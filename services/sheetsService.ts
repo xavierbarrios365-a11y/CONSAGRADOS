@@ -246,9 +246,9 @@ export const resetPasswordWithAnswer = async (agentId: string, answer: string) =
   }
 };
 
-export const updateAgentPin = async (agentId: string, newPin: string) => {
+export const updateAgentPin = async (agentId: string, newPin: string, question?: string, answer?: string) => {
   try {
-    const response = await postToAction('update_user_password', { agentId, newPin });
+    const response = await postToAction('update_user_password', { agentId, newPin, question, answer });
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO ACTUALIZAR PIN:", error);

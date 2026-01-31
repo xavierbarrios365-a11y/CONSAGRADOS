@@ -50,6 +50,8 @@ const App: React.FC = () => {
   const [isMustChangeFlow, setIsMustChangeFlow] = useState(false);
   const [newPinInput, setNewPinInput] = useState('');
   const [confirmPinInput, setConfirmPinInput] = useState('');
+  const [newQuestionInput, setNewQuestionInput] = useState('');
+  const [newAnswerInput, setNewAnswerInput] = useState('');
   const [isUpdatingPin, setIsUpdatingPin] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -211,8 +213,8 @@ const App: React.FC = () => {
 
   const handleManualPinChange = async () => {
     if (!currentUser) return;
-    if (!newPinInput || !confirmPinInput) {
-      alert("AMBOS CAMPOS SON REQUERIDOS");
+    if (!newPinInput || !confirmPinInput || !newQuestionInput || !newAnswerInput) {
+      alert("TODOS LOS CAMPOS SON REQUERIDOS (PIN, PREGUNTA Y RESPUESTA)");
       return;
     }
     if (newPinInput !== confirmPinInput) {
@@ -228,14 +230,14 @@ const App: React.FC = () => {
 
     setIsUpdatingPin(true);
     try {
-      const res = await updateAgentPin(currentUser.id, newPinInput);
+      const res = await updateAgentPin(currentUser.id, newPinInput, newQuestionInput, newAnswerInput);
       if (res.success) {
-        alert("PIN ACTUALIZADO EXITOSAMENTE. INICIA SESIÓN CON TU NUEVO PIN.");
+        alert("PERFIL DE SEGURIDAD ACTUALIZADO. INICIA SESIÓN CON TU NUEVO PIN.");
         setIsMustChangeFlow(false);
         setLoginPin('');
         syncData();
       } else {
-        alert("ERROR AL ACTUALIZAR PIN");
+        alert("ERROR AL ACTUALIZAR SEGURIDAD");
       }
     } catch (err) {
       alert("FALLO DE CONEXIÓN");
@@ -534,12 +536,31 @@ const App: React.FC = () => {
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-yellow-500 transition-all"
                 />
               </div>
+
+              <div className="space-y-4 border-t border-white/5 pt-6">
+                <p className="text-[9px] text-blue-500 font-bold uppercase tracking-widest text-center">Configura tu Recuperación</p>
+                <input
+                  type="text"
+                  placeholder="PREGUNTA (EF. ¿NOMBRE DE TU MASCOTA?)"
+                  value={newQuestionInput}
+                  onChange={(e) => setNewQuestionInput(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-bold outline-none focus:border-blue-500 transition-all"
+                />
+                <input
+                  type="text"
+                  placeholder="RESPUESTA DE SEGURIDAD"
+                  value={newAnswerInput}
+                  onChange={(e) => setNewAnswerInput(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-bold outline-none focus:border-blue-500 transition-all"
+                />
+              </div>
+
               <button
                 onClick={handleManualPinChange}
                 disabled={isUpdatingPin}
                 className="w-full bg-yellow-600 py-6 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-yellow-500 transition-all disabled:opacity-50"
               >
-                {isUpdatingPin ? 'Actualizando...' : 'Actualizar y Entrar'}
+                {isUpdatingPin ? 'Guardando Configuración...' : 'Finalizar y Entrar'}
               </button>
             </div>
           </div>

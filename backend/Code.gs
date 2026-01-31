@@ -604,7 +604,7 @@ function resetPasswordWithAnswer(data) {
 }
 
 /**
- * @description Actualiza el PIN de un agente y marca el cambio obligatorio como completado.
+ * @description Actualiza el PIN de un agente, su pregunta de seguridad y marca el cambio obligatorio como completado.
  */
 function updateUserPassword(data) {
   const CONFIG = getGlobalConfig();
@@ -615,11 +615,22 @@ function updateUserPassword(data) {
   const idCol = headers.indexOf('ID');
   const pinCol = headers.indexOf('PIN');
   const mustChangeCol = headers.indexOf('CAMBIO_OBLIGATORIO_PIN');
+  const questionCol = headers.indexOf('PREGUNTA_SEGURIDAD');
+  const answerCol = headers.indexOf('RESPUESTA_SEGURIDAD');
   
   const agentRowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
   if (agentRowIdx === -1) throw new Error("Agente no encontrado.");
   
+  // Actualizar datos
   sheet.getRange(agentRowIdx + 1, pinCol + 1).setValue(data.newPin);
+  
+  if (data.question && questionCol !== -1) {
+    sheet.getRange(agentRowIdx + 1, questionCol + 1).setValue(data.question);
+  }
+  if (data.answer && answerCol !== -1) {
+    sheet.getRange(agentRowIdx + 1, answerCol + 1).setValue(data.answer);
+  }
+  
   if (mustChangeCol !== -1) {
     sheet.getRange(agentRowIdx + 1, mustChangeCol + 1).setValue('NO');
   }

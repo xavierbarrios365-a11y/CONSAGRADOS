@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import { AppView, Agent, UserRole } from './types';
 import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
+import ContentModule from './components/ContentModule';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin } from './services/sheetsService';
@@ -340,7 +341,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (view) {
       case AppView.CIU:
-        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} />;
+        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} setView={setView} />;
       case AppView.DIRECTORY:
         return (
           <div className="p-6 md:p-10 space-y-5 animate-in fade-in pb-24">
@@ -448,6 +449,8 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      case AppView.CONTENT:
+        return <ContentModule userRole={currentUser?.userRole || UserRole.STUDENT} />;
       default: return null;
     }
   };
@@ -638,7 +641,7 @@ const App: React.FC = () => {
                     <div className="bg-green-500/10 p-6 rounded-3xl border border-green-500/20">
                       <p className="text-[9px] text-green-500 font-black uppercase tracking-widest mb-4">ACCESO CONCEDIDO</p>
                       <p className="text-[10px] text-white/50 uppercase font-black tracking-widest mb-2">TU PIN DE ACCESO ES:</p>
-                      <p className="text-4xl font-orbitron font-bold text-white tracking-[0.5em]">{revealedPin}</p>
+                      <p className="text-2xl md:text-4xl font-orbitron font-bold text-white tracking-[0.3em] md:tracking-[0.5em] break-all">{revealedPin}</p>
                     </div>
                     <button
                       onClick={() => setShowForgotPassword(false)}

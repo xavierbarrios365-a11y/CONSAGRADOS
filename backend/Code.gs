@@ -19,7 +19,8 @@ function getGlobalConfig() {
     TELEGRAM_CHAT_ID: '1009537014',
     DIRECTORY_SHEET_NAME: 'DIRECTORIO_OFICIAL',
     ENROLLMENT_SHEET_NAME: 'INSCRIPCIONES',
-    ATTENDANCE_SHEET_NAME: 'ASISTENCIA'
+    ATTENDANCE_SHEET_NAME: 'ASISTENCIA',
+    GUIAS_SHEET_NAME: 'GUIAS'
   };
 }
 
@@ -102,6 +103,12 @@ function doPost(e) {
         return getSecurityQuestion(request.data);
       case 'reset_password_with_answer':
         return resetPasswordWithAnswer(request.data);
+      case 'upload_guide':
+        return uploadGuide(request.data);
+      case 'get_guides':
+        return getGuides(request.data);
+      case 'delete_guide':
+        return deleteGuide(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -444,6 +451,12 @@ function setupDatabase() {
   ];
   results.push(ensureSheetColumns(ss, CONFIG.ATTENDANCE_SHEET_NAME, attendanceHeaders));
   
+  // 4. GUIAS
+  const guiasHeaders = [
+    'ID', 'NOMBRE', 'TIPO', 'URL', 'FECHA'
+  ];
+  results.push(ensureSheetColumns(ss, CONFIG.GUIAS_SHEET_NAME, guiasHeaders));
+  
   const summary = results.join('\n');
   const telegramMessage = `🛠️ <b>SETUP DE BASE DE DATOS COMPLETADO</b>\n\n${summary}\n\n<i>Sistema CONSAGRADOS 2026 listo para operar.</i>`;
   sendTelegramNotification(telegramMessage);
@@ -610,5 +623,79 @@ function onOpen() {
     .addItem('🔍 Verificar Sistema', 'checkSystemStatus')
     .addItem('🔧 Reparar IDs/PINs', 'repairMissingData')
     .addToUi();
+}
+
+/**
+ * @description Sube una guía y guarda sus metadatos.
+ */
+function uploadGuide(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.GUIAS_SHEET_NAME);
+  
+  const id = `GUIA-${Date.now()}`;
+  const date = new Date().toISOString();
+  
+  sheet.appendRow([id, data.name, data.type, data.url, date]);
+  
+  const telegramMessage = `📚 <b>NUEVA GUÍA DISPONIBLE</b>\n\n<b>• Nombre:</b> ${data.name}\n<b>• Tipo:</b> ${data.type}\n\n<i>El material ha sido cargado al centro de inteligencia.</i>`;
+  sendTelegramNotification(telegramMessage);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene las guías disponibles para un usuario.
+ */
+function getGuides(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.GUIAS_SHEET_NAME);
+  
+  const values = sheet.getDataRange().getValues();
+  const headers = values.shift();
+  
+  const guides = values.map(row => {
+    return {
+      id: row[0],
+      name: row[1],
+      type: row[2],
+      url: row[3],
+      date: row[4]
+    };
+  });
+  
+  // Filtrado por rol (a menos que sea DIRECTOR)
+  let filtered = guides;
+  if (data.userRole === 'STUDENT') {
+    filtered = guides.filter(g => g.type === 'ESTUDIANTE');
+  } else if (data.userRole === 'LEADER') {
+    filtered = guides.filter(g => g.type === 'LIDER');
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ data: filtered })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Elimina una guía por ID.
+ */
+function deleteGuide(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.GUIAS_SHEET_NAME);
+  
+  const values = sheet.getDataRange().getValues();
+  const idCol = 0; // Columna ID
+  
+  const rowIdx = values.findIndex(row => String(row[idCol]) === String(data.guideId));
+  if (rowIdx === -1) throw new Error("Guía no encontrada.");
+  
+  const guideName = values[rowIdx][1];
+  sheet.deleteRow(rowIdx + 1);
+  
+  const telegramMessage = `🗑️ <b>GUÍA ELIMINADA</b>\n\n<b>• Nombre:</b> ${guideName}\n<b>• Ejecutado por:</b> Director\n\n<i>El recurso ha sido retirado del centro de inteligencia.</i>`;
+  sendTelegramNotification(telegramMessage);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 

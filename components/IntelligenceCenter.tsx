@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Agent, UserRole } from '../types';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw } from 'lucide-react';
+import { Agent, UserRole, AppView } from '../types';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import { reconstructDatabase } from '../services/sheetsService';
 
@@ -9,9 +9,10 @@ interface CIUProps {
   currentUser: Agent | null;
   onUpdateNeeded?: () => void;
   intelReport?: string;
+  setView?: (view: AppView) => void;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
@@ -49,6 +50,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 </div>
               </div>
               <div className="flex gap-4 w-full md:w-auto">
+                {setView && (
+                  <button
+                    onClick={() => setView(AppView.CONTENT)}
+                    className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-5 bg-white/10 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-white/20 transition-all border border-white/10 active:scale-95"
+                  >
+                    <BookOpen size={18} className="text-blue-500" />
+                    Gestionar Material
+                  </button>
+                )}
                 <button
                   onClick={handleImportInscriptions}
                   disabled={isReconstructing}

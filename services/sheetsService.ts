@@ -255,3 +255,37 @@ export const updateAgentPin = async (agentId: string, newPin: string, question?:
     return { success: false, error: error.message };
   }
 };
+
+// --- MÓDULO DE CONTENIDO (GUÍAS) ---
+
+export const uploadFile = uploadImage; // Reutilizamos la lógica de subida a Drive
+
+export const fetchGuides = async (userRole: UserRole) => {
+  try {
+    const response = await postToAction('get_guides', { userRole });
+    return response.success ? response.data : [];
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER GUÍAS:", error);
+    return [];
+  }
+};
+
+export const uploadGuideMetadata = async (name: string, type: 'ESTUDIANTE' | 'LIDER', url: string) => {
+  try {
+    const response = await postToAction('upload_guide', { name, type, url });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO CARGAR METADATOS GUÍA:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const deleteGuide = async (guideId: string) => {
+  try {
+    const response = await postToAction('delete_guide', { guideId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ELIMINAR GUÍA:", error);
+    return { success: false, error: error.message };
+  }
+};

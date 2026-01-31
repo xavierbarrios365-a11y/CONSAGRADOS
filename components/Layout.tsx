@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from './DigitalIdCard';
 
@@ -21,6 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.DIRECTORY, icon: <Users size={20} />, label: 'Directorio', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.SCANNER, icon: <QrCode size={20} />, label: 'Asistencia', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.ENROLLMENT, icon: <UserPlus size={20} />, label: 'Inscribir', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
+    { id: AppView.CONTENT, icon: <BookOpen size={20} />, label: 'Material', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Mi Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];
 

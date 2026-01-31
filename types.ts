@@ -36,15 +36,23 @@ export interface Agent {
   accessLevel?: string;
   securityQuestion?: string;
   securityAnswer?: string;
-  mustChangePassword?: boolean;
+  mustChangePassword: boolean;
+}
+
+export interface Guide {
+  id: string;
+  name: string;
+  type: 'ESTUDIANTE' | 'LIDER';
+  url: string;
+  date: string;
 }
 
 export enum AppView {
-  DASHBOARD = 'DASHBOARD',
-  DIRECTORY = 'DIRECTORY',
-  SCANNER = 'SCANNER',
-  PROFILE = 'PROFILE',
+  SCANNER = 'scanner',
+  DIRECTORY = 'directory',
+  ENROLLMENT = 'enrollment',
+  PROFILE = 'profile',
+  CONTENT = 'content',
   CIU = 'CIU',
-  SETTINGS = 'SETTINGS',
-  ENROLLMENT = 'ENROLLMENT'
+  SETTINGS = 'SETTINGS'
 }

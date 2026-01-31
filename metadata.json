@@ -1,0 +1,8 @@
+
+{
+  "name": "Consagrados 2026",
+  "description": "ERP de Gestión de Comunidades - Agency of Experience. Gestión de identidad, control de acceso y lealtad gamificada.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

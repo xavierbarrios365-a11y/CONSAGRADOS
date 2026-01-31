@@ -403,3 +403,142 @@ function repairMissingData() {
 }
 
 
+/****************************************************************************************************************************
+ * 🚀 SETUP AUTOMÁTICO DE BASE DE DATOS
+ * 
+ * INSTRUCCIONES: Ejecuta esta función UNA VEZ desde el Editor de Apps Script para crear todas las hojas necesarias.
+ * Menú: Ejecutar > Ejecutar función > setupDatabase
+ * 
+ * Esta función:
+ * 1. Verifica si existen las hojas requeridas
+ * 2. Las crea automáticamente si no existen
+ * 3. Añade las columnas/cabeceras correctas
+ * 4. Envía notificación a Telegram con el resultado
+ ****************************************************************************************************************************/
+
+function setupDatabase() {
+  const CONFIG = getGlobalConfig();
+  
+  // Verificar que el SPREADSHEET_ID esté configurado
+  if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) {
+    return "❌ ERROR: Debes configurar SPREADSHEET_ID en getGlobalConfig() antes de ejecutar.";
+  }
+  
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const results = [];
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 1. HOJA: DIRECTORIO_OFICIAL (Base de datos principal de agentes)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const directoryHeaders = [
+    'ID', 'NOMBRE', 'PIN', 'RANGO', 'CARGO', 'FOTO URL', 'WHATSAPP', 
+    'FECHA DE NACIMIENTO', 'TALENTO', 'BAUTIZADO', 'RELACION CON DIOS',
+    'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO'
+  ];
+  results.push(createSheetIfNotExists(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2. HOJA: INSCRIPCIONES (Formulario de nuevos agentes)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const enrollmentHeaders = [
+    'TIMESTAMP', 'NOMBRE', 'WHATSAPP', 'FECHA DE NACIMIENTO', 'TALENTO', 
+    'BAUTIZADO', 'RELACION CON DIOS', 'FOTO URL', 'PROCESADO'
+  ];
+  results.push(createSheetIfNotExists(ss, CONFIG.ENROLLMENT_SHEET_NAME, enrollmentHeaders));
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 3. HOJA: ASISTENCIA (Registro de escaneos QR)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const attendanceHeaders = [
+    'ID', 'TIPO', 'UBICACION', 'FECHA'
+  ];
+  results.push(createSheetIfNotExists(ss, CONFIG.ATTENDANCE_SHEET_NAME, attendanceHeaders));
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RESUMEN Y NOTIFICACIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+  const summary = results.join('\n');
+  const telegramMessage = `🛠️ <b>SETUP DE BASE DE DATOS COMPLETADO</b>\n\n${summary}\n\n<i>Sistema CONSAGRADOS 2026 listo para operar.</i>`;
+  sendTelegramNotification(telegramMessage);
+  
+  Logger.log(summary);
+  return summary;
+}
+
+/**
+ * @description Crea una hoja si no existe y añade las cabeceras.
+ * @param {Spreadsheet} ss - El spreadsheet
+ * @param {string} sheetName - Nombre de la hoja
+ * @param {string[]} headers - Array de cabeceras
+ * @returns {string} Mensaje de resultado
+ */
+function createSheetIfNotExists(ss, sheetName, headers) {
+  let sheet = ss.getSheetByName(sheetName);
+  
+  if (sheet) {
+    // La hoja ya existe, verificar si tiene cabeceras
+    const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+    if (!existingHeaders[0] || existingHeaders[0] === '') {
+      // No tiene cabeceras, añadirlas
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      formatHeaders(sheet, headers.length);
+      return `📝 ${sheetName}: Ya existía, cabeceras añadidas.`;
+    }
+    return `✅ ${sheetName}: Ya existe y está configurada.`;
+  }
+  
+  // Crear nueva hoja
+  sheet = ss.insertSheet(sheetName);
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  formatHeaders(sheet, headers.length);
+  
+  return `🆕 ${sheetName}: Creada exitosamente con ${headers.length} columnas.`;
+}
+
+/**
+ * @description Aplica formato profesional a las cabeceras.
+ */
+function formatHeaders(sheet, numCols) {
+  const headerRange = sheet.getRange(1, 1, 1, numCols);
+  headerRange.setBackground('#1a1a2e');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setFontWeight('bold');
+  headerRange.setHorizontalAlignment('center');
+  sheet.setFrozenRows(1);
+  
+  // Ajustar ancho de columnas
+  for (let i = 1; i <= numCols; i++) {
+    sheet.setColumnWidth(i, 150);
+  }
+}
+
+
+/**
+ * @description VERIFICAR ESTADO DEL SISTEMA - Ejecutar para diagnóstico rápido.
+ */
+function checkSystemStatus() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  const checks = {
+    'SPREADSHEET_ID': !!CONFIG.SPREADSHEET_ID && !CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI'),
+    'DRIVE_FOLDER_ID': !!CONFIG.DRIVE_FOLDER_ID && !CONFIG.DRIVE_FOLDER_ID.includes('PEGA_AQUI'),
+    'TELEGRAM_BOT_TOKEN': !!CONFIG.TELEGRAM_BOT_TOKEN && !CONFIG.TELEGRAM_BOT_TOKEN.includes('PEGA_AQUI'),
+    'TELEGRAM_CHAT_ID': !!CONFIG.TELEGRAM_CHAT_ID,
+    'HOJA_DIRECTORIO': !!ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME),
+    'HOJA_INSCRIPCIONES': !!ss.getSheetByName(CONFIG.ENROLLMENT_SHEET_NAME),
+    'HOJA_ASISTENCIA': !!ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME)
+  };
+  
+  let report = '📊 DIAGNÓSTICO DEL SISTEMA CONSAGRADOS 2026\n\n';
+  for (const [key, value] of Object.entries(checks)) {
+    report += `${value ? '✅' : '❌'} ${key}\n`;
+  }
+  
+  const allOk = Object.values(checks).every(v => v);
+  report += `\n${allOk ? '🟢 SISTEMA OPERATIVO' : '🔴 REQUIERE ATENCIÓN'}`;
+  
+  Logger.log(report);
+  return report;
+}
+

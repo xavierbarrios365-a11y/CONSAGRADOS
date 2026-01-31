@@ -139,22 +139,25 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#050505] rounded-[2rem] border-2 border-blue-500/20 shadow-2xl flex flex-col items-center justify-center p-6 md:p-8"
+          className="absolute inset-0 bg-[#050505] rounded-[2rem] border-2 border-blue-500/20 shadow-2xl flex flex-col items-center justify-between p-4 md:p-6"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
-          <div className="text-center mb-4 md:mb-6">
-            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.4em] mb-1 leading-none">ACCESO DIGITAL</h3>
-            <p className="text-[7px] md:text-[8px] text-blue-500 font-bold uppercase tracking-widest opacity-50">AGENCY OF EXPERIENCE</p>
+          {/* Header compacto */}
+          <div className="text-center pt-2">
+            <h3 className="text-[9px] font-black text-white uppercase tracking-[0.3em] mb-0.5 leading-none">ACCESO DIGITAL</h3>
+            <p className="text-[6px] text-blue-500 font-bold uppercase tracking-widest opacity-50">AGENCY OF EXPERIENCE</p>
           </div>
 
-          <div className={`p-3 md:p-4 bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-4'}`}>
-            <img src={qrUrl} alt="QR" className="w-32 h-32 md:w-40 md:h-40" />
+          {/* QR Central - Ocupa el espacio principal */}
+          <div className={`p-2 md:p-3 bg-white rounded-2xl md:rounded-3xl shadow-2xl transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+            <img src={qrUrl} alt="QR" className="w-28 h-28 md:w-36 md:h-36" />
           </div>
 
-          <div className="mt-6 md:mt-8 w-full">
-            <div className="bg-white/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 text-center">
-              <p className="text-[6px] text-gray-600 font-black uppercase mb-1">FIRMA DIGITAL</p>
-              <p className="text-[7px] md:text-[8px] font-mono text-blue-400 break-all leading-tight opacity-40">
+          {/* Firma Digital Compacta - Fija abajo */}
+          <div className="w-full pb-2">
+            <div className="bg-white/5 p-2 md:p-3 rounded-xl border border-white/5 text-center">
+              <p className="text-[5px] md:text-[6px] text-gray-600 font-black uppercase mb-0.5">FIRMA DIGITAL</p>
+              <p className="text-[6px] md:text-[7px] font-mono text-blue-400 break-all leading-tight opacity-40">
                 {agent.idSignature || `C2026-N-${agent.id}`}
               </p>
             </div>

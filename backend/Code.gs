@@ -91,7 +91,9 @@ function doPost(e) {
         if (!CONFIG.DRIVE_FOLDER_ID || CONFIG.DRIVE_FOLDER_ID.includes('PEGA_AQUI')) throw new Error("DRIVE_FOLDER_ID no configurado.");
         return uploadImage(request.data);
       case 'register_id_scan':
-        return registerIdScan(request.payload);
+        return registerIdScan(request.data);
+      case 'update_agent_points':
+        return updateAgentPoints(request.data);
       case 'reconstruct_db':
         return reconstructDb();
       default:
@@ -184,21 +186,97 @@ function registerIdScan(payload) {
    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
    const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
    if (!attendanceSheet) throw new Error(`Sheet "${CONFIG.ATTENDANCE_SHEET_NAME}" no encontrada.`);
+   
+   // --- VALIDACIÓN: UN ESCANEO POR DÍA ---
+   const attendanceData = attendanceSheet.getDataRange().getValues();
+   const today = new Date();
+   today.setHours(0,0,0,0);
+   
+   for (let i = 1; i < attendanceData.length; i++) {
+     const rowId = attendanceData[i][0];
+     const rowDate = new Date(attendanceData[i][3]);
+     rowDate.setHours(0,0,0,0);
+     
+     if (String(rowId) === String(payload.scannedId) && rowDate.getTime() === today.getTime()) {
+       return ContentService.createTextOutput(JSON.stringify({ 
+         success: false, 
+         error: "ALERTA: Agente ya registrado el día de hoy." 
+       })).setMimeType(ContentService.MimeType.JSON);
+     }
+   }
+
    attendanceSheet.appendRow([payload.scannedId, payload.type, payload.location, new Date(payload.timestamp)]);
 
    // Notificación a Telegram
    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
-   const idColumn = directorySheet.getRange("A:A").getValues();
+   const directoryData = directorySheet.getDataRange().getValues();
    let agentName = "Desconocido";
-   for (let i = 0; i < idColumn.length; i++) {
-     if (idColumn[i][0] == payload.scannedId) {
-       agentName = directorySheet.getRange(i + 1, 2).getValue(); // Asume que el nombre está en la columna B
+   let agentRowIdx = -1;
+
+   for (let i = 1; i < directoryData.length; i++) {
+     if (String(directoryData[i][0]) == String(payload.scannedId)) {
+       agentName = directoryData[i][1]; 
+       agentRowIdx = i + 1;
        break;
+     }
+   }
+   
+   // AUTO-XP: +10 por asistencia
+   if (agentRowIdx !== -1) {
+     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+     const xpCol = headers.indexOf('XP') + 1 || headers.indexOf('PUNTOS XP') + 1;
+     if (xpCol > 0) {
+       const currentXp = parseInt(directorySheet.getRange(agentRowIdx, xpCol).getValue()) || 0;
+       directorySheet.getRange(agentRowIdx, xpCol).setValue(currentXp + 10);
      }
    }
    
    const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}`;
    sendTelegramNotification(telegramMessage);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, agentName: agentName })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Actualiza puntos específicos de un agente (Biblia, Apuntes, Liderazgo).
+ */
+function updateAgentPoints(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  let colName = '';
+  switch(data.type) {
+    case 'BIBLIA': colName = 'PUNTOS BIBLIA'; break;
+    case 'APUNTES': colName = 'PUNTOS APUNTES'; break;
+    case 'LIDERAZGO': colName = 'PUNTOS LIDERAZGO'; break;
+  }
+  
+  const colIdx = headers.indexOf(colName) + 1;
+  const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
+  
+  if (colIdx === 0) throw new Error(`Columna ${colName} no encontrada.`);
+
+  let rowIdx = -1;
+  for (let i = 1; i < directoryData.length; i++) {
+    if (String(directoryData[i][0]) === String(data.agentId)) {
+      rowIdx = i + 1;
+      break;
+    }
+  }
+
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  const currentVal = parseInt(sheet.getRange(rowIdx, colIdx).getValue()) || 0;
+  sheet.getRange(rowIdx, colIdx).setValue(currentVal + data.points);
+  
+  // También sumamos al XP total
+  if (xpColIdx > 0) {
+    const currentXp = parseInt(sheet.getRange(rowIdx, xpColIdx).getValue()) || 0;
+    sheet.getRange(rowIdx, xpColIdx).setValue(currentXp + data.points);
+  }
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }

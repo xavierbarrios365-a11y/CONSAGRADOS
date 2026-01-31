@@ -7,11 +7,14 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7d1GqCkxSDU1j
 const postToAction = async (action: string, data: any) => {
   const response = await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    mode: 'cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, data })
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action, data }),
+    redirect: 'follow'
   });
-  if (!response.ok) throw new Error(`Error en la solicitud a la API: ${response.statusText}`);
+
+  if (!response.ok && response.status !== 0) {
+    throw new Error(`Error en la solicitud a la API: ${response.statusText}`);
+  }
   return response.json();
 };
 
@@ -199,6 +202,20 @@ export const reconstructDatabase = async () => {
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO RECONSTRUCCIÓN DB:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const incrementPoints = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
+  try {
+    const response = await postToAction('update_agent_points', {
+      agentId,
+      type,
+      points
+    });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO INCREMENTO DE PUNTOS:", error);
     return { success: false, error: error.message };
   }
 };

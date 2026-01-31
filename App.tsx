@@ -6,7 +6,7 @@ import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
-import { fetchAgentsFromSheets, submitTransaction } from './services/sheetsService';
+import { fetchAgentsFromSheets, submitTransaction, incrementPoints } from './services/sheetsService';
 import {
   Search,
   RefreshCw,
@@ -37,6 +37,8 @@ const App: React.FC = () => {
   const [scannedId, setScannedId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
+  const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
+  const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -56,20 +58,50 @@ const App: React.FC = () => {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d', { willReadFrequently: true });
 
+            let lastScanTime = 0;
             const scan = () => {
               if (!active) return;
               if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && context) {
-                canvas.width = videoRef.current.videoWidth;
-                canvas.height = videoRef.current.videoHeight;
+                // Optimización: Escanear a baja resolución para mayor velocidad
+                const scanWidth = Math.min(videoRef.current.videoWidth, 480);
+                const scanHeight = Math.min(videoRef.current.videoHeight, Math.floor(480 * (videoRef.current.videoHeight / videoRef.current.videoWidth)));
+
+                canvas.width = scanWidth;
+                canvas.height = scanHeight;
                 context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
                 const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-                if (code && code.data) {
-                  setScannedId(code.data);
+
+                try {
+                  const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "attemptBoth",
+                  });
+
+                  if (code && code.data && code.data !== scannedId && scanStatus === 'IDLE') {
+                    const now = Date.now();
+                    if (now - lastScanTime > 2000) {
+                      console.log("✅ QR DETECTADO:", code.data);
+                      setScannedId(code.data);
+
+                      const scannerFrame = document.querySelector('.scanner-frame');
+                      if (scannerFrame) {
+                        scannerFrame.classList.add('border-green-500', 'shadow-[0_0_30px_rgba(34,197,94,0.5)]');
+                        setTimeout(() => {
+                          scannerFrame.classList.remove('border-green-500', 'shadow-[0_0_30px_rgba(34,197,94,0.5)]');
+                        }, 500);
+                      }
+                      lastScanTime = now;
+                      setTimeout(() => processScan(code.data), 500);
+                    }
+                  } else if (!code && scanStatus === 'IDLE' && scannedId) {
+                    setScannedId('');
+                  }
+                } catch (qrErr) {
+                  console.error("Error en jsQR loop:", qrErr);
                 }
               }
               requestAnimationFrame(scan);
             };
+            console.log("🚀 Iniciando loop de escaneo...");
             requestAnimationFrame(scan);
           }
         } catch (err) {
@@ -168,20 +200,60 @@ const App: React.FC = () => {
     setView(AppView.DIRECTORY);
   };
 
-  const processScan = async () => {
-    if (!scannedId) return;
+  const processScan = async (idToProcess?: string) => {
+    const id = idToProcess || scannedId;
+    if (!id || scanStatus !== 'IDLE') return;
+
     setScanStatus('SCANNING');
-    const result = await submitTransaction(scannedId, 'ASISTENCIA');
-    if (result.success) {
-      setScanStatus('SUCCESS');
-      setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); }, 3000);
+    try {
+      const result = await submitTransaction(id, 'ASISTENCIA');
+      if (result.success) {
+        setScanStatus('SUCCESS');
+
+        // Buscar al agente escaneado para el formulario de puntos
+        const agent = agents.find(a => String(a.id) === String(id));
+        if (agent) setScannedAgentForPoints(agent);
+
+        setTimeout(() => {
+          setScanStatus('IDLE');
+          setScannedId('');
+        }, 3000);
+      } else {
+        alert(result.error || "No se pudo registrar.");
+        setScanStatus('IDLE');
+        setScannedId(''); // Importante: desbloquear para reintento
+      }
+    } catch (err) {
+      alert("ERROR DE CONEXIÓN AL REGISTRAR.");
+      setScanStatus('IDLE');
+      setScannedId('');
+    }
+  };
+
+  const handleIncrementPoints = async (type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO') => {
+    if (!scannedAgentForPoints) return;
+    setIsUpdatingPoints(true);
+    try {
+      const res = await incrementPoints(scannedAgentForPoints.id, type, 10);
+      if (res.success) {
+        alert(`+10 PUNTOS DE ${type} ASIGNADOS A ${scannedAgentForPoints.name.split(' ')[0]}`);
+        syncData(); // Sincronizar para ver los nuevos puntos
+      } else {
+        alert("ERROR AL ACTUALIZAR PUNTOS");
+      }
+    } catch (err) {
+      alert("FALLO TÁCTICO EN CONEXIÓN");
+    } finally {
+      setIsUpdatingPoints(false);
+      // Opcional: No cerrar el modal por si quiere marcar otra cosa, 
+      // o cerrarlo tras un delay.
     }
   };
 
   const renderContent = () => {
     switch (view) {
       case AppView.CIU:
-        return <IntelligenceCenter agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} />;
+        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} />;
       case AppView.DIRECTORY:
         return (
           <div className="p-6 md:p-10 space-y-5 animate-in fade-in pb-24">
@@ -219,21 +291,30 @@ const App: React.FC = () => {
         );
       case AppView.SCANNER:
         return (
-          <div className="p-4 md:p-10 flex flex-col items-center justify-start space-y-4 md:space-y-6 animate-in fade-in h-full pt-6">
-            <div className="text-center space-y-1 mb-2">
+          <div className="p-6 md:p-10 flex flex-col items-center justify-between animate-in fade-in h-[calc(100svh-160px)] md:h-full pt-6 pb-10">
+            <div className="text-center space-y-1 mb-4">
               <h2 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Scanner Táctico</h2>
               <p className="text-[7px] text-blue-500 font-bold uppercase tracking-widest opacity-60 text-center">Apunta al código QR del agente</p>
             </div>
-            <div className="relative w-full max-w-[280px] md:max-w-xs aspect-[3/4] border-2 border-blue-500/20 rounded-[2.5rem] overflow-hidden bg-black shadow-[0_0_50px_rgba(37,99,235,0.1)]">
+            <div className={`relative w-full max-w-[280px] md:max-w-xs aspect-square border-2 rounded-[2.5rem] overflow-hidden bg-black transition-all duration-300 scanner-frame ${scanStatus === 'SUCCESS' ? 'border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' :
+              scanStatus === 'SCANNING' ? 'border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)]' :
+                'border-blue-500/20 shadow-[0_0_50px_rgba(37,99,235,0.1)]'
+              }`}>
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale opacity-70" />
-              <div className="absolute top-0 left-0 w-full h-0.5 bg-blue-500 shadow-[0_0_15px_blue] animate-scan-line"></div>
+              <div className={`absolute top-0 left-0 w-full h-0.5 shadow-[0_0_15px_blue] animate-scan-line ${scanStatus === 'SUCCESS' ? 'bg-green-500 shadow-green-500' :
+                scanStatus === 'SCANNING' ? 'bg-yellow-500 shadow-yellow-500' :
+                  'bg-blue-500 shadow-blue-500'
+                }`}></div>
 
               {/* Overlay táctico */}
               <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-blue-500/30 rounded-3xl"></div>
+              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border rounded-3xl transition-colors ${scanStatus === 'SUCCESS' ? 'border-green-500/50' :
+                scanStatus === 'SCANNING' ? 'border-yellow-500/50' :
+                  'border-blue-500/30'
+                }`}></div>
             </div>
 
-            <div className="w-full max-w-[280px] md:max-w-xs space-y-3 z-10">
+            <div className="w-full max-w-[280px] md:max-w-xs space-y-4 z-10">
               <div className="relative">
                 <input
                   type="text"
@@ -252,11 +333,11 @@ const App: React.FC = () => {
                 )}
               </div>
               <button
-                onClick={processScan}
+                onClick={() => processScan()}
                 disabled={!scannedId || scanStatus !== 'IDLE'}
                 className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${!scannedId || scanStatus !== 'IDLE'
-                    ? 'bg-gray-800 text-gray-500'
-                    : 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] active:scale-95'
+                  ? 'bg-gray-800 text-gray-500'
+                  : 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] active:scale-95'
                   }`}
               >
                 {scanStatus === 'IDLE' ? 'Confirmar Registro' : 'Procesando...'}
@@ -268,8 +349,8 @@ const App: React.FC = () => {
         return <EnrollmentForm onSuccess={handleEnrollmentSuccess} />;
       case AppView.PROFILE:
         return (
-          <div className="p-6 md:p-10 flex flex-col items-center gap-6 animate-in fade-in h-full pb-24">
-            {currentUser && <DigitalIdCard agent={currentUser} />}
+          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24">
+            {currentUser && <DigitalIdCard key={currentUser?.id} agent={currentUser} />}
           </div>
         );
       default: return null;
@@ -351,6 +432,48 @@ const App: React.FC = () => {
       <div className="relative h-full">
         {renderContent()}
 
+        {scannedAgentForPoints && (
+          <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
+            <div className="w-full max-w-sm bg-[#0a0a0a] border border-blue-500/30 rounded-[3rem] p-8 space-y-8 shadow-[0_0_50px_rgba(37,99,235,0.2)]">
+              <div className="text-center space-y-2">
+                <div className="w-20 h-20 rounded-full border-2 border-blue-500/50 mx-auto overflow-hidden bg-gray-900">
+                  <img src={formatDriveUrl(scannedAgentForPoints.photoUrl)} className="w-full h-full object-cover" />
+                </div>
+                <h3 className="text-white font-black uppercase tracking-widest text-sm">{scannedAgentForPoints.name}</h3>
+                <p className="text-[9px] text-blue-500 font-bold uppercase tracking-[0.3em]">Registro de Méritos</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <PointButton
+                  label="Trajo Biblia (+10)"
+                  onClick={() => handleIncrementPoints('BIBLIA')}
+                  disabled={isUpdatingPoints}
+                  icon={<Database size={16} />}
+                />
+                <PointButton
+                  label="Trajo Apuntes (+10)"
+                  onClick={() => handleIncrementPoints('APUNTES')}
+                  disabled={isUpdatingPoints}
+                  icon={<RefreshCw size={16} />}
+                />
+                <PointButton
+                  label="Participación (+10)"
+                  onClick={() => handleIncrementPoints('LIDERAZGO')}
+                  disabled={isUpdatingPoints}
+                  icon={<Activity size={16} />}
+                />
+              </div>
+
+              <button
+                onClick={() => setScannedAgentForPoints(null)}
+                className="w-full py-4 text-[9px] font-black text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+              >
+                Cerrar Protocolo
+              </button>
+            </div>
+          </div>
+        )}
+
         {foundAgent && (
           <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center justify-center p-6 backdrop-blur-lg animate-in fade-in">
             <button
@@ -373,5 +496,19 @@ const App: React.FC = () => {
     </Layout>
   );
 };
+
+const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClick: () => void, disabled: boolean, icon: any }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 hover:border-blue-500/50 transition-all disabled:opacity-50"
+  >
+    <div className="flex items-center gap-3">
+      <span className="text-blue-500">{icon}</span>
+      {label}
+    </div>
+    <div className="w-5 h-5 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-[10px] text-blue-400">+</div>
+  </button>
+);
 
 export default App;

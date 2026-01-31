@@ -39,6 +39,10 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 3 * 1024 * 1024) {
+        setError("La imagen es demasiado grande. Máximo 3MB.");
+        return;
+      }
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -75,7 +79,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
         return;
       }
     }
-    
+
     // 2. Enviar los datos del formulario
     setStatus('SUBMITTING');
     const finalData = { ...formData, photoUrl };
@@ -87,8 +91,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
       setFormData({ nombre: '', whatsapp: '', talento: '', bautizado: 'NO', relacion: '', nivel: 'ESTUDIANTE', fechaNacimiento: '' });
       setSelectedFile(null);
       setImagePreview(null);
-      if(fileInputRef.current) fileInputRef.current.value = '';
-      
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
       setTimeout(() => {
         setStatus('IDLE');
         onSuccess(); // Llamar a la función de éxito para refrescar la lista de agentes
@@ -99,9 +103,9 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
       setTimeout(() => setStatus('IDLE'), 4000);
     }
   };
-  
+
   const getButtonContent = () => {
-    switch(status) {
+    switch (status) {
       case 'UPLOADING': return <><Loader2 size={18} className="animate-spin" /> Subiendo Foto...</>;
       case 'SUBMITTING': return <><Loader2 size={18} className="animate-spin" /> Registrando Agente...</>;
       case 'SUCCESS': return <><CheckCircle2 size={18} /> Agente Registrado</>;
@@ -120,41 +124,40 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-             <div 
-               onClick={() => fileInputRef.current?.click()}
-               className="w-full aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/10 transition-all p-4"
-             >
-               {imagePreview ? (
-                 <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />
-               ) : (
-                 <div className="space-y-2 text-gray-500">
-                   <UploadCloud size={32} className="mx-auto" />
-                   <p className="text-[10px] font-bold uppercase tracking-widest">Subir Foto de Perfil</p>
-                   <p className="text-xs">Toca para seleccionar una imagen</p>
-                 </div>
-               )}
-             </div>
+            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/10 transition-all p-4"
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />
+              ) : (
+                <div className="space-y-2 text-gray-500">
+                  <UploadCloud size={32} className="mx-auto" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Subir Foto de Perfil</p>
+                  <p className="text-xs">Toca para seleccionar una imagen</p>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-4">
-               <InputField label="Nombre Completo *" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="EJ. JUAN PÉREZ" />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <InputField label="WhatsApp *" name="whatsapp" value={formData.whatsapp} onChange={handleChange} placeholder="+54..." />
-                 <InputField label="Fecha Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} type="date" />
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <InputField label="Talento / Habilidad" name="talento" value={formData.talento} onChange={handleChange} placeholder="EJ. MÚSICA, DISEÑO..." />
-                 <SelectField label="Nivel de Acceso" name="nivel" value={formData.nivel} onChange={handleChange} options={['ESTUDIANTE', 'LIDER', 'DIRECTOR']} />
-               </div>
-               <SelectField label="Bautizado" name="bautizado" value={formData.bautizado} onChange={handleChange} options={['SÍ', 'NO']} />
-               <TextAreaField label="Relación con Dios" name="relacion" value={formData.relacion} onChange={handleChange} placeholder="Describe brevemente..." />
+              <InputField label="Nombre Completo *" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="EJ. JUAN PÉREZ" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputField label="WhatsApp *" name="whatsapp" value={formData.whatsapp} onChange={handleChange} placeholder="+54..." />
+                <InputField label="Fecha Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} type="date" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputField label="Talento / Habilidad" name="talento" value={formData.talento} onChange={handleChange} placeholder="EJ. MÚSICA, DISEÑO..." />
+                <SelectField label="Nivel de Acceso" name="nivel" value={formData.nivel} onChange={handleChange} options={['ESTUDIANTE', 'LIDER', 'DIRECTOR']} />
+              </div>
+              <SelectField label="Bautizado" name="bautizado" value={formData.bautizado} onChange={handleChange} options={['SÍ', 'NO']} />
+              <TextAreaField label="Relación con Dios" name="relacion" value={formData.relacion} onChange={handleChange} placeholder="Describe brevemente..." />
             </div>
 
             {error && <div className="text-center text-red-500 bg-red-500/10 p-3 rounded-lg text-xs font-bold">{error}</div>}
 
-            <button type="submit" disabled={status !== 'IDLE'} className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all ${
-                status !== 'IDLE' ? (status === 'SUCCESS' ? 'bg-green-600' : status === 'ERROR' ? 'bg-red-600' : 'bg-gray-800 text-gray-500') : 'bg-blue-600 hover:bg-blue-500 shadow-xl'
-            } text-white`}>
+            <button type="submit" disabled={status !== 'IDLE'} className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all ${status !== 'IDLE' ? (status === 'SUCCESS' ? 'bg-green-600' : status === 'ERROR' ? 'bg-red-600' : 'bg-gray-800 text-gray-500') : 'bg-blue-600 hover:bg-blue-500 shadow-xl'
+              } text-white`}>
               {getButtonContent()}
             </button>
           </form>

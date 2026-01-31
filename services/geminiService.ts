@@ -2,8 +2,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { Agent } from "../types";
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-const ai = new GoogleGenAI({ apiKey: apiKey });
+const apiKey = process.env.GEMINI_API_KEY || '';
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {
   const stats = {
@@ -15,15 +15,19 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     }, {})
   };
 
+  if (!ai) return "TACTICAL ANALYSIS UNAVAILABLE. CONFIGURE API KEY.";
+
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
-      Format the response as a short military-style intel report. Keep it under 100 words. 
-      Use a serious, high-tech tone.`,
-      config: {
-        thinkingConfig: { thinkingBudget: 0 }
-      }
+      model: 'gemini-1.5-flash',
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: `Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
+          Format the response as a short military-style intel report. Keep it under 100 words. 
+          Use a serious, high-tech tone.`
+        }]
+      }]
     });
     return response.text;
   } catch (error) {

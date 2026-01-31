@@ -13,18 +13,18 @@ export enum UserRole {
 }
 
 export interface Agent {
-  id: string;          
-  name: string;        
-  photoUrl: string;    
-  rank: string;        
-  role: string;        
-  talent: string;      
-  baptismStatus: string; 
-  status: string;      
-  xp: number;          
-  userRole: UserRole;  
-  pin: string;         
-  idSignature: string; 
+  id: string;
+  name: string;
+  photoUrl: string;
+  rank: string;
+  role: string;
+  talent: string;
+  baptismStatus: string;
+  status: string;
+  xp: number;
+  userRole: UserRole;
+  pin: string;
+  idSignature: string;
   joinedDate: string;
   bible: number;
   notes: number;
@@ -34,6 +34,9 @@ export interface Agent {
   whatsapp?: string;
   relationshipWithGod?: string;
   accessLevel?: string;
+  securityQuestion?: string;
+  securityAnswer?: string;
+  mustChangePassword?: boolean;
 }
 
 export enum AppView {

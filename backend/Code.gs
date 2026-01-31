@@ -96,6 +96,12 @@ function doPost(e) {
         return updateAgentPoints(request.data);
       case 'reconstruct_db':
         return reconstructDb();
+      case 'update_user_password':
+        return updateUserPassword(request.data);
+      case 'get_security_question':
+        return getSecurityQuestion(request.data);
+      case 'reset_password_with_answer':
+        return resetPasswordWithAnswer(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -148,6 +154,9 @@ function enrollAgent(data) {
       case 'PUNTOS APUNTES': return 0;
       case 'PUNTOS LIDERAZGO': return 0;
       case 'FECHA_INGRESO': return new Date(); 
+      case 'PREGUNTA_SEGURIDAD': return data.preguntaSeguridad || '¿Cuál es tu color favorito?';
+      case 'RESPUESTA_SEGURIDAD': return data.respuestaSeguridad || 'Azul';
+      case 'CAMBIO_OBLIGATORIO_PIN': return 'SI';
       default: return '';
     }
   });
@@ -433,7 +442,8 @@ function setupDatabase() {
   const directoryHeaders = [
     'ID', 'NOMBRE', 'PIN', 'RANGO', 'CARGO', 'FOTO URL', 'WHATSAPP', 
     'FECHA DE NACIMIENTO', 'TALENTO', 'BAUTIZADO', 'RELACION CON DIOS',
-    'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO'
+    'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO',
+    'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN'
   ];
   results.push(createSheetIfNotExists(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
   
@@ -540,5 +550,89 @@ function checkSystemStatus() {
   
   Logger.log(report);
   return report;
+}
+
+/**
+ * @description Obtiene la pregunta de seguridad de un agente.
+ */
+function getSecurityQuestion(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  const idCol = headers.indexOf('ID');
+  const questionCol = headers.indexOf('PREGUNTA_SEGURIDAD');
+  
+  const agent = directoryData.find(row => String(row[idCol]) === String(data.agentId));
+  if (!agent) throw new Error("Agente no encontrado.");
+  
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    question: agent[questionCol] || "¿Cuál es tu color favorito?" 
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Valida respuesta de seguridad y devuelve el PIN o resetea.
+ */
+function resetPasswordWithAnswer(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  const idCol = headers.indexOf('ID');
+  const pinCol = headers.indexOf('PIN');
+  const answerCol = headers.indexOf('RESPUESTA_SEGURIDAD');
+  
+  const agentRowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+  if (agentRowIdx === -1) throw new Error("Agente no encontrado.");
+  
+  const agentRow = directoryData[agentRowIdx];
+  const storedAnswer = String(agentRow[answerCol]).trim().toLowerCase();
+  const providedAnswer = String(data.answer).trim().toLowerCase();
+  
+  if (storedAnswer === providedAnswer) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: true, 
+      pin: agentRow[pinCol] 
+    })).setMimeType(ContentService.MimeType.JSON);
+  } else {
+    throw new Error("Respuesta de seguridad incorrecta.");
+  }
+}
+
+/**
+ * @description Actualiza el PIN de un agente y marca el cambio obligatorio como completado.
+ */
+function updateUserPassword(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  const idCol = headers.indexOf('ID');
+  const pinCol = headers.indexOf('PIN');
+  const mustChangeCol = headers.indexOf('CAMBIO_OBLIGATORIO_PIN');
+  
+  const agentRowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+  if (agentRowIdx === -1) throw new Error("Agente no encontrado.");
+  
+  sheet.getRange(agentRowIdx + 1, pinCol + 1).setValue(data.newPin);
+  if (mustChangeCol !== -1) {
+    sheet.getRange(agentRowIdx + 1, mustChangeCol + 1).setValue('NO');
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🛠️ CONSAGRADOS')
+    .addItem('🚀 Setup Base de Datos', 'setupDatabase')
+    .addItem('🔍 Verificar Sistema', 'checkSystemStatus')
+    .addItem('🔧 Reparar IDs/PINs', 'repairMissingData')
+    .addToUi();
 }
 

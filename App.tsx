@@ -6,7 +6,7 @@ import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
-import { fetchAgentsFromSheets, submitTransaction, incrementPoints } from './services/sheetsService';
+import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin } from './services/sheetsService';
 import {
   Search,
   RefreshCw,
@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   X,
-  Activity
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
@@ -39,6 +40,17 @@ const App: React.FC = () => {
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
+
+  // Estados de Seguridad Avanzada
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'ID' | 'QUESTION' | 'SUCCESS'>('ID');
+  const [securityAnswerInput, setSecurityAnswerInput] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [revealedPin, setRevealedPin] = useState('');
+  const [isMustChangeFlow, setIsMustChangeFlow] = useState(false);
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmPinInput, setConfirmPinInput] = useState('');
+  const [isUpdatingPin, setIsUpdatingPin] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -179,6 +191,11 @@ const App: React.FC = () => {
 
     if (user) {
       if (String(user.pin).trim() === pinEntered) {
+        if (user.mustChangePassword) {
+          setCurrentUser(user);
+          setIsMustChangeFlow(true);
+          return;
+        }
         setCurrentUser(user);
         setIsLoggedIn(true);
         if (user.userRole === UserRole.DIRECTOR) setView(AppView.CIU);
@@ -189,6 +206,76 @@ const App: React.FC = () => {
       }
     } else {
       setLoginError({ field: 'id', message: `ID '${loginId}' NO RECONOCIDO EN EL DIRECTORIO.` });
+    }
+  };
+
+  const handleManualPinChange = async () => {
+    if (!currentUser) return;
+    if (!newPinInput || !confirmPinInput) {
+      alert("AMBOS CAMPOS SON REQUERIDOS");
+      return;
+    }
+    if (newPinInput !== confirmPinInput) {
+      alert("LOS PINS NO COINCIDEN");
+      return;
+    }
+    // Validación alfanumérica simple
+    const isAlphanumeric = /^[a-z0-9]+$/i.test(newPinInput);
+    if (!isAlphanumeric) {
+      alert("EL PIN DEBE SER ALFANUMÉRICO (LETRAS Y NÚMEROS)");
+      return;
+    }
+
+    setIsUpdatingPin(true);
+    try {
+      const res = await updateAgentPin(currentUser.id, newPinInput);
+      if (res.success) {
+        alert("PIN ACTUALIZADO EXITOSAMENTE. INICIA SESIÓN CON TU NUEVO PIN.");
+        setIsMustChangeFlow(false);
+        setLoginPin('');
+        syncData();
+      } else {
+        alert("ERROR AL ACTUALIZAR PIN");
+      }
+    } catch (err) {
+      alert("FALLO DE CONEXIÓN");
+    } finally {
+      setIsUpdatingPin(false);
+    }
+  };
+
+  const handleRequestQuestion = async () => {
+    setResetError('');
+    const inputId = loginId.trim();
+    if (!inputId) {
+      setResetError("INGRESA TU ID PARA RECUPERAR");
+      return;
+    }
+
+    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === inputId.replace(/[^0-9]/g, ''));
+    if (!user) {
+      setResetError("AGENTE NO IDENTIFICADO");
+      return;
+    }
+
+    setForgotPasswordStep('QUESTION');
+  };
+
+  const handleVerifyAnswer = async () => {
+    setResetError('');
+    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === loginId.replace(/[^0-9]/g, ''));
+    if (!user) return;
+
+    try {
+      const res = await resetPasswordWithAnswer(user.id, securityAnswerInput);
+      if (res.success) {
+        setRevealedPin(res.pin);
+        setForgotPasswordStep('SUCCESS');
+      } else {
+        setResetError("RESPUESTA INCORRECTA");
+      }
+    } catch (err) {
+      setResetError("FALLO TÁCTICO EN CONEXIÓN");
     }
   };
 
@@ -234,7 +321,7 @@ const App: React.FC = () => {
     if (!scannedAgentForPoints) return;
     setIsUpdatingPoints(true);
     try {
-      const res = await incrementPoints(scannedAgentForPoints.id, type, 10);
+      const res = await updateAgentPoints(scannedAgentForPoints.id, type, 10);
       if (res.success) {
         alert(`+10 PUNTOS DE ${type} ASIGNADOS A ${scannedAgentForPoints.name.split(' ')[0]}`);
         syncData(); // Sincronizar para ver los nuevos puntos
@@ -245,8 +332,6 @@ const App: React.FC = () => {
       alert("FALLO TÁCTICO EN CONEXIÓN");
     } finally {
       setIsUpdatingPoints(false);
-      // Opcional: No cerrar el modal por si quiere marcar otra cosa, 
-      // o cerrarlo tras un delay.
     }
   };
 
@@ -405,11 +490,139 @@ const App: React.FC = () => {
             </button>
           </form>
 
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                setShowForgotPassword(true);
+                setForgotPasswordStep('ID');
+                setResetError('');
+              }}
+              className="text-[9px] text-gray-500 font-bold uppercase tracking-widest hover:text-blue-500 transition-colors"
+            >
+              ¿Olvidaste tu PIN de acceso? Solicitar Recuperación
+            </button>
+          </div>
+
           <div className="pt-8 border-t border-white/5 flex flex-col items-center gap-2 opacity-30">
             <Activity size={16} className="text-blue-500" />
             <p className="text-[7px] font-black text-gray-500 uppercase tracking-[0.4em]">SISTEMAS OPERATIVOS NOMINALES</p>
           </div>
         </div>
+
+        {/* MODAL: CAMBIO OBLIGATORIO DE PIN */}
+        {isMustChangeFlow && (
+          <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
+            <div className="w-full max-w-sm bg-[#0a0a0a] border border-yellow-500/30 rounded-[3rem] p-8 space-y-8 shadow-[0_0_50px_rgba(234,179,8,0.2)]">
+              <div className="text-center space-y-2">
+                <AlertCircle className="mx-auto text-yellow-500" size={40} />
+                <h3 className="text-white font-black uppercase tracking-widest text-sm">CAMBIO DE PIN OBLIGATORIO</h3>
+                <p className="text-[9px] text-yellow-500/70 font-bold uppercase tracking-[0.2em]">DETECTADO PRIMER INICIO DE SESIÓN</p>
+              </div>
+              <div className="space-y-4">
+                <input
+                  type="password"
+                  placeholder="NUEVO PIN ALFANUMÉRICO"
+                  value={newPinInput}
+                  onChange={(e) => setNewPinInput(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-yellow-500 transition-all"
+                />
+                <input
+                  type="password"
+                  placeholder="CONFIRMAR NUEVO PIN"
+                  value={confirmPinInput}
+                  onChange={(e) => setConfirmPinInput(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-yellow-500 transition-all"
+                />
+              </div>
+              <button
+                onClick={handleManualPinChange}
+                disabled={isUpdatingPin}
+                className="w-full bg-yellow-600 py-6 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-yellow-500 transition-all disabled:opacity-50"
+              >
+                {isUpdatingPin ? 'Actualizando...' : 'Actualizar y Entrar'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: OLVIDÉ MI CONTRASEÑA */}
+        {showForgotPassword && (
+          <div className="fixed inset-0 z-[200] bg-black/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in">
+            <div className="w-full max-w-sm space-y-8">
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                className="text-gray-500 hover:text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-4"
+              >
+                <X size={16} /> Cancelar Operación
+              </button>
+
+              <div className="bg-[#0a0a0a] border border-blue-500/20 rounded-[3rem] p-10 space-y-8">
+                <div className="text-center space-y-2">
+                  <h3 className="text-white font-black uppercase tracking-widest text-sm">RECUPERACIÓN DE ACCESO</h3>
+                  <p className="text-[9px] text-blue-500 font-bold uppercase tracking-[0.2em]">PROTOCOLO DE SEGURIDAD V37</p>
+                </div>
+
+                {forgotPasswordStep === 'ID' && (
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="INGRESA TU ID O CÉDULA"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-blue-500"
+                    />
+                    {resetError && <p className="text-[9px] text-red-500 font-bold text-center uppercase">{resetError}</p>}
+                    <button
+                      onClick={handleRequestQuestion}
+                      className="w-full bg-blue-600 py-5 rounded-2xl text-white font-black uppercase text-[9px] tracking-widest"
+                    >
+                      Continuar
+                    </button>
+                  </div>
+                )}
+
+                {forgotPasswordStep === 'QUESTION' && (
+                  <div className="space-y-6">
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                      <p className="text-[8px] text-gray-500 font-black uppercase mb-2 tracking-widest">Pregunta de Seguridad:</p>
+                      <p className="text-xs text-white font-bold">{agents.find(a => String(a.id).replace(/[^0-9]/g, '') === loginId.replace(/[^0-9]/g, ''))?.securityQuestion || "¿Cuál es tu color favorito?"}</p>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="TU RESPUESTA..."
+                      value={securityAnswerInput}
+                      onChange={(e) => setSecurityAnswerInput(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold outline-none focus:border-blue-500"
+                    />
+                    {resetError && <p className="text-[9px] text-red-500 font-bold text-center uppercase">{resetError}</p>}
+                    <button
+                      onClick={handleVerifyAnswer}
+                      className="w-full bg-blue-600 py-5 rounded-2xl text-white font-black uppercase text-[9px] tracking-widest"
+                    >
+                      Verificar Identidad
+                    </button>
+                  </div>
+                )}
+
+                {forgotPasswordStep === 'SUCCESS' && (
+                  <div className="space-y-6 text-center">
+                    <div className="bg-green-500/10 p-6 rounded-3xl border border-green-500/20">
+                      <p className="text-[9px] text-green-500 font-black uppercase tracking-widest mb-4">ACCESO CONCEDIDO</p>
+                      <p className="text-[10px] text-white/50 uppercase font-black tracking-widest mb-2">TU PIN DE ACCESO ES:</p>
+                      <p className="text-4xl font-orbitron font-bold text-white tracking-[0.5em]">{revealedPin}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowForgotPassword(false)}
+                      className="w-full bg-white/10 py-5 rounded-2xl text-white font-black uppercase text-[9px] tracking-widest"
+                    >
+                      Volver al Login
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

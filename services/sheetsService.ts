@@ -60,7 +60,10 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'WHATSAPP': ['whatsapp', 'teléfono', 'celular', 'felefono', 'telefono'],
       'FECHA_NACIMIENTO': ['birthday', 'fecha de nacimiento', 'nacimiento'],
       'FECHA_INGRESO': ['joineddate', 'fecha de ingreso', 'ingreso'],
-      'RELACION_CON_DIOS': ['relationshipwithgod', 'relacion con dios', 'compromiso']
+      'RELACION_CON_DIOS': ['relationshipwithgod', 'relacion con dios', 'compromiso'],
+      'PREGUNTA': ['securityquestion', 'pregunta_seguridad', 'pregunta'],
+      'RESPUESTA': ['securityanswer', 'respuesta_seguridad', 'respuesta'],
+      'MUST_CHANGE': ['mustchangepassword', 'cambio_obligatorio_pin', 'cambio']
     };
 
     const isMatrix = Array.isArray(rawContent[0]);
@@ -149,7 +152,10 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
     birthday: formatDate(getV('FECHA_NACIMIENTO')),
     whatsapp: getV('WHATSAPP') || "S/D",
     relationshipWithGod: getV('RELACION_CON_DIOS') || "PENDIENTE",
-    accessLevel: getV('NIVEL_ACCESO') || "ESTUDIANTE"
+    accessLevel: getV('NIVEL_ACCESO') || "ESTUDIANTE",
+    securityQuestion: getV('PREGUNTA') || "",
+    securityAnswer: getV('RESPUESTA') || "",
+    mustChangePassword: String(getV('MUST_CHANGE')).toUpperCase() === 'SI'
   };
 };
 
@@ -206,7 +212,7 @@ export const reconstructDatabase = async () => {
   }
 };
 
-export const incrementPoints = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
+export const updateAgentPoints = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
   try {
     const response = await postToAction('update_agent_points', {
       agentId,
@@ -216,6 +222,36 @@ export const incrementPoints = async (agentId: string, type: 'BIBLIA' | 'APUNTES
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO INCREMENTO DE PUNTOS:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const getSecurityQuestion = async (agentId: string) => {
+  try {
+    const response = await postToAction('get_security_question', { agentId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER PREGUNTA:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const resetPasswordWithAnswer = async (agentId: string, answer: string) => {
+  try {
+    const response = await postToAction('reset_password_with_answer', { agentId, answer });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO VALIDACIÓN RESPUESTA:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateAgentPin = async (agentId: string, newPin: string) => {
+  try {
+    const response = await postToAction('update_user_password', { agentId, newPin });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ACTUALIZAR PIN:", error);
     return { success: false, error: error.message };
   }
 };

@@ -24,7 +24,9 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
     bautizado: 'NO',
     relacion: '',
     nivel: 'ESTUDIANTE',
-    fechaNacimiento: ''
+    fechaNacimiento: '',
+    preguntaSeguridad: '',
+    respuestaSeguridad: ''
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -88,7 +90,17 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
     if (enrollResult.success) {
       setStatus('SUCCESS');
       // Limpiar formulario
-      setFormData({ nombre: '', whatsapp: '', talento: '', bautizado: 'NO', relacion: '', nivel: 'ESTUDIANTE', fechaNacimiento: '' });
+      setFormData({
+        nombre: '',
+        whatsapp: '',
+        talento: '',
+        bautizado: 'NO',
+        relacion: '',
+        nivel: 'ESTUDIANTE',
+        fechaNacimiento: '',
+        preguntaSeguridad: '',
+        respuestaSeguridad: ''
+      });
       setSelectedFile(null);
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -152,6 +164,24 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
               </div>
               <SelectField label="Bautizado" name="bautizado" value={formData.bautizado} onChange={handleChange} options={['SÍ', 'NO']} />
               <TextAreaField label="Relación con Dios" name="relacion" value={formData.relacion} onChange={handleChange} placeholder="Describe brevemente..." />
+
+              <div className="border-t border-white/5 pt-6 mt-6 space-y-4">
+                <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest text-center">Configuración de Seguridad</p>
+                <InputField
+                  label="Pregunta de Seguridad (Para recuperar PIN)"
+                  name="preguntaSeguridad"
+                  value={formData.preguntaSeguridad}
+                  onChange={handleChange}
+                  placeholder="EJ. ¿NOMBRE DE TU MASCOTA?"
+                />
+                <InputField
+                  label="Respuesta de Seguridad"
+                  name="respuestaSeguridad"
+                  value={formData.respuestaSeguridad}
+                  onChange={handleChange}
+                  placeholder="TU RESPUESTA..."
+                />
+              </div>
             </div>
 
             {error && <div className="text-center text-red-500 bg-red-500/10 p-3 rounded-lg text-xs font-bold">{error}</div>}

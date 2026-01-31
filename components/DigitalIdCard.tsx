@@ -139,22 +139,22 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#050505] rounded-[2rem] border-2 border-blue-500/20 shadow-2xl flex flex-col items-center justify-center p-8"
+          className="absolute inset-0 bg-[#050505] rounded-[2rem] border-2 border-blue-500/20 shadow-2xl flex flex-col items-center justify-center p-6 md:p-8"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
-          <div className="text-center mb-6">
+          <div className="text-center mb-4 md:mb-6">
             <h3 className="text-[10px] font-black text-white uppercase tracking-[0.4em] mb-1 leading-none">ACCESO DIGITAL</h3>
-            <p className="text-[8px] text-blue-500 font-bold uppercase tracking-widest opacity-50">AGENCY OF EXPERIENCE</p>
+            <p className="text-[7px] md:text-[8px] text-blue-500 font-bold uppercase tracking-widest opacity-50">AGENCY OF EXPERIENCE</p>
           </div>
 
-          <div className={`p-4 bg-white rounded-[2.5rem] shadow-2xl transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-4'}`}>
-            <img src={qrUrl} alt="QR" className="w-40 h-40" />
+          <div className={`p-3 md:p-4 bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-4'}`}>
+            <img src={qrUrl} alt="QR" className="w-32 h-32 md:w-40 md:h-40" />
           </div>
 
-          <div className="mt-8 w-full">
-            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
-              <p className="text-[7px] text-gray-600 font-black uppercase mb-1">FIRMA DIGITAL</p>
-              <p className="text-[8px] font-mono text-blue-400 break-all leading-tight opacity-40">
+          <div className="mt-6 md:mt-8 w-full">
+            <div className="bg-white/5 p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 text-center">
+              <p className="text-[6px] text-gray-600 font-black uppercase mb-1">FIRMA DIGITAL</p>
+              <p className="text-[7px] md:text-[8px] font-mono text-blue-400 break-all leading-tight opacity-40">
                 {agent.idSignature || `C2026-N-${agent.id}`}
               </p>
             </div>

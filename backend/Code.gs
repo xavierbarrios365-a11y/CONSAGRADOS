@@ -414,21 +414,10 @@ function repairMissingData() {
 
 /****************************************************************************************************************************
  * 🚀 SETUP AUTOMÁTICO DE BASE DE DATOS
- * 
- * INSTRUCCIONES: Ejecuta esta función UNA VEZ desde el Editor de Apps Script para crear todas las hojas necesarias.
- * Menú: Ejecutar > Ejecutar función > setupDatabase
- * 
- * Esta función:
- * 1. Verifica si existen las hojas requeridas
- * 2. Las crea automáticamente si no existen
- * 3. Añade las columnas/cabeceras correctas
- * 4. Envía notificación a Telegram con el resultado
  ****************************************************************************************************************************/
 
 function setupDatabase() {
   const CONFIG = getGlobalConfig();
-  
-  // Verificar que el SPREADSHEET_ID esté configurado
   if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) {
     return "❌ ERROR: Debes configurar SPREADSHEET_ID en getGlobalConfig() antes de ejecutar.";
   }
@@ -436,37 +425,25 @@ function setupDatabase() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const results = [];
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 1. HOJA: DIRECTORIO_OFICIAL (Base de datos principal de agentes)
-  // ═══════════════════════════════════════════════════════════════════════════
   const directoryHeaders = [
     'ID', 'NOMBRE', 'PIN', 'RANGO', 'CARGO', 'FOTO URL', 'WHATSAPP', 
     'FECHA DE NACIMIENTO', 'TALENTO', 'BAUTIZADO', 'RELACION CON DIOS',
     'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO',
     'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN'
   ];
-  results.push(createSheetIfNotExists(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
+  results.push(ensureSheetColumns(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2. HOJA: INSCRIPCIONES (Formulario de nuevos agentes)
-  // ═══════════════════════════════════════════════════════════════════════════
   const enrollmentHeaders = [
     'TIMESTAMP', 'NOMBRE', 'WHATSAPP', 'FECHA DE NACIMIENTO', 'TALENTO', 
     'BAUTIZADO', 'RELACION CON DIOS', 'FOTO URL', 'PROCESADO'
   ];
-  results.push(createSheetIfNotExists(ss, CONFIG.ENROLLMENT_SHEET_NAME, enrollmentHeaders));
+  results.push(ensureSheetColumns(ss, CONFIG.ENROLLMENT_SHEET_NAME, enrollmentHeaders));
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 3. HOJA: ASISTENCIA (Registro de escaneos QR)
-  // ═══════════════════════════════════════════════════════════════════════════
   const attendanceHeaders = [
     'ID', 'TIPO', 'UBICACION', 'FECHA'
   ];
-  results.push(createSheetIfNotExists(ss, CONFIG.ATTENDANCE_SHEET_NAME, attendanceHeaders));
+  results.push(ensureSheetColumns(ss, CONFIG.ATTENDANCE_SHEET_NAME, attendanceHeaders));
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // RESUMEN Y NOTIFICACIÓN
-  // ═══════════════════════════════════════════════════════════════════════════
   const summary = results.join('\n');
   const telegramMessage = `🛠️ <b>SETUP DE BASE DE DATOS COMPLETADO</b>\n\n${summary}\n\n<i>Sistema CONSAGRADOS 2026 listo para operar.</i>`;
   sendTelegramNotification(telegramMessage);
@@ -476,55 +453,52 @@ function setupDatabase() {
 }
 
 /**
- * @description Crea una hoja si no existe y añade las cabeceras.
- * @param {Spreadsheet} ss - El spreadsheet
- * @param {string} sheetName - Nombre de la hoja
- * @param {string[]} headers - Array de cabeceras
- * @returns {string} Mensaje de resultado
+ * @description Crea la hoja si no existe. Si existe, asegura que todas las columnas indicadas estén presentes.
  */
-function createSheetIfNotExists(ss, sheetName, headers) {
+function ensureSheetColumns(ss, sheetName, headers) {
   let sheet = ss.getSheetByName(sheetName);
   
-  if (sheet) {
-    // La hoja ya existe, verificar si tiene cabeceras
-    const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
-    if (!existingHeaders[0] || existingHeaders[0] === '') {
-      // No tiene cabeceras, añadirlas
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-      formatHeaders(sheet, headers.length);
-      return `📝 ${sheetName}: Ya existía, cabeceras añadidas.`;
-    }
-    return `✅ ${sheetName}: Ya existe y está configurada.`;
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    formatHeaders(sheet, headers.length);
+    sheet.setFrozenRows(1);
+    return `🆕 HOJA CREADA: ${sheetName}`;
   }
   
-  // Crear nueva hoja
-  sheet = ss.insertSheet(sheetName);
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  formatHeaders(sheet, headers.length);
+  const lastCol = sheet.getLastColumn() || 1;
+  const existingHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim().toUpperCase());
+  const missingHeaders = headers.filter(h => !existingHeaders.includes(String(h).toUpperCase()));
   
-  return `🆕 ${sheetName}: Creada exitosamente con ${headers.length} columnas.`;
+  if (missingHeaders.length > 0) {
+    const startCol = lastCol + 1;
+    sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+    formatHeaders(sheet, missingHeaders.length, startCol);
+    return `✅ HOJA ACTUALIZADA: ${sheetName} (Añadidas: ${missingHeaders.join(', ')})`;
+  }
+  
+  return `ℹ️ HOJA AL DÍA: ${sheetName}`;
 }
 
-/**
- * @description Aplica formato profesional a las cabeceras.
- */
-function formatHeaders(sheet, numCols) {
-  const headerRange = sheet.getRange(1, 1, 1, numCols);
-  headerRange.setBackground('#1a1a2e');
-  headerRange.setFontColor('#ffffff');
-  headerRange.setFontWeight('bold');
-  headerRange.setHorizontalAlignment('center');
-  sheet.setFrozenRows(1);
+function createSheetIfNotExists(ss, sheetName, headers) {
+  return ensureSheetColumns(ss, sheetName, headers);
+}
+
+function formatHeaders(sheet, numCols, startCol = 1) {
+  const range = sheet.getRange(1, startCol, 1, numCols);
+  range.setBackground('#1a1a2e')
+       .setFontColor('#ffffff')
+       .setFontWeight('bold')
+       .setHorizontalAlignment('center')
+       .setVerticalAlignment('middle');
   
-  // Ajustar ancho de columnas
-  for (let i = 1; i <= numCols; i++) {
+  for (let i = startCol; i < startCol + numCols; i++) {
     sheet.setColumnWidth(i, 150);
   }
 }
 
-
 /**
- * @description VERIFICAR ESTADO DEL SISTEMA - Ejecutar para diagnóstico rápido.
+ * @description VERIFICAR ESTADO DEL SISTEMA
  */
 function checkSystemStatus() {
   const CONFIG = getGlobalConfig();
@@ -553,7 +527,7 @@ function checkSystemStatus() {
 }
 
 /**
- * @description Obtiene la pregunta de seguridad de un agente.
+ * @description Obtiene la pregunta de seguridad
  */
 function getSecurityQuestion(data) {
   const CONFIG = getGlobalConfig();
@@ -574,7 +548,7 @@ function getSecurityQuestion(data) {
 }
 
 /**
- * @description Valida respuesta de seguridad y devuelve el PIN o resetea.
+ * @description Valida respuesta de seguridad
  */
 function resetPasswordWithAnswer(data) {
   const CONFIG = getGlobalConfig();
@@ -604,7 +578,7 @@ function resetPasswordWithAnswer(data) {
 }
 
 /**
- * @description Actualiza el PIN de un agente, su pregunta de seguridad y marca el cambio obligatorio como completado.
+ * @description Actualiza el password
  */
 function updateUserPassword(data) {
   const CONFIG = getGlobalConfig();
@@ -621,19 +595,10 @@ function updateUserPassword(data) {
   const agentRowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
   if (agentRowIdx === -1) throw new Error("Agente no encontrado.");
   
-  // Actualizar datos
   sheet.getRange(agentRowIdx + 1, pinCol + 1).setValue(data.newPin);
-  
-  if (data.question && questionCol !== -1) {
-    sheet.getRange(agentRowIdx + 1, questionCol + 1).setValue(data.question);
-  }
-  if (data.answer && answerCol !== -1) {
-    sheet.getRange(agentRowIdx + 1, answerCol + 1).setValue(data.answer);
-  }
-  
-  if (mustChangeCol !== -1) {
-    sheet.getRange(agentRowIdx + 1, mustChangeCol + 1).setValue('NO');
-  }
+  if (data.question && questionCol !== -1) sheet.getRange(agentRowIdx + 1, questionCol + 1).setValue(data.question);
+  if (data.answer && answerCol !== -1) sheet.getRange(agentRowIdx + 1, answerCol + 1).setValue(data.answer);
+  if (mustChangeCol !== -1) sheet.getRange(agentRowIdx + 1, mustChangeCol + 1).setValue('NO');
   
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }

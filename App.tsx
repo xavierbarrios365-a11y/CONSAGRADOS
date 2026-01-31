@@ -436,8 +436,16 @@ const App: React.FC = () => {
         return <EnrollmentForm onSuccess={handleEnrollmentSuccess} />;
       case AppView.PROFILE:
         return (
-          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24">
-            {currentUser && <DigitalIdCard key={currentUser?.id} agent={currentUser} />}
+          <div className="p-6 md:p-10 min-h-[calc(100svh-160px)] md:h-full flex flex-col items-center justify-center animate-in fade-in relative">
+            <button
+              onClick={() => setView(AppView.CIU)}
+              className="absolute top-6 right-6 md:top-10 md:right-10 bg-white/5 hover:bg-white/10 p-4 rounded-2xl border border-white/10 text-gray-400 hover:text-white transition-all active:scale-95 group z-50"
+            >
+              <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            </button>
+            <div className="w-full flex justify-center">
+              {currentUser && <DigitalIdCard key={currentUser?.id} agent={currentUser} />}
+            </div>
           </div>
         );
       default: return null;

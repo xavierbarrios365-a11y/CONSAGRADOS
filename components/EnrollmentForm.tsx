@@ -127,12 +127,12 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-2xl mx-auto animate-in fade-in duration-500 pb-24">
-      <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
+    <div className="p-6 md:p-10 max-w-2xl mx-auto animate-in fade-in duration-500 pb-24 font-montserrat">
+      <div className="bg-[#001833] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
         <div className="space-y-8">
           <div className="space-y-1">
-            <h2 className="text-3xl font-orbitron font-bold text-white tracking-widest">INSCRIPCIÓN</h2>
-            <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.4em]">Registro de Nuevo Agente</p>
+            <h2 className="text-3xl font-bebas font-bold text-white tracking-widest">INSCRIPCIÓN</h2>
+            <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] font-montserrat">Registro de Nuevo Agente</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -145,8 +145,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
                 <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />
               ) : (
                 <div className="space-y-2 text-gray-500">
-                  <UploadCloud size={32} className="mx-auto" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Subir Foto de Perfil</p>
+                  <UploadCloud size={32} className="mx-auto text-[#ffb700]" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest font-bebas">Subir Foto de Perfil</p>
                   <p className="text-xs">Toca para seleccionar una imagen</p>
                 </div>
               )}
@@ -166,7 +166,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
               <TextAreaField label="Relación con Dios" name="relacion" value={formData.relacion} onChange={handleChange} placeholder="Describe brevemente..." />
 
               <div className="border-t border-white/5 pt-6 mt-6 space-y-4">
-                <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest text-center">Configuración de Seguridad</p>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest text-center font-bebas">Configuración de Seguridad</p>
                 <InputField
                   label="Pregunta de Seguridad (Para recuperar PIN)"
                   name="preguntaSeguridad"
@@ -186,7 +186,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
 
             {error && <div className="text-center text-red-500 bg-red-500/10 p-3 rounded-lg text-xs font-bold">{error}</div>}
 
-            <button type="submit" disabled={status !== 'IDLE'} className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all ${status !== 'IDLE' ? (status === 'SUCCESS' ? 'bg-green-600' : status === 'ERROR' ? 'bg-red-600' : 'bg-gray-800 text-gray-500') : 'bg-blue-600 hover:bg-blue-500 shadow-xl'
+            <button type="submit" disabled={status !== 'IDLE'} className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all font-bebas ${status !== 'IDLE' ? (status === 'SUCCESS' ? 'bg-green-600' : status === 'ERROR' ? 'bg-red-600' : 'bg-gray-800 text-gray-500') : 'bg-[#ffb700] text-[#001f3f] shadow-xl hover:bg-[#ffb700]/90'
               } text-white`}>
               {getButtonContent()}
             </button>
@@ -200,15 +200,15 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
 // --- Componentes de Formulario Reutilizables ---
 const InputField = ({ label, ...props }) => (
   <div>
-    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1">{label}</label>
-    <input {...props} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-blue-500 transition-all" />
+    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">{label}</label>
+    <input {...props} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all font-montserrat" />
   </div>
 );
 
 const SelectField = ({ label, options, ...props }) => (
   <div>
-    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1">{label}</label>
-    <select {...props} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-blue-500 transition-all appearance-none">
+    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">{label}</label>
+    <select {...props} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat">
       {options.map(o => <option key={o} value={o} className="bg-black">{o}</option>)}
     </select>
   </div>
@@ -216,7 +216,7 @@ const SelectField = ({ label, options, ...props }) => (
 
 const TextAreaField = ({ label, ...props }) => (
   <div>
-    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1">{label}</label>
-    <textarea {...props} rows={3} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-blue-500 transition-all resize-none" />
+    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">{label}</label>
+    <textarea {...props} rows={3} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all resize-none font-montserrat" />
   </div>
 );

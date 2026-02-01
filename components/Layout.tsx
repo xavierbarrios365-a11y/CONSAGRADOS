@@ -28,19 +28,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
   const filteredNavItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <div className="flex flex-col h-screen bg-[#020202] text-[#f8f9fa] overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#001f3f] text-[#f4f4f4] overflow-hidden font-montserrat">
       <header className="h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
         <div className="flex items-center gap-3">
           <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-7 md:h-8 w-auto object-contain transition-transform active:scale-95" />
           <div className="flex flex-col">
-            <h1 className="font-orbitron font-bold text-[10px] md:text-xs tracking-widest text-white leading-none">CONSAGRADOS 2026</h1>
-            <p className="text-[6px] md:text-[7px] text-blue-500 font-black uppercase tracking-[0.2em]">Agency of Experience</p>
+            <h1 className="font-bebas text-[12px] md:text-sm tracking-[0.15em] text-white leading-none">CONSAGRADOS 2026</h1>
+            <p className="text-[6px] md:text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">Agency of Experience</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
             <p className="text-[10px] font-black text-white uppercase leading-none">{userName.split(' ')[0]}</p>
-            <p className="text-[7px] text-blue-400 font-bold uppercase tracking-widest">{userRole}</p>
+            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest">{userRole}</p>
           </div>
           <button onClick={onLogout} className="p-2 text-gray-500 hover:text-white transition-colors bg-white/5 rounded-lg">
             <LogOut size={16} />
@@ -55,8 +55,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
               <button
                 key={item.id}
                 onClick={() => setView(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeView === item.id
-                  ? 'bg-blue-600/10 text-blue-400 border-l-2 border-blue-500'
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeView === item.id
+                  ? 'bg-[#ffb700]/10 text-[#ffb700] border-l-4 border-[#ffb700]'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
                   }`}
               >
@@ -67,7 +67,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto pb-24 md:pb-0 bg-[#050505]">
+        <main className="flex-1 overflow-y-auto pb-24 md:pb-0 bg-[#001833]">
           <div className="max-w-screen-xl mx-auto h-full">
             {children}
           </div>
@@ -79,10 +79,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${activeView === item.id ? 'text-blue-400' : 'text-gray-500'
+            className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${activeView === item.id ? 'text-[#ffb700]' : 'text-gray-500'
               }`}
           >
-            <div className={`p-1 rounded-lg ${activeView === item.id ? 'bg-blue-500/10' : ''}`}>
+            <div className={`p-1.5 rounded-xl ${activeView === item.id ? 'bg-[#ffb700]/10' : ''}`}>
               {item.icon}
             </div>
             <span className="text-[7px] font-black uppercase tracking-widest">{item.label}</span>

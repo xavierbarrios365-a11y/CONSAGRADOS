@@ -75,28 +75,28 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
           <div className="p-5 flex justify-between items-start z-10">
             <div>
-              <p className="text-[7px] md:text-[8px] text-blue-500 font-black uppercase tracking-[0.2em] mb-1 leading-none">CONSAGRADOS 2026</p>
-              <h2 className="text-[10px] md:text-xs font-orbitron font-bold text-white tracking-widest uppercase truncate max-w-[150px]">
+              <p className="text-[7px] md:text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] mb-1 leading-none font-montserrat">CONSAGRADOS 2026</p>
+              <h2 className="text-[12px] md:text-sm font-bebas text-white tracking-widest uppercase truncate max-w-[150px]">
                 {agent.name.split(' ')[0]}
               </h2>
             </div>
-            <Shield size={18} className="text-blue-500 opacity-50" />
+            <Shield size={18} className="text-[#ffb700] opacity-50" />
           </div>
 
           <div className="flex flex-col items-center px-6 mt-0 md:mt-1">
             <div className="relative mb-2">
-              <div className="absolute inset-0 bg-blue-600 blur-xl opacity-10"></div>
+              <div className="absolute inset-0 bg-[#ffb700] blur-xl opacity-10"></div>
               <img
                 src={imgError ? "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" : formatDriveUrl(agent.photoUrl)}
                 alt={agent.name}
                 onError={() => setImgError(true)}
-                className="relative w-24 h-24 md:w-28 md:h-28 rounded-3xl object-cover border-2 border-blue-500/30 shadow-lg grayscale hover:grayscale-0 transition-all duration-500"
+                className="relative w-24 h-24 md:w-28 md:h-28 rounded-3xl object-cover border-2 border-[#ffb700]/30 shadow-lg grayscale hover:grayscale-0 transition-all duration-500"
               />
             </div>
             <div className="text-center px-2">
-              <p className="text-[10px] md:text-[11px] font-black text-white uppercase tracking-wider leading-tight">{agent.name}</p>
-              <span className="inline-block bg-blue-600/10 border border-blue-500/20 px-3 py-0.5 rounded-full mt-1">
-                <p className="text-[7px] text-blue-400 font-bold uppercase tracking-[0.2em]">{agent.rank}</p>
+              <p className="text-[10px] md:text-[11px] font-black text-white uppercase tracking-wider leading-tight font-montserrat">{agent.name}</p>
+              <span className="inline-block bg-[#ffb700]/10 border border-[#ffb700]/20 px-3 py-0.5 rounded-full mt-1">
+                <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-[0.2em] font-bebas">{agent.rank}</p>
               </span>
             </div>
           </div>
@@ -109,7 +109,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
               </div>
               <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
                 <p className="text-[6px] text-gray-500 font-black uppercase mb-0.5">XP TÁCTICA</p>
-                <p className="text-[9px] font-black text-blue-500 leading-none">{agent.xp} PTS</p>
+                <p className="text-[9px] font-black text-[#ffb700] leading-none">{agent.xp} PTS</p>
               </div>
             </div>
 
@@ -131,21 +131,21 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
             </div>
           </div>
 
-          <div className="bg-blue-600/5 p-3 border-t border-white/5 flex justify-between items-center mt-auto">
-            <p className="text-[7px] text-blue-400 font-bold uppercase tracking-widest leading-none">AGENCY OF EXPERIENCE</p>
-            <ShieldCheck size={12} className="text-blue-500 opacity-50" />
+          <div className="bg-[#ffb700]/5 p-3 border-t border-white/5 flex justify-between items-center mt-auto">
+            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest leading-none font-bebas">AGENCY OF EXPERIENCE</p>
+            <ShieldCheck size={12} className="text-[#ffb700] opacity-50" />
           </div>
         </div>
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#050505] rounded-[2rem] border-2 border-blue-500/20 shadow-2xl flex flex-col items-center justify-between p-4 md:p-6"
+          className="absolute inset-0 bg-[#001f3f] rounded-[2rem] border-2 border-[#ffb700]/20 shadow-2xl flex flex-col items-center justify-between p-4 md:p-6"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           {/* Header compacto */}
           <div className="text-center pt-2">
-            <h3 className="text-[9px] font-black text-white uppercase tracking-[0.3em] mb-0.5 leading-none">ACCESO DIGITAL</h3>
-            <p className="text-[6px] text-blue-500 font-bold uppercase tracking-widest opacity-50">AGENCY OF EXPERIENCE</p>
+            <h3 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em] mb-0.5 leading-none">ACCESO DIGITAL</h3>
+            <p className="text-[6px] text-[#ffb700] font-bold uppercase tracking-widest opacity-50 font-montserrat">AGENCY OF EXPERIENCE</p>
           </div>
 
           {/* QR Central - Ocupa el espacio principal */}
@@ -157,7 +157,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
           <div className="w-full pb-2">
             <div className="bg-white/5 p-2 md:p-3 rounded-xl border border-white/5 text-center">
               <p className="text-[5px] md:text-[6px] text-gray-600 font-black uppercase mb-0.5">FIRMA DIGITAL</p>
-              <p className="text-[6px] md:text-[7px] font-mono text-blue-400 break-all leading-tight opacity-40">
+              <p className="text-[6px] md:text-[7px] font-mono text-[#ffb700] break-all leading-tight opacity-40">
                 {agent.idSignature || `C2026-N-${agent.id}`}
               </p>
             </div>
@@ -171,7 +171,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
 const InfoItem = ({ icon, label, value }: { icon: any, label: string, value: string }) => (
   <div className="flex items-center gap-2 border-b border-white/5 pb-1">
-    <span className="text-blue-500 opacity-40">{icon}</span>
+    <span className="text-[#ffb700] opacity-40">{icon}</span>
     <div className="flex justify-between w-full items-center">
       <span className="text-[6px] text-gray-500 font-black uppercase tracking-widest">{label}</span>
       <span className="text-[8px] text-white font-bold uppercase truncate max-w-[120px] text-right">{value}</span>

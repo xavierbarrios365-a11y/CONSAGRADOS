@@ -99,9 +99,9 @@ const App: React.FC = () => {
 
                       const scannerFrame = document.querySelector('.scanner-frame');
                       if (scannerFrame) {
-                        scannerFrame.classList.add('border-green-500', 'shadow-[0_0_30px_rgba(34,197,94,0.5)]');
+                        scannerFrame.classList.add('border-[#ffb700]', 'shadow-[0_0_30px_rgba(255,183,0,0.5)]');
                         setTimeout(() => {
-                          scannerFrame.classList.remove('border-green-500', 'shadow-[0_0_30px_rgba(34,197,94,0.5)]');
+                          scannerFrame.classList.remove('border-[#ffb700]', 'shadow-[0_0_30px_rgba(255,183,0,0.5)]');
                         }, 500);
                       }
                       lastScanTime = now;
@@ -352,7 +352,7 @@ const App: React.FC = () => {
                 placeholder="BUSCAR AGENTE..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-blue-500"
+                className="w-full bg-[#001833] border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] font-montserrat"
               />
             </div>
             <div className="grid grid-cols-1 gap-2">
@@ -365,9 +365,9 @@ const App: React.FC = () => {
                       onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                     />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] font-black text-white uppercase">{a.name}</p>
-                    <p className="text-[8px] text-blue-500 font-bold uppercase tracking-widest">{a.id}</p>
+                  <div className="flex-1 font-montserrat">
+                    <p className="text-[10px] font-black text-white uppercase font-bebas tracking-wider">{a.name}</p>
+                    <p className="text-[8px] text-[#ffb700] font-bold uppercase tracking-widest">{a.id}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] font-black text-white">{a.xp} XP</p>
@@ -381,17 +381,17 @@ const App: React.FC = () => {
         return (
           <div className="p-6 md:p-10 flex flex-col items-center justify-between animate-in fade-in h-[calc(100svh-160px)] md:h-full pt-6 pb-10">
             <div className="text-center space-y-1 mb-4">
-              <h2 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Scanner Táctico</h2>
-              <p className="text-[7px] text-blue-500 font-bold uppercase tracking-widest opacity-60 text-center">Apunta al código QR del agente</p>
+              <h2 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em]">Scanner Táctico</h2>
+              <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 text-center font-montserrat">Apunta al código QR del agente</p>
             </div>
             <div className={`relative w-full max-w-[280px] md:max-w-xs aspect-square border-2 rounded-[2.5rem] overflow-hidden bg-black transition-all duration-300 scanner-frame ${scanStatus === 'SUCCESS' ? 'border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' :
-              scanStatus === 'SCANNING' ? 'border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)]' :
-                'border-blue-500/20 shadow-[0_0_50px_rgba(37,99,235,0.1)]'
+              scanStatus === 'SCANNING' ? 'border-[#ffb700] shadow-[0_0_50px_rgba(255,183,0,0.3)]' :
+                'border-[#ffb700]/20 shadow-[0_0_50px_rgba(255,183,0,0.1)]'
               }`}>
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale opacity-70" />
               <div className={`absolute top-0 left-0 w-full h-0.5 shadow-[0_0_15px_blue] animate-scan-line ${scanStatus === 'SUCCESS' ? 'bg-green-500 shadow-green-500' :
-                scanStatus === 'SCANNING' ? 'bg-yellow-500 shadow-yellow-500' :
-                  'bg-blue-500 shadow-blue-500'
+                scanStatus === 'SCANNING' ? 'bg-[#ffb700] shadow-[#ffb700]' :
+                  'bg-[#ffb700] shadow-[#ffb700]'
                 }`}></div>
 
               {/* Overlay táctico */}
@@ -423,9 +423,9 @@ const App: React.FC = () => {
               <button
                 onClick={() => processScan()}
                 disabled={!scannedId || scanStatus !== 'IDLE'}
-                className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${!scannedId || scanStatus !== 'IDLE'
+                className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all font-bebas ${!scannedId || scanStatus !== 'IDLE'
                   ? 'bg-gray-800 text-gray-500'
-                  : 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] active:scale-95'
+                  : 'bg-[#ffb700] text-[#001f3f] shadow-[0_10px_30px_rgba(255,183,0,0.2)] active:scale-95'
                   }`}
               >
                 {scanStatus === 'IDLE' ? 'Confirmar Registro' : 'Procesando...'}
@@ -457,15 +457,15 @@ const App: React.FC = () => {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#020202] relative overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-900/5 rounded-full blur-[120px]"></div>
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#001f3f] relative overflow-hidden font-montserrat">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#ffb700]/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#ffb700]/5 rounded-full blur-[120px]"></div>
 
         <div className="w-full max-w-sm space-y-10 z-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
           <div className="text-center">
-            <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo Consagrados" className="h-28 w-auto mx-auto mb-6 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]" />
-            <h1 className="text-4xl font-orbitron font-bold text-white tracking-[0.2em] mb-1">CONSAGRADOS</h1>
-            <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.5em] opacity-80">Agency of Experience</p>
+            <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo Consagrados" className="h-28 w-auto mx-auto mb-6 drop-shadow-[0_0_30px_rgba(255,183,0,0.4)]" />
+            <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] mb-1">CONSAGRADOS</h1>
+            <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.5em] opacity-80 font-montserrat">Agency of Experience</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -475,7 +475,7 @@ const App: React.FC = () => {
                 placeholder="ID O CÉDULA"
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-blue-500 transition-all focus:bg-white/10"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] transition-all focus:bg-white/10 font-montserrat"
               />
             </div>
             <div className="relative">
@@ -484,7 +484,7 @@ const App: React.FC = () => {
                 placeholder="PIN DE SEGURIDAD"
                 value={loginPin}
                 onChange={(e) => setLoginPin(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-blue-500 transition-all focus:bg-white/10"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] transition-all focus:bg-white/10 font-montserrat"
               />
               <button type="button" onClick={() => setShowPin(!showPin)} className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white transition-colors">
                 {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -497,7 +497,7 @@ const App: React.FC = () => {
             )}
             <button
               type="submit"
-              className="w-full bg-blue-600 py-6 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:bg-blue-500 active:scale-[0.98] transition-all"
+              className="w-full bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-[0_10px_30px_rgba(255,183,0,0.2)] hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
             >
               Entrar al Command Center
             </button>
@@ -510,15 +510,15 @@ const App: React.FC = () => {
                 setForgotPasswordStep('ID');
                 setResetError('');
               }}
-              className="text-[9px] text-gray-500 font-bold uppercase tracking-widest hover:text-blue-500 transition-colors"
+              className="text-[9px] text-gray-500 font-bold uppercase tracking-widest hover:text-[#ffb700] transition-colors font-montserrat"
             >
               ¿Olvidaste tu PIN de acceso? Solicitar Recuperación
             </button>
           </div>
 
           <div className="pt-8 border-t border-white/5 flex flex-col items-center gap-2 opacity-30">
-            <Activity size={16} className="text-blue-500" />
-            <p className="text-[7px] font-black text-gray-500 uppercase tracking-[0.4em]">SISTEMAS OPERATIVOS NOMINALES</p>
+            <Activity size={16} className="text-[#ffb700]" />
+            <p className="text-[7px] font-black text-gray-500 uppercase tracking-[0.4em] font-bebas">SISTEMAS OPERATIVOS NOMINALES</p>
           </div>
         </div>
 
@@ -549,20 +549,20 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-4 border-t border-white/5 pt-6">
-                <p className="text-[9px] text-blue-500 font-bold uppercase tracking-widest text-center">Configura tu Recuperación</p>
+                <p className="text-[9px] text-[#ffb700] font-bold uppercase tracking-widest text-center font-bebas">Configura tu Recuperación</p>
                 <input
                   type="text"
                   placeholder="PREGUNTA (EF. ¿NOMBRE DE TU MASCOTA?)"
                   value={newQuestionInput}
                   onChange={(e) => setNewQuestionInput(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-bold outline-none focus:border-blue-500 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-bold outline-none focus:border-[#ffb700] transition-all"
                 />
                 <input
                   type="text"
                   placeholder="RESPUESTA DE SEGURIDAD"
                   value={newAnswerInput}
                   onChange={(e) => setNewAnswerInput(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-bold outline-none focus:border-blue-500 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-bold outline-none focus:border-[#ffb700] transition-all"
                 />
               </div>
 
@@ -588,10 +588,10 @@ const App: React.FC = () => {
                 <X size={16} /> Cancelar Operación
               </button>
 
-              <div className="bg-[#0a0a0a] border border-blue-500/20 rounded-[3rem] p-10 space-y-8">
+              <div className="bg-[#001833] border border-[#ffb700]/20 rounded-[3rem] p-10 space-y-8 font-montserrat shadow-2xl">
                 <div className="text-center space-y-2">
-                  <h3 className="text-white font-black uppercase tracking-widest text-sm">RECUPERACIÓN DE ACCESO</h3>
-                  <p className="text-[9px] text-blue-500 font-bold uppercase tracking-[0.2em]">PROTOCOLO DE SEGURIDAD V37</p>
+                  <h3 className="text-white font-black uppercase tracking-widest text-sm font-bebas">RECUPERACIÓN DE ACCESO</h3>
+                  <p className="text-[9px] text-[#ffb700] font-bold uppercase tracking-[0.2em] font-montserrat">PROTOCOLO DE SEGURIDAD V37</p>
                 </div>
 
                 {forgotPasswordStep === 'ID' && (
@@ -746,13 +746,13 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
   <button
     onClick={onClick}
     disabled={disabled}
-    className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 hover:border-blue-500/50 transition-all disabled:opacity-50"
+    className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/10 hover:border-[#ffb700]/50 transition-all disabled:opacity-50 font-bebas"
   >
     <div className="flex items-center gap-3">
-      <span className="text-blue-500">{icon}</span>
+      <span className="text-[#ffb700]">{icon}</span>
       {label}
     </div>
-    <div className="w-5 h-5 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-[10px] text-blue-400">+</div>
+    <div className="w-5 h-5 rounded-full bg-[#ffb700]/10 border border-[#ffb700]/30 flex items-center justify-center text-[10px] text-[#ffb700]">+</div>
   </button>
 );
 

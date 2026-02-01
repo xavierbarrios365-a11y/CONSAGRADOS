@@ -69,7 +69,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
         {/* FRENTE */}
         <div
           className="absolute inset-0 bg-[#0a0a0a] rounded-[2rem] border-2 border-white/10 shadow-2xl flex flex-col overflow-hidden"
-          style={{ backfaceVisibility: 'hidden' }}
+          style={{
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            transform: 'translateZ(1px)' // Forzar separación 3D en móviles
+          }}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-transparent"></div>
 
@@ -141,7 +145,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
         {/* DORSO */}
         <div
           className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col items-center justify-center p-6 space-y-8"
-          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          style={{
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg) translateZ(1px)' // Forzar separación 3D en móviles
+          }}
         >
           {/* Header compacto */}
           <div className="text-center px-4">

@@ -131,9 +131,10 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
             </div>
           </div>
 
-          <div className="bg-[#ffb700]/5 p-3 border-t border-white/5 flex justify-between items-center mt-auto">
-            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest leading-none font-bebas">AGENCY OF EXPERIENCE</p>
-            <ShieldCheck size={12} className="text-[#ffb700] opacity-50" />
+          <div className="bg-[#ffb700]/5 p-3 border-t border-white/5 flex flex-col items-center mt-auto">
+            <p className="text-[5px] text-[#ffb700] font-bold uppercase tracking-widest leading-tight text-center font-bebas">
+              No pedimos permiso para ser luz. Vivimos en un mundo que celebra lo superficial y premia lo frágil. Pero nosotros no somos de ese mundo.
+            </p>
           </div>
         </div>
 
@@ -143,9 +144,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           {/* Header compacto */}
-          <div className="text-center pt-2">
-            <h3 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em] mb-0.5 leading-none">ACCESO DIGITAL</h3>
-            <p className="text-[6px] text-[#ffb700] font-bold uppercase tracking-widest opacity-50 font-montserrat">AGENCY OF EXPERIENCE</p>
+          <div className="text-center pt-2 px-4">
+            <h3 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em] mb-1 leading-none">ACCESO DIGITAL</h3>
+            <p className="text-[5px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 font-montserrat leading-tight">
+              NO PEDIMOS PERMISO PARA SER LUZ. VIVIMOS EN UN MUNDO QUE CELEBRA LO SUPERFICIAL Y PREMIA LO FRÁGIL. PERO NOSOTROS NO SOMOS DE ESE MUNDO.
+            </p>
           </div>
 
           {/* QR Central - Ocupa el espacio principal */}

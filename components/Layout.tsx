@@ -34,7 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-7 md:h-8 w-auto object-contain transition-transform active:scale-95" />
           <div className="flex flex-col">
             <h1 className="font-bebas text-[12px] md:text-sm tracking-[0.15em] text-white leading-none">CONSAGRADOS 2026</h1>
-            <p className="text-[6px] md:text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">Agency of Experience</p>
+            <p className="text-[6px] md:text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">No pedimos permiso para ser luz</p>
           </div>
         </div>
         <div className="flex items-center gap-4">

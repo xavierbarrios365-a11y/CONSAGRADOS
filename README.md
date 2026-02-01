@@ -4,7 +4,7 @@
 
 # 🛡️ CONSAGRADOS 2026 - Sistema de Gestión Táctica
 
-> **Agency of Experience** - Plataforma de gestión de comunidad religiosa con interfaz militar/táctica.
+> **No pedimos permiso para ser luz** - Plataforma de gestión de comunidad religiosa con interfaz militar/táctica.
 
 ## 📋 Descripción
 

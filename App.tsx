@@ -465,7 +465,17 @@ const App: React.FC = () => {
           <div className="text-center">
             <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo Consagrados" className="h-28 w-auto mx-auto mb-6 drop-shadow-[0_0_30px_rgba(255,183,0,0.4)]" />
             <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] mb-1">CONSAGRADOS</h1>
-            <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.5em] opacity-80 font-montserrat">Agency of Experience</p>
+            <div className="space-y-1 mt-2">
+              <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
+                No pedimos permiso para ser luz.
+              </p>
+              <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
+                Vivimos en un mundo que celebra lo superficial y premia lo frágil.
+              </p>
+              <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
+                Pero nosotros no somos de ese mundo.
+              </p>
+            </div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">

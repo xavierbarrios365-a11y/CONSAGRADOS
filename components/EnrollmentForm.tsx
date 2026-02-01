@@ -3,8 +3,11 @@ import React, { useState, useRef } from 'react';
 import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { uploadImage, enrollAgent } from '../services/sheetsService';
 
+import { UserRole } from '../types';
+
 interface EnrollmentFormProps {
   onSuccess: () => void;
+  userRole?: UserRole;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -16,7 +19,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => {
+export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userRole }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     whatsapp: '',
@@ -137,20 +140,23 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess }) => 
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/10 transition-all p-4"
-            >
-              {imagePreview ? (
-                <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />
-              ) : (
-                <div className="space-y-2 text-gray-500">
-                  <UploadCloud size={32} className="mx-auto text-[#ffb700]" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest font-bebas">Subir Foto de Perfil</p>
-                  <p className="text-xs">Toca para seleccionar una imagen</p>
-                </div>
-              )}
-            </div>
+
+            {userRole === UserRole.DIRECTOR && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/10 transition-all p-4"
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />
+                ) : (
+                  <div className="space-y-2 text-gray-500">
+                    <UploadCloud size={32} className="mx-auto text-[#ffb700]" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest font-bebas">Subir Foto de Perfil</p>
+                    <p className="text-xs">Toca para seleccionar una imagen</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-4">
               <InputField label="Nombre Completo *" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="EJ. JUAN PÉREZ" />

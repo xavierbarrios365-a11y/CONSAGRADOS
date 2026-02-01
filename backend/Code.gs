@@ -109,6 +109,8 @@ function doPost(e) {
         return getGuides(request.data);
       case 'delete_guide':
         return deleteGuide(request.data);
+      case 'update_agent_photo':
+        return updateAgentPhoto(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -138,7 +140,7 @@ function enrollAgent(data) {
       case 'ID CÉDULA':
       case 'ID': return newId; 
       case 'NOMBRE': return data.nombre || ''; 
-      case 'FELEFONO':
+      case 'TELEFONO':
       case 'WHATSAPP': return data.whatsapp || '';
       case 'FECHA DE NACIMIENTO':
       case 'FECHA_NACIMIENTO': return data.fechaNacimiento || ''; 
@@ -154,7 +156,7 @@ function enrollAgent(data) {
       case 'PIN': return newPin; 
       case 'STATUS':
       case 'ESTADO': return 'ACTIVO'; 
-      case 'RANGO': return 'RECLUTA';
+      case 'RANGO': return (data.nivel === 'LIDER' || data.nivel === 'DIRECTOR') ? 'ACTIVO' : 'RECLUTA';
       case 'PUNTOS XP':
       case 'XP': return 0; 
       case 'PUNTOS BIBLIA': return 0;
@@ -336,16 +338,19 @@ function reconstructDb() {
         case 'ID CÉDULA':
         case 'ID': return newId;
         case 'NOMBRE': return name;
-        case 'RANGO': return 'RECLUTA';
+        case 'RANGO': {
+           const cargo = (getE('CARGO') || getE('NIVEL_ACCESO') || '').toUpperCase();
+           return (cargo.includes('LIDER') || cargo.includes('DIRECTOR')) ? 'ACTIVO' : 'RECLUTA';
+        }
         case 'STATUS':
         case 'ESTADO': return 'ACTIVO';
         case 'CARGO':
-        case 'NIVEL_ACCESO': return 'Estudiante';
+        case 'NIVEL_ACCESO': return getE('CARGO') || getE('NIVEL_ACCESO') || 'Estudiante';
         case 'CONTRASEÑA/PIN':
         case 'PIN': return newPin;
         case 'FOTO URL':
         case 'FOTO_URL': return getE('FOTO URL') || getE('FOTO') || '';
-        case 'FELEFONO':
+        case 'TELEFONO':
         case 'WHATSAPP': return getE('WHATSAPP') || getE('TELÉFONO') || '';
         case 'FECHA DE NACIMIENTO':
         case 'FECHA_NACIMIENTO': return getE('FECHA DE NACIMIENTO') || getE('FECHA_NACIMIENTO') || '';
@@ -695,6 +700,36 @@ function deleteGuide(data) {
   
   const telegramMessage = `🗑️ <b>GUÍA ELIMINADA</b>\n\n<b>• Nombre:</b> ${guideName}\n<b>• Ejecutado por:</b> Director\n\n<i>El recurso ha sido retirado del centro de inteligencia.</i>`;
   sendTelegramNotification(telegramMessage);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Actualiza la foto de un agente.
+ */
+function updateAgentPhoto(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  const photoCol = (headers.indexOf('FOTO URL') + 1) || (headers.indexOf('FOTO_URL') + 1);
+  
+  if (photoCol === 0) throw new Error("Columna FOTO URL no encontrada.");
+
+  let rowIdx = -1;
+  for (let i = 1; i < directoryData.length; i++) {
+    if (String(directoryData[i][idCol]) === String(data.agentId)) {
+      rowIdx = i + 1;
+      break;
+    }
+  }
+
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  sheet.getRange(rowIdx, photoCol).setValue(data.photoUrl);
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }

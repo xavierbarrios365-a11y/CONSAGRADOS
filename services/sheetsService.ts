@@ -57,7 +57,7 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'BIBLIA': ['bible', 'biblia', 'puntos biblia'],
       'APUNTES': ['notes', 'apuntes', 'puntos apuntes', 'libretas'],
       'LIDERAZGO': ['leadership', 'liderazgo', 'puntos liderazgo'],
-      'WHATSAPP': ['whatsapp', 'teléfono', 'celular', 'felefono', 'telefono'],
+      'WHATSAPP': ['whatsapp', 'teléfono', 'celular', 'felefono', 'telefono', 'tel\u00C3\u00A9fono'],
       'FECHA_NACIMIENTO': ['birthday', 'fecha de nacimiento', 'nacimiento'],
       'FECHA_INGRESO': ['joineddate', 'fecha de ingreso', 'ingreso'],
       'RELACION_CON_DIOS': ['relationshipwithgod', 'relacion con dios', 'compromiso'],
@@ -286,6 +286,16 @@ export const deleteGuide = async (guideId: string) => {
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO ELIMINAR GUÍA:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateAgentPhoto = async (agentId: string, photoUrl: string) => {
+  try {
+    const response = await postToAction('update_agent_photo', { agentId, photoUrl });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ACTUALIZAR FOTO:", error);
     return { success: false, error: error.message };
   }
 };

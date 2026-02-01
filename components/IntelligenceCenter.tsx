@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Agent, UserRole, AppView } from '../types';
 import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
-import { reconstructDatabase } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto } from '../services/sheetsService';
+import { UploadCloud, Loader2, Camera } from 'lucide-react';
 
 interface CIUProps {
   agents: Agent[];
@@ -15,6 +16,8 @@ interface CIUProps {
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
 
   if (!agent) return <div className="p-10 text-center font-bebas text-[#ffb700] animate-pulse uppercase tracking-widest">Inicializando Nodo de Inteligencia...</div>;
@@ -29,6 +32,42 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       if (onUpdateNeeded) onUpdateNeeded();
     } else {
       alert(`ERROR: No se pudo completar la operación. ${res.error || ''}`);
+    }
+  };
+
+  const handlePhotoUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !agent) return;
+
+    setPhotoStatus('UPLOADING');
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const base64 = await base64Promise;
+      const uploadResult = await uploadImage(base64, file);
+
+      if (uploadResult.success && uploadResult.url) {
+        setPhotoStatus('SAVING');
+        const updateResult = await updateAgentPhoto(agent.id, uploadResult.url);
+        if (updateResult.success) {
+          setPhotoStatus('SUCCESS');
+          if (onUpdateNeeded) onUpdateNeeded();
+          setTimeout(() => setPhotoStatus('IDLE'), 3000);
+        } else {
+          throw new Error(updateResult.error || "Error al actualizar registro");
+        }
+      } else {
+        throw new Error(uploadResult.error || "Error al subir imagen");
+      }
+    } catch (err: any) {
+      alert(`ERROR: ${err.message}`);
+      setPhotoStatus('ERROR');
+      setTimeout(() => setPhotoStatus('IDLE'), 3000);
     }
   };
 
@@ -112,12 +151,34 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
               <div className="relative mb-8 group">
                 <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
-                <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner">
+                <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
                   <img
                     src={formatDriveUrl(agent.photoUrl)}
                     className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
                     onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                   />
+
+                  {currentUser?.userRole === UserRole.DIRECTOR && (
+                    <div
+                      onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                      className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
+                    >
+                      {photoStatus === 'IDLE' ? (
+                        <>
+                          <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
+                          <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
+                          <p className="text-[9px] text-white font-black uppercase tracking-widest">
+                            {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
                 </div>
               </div>
 

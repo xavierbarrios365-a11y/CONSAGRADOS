@@ -140,30 +140,25 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#001f3f] rounded-[2rem] border-2 border-[#ffb700]/20 shadow-2xl flex flex-col items-center justify-between p-4 md:p-6"
+          className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col items-center justify-center p-6 space-y-8"
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           {/* Header compacto */}
-          <div className="text-center pt-2 px-4">
-            <h3 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em] mb-1 leading-none">ACCESO DIGITAL</h3>
-            <p className="text-[5px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 font-montserrat leading-tight">
-              NO PEDIMOS PERMISO PARA SER LUZ. VIVIMOS EN UN MUNDO QUE CELEBRA LO SUPERFICIAL Y PREMIA LO FRÁGIL. PERO NOSOTROS NO SOMOS DE ESE MUNDO.
-            </p>
+          <div className="text-center px-4">
+            <h3 className="text-[14px] font-bebas text-white uppercase tracking-[0.3em] mb-2 leading-none">ACCESO DIGITAL</h3>
+            <div className="h-[1px] w-12 bg-[#ffb700]/30 mx-auto mb-2"></div>
           </div>
 
           {/* QR Central - Ocupa el espacio principal */}
-          <div className={`p-2 md:p-3 bg-white rounded-2xl md:rounded-3xl shadow-2xl transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
-            <img src={qrUrl} alt="QR" className="w-28 h-28 md:w-36 md:h-36" />
+          <div className={`p-3 bg-white rounded-3xl shadow-[0_0_30px_rgba(255,255,255,0.1)] transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+            <img src={qrUrl} alt="QR" className="w-32 h-32 md:w-40 md:h-40" />
           </div>
 
-          {/* Firma Digital Compacta - Fija abajo */}
-          <div className="w-full pb-2">
-            <div className="bg-white/5 p-2 md:p-3 rounded-xl border border-white/5 text-center">
-              <p className="text-[5px] md:text-[6px] text-gray-600 font-black uppercase mb-0.5">FIRMA DIGITAL</p>
-              <p className="text-[6px] md:text-[7px] font-mono text-[#ffb700] break-all leading-tight opacity-40">
-                {agent.idSignature || `C2026-N-${agent.id}`}
-              </p>
-            </div>
+          {/* Mantra Institucional en el Dorso */}
+          <div className="text-center px-6">
+            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest opacity-80 font-montserrat leading-relaxed italic">
+              "NO PEDIMOS PERMISO PARA SER LUZ. VIVIMOS EN UN MUNDO QUE CELEBRA LO SUPERFICIAL Y PREMIA LO FRÁGIL. PERO NOSOTROS NO SOMOS DE ESE MUNDO."
+            </p>
           </div>
         </div>
 

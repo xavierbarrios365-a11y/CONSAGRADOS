@@ -531,7 +531,7 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.ENROLLMENT:
-        return <EnrollmentForm onSuccess={handleEnrollmentSuccess} />;
+        return <EnrollmentForm onSuccess={handleEnrollmentSuccess} userRole={currentUser?.userRole} />;
       case AppView.PROFILE:
         return (
           <div className="p-6 md:p-10 min-h-[calc(100svh-160px)] md:h-full flex flex-col items-center justify-center animate-in fade-in relative">

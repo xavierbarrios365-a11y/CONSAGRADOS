@@ -516,10 +516,10 @@ const App: React.FC = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="ID O QR CAPTURADO..."
+                  placeholder="ID / NOMBRE..."
                   value={scannedId}
                   onChange={(e) => setScannedId(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-white text-[10px] font-bold uppercase tracking-[0.2em] outline-none focus:border-blue-500 transition-all text-center placeholder:opacity-30"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-white text-[12px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#ffb700] transition-all text-center placeholder:opacity-30 font-bebas"
                 />
                 {scannedId && (
                   <button
@@ -550,18 +550,23 @@ const App: React.FC = () => {
                     onFocus={() => {
                       if (manualSearchQuery.length > 0) setShowManualResults(true);
                     }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-[9px] font-bold uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all font-montserrat"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl py-4 pl-10 pr-4 text-white text-[10px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#ffb700] transition-all font-bebas"
                   />
                 </div>
 
                 {showManualResults && (
-                  <div className="absolute bottom-full mb-2 w-full bg-[#001833] border border-white/10 rounded-xl max-h-40 overflow-y-auto shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="absolute bottom-full mb-2 w-full bg-[#001f3f] border border-[#ffb700]/30 rounded-[2rem] max-h-60 overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] z-[100] animate-in fade-in slide-in-from-bottom-4">
+                    <div className="p-3 border-b border-white/5 bg-white/5">
+                      <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Resultados de Búsqueda</p>
+                    </div>
+
+                    {/* Agentes en Directorio */}
                     {agents
                       .filter(a =>
                         a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) ||
                         a.id.toLowerCase().includes(manualSearchQuery.toLowerCase())
                       )
-                      .slice(0, 10)
+                      .slice(0, 5)
                       .map(a => (
                         <div
                           key={a.id}
@@ -570,26 +575,63 @@ const App: React.FC = () => {
                             setManualSearchQuery(a.name);
                             setShowManualResults(false);
                           }}
-                          className="flex items-center gap-3 p-3 hover:bg-[#ffb700]/10 cursor-pointer border-b border-white/5 last:border-0 transition-colors"
+                          className="flex items-center gap-3 p-4 hover:bg-[#ffb700]/10 cursor-pointer border-b border-white/5 transition-colors group"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-gray-900 overflow-hidden shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-gray-950 overflow-hidden shrink-0 border border-white/10">
                             <img
                               src={formatDriveUrl(a.photoUrl)}
-                              className="w-full h-full object-cover grayscale"
+                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
                               onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                             />
                           </div>
                           <div className="flex-1 overflow-hidden">
-                            <p className="text-[8px] font-black text-white uppercase truncate font-bebas">{a.name}</p>
-                            <p className="text-[7px] text-[#ffb700] font-bold uppercase truncate">{a.id}</p>
+                            <p className="text-[10px] font-black text-white uppercase truncate font-bebas">{a.name}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[7px] text-[#ffb700] font-black uppercase tracking-widest">{a.id}</span>
+                              <span className="text-[6px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">AGENTE</span>
+                            </div>
                           </div>
                         </div>
                       ))}
-                    {agents.filter(a => a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) || a.id.toLowerCase().includes(manualSearchQuery.toLowerCase())).length === 0 && (
-                      <div className="p-4 text-center">
-                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Sin resultados</p>
-                      </div>
-                    )}
+
+                    {/* Visitantes en Radar */}
+                    {visitorRadar
+                      .filter(v => v.name.toLowerCase().includes(manualSearchQuery.toLowerCase()))
+                      .map(v => (
+                        <div
+                          key={v.id}
+                          onClick={() => {
+                            setScannedId(v.id);
+                            setManualSearchQuery(v.name);
+                            setShowManualResults(false);
+                          }}
+                          className="flex items-center gap-3 p-4 hover:bg-orange-500/10 cursor-pointer border-b border-white/5 transition-colors text-left"
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500/20 border-orange-500/40 text-orange-500' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                            <Target size={18} />
+                          </div>
+                          <div className="flex-1 overflow-hidden">
+                            <p className="text-[10px] font-black text-white uppercase truncate font-bebas">{v.name}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[7px] text-gray-400 font-black uppercase tracking-widest">{v.visits} VISITAS</span>
+                              <span className={`text-[6px] px-1.5 py-0.5 rounded font-bold ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/10 text-gray-500'}`}>{v.status}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                    {agents.filter(a => a.name.toLowerCase().includes(manualSearchQuery.toLowerCase())).length === 0 &&
+                      visitorRadar.filter(v => v.name.toLowerCase().includes(manualSearchQuery.toLowerCase())).length === 0 && (
+                        <div
+                          onClick={() => {
+                            setScannedId(manualSearchQuery);
+                            setShowManualResults(false);
+                          }}
+                          className="p-6 text-center hover:bg-white/5 cursor-pointer italic"
+                        >
+                          <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em]">Registrar "{manualSearchQuery}" como nuevo visitante</p>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>

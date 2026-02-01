@@ -113,6 +113,8 @@ function doPost(e) {
         return updateAgentPhoto(request.data);
       case 'get_visitor_radar':
         return getVisitorRadar();
+      case 'deduct_percentage_points':
+        return deductPercentagePoints(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -355,6 +357,40 @@ function updateAgentPoints(data) {
     const currentXp = parseInt(sheet.getRange(rowIdx, xpColIdx).getValue()) || 0;
     sheet.getRange(rowIdx, xpColIdx).setValue(currentXp + data.points);
   }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function deductPercentagePoints(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
+  const bibliaColIdx = headers.indexOf('PUNTOS BIBLIA') + 1;
+  const apuntesColIdx = headers.indexOf('PUNTOS APUNTES') + 1;
+  const liderazgoColIdx = headers.indexOf('PUNTOS LIDERAZGO') + 1;
+
+  let rowIdx = -1;
+  for (let i = 1; i < directoryData.length; i++) {
+    if (String(directoryData[i][0]) === String(data.agentId)) {
+      rowIdx = i + 1;
+      break;
+    }
+  }
+
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  const categories = [bibliaColIdx, apuntesColIdx, liderazgoColIdx, xpColIdx];
+  categories.forEach(col => {
+    if (col > 0) {
+      const current = parseInt(sheet.getRange(rowIdx, col).getValue()) || 0;
+      const newValue = Math.max(0, Math.floor(current * (1 - (data.percentage / 100))));
+      sheet.getRange(rowIdx, col).setValue(newValue);
+    }
+  });
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }

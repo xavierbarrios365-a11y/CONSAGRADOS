@@ -270,6 +270,16 @@ export const fetchGuides = async (userRole: UserRole) => {
   }
 };
 
+export const deductPercentagePoints = async (agentId: string, percentage: number) => {
+  try {
+    const response = await postToAction('deduct_percentage_points', { agentId, percentage });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO DEDUCCIÓN PORCENTUAL:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 export const uploadGuideMetadata = async (name: string, type: 'ESTUDIANTE' | 'LIDER', url: string) => {
   try {
     const response = await postToAction('upload_guide', { name, type, url });

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView } from '../types';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2 } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
-import { reconstructDatabase, uploadImage, updateAgentPhoto } from '../services/sheetsService';
-import { UploadCloud, Loader2, Camera } from 'lucide-react';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints } from '../services/sheetsService';
 
 interface CIUProps {
   agents: Agent[];
@@ -17,6 +16,7 @@ interface CIUProps {
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
+  const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
@@ -84,6 +84,43 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       alert(`ERROR: ${err.message}`);
       setPhotoStatus('ERROR');
       setTimeout(() => setPhotoStatus('IDLE'), 3000);
+    }
+  };
+  const handleUpdatePoints = async (type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
+    if (!agent) return;
+    if (points < 0 && !window.confirm(`🚨 ¿APLICAR SANCIÓN DE ${points} PUNTOS A ${agent.name}?`)) return;
+
+    setIsUpdatingPoints(true);
+    try {
+      const res = await updateAgentPoints(agent.id, type, points);
+      if (res.success) {
+        if (onUpdateNeeded) onUpdateNeeded();
+      } else {
+        alert("ERROR: Fallo en protocolo de puntos.");
+      }
+    } catch (err) {
+      alert("FALLO TÁCTICO DE CONEXIÓN");
+    } finally {
+      setIsUpdatingPoints(false);
+    }
+  };
+
+  const handlePercentageDeduction = async (percentage: number) => {
+    if (!agent) return;
+    if (!window.confirm(`🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿CONFIRMA LA EXPULSIÓN DE ${agent.name}?\nSe le descontará el ${percentage}% de TODOS sus puntos acumulados.`)) return;
+
+    setIsUpdatingPoints(true);
+    try {
+      const res = await deductPercentagePoints(agent.id, percentage);
+      if (res.success) {
+        if (onUpdateNeeded) onUpdateNeeded();
+      } else {
+        alert("FALLO EN PROTOCOLO DE EXPULSIÓN");
+      }
+    } catch (err) {
+      alert("FALLO TÁCTICO DE CONEXIÓN");
+    } finally {
+      setIsUpdatingPoints(false);
     }
   };
 
@@ -305,9 +342,68 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <MetricCard icon={<Book className="text-[#ffb700]" size={16} />} label="BIBLIA" value={agent.bible} color="from-[#ffb700] to-orange-600" />
-              <MetricCard icon={<FileText className="text-gray-400" size={16} />} label="NOTAS" value={agent.notes} color="from-gray-400 to-gray-600" />
-              <MetricCard icon={<Star className="text-[#ffb700]" size={16} />} label="LÍDER" value={agent.leadership} color="from-[#ffb700] to-orange-600" />
+              <MetricCard
+                icon={<Book className="text-[#ffb700]" size={16} />}
+                label="BIBLIA"
+                value={agent.bible}
+                color="from-[#ffb700] to-orange-600"
+                onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
+                disabled={isUpdatingPoints}
+              />
+              <MetricCard
+                icon={<FileText className="text-gray-400" size={16} />}
+                label="NOTAS"
+                value={agent.notes}
+                color="from-gray-400 to-gray-600"
+                onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
+                disabled={isUpdatingPoints}
+              />
+              <MetricCard
+                icon={<Star className="text-[#ffb700]" size={16} />}
+                label="LÍDER"
+                value={agent.leadership}
+                color="from-[#ffb700] to-orange-600"
+                onAdjust={(val) => handleUpdatePoints('LIDERAZGO', val)}
+                disabled={isUpdatingPoints}
+              />
+            </div>
+
+            {/* PANEL DE SANCIONES */}
+            <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <Gavel className="text-red-500" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
+                  <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SanctionOption
+                  label="Inasistencia"
+                  sub="Faltó a actividad"
+                  pts="-5"
+                  onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+                  disabled={isUpdatingPoints}
+                />
+                <SanctionOption
+                  label="No Participó"
+                  sub="Sin aportes en clase"
+                  pts="-2"
+                  onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
+                  disabled={isUpdatingPoints}
+                />
+                <SanctionOption
+                  label="Expulsión"
+                  sub="Sanción Definitiva"
+                  pts="-50%"
+                  isCritical
+                  onClick={() => handlePercentageDeduction(50)}
+                  disabled={isUpdatingPoints}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -316,14 +412,32 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   );
 };
 
-const MetricCard = ({ icon, label, value, color }: { icon: any, label: string, value: number, color: string }) => (
+const MetricCard = ({ icon, label, value, color, onAdjust, disabled }: { icon: any, label: string, value: number, color: string, onAdjust?: (val: number) => void, disabled?: boolean }) => (
   <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl relative overflow-hidden group hover:border-[#ffb700]/20 transition-colors font-montserrat">
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-          {icon}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-white/5 rounded-xl border border-white/5">
+            {icon}
+          </div>
+          <p className="text-[7px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
         </div>
-        <p className="text-[7px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); onAdjust?.(-5); }}
+            disabled={disabled}
+            className="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/10 rounded text-red-500 hover:bg-red-500/20 active:scale-90 transition-all"
+          >
+            <Minus size={10} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onAdjust?.(5); }}
+            disabled={disabled}
+            className="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/10 rounded text-green-500 hover:bg-green-500/20 active:scale-90 transition-all"
+          >
+            <Plus size={10} />
+          </button>
+        </div>
       </div>
       <div>
         <p className="text-3xl font-bebas font-black text-white tracking-tight leading-none mb-2">{value}</p>
@@ -333,6 +447,23 @@ const MetricCard = ({ icon, label, value, color }: { icon: any, label: string, v
       </div>
     </div>
   </div>
+);
+
+const SanctionOption = ({ label, sub, pts, onClick, disabled, isCritical }: any) => (
+  <button
+    disabled={disabled}
+    onClick={onClick}
+    className={`flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 ${isCritical
+        ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
+        : 'bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/20'
+      }`}
+  >
+    <div className="text-left font-montserrat">
+      <p className={`text-[9px] font-black uppercase font-bebas ${isCritical ? 'text-red-500' : 'text-white'}`}>{label}</p>
+      <p className="text-[6px] text-gray-500 uppercase font-black">{sub}</p>
+    </div>
+    <span className="text-red-500 font-bebas font-black text-xl">{pts}</span>
+  </button>
 );
 
 export default IntelligenceCenter;

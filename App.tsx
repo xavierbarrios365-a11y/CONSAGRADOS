@@ -42,7 +42,12 @@ const App: React.FC = () => {
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
 
-  // Estados de Seguridad Avanzada
+  // Estados de Seguridad y Sesión
+  const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [sessionIp, setSessionIp] = useState<string>(localStorage.getItem('consagrados_ip') || '');
+
+  // Estados de Seguridad Avanzada (Restaurados)
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<'ID' | 'QUESTION' | 'SUCCESS'>('ID');
   const [securityAnswerInput, setSecurityAnswerInput] = useState('');
@@ -57,6 +62,96 @@ const App: React.FC = () => {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // --- FUNCIONES DE AYUDA (DEFINIDAS ANTES DE LOS EFFECTS) ---
+
+  const handleLogout = useCallback(() => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setFoundAgent(null);
+    setLoginId('');
+    setLoginPin('');
+    setView(AppView.PROFILE);
+    localStorage.removeItem('consagrados_agent');
+    setShowSessionWarning(false);
+  }, []);
+
+  const resetSessionTimer = useCallback(() => {
+    if (isLoggedIn) {
+      setLastActiveTime(Date.now());
+      if (showSessionWarning) setShowSessionWarning(false);
+    }
+  }, [isLoggedIn, showSessionWarning]);
+
+  // --- EFFECTS ---
+
+  // 1. Inicialización y Persistencia
+  useEffect(() => {
+    const storedUser = localStorage.getItem('consagrados_agent');
+    if (storedUser) {
+      try {
+        const agent = JSON.parse(storedUser);
+        setIsLoggedIn(true);
+        setCurrentUser(agent);
+        setLastActiveTime(Date.now());
+      } catch (e) {
+        localStorage.removeItem('consagrados_agent');
+      }
+    }
+
+    // Obtener IP Inicial
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ip) {
+          setSessionIp(data.ip);
+          localStorage.setItem('consagrados_ip', data.ip);
+        }
+      })
+      .catch(err => console.error("Error obteniendo IP:", err));
+  }, []);
+
+  // 2. Temporizador de Expiración (5 min)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = now - lastActiveTime;
+      if (diff >= 300000) {
+        handleLogout();
+      } else if (diff >= 270000) {
+        setShowSessionWarning(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, lastActiveTime, handleLogout]);
+
+  // 3. Monitoreo de Red/IP
+  useEffect(() => {
+    if (!isLoggedIn || !sessionIp) return;
+
+    const interval = setInterval(() => {
+      fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => {
+          if (data.ip && data.ip !== sessionIp) {
+            alert("CAMBIO DE RED DETECTADO. Cierre de sesión por seguridad.");
+            handleLogout();
+          }
+        })
+        .catch(console.error);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, sessionIp, handleLogout]);
+
+  useEffect(() => {
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetSessionTimer));
+    return () => events.forEach(e => window.removeEventListener(e, resetSessionTimer));
+  }, [resetSessionTimer]);
 
   useEffect(() => {
     if (view === AppView.SCANNER) {
@@ -194,6 +289,8 @@ const App: React.FC = () => {
 
     if (user) {
       if (String(user.pin).trim() === pinEntered) {
+        setLastActiveTime(Date.now());
+        localStorage.setItem('consagrados_agent', JSON.stringify(user));
         if (user.mustChangePassword) {
           setCurrentUser(user);
           setIsMustChangeFlow(true);
@@ -675,14 +772,7 @@ const App: React.FC = () => {
       setView={setView}
       userRole={currentUser?.userRole || UserRole.STUDENT}
       userName={currentUser?.name || 'Agente'}
-      onLogout={() => {
-        setIsLoggedIn(false);
-        setCurrentUser(null);
-        setFoundAgent(null);
-        setLoginId('');
-        setLoginPin('');
-        setView(AppView.PROFILE);
-      }}
+      onLogout={handleLogout}
     >
       <div className="relative h-full">
         {renderContent()}
@@ -738,6 +828,34 @@ const App: React.FC = () => {
               <X size={28} className="group-hover:rotate-90 transition-transform" /> Cerrar Expediente
             </button>
             <DigitalIdCard agent={foundAgent} />
+          </div>
+        )}
+
+        {showSessionWarning && (
+          <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+            <div className="w-full max-w-sm bg-[#001f3f] border border-[#ffb700]/30 rounded-[2rem] p-8 space-y-6 shadow-[0_0_50px_rgba(255,183,0,0.2)] text-center">
+              <div className="w-16 h-16 bg-[#ffb700]/10 rounded-full flex items-center justify-center mx-auto border border-[#ffb700]/30 focus-within:ring-2 focus-within:ring-[#ffb700]">
+                <Activity className="text-[#ffb700] animate-pulse" size={32} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-white font-bebas text-2xl tracking-widest uppercase">¿Sigues ahí, Agente?</h3>
+                <p className="text-[10px] text-white/60 font-montserrat uppercase tracking-widest leading-relaxed">
+                  Tu sesión táctica expirará en 30 segundos por inactividad.
+                </p>
+              </div>
+              <button
+                onClick={() => resetSessionTimer()}
+                className="w-full bg-[#ffb700] py-4 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-[0_0_20px_rgba(255,183,0,0.3)] hover:scale-[1.02] active:scale-95 transition-all outline-none"
+              >
+                Mantener Conexión
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full py-2 text-[9px] text-white/30 font-black uppercase tracking-widest hover:text-white transition-colors outline-none"
+              >
+                Cerrar Sesión Ahora
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -185,7 +185,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     <Zap size={16} className="text-[#ffb700]" />
                     <p className="text-[11px] text-gray-500 font-black uppercase tracking-widest font-bebas">Experiencia Operativa</p>
                   </div>
-                  <p className="text-7xl font-bebas font-black text-white tracking-tighter">{agent.xp} <span className="text-[#ffb700] text-3xl uppercase ml-2">XP</span></p>
+                  <p className="text-7xl font-bebas font-black text-white tracking-[0.05em] drop-shadow-[0_10px_20px_rgba(255,183,0,0.2)]">
+                    {agent.xp} <span className="text-[#ffb700] text-3xl uppercase ml-2">XP</span>
+                  </p>
                 </div>
               </div>
               <div className="relative h-4 bg-[#000c19] rounded-full overflow-hidden p-0.5 border border-white/10">
@@ -218,7 +220,7 @@ const MetricCard = ({ icon, label, value, color }: { icon: any, label: string, v
         <p className="text-[10px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
       </div>
       <div className="flex items-end gap-2">
-        <p className="text-5xl font-bebas font-black text-white tracking-tighter">{value}</p>
+        <p className="text-5xl font-bebas font-black text-white tracking-[0.05em] drop-shadow-[0_5px_15px_rgba(255,255,255,0.1)]">{value}</p>
         <p className="text-[10px] text-white/20 font-black uppercase mb-2 tracking-widest font-bebas">PTS</p>
       </div>
       <div className="w-full h-2 bg-[#000c19] rounded-full overflow-hidden border border-white/5">

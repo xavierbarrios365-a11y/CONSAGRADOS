@@ -678,7 +678,7 @@ function getGuides(data) {
     filtered = guides.filter(g => g.type === 'LIDER');
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ data: filtered })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, data: filtered })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

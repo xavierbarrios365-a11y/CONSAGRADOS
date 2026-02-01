@@ -16,9 +16,11 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
     const [activeFilter, setActiveFilter] = useState<'ALL' | 'ESTUDIANTE' | 'LIDER'>('ALL');
 
     // Form state - SIMPLIFICADO: solo archivo directo
+    // Form state - MULTI-UPLOAD: soporta hasta 3 archivos
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<'ESTUDIANTE' | 'LIDER'>('ESTUDIANTE');
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [uploadStatuses, setUploadStatuses] = useState<Record<string, 'IDLE' | 'UPLOADING' | 'SUCCESS' | 'ERROR'>>({});
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,40 +54,78 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!newName || !selectedFile) return;
+        if (selectedFiles.length === 0 || !newName) return;
 
         setIsUploading(true);
-        try {
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64 = (reader.result as string).split(',')[1];
-                const uploadRes = await uploadFile(base64, selectedFile);
+        const newStatuses: Record<string, any> = {};
+        selectedFiles.forEach(f => newStatuses[f.name] = 'UPLOADING');
+        setUploadStatuses(newStatuses);
 
-                if (uploadRes.success && uploadRes.url) {
-                    const metadataRes = await uploadGuideMetadata(newName, newType, uploadRes.url);
-                    if (metadataRes.success) {
-                        alert('¡Contenido táctico desplegado!');
-                        setShowUploadModal(false);
-                        resetForm();
-                        loadGuides();
+        try {
+            const uploadPromises = selectedFiles.map(async (file, index) => {
+                try {
+                    const reader = new FileReader();
+                    const base64Promise = new Promise<string>((resolve, reject) => {
+                        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+
+                    const base64 = await base64Promise;
+                    const uploadRes = await uploadFile(base64, file);
+
+                    if (uploadRes.success && uploadRes.url) {
+                        // Usar el nombre base + index si hay varios, o solo el nombre si es uno
+                        const finalName = selectedFiles.length > 1 ? `${newName} (${index + 1})` : newName;
+                        const metadataRes = await uploadGuideMetadata(finalName, newType, uploadRes.url);
+
+                        if (metadataRes.success) {
+                            setUploadStatuses(prev => ({ ...prev, [file.name]: 'SUCCESS' }));
+                        } else {
+                            throw new Error(metadataRes.error || 'Error en metadatos');
+                        }
                     } else {
-                        alert('Error en metadatos: ' + metadataRes.error);
+                        throw new Error(uploadRes.error || 'Fallo en subida');
                     }
-                } else {
-                    alert('Error al subir archivo: ' + uploadRes.error);
+                } catch (err) {
+                    setUploadStatuses(prev => ({ ...prev, [file.name]: 'ERROR' }));
+                    throw err;
                 }
+            });
+
+            await Promise.allSettled(uploadPromises);
+
+            const results = Object.values(newStatuses);
+            if (results.every(s => s === 'SUCCESS')) {
+                // alert('¡Todo el contenido táctico ha sido desplegado!');
+            }
+
+            setTimeout(() => {
+                setShowUploadModal(false);
+                resetForm();
+                loadGuides();
                 setIsUploading(false);
-            };
-            reader.readAsDataURL(selectedFile);
+            }, 1500);
+
         } catch (err) {
-            alert('Fallo táctico en la carga del recurso.');
+            console.error('Multi-upload error:', err);
             setIsUploading(false);
         }
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 3) {
+            alert('Límite táctico de 3 archivos alcanzado. Selecciona menos archivos.');
+            return;
+        }
+        setSelectedFiles(files);
+    };
+
     const resetForm = () => {
         setNewName('');
-        setSelectedFile(null);
+        setSelectedFiles([]);
+        setUploadStatuses({});
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -252,39 +292,53 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                                 </div>
                             </div>
 
-                            {/* Archivo - BOTÓN GRANDE para móvil */}
+                            {/* Archivo - BOTÓN GRANDE para móvil con MULTI-SELECCIÓN */}
                             <div className="space-y-1">
-                                <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">Archivo</label>
+                                <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">Archivos (Máx 3)</label>
                                 <div className="relative">
                                     <input
                                         ref={fileInputRef}
                                         type="file"
+                                        multiple
                                         required
-                                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                        onChange={handleFileChange}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                         accept=".pdf,.doc,.docx,image/*"
                                     />
-                                    <div className={`w-full py-8 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${selectedFile ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10'
-                                        }`}>
-                                        <FileText className={selectedFile ? 'text-green-500' : 'text-gray-400'} size={24} />
+                                    <div className={`w-full py-6 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${selectedFiles.length > 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10'}`}>
+                                        <Plus className={selectedFiles.length > 0 ? 'text-green-500' : 'text-gray-400'} size={24} />
                                         <p className="text-[8px] font-black uppercase tracking-widest text-center px-4 text-gray-400 font-bebas">
-                                            {selectedFile ? selectedFile.name : 'Toca para seleccionar'}
+                                            {selectedFiles.length > 0 ? `${selectedFiles.length} ARCHIVOS SELECCIONADOS` : 'Toca para seleccionar'}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Lista de archivos seleccionados con sus estados */}
+                            {selectedFiles.length > 0 && (
+                                <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
+                                    {selectedFiles.map((file) => (
+                                        <div key={file.name} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <FileText size={14} className="text-gray-500 shrink-0" />
+                                                <span className="text-[8px] text-white/70 font-bold truncate">{file.name}</span>
+                                            </div>
+                                            <div className="shrink-0">
+                                                {uploadStatuses[file.name] === 'UPLOADING' && <Loader2 size={12} className="text-[#ffb700] animate-spin" />}
+                                                {uploadStatuses[file.name] === 'SUCCESS' && <Download size={12} className="text-green-500" />}
+                                                {uploadStatuses[file.name] === 'ERROR' && <X size={12} className="text-red-500" />}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <button
                                 type="submit"
-                                disabled={isUploading || !selectedFile || !newName}
+                                disabled={isUploading || selectedFiles.length === 0 || !newName}
                                 className="w-full bg-[#ffb700] py-5 rounded-xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bebas"
                             >
-                                {isUploading ? (
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Loader2 size={16} className="animate-spin" />
-                                        <span>Subiendo...</span>
-                                    </div>
-                                ) : 'Publicar Material'}
+                                {isUploading ? 'Desplegando Contenido...' : 'Publicar Material'}
                             </button>
                         </form>
                     </div>

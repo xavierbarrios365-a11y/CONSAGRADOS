@@ -41,6 +41,8 @@ const App: React.FC = () => {
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
+  const [manualSearchQuery, setManualSearchQuery] = useState('');
+  const [showManualResults, setShowManualResults] = useState(false);
 
   // Estados de Seguridad y Sesión
   const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
@@ -510,13 +512,77 @@ const App: React.FC = () => {
                 />
                 {scannedId && (
                   <button
-                    onClick={() => setScannedId('')}
+                    onClick={() => {
+                      setScannedId('');
+                      setManualSearchQuery('');
+                      setShowManualResults(false);
+                    }}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
                   >
                     <X size={14} />
                   </button>
                 )}
               </div>
+
+              {/* Lista de Búsqueda Manual */}
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+                  <input
+                    type="text"
+                    placeholder="BUSCAR NOMBRE O ID..."
+                    value={manualSearchQuery}
+                    onChange={(e) => {
+                      setManualSearchQuery(e.target.value);
+                      setShowManualResults(e.target.value.length > 0);
+                    }}
+                    onFocus={() => {
+                      if (manualSearchQuery.length > 0) setShowManualResults(true);
+                    }}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-[9px] font-bold uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all font-montserrat"
+                  />
+                </div>
+
+                {showManualResults && (
+                  <div className="absolute bottom-full mb-2 w-full bg-[#001833] border border-white/10 rounded-xl max-h-40 overflow-y-auto shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2">
+                    {agents
+                      .filter(a =>
+                        a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) ||
+                        a.id.toLowerCase().includes(manualSearchQuery.toLowerCase())
+                      )
+                      .slice(0, 10)
+                      .map(a => (
+                        <div
+                          key={a.id}
+                          onClick={() => {
+                            setScannedId(a.id);
+                            setManualSearchQuery(a.name);
+                            setShowManualResults(false);
+                          }}
+                          className="flex items-center gap-3 p-3 hover:bg-[#ffb700]/10 cursor-pointer border-b border-white/5 last:border-0 transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-gray-900 overflow-hidden shrink-0">
+                            <img
+                              src={formatDriveUrl(a.photoUrl)}
+                              className="w-full h-full object-cover grayscale"
+                              onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                            />
+                          </div>
+                          <div className="flex-1 overflow-hidden">
+                            <p className="text-[8px] font-black text-white uppercase truncate font-bebas">{a.name}</p>
+                            <p className="text-[7px] text-[#ffb700] font-bold uppercase truncate">{a.id}</p>
+                          </div>
+                        </div>
+                      ))}
+                    {agents.filter(a => a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) || a.id.toLowerCase().includes(manualSearchQuery.toLowerCase())).length === 0 && (
+                      <div className="p-4 text-center">
+                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Sin resultados</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={() => processScan()}
                 disabled={!scannedId || scanStatus !== 'IDLE'}

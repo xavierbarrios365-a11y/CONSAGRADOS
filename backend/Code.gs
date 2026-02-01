@@ -252,6 +252,21 @@ function registerIdScan(payload) {
    const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}`;
    sendTelegramNotification(telegramMessage);
 
+   // --- VISITANTE RADAR ---
+   if (agentRowIdx === -1) {
+     let visitorVisits = 0;
+     for (let i = 1; i < attendanceData.length; i++) {
+       if (String(attendanceData[i][0]) === String(payload.scannedId)) {
+         visitorVisits++;
+       }
+     }
+     
+     if (visitorVisits >= 2) {
+       const alertMessage = `🚨 <b>ALERTA DE RECLUTAMIENTO</b>\n\nEl visitante con ID <code>${payload.scannedId}</code> ha asistido <b>${visitorVisits + 1} veces</b>.\n\n<b>ESTADO:</b> DEBE SER INSCRITO INMEDIATAMENTE.`;
+       sendTelegramNotification(alertMessage);
+     }
+   }
+
   return ContentService.createTextOutput(JSON.stringify({ success: true, agentName: agentName })).setMimeType(ContentService.MimeType.JSON);
 }
 

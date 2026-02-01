@@ -55,7 +55,8 @@ export enum AppView {
   PROFILE = 'profile',
   CONTENT = 'content',
   CIU = 'CIU',
-  SETTINGS = 'SETTINGS'
+  SETTINGS = 'SETTINGS',
+  VISITOR = 'VISITOR'
 }
 
 export interface Visitor {

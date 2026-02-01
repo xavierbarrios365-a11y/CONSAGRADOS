@@ -8,17 +8,7 @@ import ContentModule from './components/ContentModule';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
-import {
-  Search,
-  RefreshCw,
-  Database,
-  Eye,
-  EyeOff,
-  X,
-  Activity,
-  AlertCircle,
-  Target
-} from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 
@@ -650,11 +640,14 @@ const App: React.FC = () => {
               {/* Radar de Visitantes */}
               {visitorRadar.length > 0 && (
                 <div className="pt-4 border-t border-white/5 space-y-3">
-                  <div className="flex items-center justify-between px-2">
-                    <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas flex items-center gap-2">
+                  <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between px-2 cursor-pointer group">
+                    <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas flex items-center gap-2 group-hover:text-white transition-colors text-left uppercase">
                       <Target size={10} className="animate-pulse" /> Radar de Visitantes
                     </p>
-                    <span className="text-[6px] text-gray-600 font-bold uppercase tracking-widest">{visitorRadar.length} detectados</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[6px] text-gray-600 font-bold uppercase tracking-widest leading-none">{visitorRadar.length} detectados</span>
+                      <ChevronRight size={10} className="text-gray-600 group-hover:text-white transition-all group-hover:translate-x-0.5" />
+                    </div>
                   </div>
 
                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none pr-4">
@@ -688,6 +681,69 @@ const App: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        );
+      case AppView.VISITOR:
+        return (
+          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24">
+            <div className="text-left space-y-1">
+              <h2 className="text-2xl font-bebas text-white uppercase tracking-widest">Radar de Visitantes</h2>
+              <p className="text-[8px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 font-montserrat">Seguimiento de posibles reclutas detectados</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visitorRadar.length === 0 ? (
+                <div className="col-span-full py-20 text-center space-y-4 bg-white/5 rounded-[2.5rem] border border-white/5">
+                  <Target size={40} className="mx-auto text-gray-700" />
+                  <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest font-bebas leading-relaxed">
+                    No se han detectado visitantes nuevos.<br />
+                    Los visitantes aparecen automáticamente al escanear IDs no registrados.
+                  </p>
+                </div>
+              ) : (
+                visitorRadar.map(v => (
+                  <div
+                    key={v.id}
+                    onClick={() => {
+                      setScannedId(v.id);
+                      setView(AppView.SCANNER);
+                    }}
+                    className={`p-6 rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden group ${v.status === 'POSIBLE RECLUTA'
+                      ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 shadow-[0_10px_30px_rgba(249,115,22,0.1)]'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                      }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500/20 border-orange-500/40 text-orange-500' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                        <Target size={24} className={v.status === 'POSIBLE RECLUTA' ? 'animate-pulse' : ''} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-white uppercase truncate font-bebas tracking-wider">{v.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">{v.visits} ENTRADAS</span>
+                          <span className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-500'}`}>{v.status}</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-colors" />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="text-[#ffb700]" size={16} />
+                <h4 className="text-[10px] font-black text-white uppercase tracking-widest font-bebas">Inteligencia de Reclutamiento</h4>
+              </div>
+              <p className="text-[8px] text-gray-400 font-bold leading-relaxed uppercase font-montserrat">
+                El Radar rastrea automáticamente los IDs ingresados manualmente o escaneados que no están en el Directorio Oficial.
+                <br /><br />
+                <span className="text-[#ffb700]">VISITANTE:</span> 1 asistencia detectada.
+                <br />
+                <span className="text-orange-500 font-black">POSIBLE RECLUTA:</span> 2 o más asistencias. Requiere registro inmediato.
+              </p>
             </div>
           </div>
         );

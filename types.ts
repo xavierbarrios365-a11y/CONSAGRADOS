@@ -56,3 +56,10 @@ export enum AppView {
   CIU = 'CIU',
   SETTINGS = 'SETTINGS'
 }
+
+export interface Visitor {
+  id: string;
+  name: string;
+  visits: number;
+  status: 'VISITANTE' | 'POSIBLE RECLUTA';
+}

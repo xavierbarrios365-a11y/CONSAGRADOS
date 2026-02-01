@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from './components/Layout';
-import { AppView, Agent, UserRole } from './types';
+import { AppView, Agent, UserRole, Visitor } from './types';
 import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import ContentModule from './components/ContentModule';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
-import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin } from './services/sheetsService';
+import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
 import {
   Search,
   RefreshCw,
@@ -16,7 +16,8 @@ import {
   EyeOff,
   X,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Target
 } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [manualSearchQuery, setManualSearchQuery] = useState('');
   const [showManualResults, setShowManualResults] = useState(false);
+  const [visitorRadar, setVisitorRadar] = useState<Visitor[]>([]);
 
   // Estados de Seguridad y Sesión
   const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
@@ -250,6 +252,14 @@ const App: React.FC = () => {
     } finally {
       if (!isSilent) setIsSyncing(false);
     }
+
+    // Sincronizar Radar de Visitantes
+    try {
+      const radar = await fetchVisitorRadar();
+      setVisitorRadar(radar || []);
+    } catch (err) {
+      console.error("Radar sync error", err);
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -406,6 +416,7 @@ const App: React.FC = () => {
         setTimeout(() => {
           setScanStatus('IDLE');
           setScannedId('');
+          syncData(true); // Refrescar radar y agentes
         }, 3000);
       } else {
         alert(result.error || "No se pudo registrar.");
@@ -593,6 +604,48 @@ const App: React.FC = () => {
               >
                 {scanStatus === 'IDLE' ? 'Confirmar Registro' : 'Procesando...'}
               </button>
+
+              {/* Radar de Visitantes */}
+              {visitorRadar.length > 0 && (
+                <div className="pt-4 border-t border-white/5 space-y-3">
+                  <div className="flex items-center justify-between px-2">
+                    <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas flex items-center gap-2">
+                      <Target size={10} className="animate-pulse" /> Radar de Visitantes
+                    </p>
+                    <span className="text-[6px] text-gray-600 font-bold uppercase tracking-widest">{visitorRadar.length} detectados</span>
+                  </div>
+
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none pr-4">
+                    {visitorRadar.map(v => (
+                      <div
+                        key={v.id}
+                        onClick={() => {
+                          if (scanStatus === 'IDLE') {
+                            setScannedId(v.id);
+                            setManualSearchQuery(v.name);
+                          }
+                        }}
+                        className={`shrink-0 w-28 p-3 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${v.status === 'POSIBLE RECLUTA'
+                          ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 shadow-[0_5px_15px_rgba(249,115,22,0.1)]'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          } ${scannedId === v.id ? 'ring-2 ring-[#ffb700] border-[#ffb700]' : ''}`}
+                      >
+                        <div className="flex flex-col gap-1 items-center text-center">
+                          <p className="text-[8px] font-black text-white uppercase truncate w-full font-bebas">{v.name}</p>
+                          <div className={`px-2 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-[#ffb700]'
+                            }`}>
+                            {v.visits} ENTRADAS
+                          </div>
+                          <p className={`text-[5px] font-black uppercase tracking-widest mt-0.5 ${v.status === 'POSIBLE RECLUTA' ? 'text-orange-400' : 'text-gray-500'
+                            }`}>
+                            {v.status}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );

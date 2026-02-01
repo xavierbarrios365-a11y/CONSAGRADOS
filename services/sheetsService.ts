@@ -299,3 +299,13 @@ export const updateAgentPhoto = async (agentId: string, photoUrl: string) => {
     return { success: false, error: error.message };
   }
 };
+
+export const fetchVisitorRadar = async () => {
+  try {
+    const response = await postToAction('get_visitor_radar', {});
+    return response.success ? response.data : [];
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER RADAR:", error);
+    return [];
+  }
+};

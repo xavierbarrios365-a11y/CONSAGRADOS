@@ -141,7 +141,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-            {userRole === UserRole.DIRECTOR && (
+            {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/10 transition-all p-4"

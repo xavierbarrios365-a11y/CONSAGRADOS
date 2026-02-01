@@ -111,6 +111,8 @@ function doPost(e) {
         return deleteGuide(request.data);
       case 'update_agent_photo':
         return updateAgentPhoto(request.data);
+      case 'get_visitor_radar':
+        return getVisitorRadar();
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -268,6 +270,49 @@ function registerIdScan(payload) {
    }
 
   return ContentService.createTextOutput(JSON.stringify({ success: true, agentName: agentName })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene el radar de visitantes (asistentes no inscritos).
+ */
+function getVisitorRadar() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  
+  if (!attendanceSheet || !directorySheet) throw new Error("Hojas no encontradas.");
+  
+  const attendanceData = attendanceSheet.getDataRange().getValues();
+  const directoryData = directorySheet.getDataRange().getValues();
+  
+  const registeredIds = new Set(directoryData.slice(1).map(row => String(row[0]).trim().toUpperCase()));
+  
+  const visitorMap = new Map();
+  
+  for (let i = 1; i < attendanceData.length; i++) {
+    const id = String(attendanceData[i][0]).trim();
+    if (id && !registeredIds.has(id.toUpperCase())) {
+      const count = (visitorMap.get(id) || 0) + 1;
+      visitorMap.set(id, count);
+    }
+  }
+  
+  const radar = [];
+  visitorMap.forEach((count, id) => {
+    radar.push({
+      id: id,
+      name: id, // El ID de un visitante suele ser su nombre ingresado manualmente
+      visits: count,
+      status: count >= 2 ? 'POSIBLE RECLUTA' : 'VISITANTE'
+    });
+  });
+  
+  // Ordenar por visitas (más frecuentes primero)
+  radar.sort((a, b) => b.visits - a.visits);
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, data: radar })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

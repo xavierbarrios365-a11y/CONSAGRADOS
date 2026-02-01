@@ -8,7 +8,7 @@ import ContentModule from './components/ContentModule';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 
@@ -555,6 +555,24 @@ const App: React.FC = () => {
                       <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Resultados de Búsqueda</p>
                     </div>
 
+                    {/* Opción Permanente de Registro en Radar */}
+                    {manualSearchQuery.length > 0 && (
+                      <div
+                        onClick={() => {
+                          setScannedId(manualSearchQuery);
+                          setShowManualResults(false);
+                          processScan(manualSearchQuery);
+                        }}
+                        className="p-6 text-center bg-orange-500/10 border-b border-orange-500/20 hover:bg-orange-500/20 cursor-pointer group transition-all"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <Plus size={24} className="text-orange-500 group-hover:scale-110 transition-transform" />
+                          <p className="text-[10px] text-white font-black uppercase tracking-[0.2em] font-bebas">REGISTRAR "{manualSearchQuery}" EN RADAR</p>
+                          <p className="text-[7px] text-orange-500 font-bold uppercase tracking-widest">TAP PARA GUARDAR VISITA AHORA</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Agentes en Directorio */}
                     {agents
                       .filter(a =>
@@ -570,21 +588,14 @@ const App: React.FC = () => {
                             setManualSearchQuery(a.name);
                             setShowManualResults(false);
                           }}
-                          className="flex items-center gap-3 p-4 hover:bg-[#ffb700]/10 cursor-pointer border-b border-white/5 transition-colors group"
+                          className="flex items-center gap-3 p-4 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors text-left"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-gray-950 overflow-hidden shrink-0 border border-white/10">
-                            <img
-                              src={formatDriveUrl(a.photoUrl)}
-                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
-                              onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
-                            />
+                          <div className="w-10 h-10 rounded-xl bg-[#ffb700]/10 border border-[#ffb700]/30 flex items-center justify-center shrink-0">
+                            <Shield size={18} className="text-[#ffb700]" />
                           </div>
                           <div className="flex-1 overflow-hidden">
-                            <p className="text-[10px] font-black text-white uppercase truncate font-bebas">{a.name}</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[7px] text-[#ffb700] font-black uppercase tracking-widest">{a.id}</span>
-                              <span className="text-[6px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold">AGENTE</span>
-                            </div>
+                            <p className="text-[11px] font-black text-white uppercase truncate font-bebas">{a.name}</p>
+                            <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-widest">{a.rank} | {a.id}</p>
                           </div>
                         </div>
                       ))}
@@ -614,24 +625,6 @@ const App: React.FC = () => {
                           </div>
                         </div>
                       ))}
-
-                    {agents.filter(a => a.name.toLowerCase().includes(manualSearchQuery.toLowerCase())).length === 0 &&
-                      visitorRadar.filter(v => v.name.toLowerCase().includes(manualSearchQuery.toLowerCase())).length === 0 && (
-                        <div
-                          onClick={() => {
-                            setScannedId(manualSearchQuery);
-                            setShowManualResults(false);
-                            processScan(manualSearchQuery);
-                          }}
-                          className="p-6 text-center hover:bg-orange-500/10 cursor-pointer group transition-all"
-                        >
-                          <div className="flex flex-col items-center gap-2">
-                            <Target size={24} className="text-orange-500 group-hover:scale-110 transition-transform" />
-                            <p className="text-[10px] text-white font-black uppercase tracking-[0.2em] font-bebas">REGISTRAR EN RADAR</p>
-                            <p className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">NUEVO VISITANTE: "{manualSearchQuery}"</p>
-                          </div>
-                        </div>
-                      )}
                   </div>
                 )}
               </div>
@@ -640,10 +633,10 @@ const App: React.FC = () => {
                 onClick={() => processScan()}
                 disabled={!scannedId || scanStatus !== 'IDLE'}
                 className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all font-bebas ${!scannedId || scanStatus !== 'IDLE'
-                    ? 'bg-gray-800 text-gray-500'
-                    : agents.some(a => String(a.id).trim().toUpperCase() === scannedId.trim().toUpperCase())
-                      ? 'bg-[#ffb700] text-[#001f3f] shadow-[0_10px_30px_rgba(255,183,0,0.2)]'
-                      : 'bg-orange-500 text-white shadow-[0_10px_30px_rgba(249,115,22,0.2)]'
+                  ? 'bg-gray-800 text-gray-500'
+                  : agents.some(a => String(a.id).trim().toUpperCase() === scannedId.trim().toUpperCase())
+                    ? 'bg-[#ffb700] text-[#001f3f] shadow-[0_10px_30px_rgba(255,183,0,0.2)]'
+                    : 'bg-orange-500 text-white shadow-[0_10px_30px_rgba(249,115,22,0.2)]'
                   } active:scale-95`}
               >
                 {scanStatus !== 'IDLE'
@@ -655,58 +648,85 @@ const App: React.FC = () => {
               </button>
 
               {/* Radar de Visitantes */}
-              {visitorRadar.length > 0 && (
-                <div className="pt-4 border-t border-white/5 space-y-3">
-                  <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between px-2 cursor-pointer group">
-                    <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas flex items-center gap-2 group-hover:text-white transition-colors text-left uppercase">
-                      <Target size={10} className="animate-pulse" /> Radar de Visitantes
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[6px] text-gray-600 font-bold uppercase tracking-widest leading-none">{visitorRadar.length} detectados</span>
-                      <ChevronRight size={10} className="text-gray-600 group-hover:text-white transition-all group-hover:translate-x-0.5" />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none pr-4">
-                    {visitorRadar.map(v => (
-                      <div
-                        key={v.id}
-                        onClick={() => {
-                          if (scanStatus === 'IDLE') {
-                            setScannedId(v.id);
-                            setManualSearchQuery(v.name);
-                          }
-                        }}
-                        className={`shrink-0 w-28 p-3 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${v.status === 'POSIBLE RECLUTA'
-                          ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 shadow-[0_5px_15px_rgba(249,115,22,0.1)]'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
-                          } ${scannedId === v.id ? 'ring-2 ring-[#ffb700] border-[#ffb700]' : ''}`}
-                      >
-                        <div className="flex flex-col gap-1 items-center text-center">
-                          <p className="text-[8px] font-black text-white uppercase truncate w-full font-bebas">{v.name}</p>
-                          <div className={`px-2 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-[#ffb700]'
-                            }`}>
-                            {v.visits} ENTRADAS
-                          </div>
-                          <p className={`text-[5px] font-black uppercase tracking-widest mt-0.5 ${v.status === 'POSIBLE RECLUTA' ? 'text-orange-400' : 'text-gray-500'
-                            }`}>
-                            {v.status}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+              <div className="pt-4 border-t border-white/5 space-y-3">
+                <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between px-2 cursor-pointer group">
+                  <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas flex items-center gap-2 group-hover:text-white transition-colors text-left uppercase">
+                    <Target size={10} className="animate-pulse" /> Radar de Visitantes
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[6px] text-gray-600 font-bold uppercase tracking-widest leading-none">{visitorRadar.length} detectados</span>
+                    <ChevronRight size={10} className="text-gray-600 group-hover:text-white transition-all group-hover:translate-x-0.5" />
                   </div>
                 </div>
-              )}
+
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none pr-4">
+                  {visitorRadar.map(v => (
+                    <div
+                      key={v.id}
+                      onClick={() => {
+                        if (scanStatus === 'IDLE') {
+                          setScannedId(v.id);
+                          setManualSearchQuery(v.name);
+                        }
+                      }}
+                      className={`shrink-0 w-28 p-3 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${v.status === 'POSIBLE RECLUTA'
+                        ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 shadow-[0_5px_15px_rgba(249,115,22,0.1)]'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                        } ${scannedId === v.id ? 'ring-2 ring-[#ffb700] border-[#ffb700]' : ''}`}
+                    >
+                      <div className="flex flex-col gap-1 items-center text-center">
+                        <p className="text-[8px] font-black text-white uppercase truncate w-full font-bebas">{v.name}</p>
+                        <div className={`px-2 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-[#ffb700]'
+                          }`}>
+                          {v.visits} ENTRADAS
+                        </div>
+                        <p className={`text-[5px] font-black uppercase tracking-widest mt-0.5 ${v.status === 'POSIBLE RECLUTA' ? 'text-orange-400' : 'text-gray-500'
+                          }`}>
+                          {v.status}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         );
       case AppView.VISITOR:
         return (
           <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24">
-            <div className="text-left space-y-1">
-              <h2 className="text-2xl font-bebas text-white uppercase tracking-widest">Radar de Visitantes</h2>
-              <p className="text-[8px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 font-montserrat">Seguimiento de posibles reclutas detectados</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="text-left space-y-1">
+                <h2 className="text-2xl font-bebas text-white uppercase tracking-widest">Radar de Visitantes</h2>
+                <p className="text-[8px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 font-montserrat">Seguimiento de posibles reclutas detectados</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="manual-visitor-name"
+                  placeholder="NOMBRE DEL VISITANTE..."
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[10px] font-black uppercase tracking-widest focus:border-[#ffb700] outline-none transition-all flex-1 md:w-64 font-bebas"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = (e.currentTarget as HTMLInputElement).value;
+                      if (val) processScan(val);
+                      e.currentTarget.value = '';
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const input = document.getElementById('manual-visitor-name') as HTMLInputElement;
+                    if (input.value) {
+                      processScan(input.value);
+                      input.value = '';
+                    }
+                  }}
+                  className="bg-[#ffb700] p-3 rounded-xl text-[#001f3f] shadow-[0_5px_15px_rgba(255,183,0,0.3)] hover:scale-105 active:scale-95 transition-all"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -762,6 +782,17 @@ const App: React.FC = () => {
                 <span className="text-orange-500 font-black">POSIBLE RECLUTA:</span> 2 o más asistencias. Requiere registro inmediato.
               </p>
             </div>
+
+            {/* Floating Quick Add for Mobile */}
+            <button
+              onClick={() => {
+                const name = window.prompt("INGRESA NOMBRE DEL VISITANTE:");
+                if (name) processScan(name);
+              }}
+              className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(249,115,22,0.4)] z-[60] active:scale-90 transition-all border-2 border-white/20"
+            >
+              <Plus size={28} />
+            </button>
           </div>
         );
       case AppView.ENROLLMENT:

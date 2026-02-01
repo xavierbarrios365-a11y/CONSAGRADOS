@@ -451,7 +451,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (view) {
       case AppView.CIU:
-        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} setView={setView} />;
+        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} />;
       case AppView.DIRECTORY:
         return (
           <div className="p-6 md:p-10 space-y-5 animate-in fade-in pb-24">

@@ -11,14 +11,30 @@ interface CIUProps {
   onUpdateNeeded?: () => void;
   intelReport?: string;
   setView?: (view: AppView) => void;
+  visitorCount?: number;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
+
+  const totalAgents = agents.length;
+  const totalLeaders = agents.filter(a => a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR).length;
+
+  // Lógica de Niveles y Rangos
+  const getLevelInfo = (xp: number) => {
+    if (xp < 300) return { current: 'RECLUTA', next: 'ACTIVO', target: 300, level: 0 };
+    if (xp < 500) return { current: 'ACTIVO', next: 'CONSAGRADO', target: 500, level: 1 };
+    if (xp < 700) return { current: 'CONSAGRADO', next: 'REFERENTE', target: 700, level: 2 };
+    if (xp < 1000) return { current: 'REFERENTE', next: 'LÍDER', target: 1000, level: 3 };
+    return { current: 'LÍDER', next: 'MAX', target: 1000, level: 4 };
+  };
+
+  const levelInfo = agent ? getLevelInfo(agent.xp) : null;
+  const isProspectoAscender = levelInfo && agent.xp >= (levelInfo.target - 50) && agent.xp < levelInfo.target;
 
   if (!agent) return <div className="p-10 text-center font-bebas text-[#ffb700] animate-pulse uppercase tracking-widest">Inicializando Nodo de Inteligencia...</div>;
 
@@ -117,6 +133,22 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         )}
 
+        {/* Global Stats Summary */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl text-center">
+            <p className="text-[7px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL AGENTES</p>
+            <p className="text-xl font-bebas font-black text-white">{totalAgents}</p>
+          </div>
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl text-center">
+            <p className="text-[7px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL LÍDERES</p>
+            <p className="text-xl font-bebas font-black text-[#ffb700]">{totalLeaders}</p>
+          </div>
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl text-center">
+            <p className="text-[7px] text-gray-500 font-black uppercase mb-1 font-bebas">RADAR (VISITAS)</p>
+            <p className="text-xl font-bebas font-black text-orange-500">{visitorCount || 0}</p>
+          </div>
+        </div>
+
         {/* Header Táctico */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-6 gap-4 font-montserrat">
           <div className="space-y-1">
@@ -158,6 +190,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                   />
 
+                  {isProspectoAscender && (
+                    <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
+                      PROSPECTO ASCENDER
+                    </div>
+                  )}
+
                   {currentUser?.userRole === UserRole.DIRECTOR && (
                     <div
                       onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
@@ -183,22 +221,26 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
 
               <div className="space-y-4 z-10 w-full">
-                <h2 className="text-3xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name.split(' ')[0]}</h2>
-                <div className="inline-flex items-center gap-3 bg-[#ffb700]/10 border border-[#ffb700]/30 px-6 py-2 rounded-xl">
-                  <span className="text-[#ffb700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{agent.rank}</span>
+                <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="inline-flex items-center gap-3 bg-[#ffb700]/10 border border-[#ffb700]/30 px-6 py-2 rounded-xl">
+                    <span className="text-[#ffb700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
+                  </div>
+                  {isProspectoAscender && (
+                    <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
+                  )}
                 </div>
               </div>
 
-              <div className="mt-10 w-full grid grid-cols-2 gap-4">
-                <div className="bg-white/5 p-5 rounded-3xl border border-white/5 text-left">
-                  <p className="text-[7px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
-                  <p className="text-[10px] font-mono text-[#ffb700] font-bold">{agent.id}</p>
+              <div className="mt-8 w-full grid grid-cols-2 gap-3">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-left">
+                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
+                  <p className="text-[9px] font-mono text-[#ffb700] font-bold">{agent.id}</p>
                 </div>
-                <div className="bg-white/5 p-5 rounded-3xl border border-white/5 text-left">
-                  <p className="text-[7px] text-white/40 font-black uppercase mb-1">ESTADO</p>
-                  <p className="text-[10px] font-black text-green-400 uppercase flex items-center gap-2 font-bebas">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
-                    {agent.status}
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-left">
+                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
+                  <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
+                    {agent.accessLevel || 'ESTUDIANTE'}
                   </p>
                 </div>
               </div>
@@ -237,32 +279,35 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             </div>
           </div>
 
-          {/* PANEL DE MÉTRICAS DETALLADAS */}
-          <div className="lg:col-span-8 space-y-6 font-montserrat">
-            <div className="bg-[#001833] border border-white/5 rounded-[3rem] p-10 relative overflow-hidden group shadow-2xl">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-                <div className="space-y-2">
+          <div className="lg:col-span-8 space-y-4 font-montserrat">
+            <div className="bg-[#001833] border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl">
+              <div className="flex justify-between items-end mb-4">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Zap size={16} className="text-[#ffb700]" />
-                    <p className="text-[11px] text-gray-500 font-black uppercase tracking-widest font-bebas">Experiencia Operativa</p>
+                    <Zap size={14} className="text-[#ffb700]" />
+                    <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest font-bebas">Experiencia Operativa</p>
                   </div>
-                  <p className="text-7xl font-bebas font-black text-white tracking-[0.05em] drop-shadow-[0_10px_20px_rgba(255,183,0,0.2)]">
-                    {agent.xp} <span className="text-[#ffb700] text-3xl uppercase ml-2">XP</span>
+                  <p className="text-5xl font-bebas font-black text-white tracking-tight">
+                    {agent.xp} <span className="text-[#ffb700] text-xl ml-1">XP</span>
                   </p>
                 </div>
+                <div className="text-right">
+                  <p className="text-[8px] text-gray-500 font-black uppercase mb-1 font-bebas">Siguiente Nivel: {levelInfo?.next}</p>
+                  <p className="text-[10px] text-white font-bold">{agent.xp} / {levelInfo?.target}</p>
+                </div>
               </div>
-              <div className="relative h-4 bg-[#000c19] rounded-full overflow-hidden p-0.5 border border-white/10">
+              <div className="relative h-2 bg-[#000c19] rounded-full overflow-hidden border border-white/10">
                 <div
                   className="h-full bg-gradient-to-r from-[#ffb700] to-orange-500 rounded-full transition-all duration-1000"
-                  style={{ width: `${Math.min(100, (agent.xp / 1500) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (agent.xp / (levelInfo?.target || 1000)) * 100)}%` }}
                 ></div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <MetricCard icon={<Book className="text-[#ffb700]" />} label="BIBLIA" value={agent.bible} color="from-[#ffb700] to-orange-600" />
-              <MetricCard icon={<FileText className="text-gray-400" />} label="APUNTES" value={agent.notes} color="from-gray-400 to-gray-600" />
-              <MetricCard icon={<Star className="text-[#ffb700]" />} label="LIDERAZGO" value={agent.leadership} color="from-[#ffb700] to-orange-600" />
+            <div className="grid grid-cols-3 gap-4">
+              <MetricCard icon={<Book className="text-[#ffb700]" size={16} />} label="BIBLIA" value={agent.bible} color="from-[#ffb700] to-orange-600" />
+              <MetricCard icon={<FileText className="text-gray-400" size={16} />} label="NOTAS" value={agent.notes} color="from-gray-400 to-gray-600" />
+              <MetricCard icon={<Star className="text-[#ffb700]" size={16} />} label="LÍDER" value={agent.leadership} color="from-[#ffb700] to-orange-600" />
             </div>
           </div>
         </div>
@@ -272,20 +317,19 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 };
 
 const MetricCard = ({ icon, label, value, color }: { icon: any, label: string, value: number, color: string }) => (
-  <div className="bg-[#001833] border border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden group hover:border-[#ffb700]/20 transition-colors font-montserrat">
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
+  <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl relative overflow-hidden group hover:border-[#ffb700]/20 transition-colors font-montserrat">
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="p-2 bg-white/5 rounded-xl border border-white/5">
           {icon}
         </div>
-        <p className="text-[10px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
+        <p className="text-[7px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
       </div>
-      <div className="flex items-end gap-2">
-        <p className="text-5xl font-bebas font-black text-white tracking-[0.05em] drop-shadow-[0_5px_15px_rgba(255,255,255,0.1)]">{value}</p>
-        <p className="text-[10px] text-white/20 font-black uppercase mb-2 tracking-widest font-bebas">PTS</p>
-      </div>
-      <div className="w-full h-2 bg-[#000c19] rounded-full overflow-hidden border border-white/5">
-        <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-1000`} style={{ width: `${Math.min(100, value)}%` }}></div>
+      <div>
+        <p className="text-3xl font-bebas font-black text-white tracking-tight leading-none mb-2">{value}</p>
+        <div className="w-full h-1 bg-[#000c19] rounded-full overflow-hidden border border-white/5">
+          <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-1000`} style={{ width: `${Math.min(100, value)}%` }}></div>
+        </div>
       </div>
     </div>
   </div>

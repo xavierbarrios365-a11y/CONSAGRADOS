@@ -3,7 +3,8 @@ export enum Rank {
   RECLUTA = 'RECLUTA',
   ACTIVO = 'ACTIVO',
   CONSAGRADO = 'CONSAGRADO',
-  REFERENTE = 'REFERENTE'
+  REFERENTE = 'REFERENTE',
+  LIDER = 'LÍDER'
 }
 
 export enum UserRole {

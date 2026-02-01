@@ -104,11 +104,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
           <div className="flex-1 px-5 py-3 space-y-2 z-10">
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
-                <p className="text-[6px] text-gray-500 font-black uppercase mb-0.5">ESTADO</p>
-                <p className="text-[9px] font-black text-green-500 uppercase leading-none">{agent.status}</p>
+                <p className="text-[6px] text-white/40 font-black uppercase mb-0.5">ESTADO</p>
+                <p className="text-[9px] font-black text-green-400 uppercase leading-none">{agent.status}</p>
               </div>
               <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
-                <p className="text-[6px] text-gray-500 font-black uppercase mb-0.5">XP TÁCTICA</p>
+                <p className="text-[6px] text-white/40 font-black uppercase mb-0.5">XP TÁCTICA</p>
                 <p className="text-[9px] font-black text-[#ffb700] leading-none">{agent.xp} PTS</p>
               </div>
             </div>

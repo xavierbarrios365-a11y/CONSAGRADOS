@@ -57,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
                 onClick={() => setView(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeView === item.id
                   ? 'bg-[#ffb700]/10 text-[#ffb700] border-l-4 border-[#ffb700]'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-white/40 hover:bg-white/5 hover:text-white'
                   }`}
               >
                 {item.icon}

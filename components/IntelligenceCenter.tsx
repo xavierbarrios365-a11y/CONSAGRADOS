@@ -129,14 +129,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
 
               <div className="mt-10 w-full grid grid-cols-2 gap-4">
-                <div className="bg-white/[0.03] p-5 rounded-3xl border border-white/5 text-left">
-                  <p className="text-[7px] text-gray-500 font-black uppercase mb-1">ID AGENTE</p>
+                <div className="bg-white/5 p-5 rounded-3xl border border-white/5 text-left">
+                  <p className="text-[7px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
                   <p className="text-[10px] font-mono text-[#ffb700] font-bold">{agent.id}</p>
                 </div>
-                <div className="bg-white/[0.03] p-5 rounded-3xl border border-white/5 text-left">
-                  <p className="text-[7px] text-gray-500 font-black uppercase mb-1">ESTADO</p>
-                  <p className="text-[10px] font-black text-green-500 uppercase flex items-center gap-2 font-bebas">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <div className="bg-white/5 p-5 rounded-3xl border border-white/5 text-left">
+                  <p className="text-[7px] text-white/40 font-black uppercase mb-1">ESTADO</p>
+                  <p className="text-[10px] font-black text-green-400 uppercase flex items-center gap-2 font-bebas">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
                     {agent.status}
                   </p>
                 </div>
@@ -170,7 +170,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     <div className="h-1 w-12 bg-[#ffb700]/30 rounded-full"></div>
                     <div className="h-1 w-4 bg-[#ffb700]/30 rounded-full"></div>
                   </div>
-                  <p className="text-[7px] font-black text-gray-500 uppercase tracking-widest font-montserrat">ENCRIPTACIÓN NIVEL 7 ACTIVA</p>
+                  <p className="text-[7px] font-black text-white/20 uppercase tracking-widest font-montserrat text-right">ENCRIPTACIÓN NIVEL 7 ACTIVA</p>
                 </div>
               </div>
             </div>
@@ -215,11 +215,11 @@ const MetricCard = ({ icon, label, value, color }: { icon: any, label: string, v
         <div className="p-3 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
           {icon}
         </div>
-        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
+        <p className="text-[10px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
       </div>
       <div className="flex items-end gap-2">
         <p className="text-5xl font-bebas font-black text-white tracking-tighter">{value}</p>
-        <p className="text-[10px] text-gray-600 font-black uppercase mb-2 tracking-widest font-bebas">PTS</p>
+        <p className="text-[10px] text-white/20 font-black uppercase mb-2 tracking-widest font-bebas">PTS</p>
       </div>
       <div className="w-full h-2 bg-[#000c19] rounded-full overflow-hidden border border-white/5">
         <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-1000`} style={{ width: `${Math.min(100, value)}%` }}></div>

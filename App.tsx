@@ -503,7 +503,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="w-full max-w-[280px] md:max-w-xs space-y-4 z-10">
-              <div className="relative">
+              <div className="relative group">
                 <input
                   type="text"
                   placeholder="ID / NOMBRE..."
@@ -522,6 +522,11 @@ const App: React.FC = () => {
                   >
                     <X size={14} />
                   </button>
+                )}
+                {!scannedId && (
+                  <p className="absolute -bottom-6 left-0 w-full text-center text-[6px] text-gray-500 font-black uppercase tracking-[0.2em] opacity-40 animate-pulse font-montserrat">
+                    ¿SIN QR? ESCRIBE EL NOMBRE PARA EL RADAR
+                  </p>
                 )}
               </div>
 
@@ -616,10 +621,15 @@ const App: React.FC = () => {
                           onClick={() => {
                             setScannedId(manualSearchQuery);
                             setShowManualResults(false);
+                            processScan(manualSearchQuery);
                           }}
-                          className="p-6 text-center hover:bg-white/5 cursor-pointer italic"
+                          className="p-6 text-center hover:bg-orange-500/10 cursor-pointer group transition-all"
                         >
-                          <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em]">Registrar "{manualSearchQuery}" como nuevo visitante</p>
+                          <div className="flex flex-col items-center gap-2">
+                            <Target size={24} className="text-orange-500 group-hover:scale-110 transition-transform" />
+                            <p className="text-[10px] text-white font-black uppercase tracking-[0.2em] font-bebas">REGISTRAR EN RADAR</p>
+                            <p className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">NUEVO VISITANTE: "{manualSearchQuery}"</p>
+                          </div>
                         </div>
                       )}
                   </div>
@@ -630,11 +640,18 @@ const App: React.FC = () => {
                 onClick={() => processScan()}
                 disabled={!scannedId || scanStatus !== 'IDLE'}
                 className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all font-bebas ${!scannedId || scanStatus !== 'IDLE'
-                  ? 'bg-gray-800 text-gray-500'
-                  : 'bg-[#ffb700] text-[#001f3f] shadow-[0_10px_30px_rgba(255,183,0,0.2)] active:scale-95'
-                  }`}
+                    ? 'bg-gray-800 text-gray-500'
+                    : agents.some(a => String(a.id).trim().toUpperCase() === scannedId.trim().toUpperCase())
+                      ? 'bg-[#ffb700] text-[#001f3f] shadow-[0_10px_30px_rgba(255,183,0,0.2)]'
+                      : 'bg-orange-500 text-white shadow-[0_10px_30px_rgba(249,115,22,0.2)]'
+                  } active:scale-95`}
               >
-                {scanStatus === 'IDLE' ? 'Confirmar Registro' : 'Procesando...'}
+                {scanStatus !== 'IDLE'
+                  ? 'Procesando...'
+                  : agents.some(a => String(a.id).trim().toUpperCase() === scannedId.trim().toUpperCase())
+                    ? 'Confirmar Asistencia'
+                    : 'Registrar en Radar'
+                }
               </button>
 
               {/* Radar de Visitantes */}

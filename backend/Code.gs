@@ -1042,6 +1042,13 @@ function saveBulkAcademyData(data) {
       const lessonValues = lessonsSheet.getDataRange().getValues();
       const existingIdx = lessonValues.findIndex(row => String(row[0]) === String(lesson.id));
       
+      const questionsField = lesson.questions ? JSON.stringify(lesson.questions) : (lesson.question || '');
+      const optA = (lesson.questions && lesson.questions[0]) ? lesson.questions[0].options[0] : (lesson.options ? lesson.options[0] : '');
+      const optB = (lesson.questions && lesson.questions[0]) ? lesson.questions[0].options[1] : (lesson.options ? lesson.options[1] : '');
+      const optC = (lesson.questions && lesson.questions[0]) ? lesson.questions[0].options[2] : (lesson.options ? lesson.options[2] : '');
+      const optD = (lesson.questions && lesson.questions[0]) ? lesson.questions[0].options[3] : (lesson.options ? lesson.options[3] : '');
+      const correct = (lesson.questions && lesson.questions[0]) ? lesson.questions[0].correctAnswer : (lesson.correctAnswer || '');
+
       const newRow = [
         lesson.id, 
         lesson.courseId, 
@@ -1049,12 +1056,12 @@ function saveBulkAcademyData(data) {
         lesson.title, 
         lesson.videoUrl || '', 
         lesson.content || '', 
-        lesson.question || '', 
-        lesson.options ? lesson.options[0] : '',
-        lesson.options ? lesson.options[1] : '',
-        lesson.options ? lesson.options[2] : '',
-        lesson.options ? lesson.options[3] : '',
-        lesson.correctAnswer || '',
+        questionsField, 
+        optA,
+        optB,
+        optC,
+        optD,
+        correct,
         lesson.xpReward || 10
       ];
       

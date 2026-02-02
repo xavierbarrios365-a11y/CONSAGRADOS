@@ -1,13 +1,15 @@
-
-import { GoogleGenAI } from "@google/genai";
+import { createClient } from "@google/genai";
 import { Agent } from "../types";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-const genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const client = apiKey ? createClient({ apiKey }) : null;
+
+if (!apiKey) {
+  console.warn("🚨 VITE_GEMINI_API_KEY no encontrada en .env.local");
+}
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {
-  if (!genAI) {
-    console.warn("🚨 AI OFFLINE: VITE_GEMINI_API_KEY no configurada.");
+  if (!client) {
     return "TACTICAL ANALYSIS UNAVAILABLE. SISTEMA SIN LLAVE DE ACCESO IA.";
   }
 
@@ -21,7 +23,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
   };
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await client.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{
         role: 'user',
@@ -33,10 +35,14 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
       }]
     });
 
-    return response.text;
+    return response.text || "ANÁLISIS COMPLETADO SIN TEXTO.";
   } catch (error: any) {
-    console.error("❌ Gemini analysis failed:", error);
-    if (error.message?.includes('API key') || error.status === 401) {
+    console.error("❌ Gemini detailed error (Analysis):", {
+      status: error.status,
+      message: error.message,
+      details: error.details
+    });
+    if (error.status === 401 || error.message?.includes('API key')) {
       return "ERROR DE SEGURIDAD: LLAVE IA NO VÁLIDA O EXPIRADA.";
     }
     return "SISTEMA DE ANÁLISIS EN MANTENIMIENTO. MANTENGA POSICIONES.";
@@ -44,8 +50,8 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
 };
 
 export const processAssessmentAI = async (input: string, isImage: boolean = false) => {
-  if (!genAI) {
-    throw new Error("SISTEMA IA NO CONFIGURADO. FALTA LLAVE VITE_GEMINI_API_KEY EN .env.local");
+  if (!client) {
+    throw new Error("SISTEMA IA NO CONFIGURADO. FALTA LLAVE VITE_GEMINI_API_KEY.");
   }
 
   try {
@@ -84,25 +90,28 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
       Responde ÚNICAMENTE con el objeto JSON puro.`
     });
 
-    const result = await genAI.models.generateContent({
+    const result = await client.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts }]
     });
 
-    const text = result.text;
+    const text = result.text || "";
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (error: any) {
-    console.error("❌ Gemini AI Importer failed:", error);
+    console.error("❌ Gemini detailed error (Importer):", {
+      status: error.status,
+      message: error.message,
+      details: error.details
+    });
     let msg = "FALLO ESTRUCTURAL IA.";
-    if (error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
+    if (error.status === 401 || error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
     throw new Error(`${msg} DETALLE: ${error.message || 'Error de conexión'}`);
   }
 };
 
 export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
-  if (!genAI) {
-    console.warn("🚨 Tactical Profile failed: genAI not initialized.");
+  if (!client) {
     return null;
   }
 
@@ -132,16 +141,16 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
       "summary": "Resumen aquí..."
     }`;
 
-    const result = await genAI.models.generateContent({
+    const result = await client.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const text = result.text;
+    const text = result.text || "";
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
-    console.error("❌ Gemini Tactical Profile failed:", error);
+    console.error("❌ Gemini detailed error (Profile):", error);
     return null;
   }
 };

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView } from '../types';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2 } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
+import TacticalRadar from './TacticalRadar';
+import { generateTacticalProfile } from '../services/geminiService';
 import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints } from '../services/sheetsService';
 
 interface CIUProps {
@@ -281,6 +283,19 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   </p>
                 </div>
               </div>
+
+              {/* RADAR TÁCTICO IN-CENTER */}
+              <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
+                <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
+                {agent.tacticalStats ? (
+                  <TacticalRadar stats={agent.tacticalStats} size={180} />
+                ) : (
+                  <div className="py-10 text-center opacity-30">
+                    <Sparkles size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* REPORTE TÁCTICO DE IA */}
@@ -290,9 +305,20 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
 
               <div className="relative z-10 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-[#ffb700] rounded-full animate-pulse"></div>
-                  <h3 className="text-[10px] text-[#ffb700]/80 font-black uppercase tracking-[0.4em] font-bebas">SISTEMA ANALÍTICO V37 // LIVE INTEL</h3>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-[#ffb700] rounded-full animate-pulse"></div>
+                    <h3 className="text-[10px] text-[#ffb700]/80 font-black uppercase tracking-[0.4em] font-bebas">SISTEMA ANALÍTICO V37 // LIVE INTEL</h3>
+                  </div>
+                  {intelReport?.includes('UNAVAILABLE') && (
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="text-[#ffb700] hover:text-white transition-colors"
+                      title="Reintentar conexión con IA"
+                    >
+                      <RefreshCw size={14} />
+                    </button>
+                  )}
                 </div>
 
                 <div className="bg-black/40 border border-white/5 rounded-2xl p-6 font-mono text-[11px] leading-relaxed text-[#f4f4f4]/80 backdrop-blur-sm shadow-inner">
@@ -454,8 +480,8 @@ const SanctionOption = ({ label, sub, pts, onClick, disabled, isCritical }: any)
     disabled={disabled}
     onClick={onClick}
     className={`flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 ${isCritical
-        ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
-        : 'bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/20'
+      ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
+      : 'bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/20'
       }`}
   >
     <div className="text-left font-montserrat">

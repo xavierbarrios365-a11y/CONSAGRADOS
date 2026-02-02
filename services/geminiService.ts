@@ -2,7 +2,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { Agent } from "../types";
 
-const apiKey = process.env.GEMINI_API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+if (!apiKey) console.warn("🚨 GEMINI_API_KEY NO DETECTADA. Verifica tus variables de entorno (VITE_GEMINI_API_KEY).");
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {

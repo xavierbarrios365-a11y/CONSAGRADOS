@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Agent } from '../types';
-import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2 } from 'lucide-react';
+import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
 import { updateTacticalStats, fetchAcademyData } from '../services/sheetsService';
@@ -49,6 +49,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [backTab, setBackTab] = useState<'QR' | 'INTEL'>('QR');
 
   const handleAIUpdate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,8 +61,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
       const result = await generateTacticalProfile(agent, progress);
       if (result) {
         await updateTacticalStats(agent.id, result.stats, result.summary);
-        // Refresh local state if needed (ideally via props/context)
-        window.location.reload(); // Simple refresh for now
+        window.location.reload();
       }
     } catch (err) {
       console.error("Failed to update tactical profile", err);
@@ -168,58 +168,88 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col items-center p-5 space-y-4"
+          className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col overflow-hidden"
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
             transform: 'rotateY(180deg) translateZ(1px)'
           }}
+          onClick={(e) => e.stopPropagation()} // Evitar volteo al tocar tabs
         >
-          {/* Header compacto */}
-          <div className="text-center w-full">
-            <h3 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em] mb-1">INTELIGENCIA TÁCTICA</h3>
-            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-[#ffb700]/30 to-transparent"></div>
-          </div>
-
-          {/* Radar Chart */}
-          <div className="relative">
-            {agent.tacticalStats ? (
-              <TacticalRadar stats={agent.tacticalStats} size={160} />
-            ) : (
-              <div className="w-[160px] h-[160px] border border-dashed border-[#ffb700]/20 rounded-full flex flex-col items-center justify-center p-4 text-center">
-                <Sparkles size={24} className="text-[#ffb700] mb-2 opacity-50" />
-                <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Perfil Psicodigital Pendiente de Análisis</p>
-              </div>
-            )}
-
-            {/* Update Button */}
+          {/* TABS SELECTOR */}
+          <div className="flex w-full bg-[#111] border-b border-white/5">
             <button
-              onClick={handleAIUpdate}
-              disabled={isUpdating}
-              className="absolute -bottom-2 -right-2 bg-[#ffb700] text-[#001f3f] p-2 rounded-xl shadow-lg hover:scale-110 active:scale-90 transition-all z-50 flex items-center justify-center"
+              onClick={() => setBackTab('QR')}
+              className={`flex-1 py-4 text-[9px] font-black uppercase tracking-[0.2em] transition-all font-bebas ${backTab === 'QR' ? 'text-[#ffb700] border-b-2 border-[#ffb700] bg-white/5' : 'text-gray-500 hover:text-white'}`}
             >
-              {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Acceso Digital
+            </button>
+            <button
+              onClick={() => setBackTab('INTEL')}
+              className={`flex-1 py-4 text-[9px] font-black uppercase tracking-[0.2em] transition-all font-bebas ${backTab === 'INTEL' ? 'text-[#ffb700] border-b-2 border-[#ffb700] bg-white/5' : 'text-gray-500 hover:text-white'}`}
+            >
+              Inteligencia
             </button>
           </div>
 
-          {/* AI Briefing */}
-          <div className="flex-1 w-full bg-[#ffb700]/5 border border-[#ffb700]/10 rounded-2xl p-3 overflow-hidden">
-            <p className="text-[6px] text-[#ffb700] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-              <ShieldCheck size={8} /> RESUMEN DE CAMPO:
-            </p>
-            <p className="text-[8px] text-white font-bold leading-tight uppercase font-montserrat italic">
-              {agent.tacticalSummary || "Sin registros de inteligencia recientes. Completa evaluaciones para generar un perfil."}
-            </p>
-          </div>
+          <div className="flex-1 flex flex-col items-center p-5 justify-between">
+            {backTab === 'QR' ? (
+              <>
+                <div className="text-center mt-2">
+                  <h3 className="text-[14px] font-bebas text-white uppercase tracking-[0.3em] mb-1">CÓDIGO DE ACCESO</h3>
+                  <p className="text-[7px] text-[#ffb700] font-black tracking-widest uppercase">ID: {agent.id}</p>
+                </div>
 
-          {/* QR & Info Foot */}
-          <div className="flex items-center justify-between w-full h-12">
-            <div className="text-left">
-              <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest ">DOC ID: {agent.id}</p>
-              <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest">ACTUALIZADO: {agent.lastAiUpdate ? new Date(agent.lastAiUpdate).toLocaleDateString() : 'N/A'}</p>
-            </div>
-            <div className="bg-white p-1 rounded-lg">
-              <img src={qrUrl} alt="QR" className="w-8 h-8" />
+                <div className={`p-4 bg-white rounded-3xl shadow-[0_0_40px_rgba(255,255,255,0.1)] transition-all duration-700 animate-in zoom-in-75`}>
+                  <img src={qrUrl} alt="QR" className="w-32 h-32 md:w-40 md:h-40" />
+                </div>
+
+                <div className="text-center px-4 mb-2">
+                  <p className="text-[7px] text-gray-500 font-bold uppercase tracking-widest font-montserrat italic leading-relaxed">
+                    Presenta este código en los puntos de control para registrar tu actividad táctica.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="relative w-full flex flex-col items-center">
+                  <div className="mb-2">
+                    {agent.tacticalStats ? (
+                      <TacticalRadar stats={agent.tacticalStats} size={150} />
+                    ) : (
+                      <div className="w-[150px] h-[150px] border border-dashed border-[#ffb700]/20 rounded-full flex flex-col items-center justify-center p-4 text-center">
+                        <Sparkles size={24} className="text-[#ffb700] mb-2 opacity-50" />
+                        <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Sin Análisis</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleAIUpdate}
+                    disabled={isUpdating}
+                    className="absolute top-0 right-0 bg-[#ffb700] text-[#001f3f] p-2 rounded-xl shadow-lg hover:scale-110 active:scale-90 transition-all z-50 flex items-center justify-center"
+                  >
+                    {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                  </button>
+                </div>
+
+                <div className="w-full bg-[#ffb700]/5 border border-[#ffb700]/10 rounded-2xl p-3 flex-1 overflow-hidden flex flex-col justify-center">
+                  <p className="text-[6px] text-[#ffb700] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+                    <ShieldCheck size={8} /> BREVE TÁCTICO:
+                  </p>
+                  <p className="text-[8px] text-white font-bold leading-tight uppercase font-montserrat italic">
+                    {agent.tacticalSummary || "Completa evaluaciones para generar tu perfil de inteligencia táctica."}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* Footer unificado */}
+            <div className="w-full pt-4 border-t border-white/5 flex justify-between items-center opacity-40">
+              <p className="text-[6px] text-gray-500 font-black uppercase">V37 // NODE: CARACAS</p>
+              <p className="text-[6px] text-gray-500 font-black uppercase">
+                {agent.lastAiUpdate ? `SYNC: ${new Date(agent.lastAiUpdate).toLocaleDateString()}` : 'SYNC: PENDIENTE'}
+              </p>
             </div>
           </div>
         </div>

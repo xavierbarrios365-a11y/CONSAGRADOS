@@ -69,25 +69,25 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto pb-32 md:pb-0 bg-[#001833]">
+        <main className="flex-1 overflow-y-auto pb-40 md:pb-0 bg-[#001833]">
           <div className="max-w-screen-xl mx-auto h-full">
             {children}
           </div>
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-xl px-4 py-3 flex justify-around items-center z-40 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-xl px-4 py-3 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {filteredNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${activeView === item.id ? 'text-[#ffb700]' : 'text-gray-500'
+            className={`flex flex-col items-center transition-all active:scale-90 ${activeView === item.id ? 'text-[#ffb700]' : 'text-gray-500'
               }`}
+            title={item.label}
           >
-            <div className={`p-1.5 rounded-xl ${activeView === item.id ? 'bg-[#ffb700]/10' : ''}`}>
+            <div className={`p-2 rounded-xl ${activeView === item.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/20' : ''}`}>
               {item.icon}
             </div>
-            <span className="text-[7px] font-black uppercase tracking-widest">{item.label}</span>
           </button>
         ))}
       </nav>

@@ -1,7 +1,10 @@
 
 import React, { useState } from 'react';
 import { Agent } from '../types';
-import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone } from 'lucide-react';
+import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2 } from 'lucide-react';
+import TacticalRadar from './TacticalRadar';
+import { generateTacticalProfile } from '../services/geminiService';
+import { updateTacticalStats, fetchAcademyData } from '../services/sheetsService';
 
 interface DigitalIdCardProps {
   agent: Agent;
@@ -45,6 +48,27 @@ export const formatDriveUrl = (url: string) => {
 const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleAIUpdate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isUpdating) return;
+
+    setIsUpdating(true);
+    try {
+      const { progress } = await fetchAcademyData(agent.id);
+      const result = await generateTacticalProfile(agent, progress);
+      if (result) {
+        await updateTacticalStats(agent.id, result.stats, result.summary);
+        // Refresh local state if needed (ideally via props/context)
+        window.location.reload(); // Simple refresh for now
+      }
+    } catch (err) {
+      console.error("Failed to update tactical profile", err);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${agent.id}&color=000000&bgcolor=ffffff`;
 
@@ -144,29 +168,59 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col items-center justify-center p-6 space-y-8"
+          className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col items-center p-5 space-y-4"
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg) translateZ(1px)' // Forzar separación 3D en móviles
+            transform: 'rotateY(180deg) translateZ(1px)'
           }}
         >
           {/* Header compacto */}
-          <div className="text-center px-4">
-            <h3 className="text-[14px] font-bebas text-white uppercase tracking-[0.3em] mb-2 leading-none">ACCESO DIGITAL</h3>
-            <div className="h-[1px] w-12 bg-[#ffb700]/30 mx-auto mb-2"></div>
+          <div className="text-center w-full">
+            <h3 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em] mb-1">INTELIGENCIA TÁCTICA</h3>
+            <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-[#ffb700]/30 to-transparent"></div>
           </div>
 
-          {/* QR Central - Ocupa el espacio principal */}
-          <div className={`p-3 bg-white rounded-3xl shadow-[0_0_30px_rgba(255,255,255,0.1)] transition-all duration-700 delay-300 transform ${isFlipped ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
-            <img src={qrUrl} alt="QR" className="w-32 h-32 md:w-40 md:h-40" />
+          {/* Radar Chart */}
+          <div className="relative">
+            {agent.tacticalStats ? (
+              <TacticalRadar stats={agent.tacticalStats} size={160} />
+            ) : (
+              <div className="w-[160px] h-[160px] border border-dashed border-[#ffb700]/20 rounded-full flex flex-col items-center justify-center p-4 text-center">
+                <Sparkles size={24} className="text-[#ffb700] mb-2 opacity-50" />
+                <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Perfil Psicodigital Pendiente de Análisis</p>
+              </div>
+            )}
+
+            {/* Update Button */}
+            <button
+              onClick={handleAIUpdate}
+              disabled={isUpdating}
+              className="absolute -bottom-2 -right-2 bg-[#ffb700] text-[#001f3f] p-2 rounded-xl shadow-lg hover:scale-110 active:scale-90 transition-all z-50 flex items-center justify-center"
+            >
+              {isUpdating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            </button>
           </div>
 
-          {/* Mantra Institucional en el Dorso */}
-          <div className="text-center px-6">
-            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest opacity-80 font-montserrat leading-relaxed italic">
-              "NO PEDIMOS PERMISO PARA SER LUZ. VIVIMOS EN UN MUNDO QUE CELEBRA LO SUPERFICIAL Y PREMIA LO FRÁGIL. PERO NOSOTROS NO SOMOS DE ESE MUNDO."
+          {/* AI Briefing */}
+          <div className="flex-1 w-full bg-[#ffb700]/5 border border-[#ffb700]/10 rounded-2xl p-3 overflow-hidden">
+            <p className="text-[6px] text-[#ffb700] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+              <ShieldCheck size={8} /> RESUMEN DE CAMPO:
             </p>
+            <p className="text-[8px] text-white font-bold leading-tight uppercase font-montserrat italic">
+              {agent.tacticalSummary || "Sin registros de inteligencia recientes. Completa evaluaciones para generar un perfil."}
+            </p>
+          </div>
+
+          {/* QR & Info Foot */}
+          <div className="flex items-center justify-between w-full h-12">
+            <div className="text-left">
+              <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest ">DOC ID: {agent.id}</p>
+              <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest">ACTUALIZADO: {agent.lastAiUpdate ? new Date(agent.lastAiUpdate).toLocaleDateString() : 'N/A'}</p>
+            </div>
+            <div className="bg-white p-1 rounded-lg">
+              <img src={qrUrl} alt="QR" className="w-8 h-8" />
+            </div>
           </div>
         </div>
 

@@ -63,7 +63,10 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'RELACION_CON_DIOS': ['relationshipwithgod', 'relacion con dios', 'compromiso'],
       'PREGUNTA': ['securityquestion', 'pregunta_seguridad', 'pregunta'],
       'RESPUESTA': ['securityanswer', 'respuesta_seguridad', 'respuesta'],
-      'MUST_CHANGE': ['mustchangepassword', 'cambio_obligatorio_pin', 'cambio']
+      'MUST_CHANGE': ['mustchangepassword', 'cambio_obligatorio_pin', 'cambio'],
+      'STATS': ['tacticalstats', 'stats_json', 'stats'],
+      'SUMMARY': ['tacticalsummary', 'tactor_summary', 'summary'],
+      'LAST_UPDATE': ['lastaiupdate', 'last_ai_update', 'update']
     };
 
     const isMatrix = Array.isArray(rawContent[0]);
@@ -155,7 +158,17 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
     accessLevel: getV('NIVEL_ACCESO') || "ESTUDIANTE",
     securityQuestion: getV('PREGUNTA') || "",
     securityAnswer: getV('RESPUESTA') || "",
-    mustChangePassword: String(getV('MUST_CHANGE')).toUpperCase() === 'SI'
+    mustChangePassword: String(getV('MUST_CHANGE')).toUpperCase() === 'SI',
+    tacticalStats: (() => {
+      try {
+        const stats = getV('STATS');
+        return stats ? JSON.parse(stats) : undefined;
+      } catch (e) {
+        return undefined;
+      }
+    })(),
+    tacticalSummary: getV('SUMMARY') || "",
+    lastAiUpdate: getV('LAST_UPDATE') || ""
   };
 };
 
@@ -345,6 +358,21 @@ export const saveBulkAcademyData = async (data: { courses: any[], lessons: any[]
     return response;
   } catch (error: any) {
     console.error(" FALLO GUARDADO MASIVO:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateTacticalStats = async (agentId: string, stats: any, summary: string) => {
+  try {
+    const response = await postToAction('update_tactical_stats', {
+      agentId,
+      stats: JSON.stringify(stats),
+      summary,
+      lastUpdate: new Date().toISOString()
+    });
+    return response;
+  } catch (error: any) {
+    console.error(" FALLO ACTUALIZAR STATS TÁCTICOS:", error);
     return { success: false, error: error.message };
   }
 };

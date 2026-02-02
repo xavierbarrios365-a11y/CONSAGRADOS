@@ -38,6 +38,15 @@ export interface Agent {
   securityQuestion?: string;
   securityAnswer?: string;
   mustChangePassword: boolean;
+  tacticalStats?: {
+    liderazgo: number;
+    servicio: number;
+    analisis: number;
+    potencial: number;
+    adaptabilidad: number;
+  };
+  tacticalSummary?: string;
+  lastAiUpdate?: string;
 }
 
 export interface Guide {

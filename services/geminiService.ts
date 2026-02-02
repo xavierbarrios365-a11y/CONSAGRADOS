@@ -87,3 +87,45 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     throw new Error("SISTEMA DE IA TEMPORALMENTE FUERA DE LÍNEA.");
   }
 };
+export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
+  if (!ai) return null;
+
+  try {
+    const prompt = `Analiza el desempeño de este agente y genera un perfil táctico de videojuego (estilo FIFA/RPG).
+    
+    DATOS DEL AGENTE:
+    - Nombre: ${agent.name}
+    - Rango: ${agent.rank}
+    - XP Total: ${agent.xp}
+    - Progreso Academia: ${JSON.stringify(academyProgress)}
+    - Talento: ${agent.talent}
+
+    REQUERIMIENTO:
+    1. Calcula 5 estadísticas de 0 a 100: Liderazgo, Servicio, Análisis, Potencial y Adaptabilidad.
+    2. Genera un "Resumen Táctico" de máximo 40 palabras con tono militar de élite.
+    
+    Responde ÚNICAMENTE en este formato JSON:
+    {
+      "stats": {
+        "liderazgo": 85,
+        "servicio": 70,
+        "analisis": 90,
+        "potencial": 95,
+        "adaptabilidad": 80
+      },
+      "summary": "Resumen aquí..."
+    }`;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+    });
+
+    const text = result.text;
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("Gemini Tactical Profile failed", error);
+    return null;
+  }
+};

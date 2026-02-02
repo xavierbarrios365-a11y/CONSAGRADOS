@@ -99,6 +99,8 @@ function doPost(e) {
         return registerIdScan(request.data);
       case 'update_agent_points':
         return updateAgentPoints(request.data);
+      case 'update_tactical_stats':
+        return updateTacticalStats(request.data);
       case 'reconstruct_db':
         return reconstructDb();
       case 'update_user_password':
@@ -553,7 +555,8 @@ function setupDatabase() {
     'ID', 'NOMBRE', 'PIN', 'RANGO', 'CARGO', 'FOTO URL', 'WHATSAPP', 
     'FECHA DE NACIMIENTO', 'TALENTO', 'BAUTIZADO', 'RELACION CON DIOS',
     'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO',
-    'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN'
+    'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN',
+    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
   
@@ -1099,5 +1102,33 @@ function saveBulkAcademyData(data) {
   }
   
   return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Datos actualizados masivamente." })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Actualiza las estadísticas tácticas y el resumen de un agente.
+ */
+function updateTacticalStats(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  const statsCol = headers.indexOf('STATS_JSON') + 1;
+  const summaryCol = headers.indexOf('TACTOR_SUMMARY') + 1;
+  const updateCol = headers.indexOf('LAST_AI_UPDATE') + 1;
+  
+  if (statsCol === 0 || summaryCol === 0 || updateCol === 0) throw new Error("Columnas tácticas no encontradas.");
+
+  const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  const row = rowIdx + 1;
+  sheet.getRange(row, statsCol).setValue(data.stats);
+  sheet.getRange(row, summaryCol).setValue(data.summary);
+  sheet.getRange(row, updateCol).setValue(data.lastUpdate);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 

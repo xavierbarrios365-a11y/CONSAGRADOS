@@ -123,6 +123,8 @@ function doPost(e) {
         return getAcademyData(request.data);
       case 'submit_quiz_result':
         return submitQuizResult(request.data);
+      case 'save_bulk_academy_data':
+        return saveBulkAcademyData(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -989,5 +991,67 @@ function submitQuizResult(data) {
     isCorrect, 
     xpAwarded: xpReward 
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Guarda datos de la academia de forma masiva (Cursos y Lecciones).
+ */
+function saveBulkAcademyData(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
+  const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+  
+  if (!coursesSheet || !lessonsSheet) throw new Error("Hojas de academia no encontradas.");
+  
+  // 1. Guardar Cursos
+  if (data.courses && data.courses.length > 0) {
+    // Si data.append es falso, limpiamos (opcional, mejor append inteligente)
+    data.courses.forEach(course => {
+      // Buscar si existe para actualizar o añadir
+      const courseValues = coursesSheet.getDataRange().getValues();
+      const existingIdx = courseValues.findIndex(row => String(row[0]) === String(course.id));
+      
+      const newRow = [course.id, course.title, course.description, course.imageUrl, course.requiredLevel];
+      if (existingIdx !== -1) {
+        coursesSheet.getRange(existingIdx + 1, 1, 1, newRow.length).setValues([newRow]);
+      } else {
+        coursesSheet.appendRow(newRow);
+      }
+    });
+  }
+  
+  // 2. Guardar Lecciones
+  if (data.lessons && data.lessons.length > 0) {
+    data.lessons.forEach(lesson => {
+      const lessonValues = lessonsSheet.getDataRange().getValues();
+      const existingIdx = lessonValues.findIndex(row => String(row[0]) === String(lesson.id));
+      
+      const newRow = [
+        lesson.id, 
+        lesson.courseId, 
+        lesson.order, 
+        lesson.title, 
+        lesson.videoUrl || '', 
+        lesson.content || '', 
+        lesson.question || '', 
+        lesson.options ? lesson.options[0] : '',
+        lesson.options ? lesson.options[1] : '',
+        lesson.options ? lesson.options[2] : '',
+        lesson.options ? lesson.options[3] : '',
+        lesson.correctAnswer || '',
+        lesson.xpReward || 10
+      ];
+      
+      if (existingIdx !== -1) {
+        lessonsSheet.getRange(existingIdx + 1, 1, 1, newRow.length).setValues([newRow]);
+      } else {
+        lessonsSheet.appendRow(newRow);
+      }
+    });
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Datos actualizados masivamente." })).setMimeType(ContentService.MimeType.JSON);
 }
 

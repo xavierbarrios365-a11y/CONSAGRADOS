@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView } from '../types';
 import { fetchAcademyData, submitQuizResult } from '../services/sheetsService';
-import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle } from 'lucide-react';
+import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, FileCode } from 'lucide-react';
+import AcademyStudio from './AcademyStudio';
 
 interface AcademyModuleProps {
     userRole: UserRole;
@@ -15,6 +16,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
     const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+    const [showStudio, setShowStudio] = useState(false);
 
     // Quiz State
     const [quizState, setQuizState] = useState<'IDLE' | 'STARTED' | 'SUBMITTING' | 'RESULT'>('IDLE');
@@ -79,57 +81,77 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
     if (!selectedCourse) {
         return (
             <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-5xl mx-auto">
-                <div className="text-left space-y-2">
-                    <h2 className="text-2xl md:text-4xl font-bebas text-white uppercase tracking-widest leading-none">Academia Táctica</h2>
-                    <p className="text-[8px] md:text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] opacity-60 font-montserrat">Forjando la mente para el despliegue</p>
-                </div>
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="text-left space-y-2">
+                        <h2 className="text-2xl md:text-4xl font-bebas text-white uppercase tracking-widest leading-none">Academia Táctica</h2>
+                        <p className="text-[8px] md:text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] opacity-60 font-montserrat">Forjando la mente para el despliegue</p>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {courses.length === 0 ? (
-                        <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                            <GraduationCap className="mx-auto text-gray-800 mb-4" size={48} />
-                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">No hay cursos disponibles en el servidor</p>
-                        </div>
-                    ) : (
-                        courses.map(course => (
-                            <div
-                                key={course.id}
-                                onClick={() => setSelectedCourse(course)}
-                                className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all cursor-pointer shadow-xl hover:-translate-y-1"
-                            >
-                                <div className="h-40 bg-gray-900 relative">
-                                    {course.imageUrl ? (
-                                        <img src={course.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-white/5">
-                                            <BookOpen size={40} className="text-gray-700" />
-                                        </div>
-                                    )}
-                                    <div className="absolute top-4 left-4">
-                                        <span className="text-[8px] font-black bg-[#ffb700] text-[#001f3f] px-3 py-1 rounded-full uppercase tracking-widest font-bebas">
-                                            {course.requiredLevel}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="p-6 space-y-3">
-                                    <h3 className="text-lg font-bebas text-white uppercase tracking-wider">{course.title}</h3>
-                                    <p className="text-[9px] text-gray-500 font-bold uppercase leading-relaxed line-clamp-2">
-                                        {course.description}
-                                    </p>
-                                    <div className="flex items-center justify-between pt-2">
-                                        <div className="flex items-center gap-2">
-                                            <Loader2 size={12} className="text-[#ffb700]" />
-                                            <span className="text-[8px] text-[#ffb700] font-black uppercase">
-                                                {lessons.filter(l => l.courseId === course.id).length} Lecciones
-                                            </span>
-                                        </div>
-                                        <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-all transform group-hover:translate-x-1" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))
+                    {userRole === UserRole.DIRECTOR && (
+                        <button
+                            onClick={() => setShowStudio(!showStudio)}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all font-bebas ${showStudio ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/60 border-white/10 hover:border-[#ffb700]/50'
+                                }`}
+                        >
+                            {showStudio ? <ArrowLeft size={16} /> : <FileCode size={16} />}
+                            {showStudio ? 'Volver a la Academia' : 'Academy Studio (Bulk)'}
+                        </button>
                     )}
                 </div>
+
+                {showStudio && userRole === UserRole.DIRECTOR ? (
+                    <AcademyStudio
+                        onSuccess={() => { setShowStudio(false); loadAcademy(); }}
+                        onCancel={() => setShowStudio(false)}
+                    />
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {courses.length === 0 ? (
+                            <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                                <GraduationCap className="mx-auto text-gray-800 mb-4" size={48} />
+                                <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">No hay cursos disponibles en el servidor</p>
+                            </div>
+                        ) : (
+                            courses.map(course => (
+                                <div
+                                    key={course.id}
+                                    onClick={() => setSelectedCourse(course)}
+                                    className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all cursor-pointer shadow-xl hover:-translate-y-1"
+                                >
+                                    <div className="h-40 bg-gray-900 relative">
+                                        {course.imageUrl ? (
+                                            <img src={course.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                                <BookOpen size={40} className="text-gray-700" />
+                                            </div>
+                                        )}
+                                        <div className="absolute top-4 left-4">
+                                            <span className="text-[8px] font-black bg-[#ffb700] text-[#001f3f] px-3 py-1 rounded-full uppercase tracking-widest font-bebas">
+                                                {course.requiredLevel}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 space-y-3">
+                                        <h3 className="text-lg font-bebas text-white uppercase tracking-wider">{course.title}</h3>
+                                        <p className="text-[9px] text-gray-500 font-bold uppercase leading-relaxed line-clamp-2">
+                                            {course.description}
+                                        </p>
+                                        <div className="flex items-center justify-between pt-2">
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 size={12} className="text-[#ffb700]" />
+                                                <span className="text-[8px] text-[#ffb700] font-black uppercase">
+                                                    {lessons.filter(l => l.courseId === course.id).length} Lecciones
+                                                </span>
+                                            </div>
+                                            <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-all transform group-hover:translate-x-1" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
             </div>
         );
     }
@@ -211,8 +233,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                                                 key={idx}
                                                 onClick={() => setSelectedAnswer(option)}
                                                 className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option
-                                                        ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]'
-                                                        : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
+                                                    ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]'
+                                                    : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
                                                     } font-bebas`}
                                             >
                                                 {option}
@@ -269,13 +291,13 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                                 key={lesson.id}
                                 onClick={() => handleLessonSelect(lesson)}
                                 className={`flex items-center gap-4 p-5 rounded-3xl border cursor-pointer transition-all ${activeLesson?.id === lesson.id
-                                        ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]'
-                                        : 'bg-white/5 border-white/5 hover:bg-white/10'
+                                    ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]'
+                                    : 'bg-white/5 border-white/5 hover:bg-white/10'
                                     }`}
                             >
                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isLessonCompleted(lesson.id)
-                                        ? 'bg-green-500/20 border-green-500/40 text-green-500'
-                                        : 'bg-black/30 border-white/5 text-gray-600'
+                                    ? 'bg-green-500/20 border-green-500/40 text-green-500'
+                                    : 'bg-black/30 border-white/5 text-gray-600'
                                     }`}>
                                     {isLessonCompleted(lesson.id) ? <CheckCircle size={18} /> : <span className="font-bebas text-lg">0{index + 1}</span>}
                                 </div>

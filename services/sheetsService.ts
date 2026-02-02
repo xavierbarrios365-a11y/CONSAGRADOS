@@ -339,3 +339,12 @@ export const submitQuizResult = async (agentId: string, lessonId: string, answer
     return { success: false, error: error.message };
   }
 };
+export const saveBulkAcademyData = async (data: { courses: any[], lessons: any[] }) => {
+  try {
+    const response = await postToAction('save_bulk_academy_data', data);
+    return response;
+  } catch (error: any) {
+    console.error(" FALLO GUARDADO MASIVO:", error);
+    return { success: false, error: error.message };
+  }
+};

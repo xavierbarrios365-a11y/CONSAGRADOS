@@ -20,8 +20,10 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
 
     // Quiz State
     const [quizState, setQuizState] = useState<'IDLE' | 'STARTED' | 'SUBMITTING' | 'RESULT'>('IDLE');
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-    const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number } | null>(null);
+    const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
+    const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number, score: number } | null>(null);
 
     useEffect(() => {
         loadAcademy();
@@ -41,31 +43,51 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
     const handleLessonSelect = (lesson: Lesson) => {
         setActiveLesson(lesson);
         setQuizState('IDLE');
+        setCurrentQuestionIndex(0);
         setSelectedAnswer(null);
+        setCorrectAnswersCount(0);
         setQuizResult(null);
     };
 
-    const handleQuizSubmit = async () => {
+    const handleAnswerSelect = (option: string) => {
+        if (quizState === 'RESULT' || quizState === 'SUBMITTING') return;
+        setSelectedAnswer(option);
+    };
+
+    const handleNextQuestion = async () => {
         if (!activeLesson || !selectedAnswer) return;
 
-        setQuizState('SUBMITTING');
-        const result = await submitQuizResult(agentId, activeLesson.id, selectedAnswer);
+        const currentQuestion = activeLesson.questions[currentQuestionIndex];
+        const isAnswerCorrect = selectedAnswer.trim().toUpperCase() === currentQuestion.correctAnswer.trim().toUpperCase();
 
-        setQuizResult({
-            isCorrect: result.isCorrect,
-            xpAwarded: result.xpAwarded
-        });
+        const newCorrectCount = isAnswerCorrect ? correctAnswersCount + 1 : correctAnswersCount;
+        setCorrectAnswersCount(newCorrectCount);
 
-        if (result.isCorrect) {
-            // Update local progress
-            setProgress(prev => [...prev.filter(p => p.lessonId !== activeLesson.id), {
-                lessonId: activeLesson.id,
-                status: 'COMPLETADO',
-                score: 100,
-                date: new Date().toISOString()
-            }]);
+        if (currentQuestionIndex < activeLesson.questions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+            setSelectedAnswer(null);
+        } else {
+            // Last question, submit result
+            setQuizState('SUBMITTING');
+            const score = (newCorrectCount / activeLesson.questions.length) * 100;
+            const result = await submitQuizResult(agentId, activeLesson.id, score);
+
+            setQuizResult({
+                isCorrect: result.isCorrect,
+                xpAwarded: result.xpAwarded,
+                score: score
+            });
+
+            if (result.isCorrect) {
+                setProgress(prev => [...prev.filter(p => p.lessonId !== activeLesson.id), {
+                    lessonId: activeLesson.id,
+                    status: 'COMPLETADO',
+                    score: score,
+                    date: new Date().toISOString()
+                }]);
+            }
+            setQuizState('RESULT');
         }
-        setQuizState('RESULT');
     };
 
     if (isLoading) {
@@ -186,7 +208,21 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                             <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
                                 {activeLesson.videoUrl ? (
                                     <iframe
-                                        src={activeLesson.videoUrl.replace('watch?v=', 'embed/')}
+                                        src={(() => {
+                                            let url = activeLesson.videoUrl;
+                                            // Handle youtu.be links
+                                            if (url.includes('youtu.be/')) {
+                                                const id = url.split('youtu.be/')[1].split(/[?#]/)[0];
+                                                return `https://www.youtube.com/embed/${id}`;
+                                            }
+                                            // Handle watch?v= links
+                                            if (url.includes('watch?v=')) {
+                                                const id = url.split('watch?v=')[1].split(/[&?#]/)[0];
+                                                return `https://www.youtube.com/embed/${id}`;
+                                            }
+                                            // Handle already embed links or other formats
+                                            return url.includes('embed/') ? url : url;
+                                        })()}
                                         className="w-full h-full"
                                         allowFullScreen
                                     ></iframe>
@@ -216,52 +252,79 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                             </div>
 
                             {/* Quiz Engine */}
-                            {!isLessonCompleted(activeLesson.id) && activeLesson.question && (
+                            {!isLessonCompleted(activeLesson.id) && activeLesson.questions && activeLesson.questions.length > 0 && (
                                 <div className="bg-[#001833] border border-[#ffb700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-                                    <div className="flex items-center gap-3">
-                                        <GraduationCap className="text-[#ffb700]" size={20} />
-                                        <h4 className="text-sm font-bebas text-white uppercase tracking-widest">Desafío Táctico</h4>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <GraduationCap className="text-[#ffb700]" size={20} />
+                                            <h4 className="text-sm font-bebas text-white uppercase tracking-widest">Desafío Táctico</h4>
+                                        </div>
+                                        {quizState !== 'RESULT' && (
+                                            <span className="text-[10px] text-gray-500 font-bebas">PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}</span>
+                                        )}
                                     </div>
 
-                                    <p className="text-sm font-bold text-white font-montserrat uppercase leading-relaxed">
-                                        {activeLesson.question}
-                                    </p>
+                                    {quizState !== 'RESULT' ? (
+                                        <>
+                                            <p className="text-sm font-bold text-white font-montserrat uppercase leading-relaxed">
+                                                {activeLesson.questions[currentQuestionIndex].question}
+                                            </p>
 
-                                    <div className="grid grid-cols-1 gap-3">
-                                        {activeLesson.options.filter(o => o).map((option, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setSelectedAnswer(option)}
-                                                className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option
-                                                    ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]'
-                                                    : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
-                                                    } font-bebas`}
-                                            >
-                                                {option}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {quizState === 'RESULT' && quizResult && (
-                                        <div className={`p-6 rounded-2xl border flex items-center gap-4 animate-in zoom-in-95 ${quizResult.isCorrect ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-red-500/20 border-red-500/30 text-red-400'
-                                            }`}>
-                                            {quizResult.isCorrect ? <Trophy size={32} /> : <AlertCircle size={32} />}
-                                            <div>
-                                                <p className="font-bebas text-lg uppercase leading-none">{quizResult.isCorrect ? '¡Misión Cumplida!' : 'Respuesta Incorrecta'}</p>
-                                                <p className="text-[10px] font-bold uppercase mt-1">
-                                                    {quizResult.isCorrect ? `Has ganado +${quizResult.xpAwarded} XP Tácticos.` : 'Repasa el material y vuelve a intentarlo.'}
-                                                </p>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {activeLesson.questions[currentQuestionIndex].options.map((option, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => handleAnswerSelect(option)}
+                                                        className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option
+                                                            ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]'
+                                                            : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
+                                                            } font-bebas`}
+                                                    >
+                                                        {option}
+                                                    </button>
+                                                ))}
                                             </div>
+
+                                            <button
+                                                onClick={handleNextQuestion}
+                                                disabled={!selectedAnswer || quizState === 'SUBMITTING'}
+                                                className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bebas"
+                                            >
+                                                {quizState === 'SUBMITTING' ? (
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Loader2 size={16} className="animate-spin" />
+                                                        <span>Verificando...</span>
+                                                    </div>
+                                                ) : (
+                                                    <span>{currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Evaluación'}</span>
+                                                )}
+                                            </button>
+                                        </>
+                                    ) : quizResult && (
+                                        <div className="space-y-6 animate-in zoom-in-95">
+                                            <div className={`p-6 rounded-2xl border flex items-center gap-4 ${quizResult.isCorrect ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-red-500/20 border-red-500/30 text-red-400'
+                                                }`}>
+                                                {quizResult.isCorrect ? <Trophy size={48} /> : <AlertCircle size={48} />}
+                                                <div>
+                                                    <p className="font-bebas text-2xl uppercase leading-none">{quizResult.isCorrect ? '¡Misión Cumplida!' : 'Evaluación Fallida'}</p>
+                                                    <p className="text-[10px] font-bold uppercase mt-1">
+                                                        {quizResult.isCorrect
+                                                            ? `Has aprobado con ${Math.round(quizResult.score)}%. Has ganado +${quizResult.xpAwarded} XP Tácticos.`
+                                                            : `Puntaje: ${Math.round(quizResult.score)}%. Se requiere 100% para aprobar. Repasa el material.`}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {!quizResult.isCorrect && (
+                                                <button
+                                                    onClick={() => handleLessonSelect(activeLesson)}
+                                                    className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all font-bebas"
+                                                >
+                                                    Reintentar Desafío
+                                                </button>
+                                            )}
                                         </div>
                                     )}
-
-                                    <button
-                                        onClick={handleQuizSubmit}
-                                        disabled={!selectedAnswer || quizState === 'SUBMITTING' || (quizState === 'RESULT' && quizResult?.isCorrect)}
-                                        className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bebas"
-                                    >
-                                        {quizState === 'SUBMITTING' ? 'Verificando...' : quizState === 'RESULT' && quizResult?.isCorrect ? 'Completado' : 'Enviar Respuesta'}
-                                    </button>
                                 </div>
                             )}
                         </div>

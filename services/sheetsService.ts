@@ -330,9 +330,9 @@ export const fetchAcademyData = async (agentId?: string) => {
   }
 };
 
-export const submitQuizResult = async (agentId: string, lessonId: string, answer: string) => {
+export const submitQuizResult = async (agentId: string, lessonId: string, score: number) => {
   try {
-    const response = await postToAction('submit_quiz_result', { agentId, lessonId, answer });
+    const response = await postToAction('submit_quiz_result', { agentId, lessonId, score });
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO ENVIAR QUIZ:", error);

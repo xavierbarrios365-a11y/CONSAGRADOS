@@ -75,6 +75,12 @@ export interface Course {
   requiredLevel: string;
 }
 
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+}
+
 export interface Lesson {
   id: string;
   courseId: string;
@@ -82,9 +88,7 @@ export interface Lesson {
   title: string;
   videoUrl: string;
   content: string;
-  question: string;
-  options: string[];
-  correctAnswer: string;
+  questions: QuizQuestion[];
   xpReward: number;
 }
 

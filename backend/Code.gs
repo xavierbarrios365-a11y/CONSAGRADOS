@@ -888,18 +888,33 @@ function getAcademyData(data) {
   
   const lessonsRaw = lessonsSheet.getDataRange().getValues();
   const lessonsHeaders = lessonsRaw.shift();
-  const lessons = lessonsRaw.map(row => ({
-    id: row[0],
-    courseId: row[1],
-    order: row[2],
-    title: row[3],
-    videoUrl: row[4],
-    content: row[5],
-    question: row[6],
-    options: [row[7], row[8], row[9], row[10]],
-    correctAnswer: row[11],
-    xpReward: row[12]
-  }));
+  const lessons = lessonsRaw.map(row => {
+    let questions = [];
+    try {
+      // Intentamos parsear el campo de pregunta como JSON (para múltiples preguntas)
+      questions = JSON.parse(row[6]);
+    } catch (e) {
+      // Si falla, es el formato viejo (una sola pregunta)
+      if (row[6]) {
+        questions = [{
+          question: row[6],
+          options: [row[7], row[8], row[9], row[10]].filter(o => o),
+          correctAnswer: row[11]
+        }];
+      }
+    }
+
+    return {
+      id: row[0],
+      courseId: row[1],
+      order: row[2],
+      title: row[3],
+      videoUrl: row[4],
+      content: row[5],
+      questions: questions,
+      xpReward: row[12]
+    };
+  });
   
   let progress = [];
   if (data.agentId && progressSheet) {
@@ -934,15 +949,14 @@ function submitQuizResult(data) {
   
   if (!progressSheet || !lessonsSheet || !directorySheet) throw new Error("Error en la base de datos.");
   
-  // 1. Validar lección y respuesta
+  // 1. Validar lección
   const lessonsData = lessonsSheet.getDataRange().getValues();
   const lesson = lessonsData.slice(1).find(row => String(row[0]) === String(data.lessonId));
   
   if (!lesson) throw new Error("Lección no encontrada.");
   
-  const correctAnswer = String(lesson[11]).trim().toUpperCase();
-  const providedAnswer = String(data.answer).trim().toUpperCase();
-  const isCorrect = correctAnswer === providedAnswer;
+  // data.score es lo que envía el frontend (porcentaje de aciertos)
+  const isCorrect = data.score >= 100; // Por ahora marcamos completado solo con 100%
   const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
   
   // 2. Guardar progreso
@@ -950,7 +964,7 @@ function submitQuizResult(data) {
     data.agentId,
     data.lessonId,
     isCorrect ? 'COMPLETADO' : 'FALLIDO',
-    isCorrect ? 100 : 0,
+    data.score || 0,
     new Date()
   ]);
   

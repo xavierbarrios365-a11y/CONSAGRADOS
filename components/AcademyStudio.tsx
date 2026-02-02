@@ -53,14 +53,23 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
   "lessons": [
     {
       "id": "LEC_01",
-      "courseId": "CURSO_01",
+      "courseId": "CURSO_ID",
       "order": 1,
-      "title": "Unidad 1: Despliegue",
-      "videoUrl": "https://youtube.com/...",
-      "content": "Teoría fundamental...",
-      "question": "¿Cuál es el objetivo?",
-      "options": ["Luz", "Oscuridad", "Neutral", "Ninguna"],
-      "correctAnswer": "Luz",
+      "title": "Título Lección",
+      "videoUrl": "YouTube Link",
+      "content": "Contenido HTML",
+      "questions": [
+        {
+          "question": "¿Pregunta 1?",
+          "options": ["A", "B", "C", "D"],
+          "correctAnswer": "A"
+        },
+        {
+          "question": "¿Pregunta 2?",
+          "options": ["A", "B", "C", "D"],
+          "correctAnswer": "B"
+        }
+      ],
       "xpReward": 50
     }
   ]

@@ -117,7 +117,7 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
   const access = String(getV('NIVEL_ACCESO') || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   let role = UserRole.STUDENT;
 
-  if (realId.includes('20389331') || access.includes("DIRECTOR")) role = UserRole.DIRECTOR;
+  if (realId.includes('29389331') || access.includes("DIRECTOR")) role = UserRole.DIRECTOR;
   else if (realId.includes('4251') || access.includes("LIDER") || access.includes("LEADER") || access.includes("LÍDER")) role = UserRole.LEADER;
 
   const formatDate = (val: any) => {

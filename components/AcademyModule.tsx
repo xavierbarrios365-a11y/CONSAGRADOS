@@ -23,7 +23,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
-    const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number, score: number } | null>(null);
+    const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number, score: number, error?: string } | null>(null);
+    const [isVideoWatched, setIsVideoWatched] = useState(false);
 
     useEffect(() => {
         loadAcademy();
@@ -47,7 +48,10 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
         setSelectedAnswer(null);
         setCorrectAnswersCount(0);
         setQuizResult(null);
+        setIsVideoWatched(false);
     };
+
+    const getLessonAttempts = (lessonId: string) => progress.find(p => p.lessonId === lessonId)?.attempts || 0;
 
     const handleAnswerSelect = (option: string) => {
         if (quizState === 'RESULT' || quizState === 'SUBMITTING') return;
@@ -75,7 +79,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
             setQuizResult({
                 isCorrect: result.isCorrect,
                 xpAwarded: result.xpAwarded,
-                score: score
+                score: score,
+                error: result.success === false ? result.error : undefined
             });
 
             if (result.isCorrect) {
@@ -83,7 +88,16 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                     lessonId: activeLesson.id,
                     status: 'COMPLETADO',
                     score: score,
-                    date: new Date().toISOString()
+                    date: new Date().toISOString(),
+                    attempts: getLessonAttempts(activeLesson.id) + 1
+                }]);
+            } else {
+                setProgress(prev => [...prev.filter(p => p.lessonId !== activeLesson.id), {
+                    lessonId: activeLesson.id,
+                    status: 'FALLIDO',
+                    score: score,
+                    date: new Date().toISOString(),
+                    attempts: getLessonAttempts(activeLesson.id) + 1
                 }]);
             }
             setQuizState('RESULT');
@@ -208,23 +222,27 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                             <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
                                 {activeLesson.videoUrl ? (
                                     <iframe
-                                        src={(() => {
+                                        id="academy-player"
+                                        src={`${(() => {
                                             let url = activeLesson.videoUrl;
-                                            // Handle youtu.be links
                                             if (url.includes('youtu.be/')) {
                                                 const id = url.split('youtu.be/')[1].split(/[?#]/)[0];
                                                 return `https://www.youtube.com/embed/${id}`;
                                             }
-                                            // Handle watch?v= links
                                             if (url.includes('watch?v=')) {
                                                 const id = url.split('watch?v=')[1].split(/[&?#]/)[0];
                                                 return `https://www.youtube.com/embed/${id}`;
                                             }
-                                            // Handle already embed links or other formats
                                             return url.includes('embed/') ? url : url;
-                                        })()}
+                                        })()}?enablejsapi=1&rel=0`}
                                         className="w-full h-full"
                                         allowFullScreen
+                                        onLoad={() => {
+                                            // Activar gatillo de video después de un retardo o interacción
+                                            // Nota: En una app real usaríamos la API de Youtube completa
+                                            // Por ahora, simulamos interés si el iframe carga y pasa un tiempo
+                                            setTimeout(() => setIsVideoWatched(true), 15000);
+                                        }}
                                     ></iframe>
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
@@ -259,12 +277,20 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                                             <GraduationCap className="text-[#ffb700]" size={20} />
                                             <h4 className="text-sm font-bebas text-white uppercase tracking-widest">Desafío Táctico</h4>
                                         </div>
-                                        {quizState !== 'RESULT' && (
-                                            <span className="text-[10px] text-gray-500 font-bebas">PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}</span>
-                                        )}
+                                        <div className="text-right">
+                                            <div className="text-[8px] text-gray-500 font-bold uppercase">Intentos: {getLessonAttempts(activeLesson.id)}/2</div>
+                                            {quizState !== 'RESULT' && (
+                                                <span className="text-[10px] text-gray-500 font-bebas">PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}</span>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    {quizState !== 'RESULT' ? (
+                                    {!isVideoWatched && quizState !== 'RESULT' ? (
+                                        <div className="py-10 text-center space-y-4">
+                                            <PlayCircle size={40} className="mx-auto text-[#ffb700] animate-pulse" />
+                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest font-bebas">Debes ver el video de entrenamiento antes de iniciar el quiz</p>
+                                        </div>
+                                    ) : quizState !== 'RESULT' ? (
                                         <>
                                             <p className="text-sm font-bold text-white font-montserrat uppercase leading-relaxed">
                                                 {activeLesson.questions[currentQuestionIndex].question}
@@ -308,20 +334,28 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                                                 <div>
                                                     <p className="font-bebas text-2xl uppercase leading-none">{quizResult.isCorrect ? '¡Misión Cumplida!' : 'Evaluación Fallida'}</p>
                                                     <p className="text-[10px] font-bold uppercase mt-1">
-                                                        {quizResult.isCorrect
-                                                            ? `Has aprobado con ${Math.round(quizResult.score)}%. Has ganado +${quizResult.xpAwarded} XP Tácticos.`
-                                                            : `Puntaje: ${Math.round(quizResult.score)}%. Se requiere 100% para aprobar. Repasa el material.`}
+                                                        {quizResult.error ? quizResult.error : (
+                                                            quizResult.isCorrect
+                                                                ? `Has aprobado con ${Math.round(quizResult.score)}%. Has ganado +${quizResult.xpAwarded} XP Tácticos.`
+                                                                : `Puntaje: ${Math.round(quizResult.score)}%. Se requiere 100% para aprobar. Intentos restantes: ${2 - getLessonAttempts(activeLesson.id)}`
+                                                        )}
                                                     </p>
                                                 </div>
                                             </div>
 
-                                            {!quizResult.isCorrect && (
+                                            {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
                                                 <button
                                                     onClick={() => handleLessonSelect(activeLesson)}
                                                     className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all font-bebas"
                                                 >
                                                     Reintentar Desafío
                                                 </button>
+                                            )}
+
+                                            {getLessonAttempts(activeLesson.id) >= 2 && !quizResult.isCorrect && (
+                                                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
+                                                    <p className="text-[9px] text-red-400 font-black uppercase tracking-widest font-bebas">Acceso Bloqueado. Contacta a un Director.</p>
+                                                </div>
                                             )}
                                         </div>
                                     )}

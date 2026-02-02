@@ -97,4 +97,5 @@ export interface LessonProgress {
   status: 'COMPLETADO' | 'FALLIDO';
   score: number;
   date: string;
+  attempts: number;
 }

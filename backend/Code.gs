@@ -588,7 +588,7 @@ function setupDatabase() {
 
   // 7. ACADEMIA PROGRESO
   const progressHeaders = [
-    'ID_AGENTE', 'ID_LECCION', 'ESTADO', 'NOTA', 'FECHA'
+    'ID_AGENTE', 'ID_LECCION', 'ESTADO', 'NOTA', 'FECHA', 'INTENTOS'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_PROGRESS_SHEET, progressHeaders));
   
@@ -949,24 +949,45 @@ function submitQuizResult(data) {
   
   if (!progressSheet || !lessonsSheet || !directorySheet) throw new Error("Error en la base de datos.");
   
-  // 1. Validar lección
+  // 1. Validar lección y límites de intentos
   const lessonsData = lessonsSheet.getDataRange().getValues();
   const lesson = lessonsData.slice(1).find(row => String(row[0]) === String(data.lessonId));
-  
   if (!lesson) throw new Error("Lección no encontrada.");
+
+  const progressData = progressSheet.getDataRange().getValues();
+  const existingProgressIdx = progressData.findIndex(row => String(row[0]) === String(data.agentId) && String(row[1]) === String(data.lessonId));
   
-  // data.score es lo que envía el frontend (porcentaje de aciertos)
-  const isCorrect = data.score >= 100; // Por ahora marcamos completado solo con 100%
+  let attempts = 0;
+  if (existingProgressIdx !== -1) {
+    attempts = parseInt(progressData[existingProgressIdx][5]) || 0;
+    if (progressData[existingProgressIdx][2] === 'COMPLETADO') {
+      throw new Error("Esta lección ya ha sido superada.");
+    }
+    if (attempts >= 2) { // Límite de 2 intentos sugerido
+      throw new Error("Has superado el límite de intentos (2). Contacta a un Director para desbloquear.");
+    }
+  }
+
+  const isCorrect = data.score >= 100;
   const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
-  
-  // 2. Guardar progreso
-  progressSheet.appendRow([
+  attempts += 1;
+
+  // 2. Guardar/Actualizar progreso
+  const now = new Date();
+  const progressRow = [
     data.agentId,
     data.lessonId,
     isCorrect ? 'COMPLETADO' : 'FALLIDO',
     data.score || 0,
-    new Date()
-  ]);
+    now,
+    attempts
+  ];
+
+  if (existingProgressIdx !== -1) {
+    progressSheet.getRange(existingProgressIdx + 1, 1, 1, progressRow.length).setValues([progressRow]);
+  } else {
+    progressSheet.appendRow(progressRow);
+  }
   
   // 3. Otorgar XP si es correcto
   let agentName = "Agente";

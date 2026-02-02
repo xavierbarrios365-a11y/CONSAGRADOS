@@ -1,15 +1,15 @@
-import { createClient } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Agent } from "../types";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-const client = apiKey ? createClient({ apiKey }) : null;
+const genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 if (!apiKey) {
   console.warn("🚨 VITE_GEMINI_API_KEY no encontrada en .env.local");
 }
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {
-  if (!client) {
+  if (!genAI) {
     return "TACTICAL ANALYSIS UNAVAILABLE. SISTEMA SIN LLAVE DE ACCESO IA.";
   }
 
@@ -23,7 +23,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
   };
 
   try {
-    const response = await client.models.generateContent({
+    const response = await genAI.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{
         role: 'user',
@@ -50,7 +50,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
 };
 
 export const processAssessmentAI = async (input: string, isImage: boolean = false) => {
-  if (!client) {
+  if (!genAI) {
     throw new Error("SISTEMA IA NO CONFIGURADO. FALTA LLAVE VITE_GEMINI_API_KEY.");
   }
 
@@ -90,7 +90,7 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
       Responde ÚNICAMENTE con el objeto JSON puro.`
     });
 
-    const result = await client.models.generateContent({
+    const result = await genAI.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts }]
     });
@@ -111,7 +111,7 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
 };
 
 export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
-  if (!client) {
+  if (!genAI) {
     return null;
   }
 
@@ -141,7 +141,7 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
       "summary": "Resumen aquí..."
     }`;
 
-    const result = await client.models.generateContent({
+    const result = await genAI.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });

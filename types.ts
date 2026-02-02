@@ -89,6 +89,8 @@ export interface QuizQuestion {
   options: string[];
   correctAnswer?: string;
   type: 'TEXT' | 'MULTIPLE' | 'DISC';
+  optionCategories?: string[]; // Para tests tipo DISC o por categorías
+  points?: number; // Puntos por respuesta correcta (si aplica)
 }
 
 export interface Lesson {
@@ -102,6 +104,14 @@ export interface Lesson {
   xpReward: number;
   startTime?: number;
   endTime?: number;
+  resultAlgorithm?: 'HIGHEST_CATEGORY' | 'SCORE_PERCENTAGE';
+  resultMappings?: {
+    category?: string;
+    minScore?: number;
+    maxScore?: number;
+    title: string;
+    content: string;
+  }[];
 }
 
 export interface LessonProgress {

@@ -198,3 +198,35 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     return null;
   }
 };
+export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[], resultProfile?: any) => {
+  const ai = getGenAI();
+  if (!ai) return null;
+
+  try {
+    const prompt = `Analiza profundamente los resultados de este agente en la evaluación: "${lessonTitle}".
+    
+    DATOS DE LA EVALUACIÓN:
+    - Perfil detectado por algoritmo: ${JSON.stringify(resultProfile || 'N/A')}
+    - Respuestas del agente: ${JSON.stringify(userAnswers)}
+
+    REQUERIMIENTO:
+    Genera un "Reporte de Inteligencia Táctica" que incluya:
+    1. Interpretación de su perfil psicológico y conductual basado en sus respuestas.
+    2. Fortalezas detectadas en su proceso de toma de decisiones.
+    3. Áreas de riesgo o cegueras tácticas.
+    4. Recomendación de despliegue (en qué área del equipo encajaría mejor).
+    
+    Mantén un tono de inteligencia militar de élite ("The Analyst"). Máximo 150 palabras.
+    Formato: HTML limpio (usa tags como <b>, <p>, <br>).`;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt
+    });
+
+    return result.text || "NO SE PUDO GENERAR EL ANÁLISIS PROFUNDO.";
+  } catch (error: any) {
+    console.error("❌ Gemini detailed error (Deep Analysis):", error.message);
+    return "ERROR EN EL SISTEMA DE ANÁLISIS PROFUNDO. REINTENTE MÁS TARDE.";
+  }
+};

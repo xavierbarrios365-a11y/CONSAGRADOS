@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView } from '../types';
 import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse } from '../services/sheetsService';
-import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, FileCode, Trash2 } from 'lucide-react';
+import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, FileCode, Trash2, BrainCircuit, Info, Sparkles } from 'lucide-react';
+import { processAssessmentAI, getDeepTestAnalysis } from '../services/geminiService';
 import AcademyStudio from './AcademyStudio';
 
 interface AcademyModuleProps {
@@ -26,7 +27,10 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const [textAnswer, setTextAnswer] = useState<string>("");
     const [correctAnswersCount, setCorrectAnswersCount] = useState(0);
     const [discScores, setDiscScores] = useState<{ [key: string]: number }>({ A: 0, B: 0, C: 0, D: 0 });
-    const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number, score: number, error?: string, profile?: string } | null>(null);
+    const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number, score: number, error?: string, profile?: string, title?: string, content?: string } | null>(null);
+    const [userAnswers, setUserAnswers] = useState<any[]>([]);
+    const [deepAnalysis, setDeepAnalysis] = useState<string | null>(null);
+    const [isAnalyzingDeeply, setIsAnalyzingDeeply] = useState(false);
     const [isVideoWatched, setIsVideoWatched] = useState(false);
     const [heartbeatActive, setHeartbeatActive] = useState(false);
 
@@ -55,20 +59,20 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     };
 
     const handleDeleteLesson = async (lessonId: string, title: string) => {
-        if (!confirm(`¿Eliminar la lección "${title}"? Esta acción no se puede deshacer.`)) return;
+        if (!confirm(`¿Eliminar la lección "${title}" ? Esta acción no se puede deshacer.`)) return;
         setIsLoading(true);
         const result = await deleteAcademyLesson(lessonId);
         if (result.success) {
             setLessons(prev => prev.filter(l => l.id !== lessonId));
             if (activeLesson?.id === lessonId) setActiveLesson(null);
         } else {
-            alert(`Error: ${result.error}`);
+            alert(`Error: ${result.error} `);
         }
         setIsLoading(false);
     };
 
     const handleDeleteCourse = async (courseId: string, title: string) => {
-        if (!confirm(`¿Eliminar el curso "${title}" y TODAS sus lecciones? Esta acción no se puede deshacer.`)) return;
+        if (!confirm(`¿Eliminar el curso "${title}" y TODAS sus lecciones ? Esta acción no se puede deshacer.`)) return;
         setIsLoading(true);
         const result = await deleteAcademyCourse(courseId);
         if (result.success) {
@@ -76,7 +80,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             setLessons(prev => prev.filter(l => l.courseId !== courseId));
             setSelectedCourse(null);
         } else {
-            alert(`Error: ${result.error}`);
+            alert(`Error: ${result.error} `);
         }
         setIsLoading(false);
     };
@@ -118,40 +122,77 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             const isAnswerCorrect = selectedAnswer?.trim().toUpperCase() === currentQuestion.correctAnswer?.trim().toUpperCase();
             if (isAnswerCorrect) newCorrectCount++;
             setCorrectAnswersCount(newCorrectCount);
-        } else if (currentQuestion.type === 'DISC') {
-            // Extract letter A, B, C, D from choice
-            const letter = selectedAnswer?.split('.')[0].trim().toUpperCase() || selectedAnswer?.trim().toUpperCase().charAt(0);
-            if (letter && ['A', 'B', 'C', 'D'].includes(letter)) {
-                newDiscScores[letter] = (newDiscScores[letter] || 0) + 1;
+        } else if (currentQuestion.type === 'DISC' || currentQuestion.optionCategories) {
+            // Extract category (either from optionCategories or from A, B, C, D letter)
+            let category = '';
+            if (currentQuestion.optionCategories) {
+                const optIdx = currentQuestion.options.findIndex(o => o === selectedAnswer);
+                category = currentQuestion.optionCategories[optIdx];
+            } else {
+                category = selectedAnswer?.split('.')[0].trim().toUpperCase() || selectedAnswer?.trim().toUpperCase().charAt(0);
+            }
+
+            if (category && ['A', 'B', 'C', 'D'].includes(category)) {
+                newDiscScores[category] = (newDiscScores[category] || 0) + 1;
                 setDiscScores(newDiscScores);
             }
         }
 
         if (currentQuestionIndex < activeLesson.questions.length - 1) {
+            // Save answer for context
+            setUserAnswers(prev => [...prev, { question: currentQuestion.question, answer: selectedAnswer || textAnswer }]);
             setCurrentQuestionIndex(prev => prev + 1);
             setSelectedAnswer(null);
             setTextAnswer("");
         } else {
             // Last question, submit result
+            const finalAnswers = [...userAnswers, { question: currentQuestion.question, answer: selectedAnswer || textAnswer }];
+            setUserAnswers(finalAnswers);
             setQuizState('SUBMITTING');
 
             let score = 100;
             let profile = undefined;
+            let resultTitle = undefined;
+            let resultContent = undefined;
 
-            if (activeLesson.questions.some(q => q.type === 'MULTIPLE')) {
-                score = (newCorrectCount / activeLesson.questions.filter(q => q.type === 'MULTIPLE').length) * 100;
-            }
+            const isDiscOrCategory = activeLesson.questions.some(q => q.type === 'DISC' || q.optionCategories);
 
-            if (activeLesson.questions.some(q => q.type === 'DISC')) {
-                // Determine profile
+            if (isDiscOrCategory) {
+                // Determine profile based on categories
                 const maxLetter = Object.entries(newDiscScores).reduce((a, b) => b[1] > a[1] ? b : a)[0];
-                const profiles: { [key: string]: string } = {
-                    A: 'DIRECTOR (Dominante)',
-                    B: 'INFLUYENTE (Entusiasta)',
-                    C: 'ESTABLE (Cooperador)',
-                    D: 'ANALÍTICO (Preciso)'
-                };
-                profile = profiles[maxLetter];
+
+                // Check if we have resultMappings in the lesson
+                if (activeLesson.resultMappings && activeLesson.resultMappings.length > 0) {
+                    const mapping = activeLesson.resultMappings.find(m => m.category === maxLetter);
+                    if (mapping) {
+                        resultTitle = mapping.title;
+                        resultContent = mapping.content;
+                    }
+                }
+
+                if (!resultTitle) {
+                    const profiles: { [key: string]: string } = {
+                        A: 'DIRECTOR (Dominante)',
+                        B: 'INFLUYENTE (Entusiasta)',
+                        C: 'ESTABLE (Cooperador)',
+                        D: 'ANALÍTICO (Preciso)'
+                    };
+                    profile = profiles[maxLetter] || `Categoría ${maxLetter} `;
+                }
+            } else if (activeLesson.questions.some(q => q.type === 'MULTIPLE')) {
+                score = (newCorrectCount / activeLesson.questions.filter(q => q.type === 'MULTIPLE').length) * 100;
+
+                // Also check SCORE_PERCENTAGE mappings if exist
+                if (activeLesson.resultAlgorithm === 'SCORE_PERCENTAGE' && activeLesson.resultMappings) {
+                    const mapping = activeLesson.resultMappings.find(m =>
+                        (m.minScore === undefined || score >= m.minScore) &&
+                        (m.maxScore === undefined || score <= m.maxScore)
+                    );
+                    if (mapping) {
+                        resultTitle = mapping.title;
+                        resultContent = mapping.content;
+                    }
+                }
             }
 
             const result = await submitQuizResult(agentId, activeLesson.id, score);
@@ -161,7 +202,9 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 xpAwarded: result.xpAwarded,
                 score: score,
                 error: result.success === false ? result.error : undefined,
-                profile: profile
+                profile: profile,
+                title: resultTitle,
+                content: resultContent
             });
 
             if (result.isCorrect) {
@@ -182,6 +225,23 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 }]);
             }
             setQuizState('RESULT');
+        }
+    };
+
+    const handleDeepAnalysis = async () => {
+        if (!activeLesson || !quizResult) return;
+        setIsAnalyzingDeeply(true);
+        try {
+            const analysis = await getDeepTestAnalysis(
+                activeLesson.title,
+                userAnswers,
+                quizResult.title || quizResult.profile
+            );
+            setDeepAnalysis(analysis);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsAnalyzingDeeply(false);
         }
     };
 
@@ -207,8 +267,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     {userRole === UserRole.DIRECTOR && (
                         <button
                             onClick={() => setShowStudio(!showStudio)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all font-bebas ${showStudio ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/60 border-white/10 hover:border-[#ffb700]/50'
-                                }`}
+                            className={`flex items - center gap - 2 px - 6 py - 3 rounded - 2xl border text - [10px] font - black uppercase tracking - widest transition - all font - bebas ${showStudio ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/60 border-white/10 hover:border-[#ffb700]/50'
+                                } `}
                         >
                             {showStudio ? <ArrowLeft size={16} /> : <FileCode size={16} />}
                             {showStudio ? 'Volver a la Academia' : 'Academy Studio (Bulk)'}
@@ -333,7 +393,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                     return baseUrl;
                                                 }
                                                 return url;
-                                            })()}`}
+                                            })()
+                                                } `}
                                             className="w-full h-full"
                                             allowFullScreen
                                             onLoad={() => {
@@ -415,10 +476,10 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         <button
                                                             key={idx}
                                                             onClick={() => handleAnswerSelect(option)}
-                                                            className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option
+                                                            className={`p - 5 rounded - 2xl text - left text - [10px] font - black uppercase tracking - widest transition - all border ${selectedAnswer === option
                                                                 ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]'
                                                                 : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
-                                                                } font-bebas`}
+                                                                } font - bebas`}
                                                         >
                                                             {option}
                                                         </button>
@@ -447,19 +508,49 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 }`}>
                                                 {quizResult.isCorrect ? <Trophy size={48} /> : <AlertCircle size={48} />}
                                                 <div>
-                                                    <p className="font-bebas text-2xl uppercase leading-none">{quizResult.isCorrect ? '¡Misión Cumplida!' : 'Evaluación Fallida'}</p>
-                                                    <p className="text-[10px] font-bold uppercase mt-1">
-                                                        {quizResult.profile ? (
-                                                            <span className="text-white">Perfil Detectado: <span className="text-[#ffb700]">{quizResult.profile}</span>. Reporte guardado para revisión.</span>
+                                                    <p className="font-bebas text-2xl uppercase leading-none">{quizResult.title || (quizResult.isCorrect ? '¡Misión Cumplida!' : 'Evaluación Fallida')}</p>
+                                                    <div className="text-[10px] font-bold uppercase mt-1 space-y-2">
+                                                        {quizResult.content ? (
+                                                            <div className="text-white bg-black/20 p-4 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: quizResult.content }} />
+                                                        ) : quizResult.profile ? (
+                                                            <p className="text-white">Perfil Detectado: <span className="text-[#ffb700]">{quizResult.profile}</span>. Reporte guardado para revisión.</p>
                                                         ) : (
-                                                            quizResult.error ? quizResult.error : (
-                                                                quizResult.isCorrect
-                                                                    ? `Has aprobado con ${Math.round(quizResult.score)}%. Has ganado +${quizResult.xpAwarded} XP Tácticos.`
-                                                                    : `Puntaje: ${Math.round(quizResult.score)}%. Se requiere 100% para aprobar. Intentos restantes: ${2 - getLessonAttempts(activeLesson.id)}`
+                                                            quizResult.error ? <p>{quizResult.error}</p> : (
+                                                                <p>
+                                                                    {quizResult.isCorrect
+                                                                        ? `Has aprobado con ${Math.round(quizResult.score)}%. Has ganado +${quizResult.xpAwarded} XP Tácticos.`
+                                                                        : `Puntaje: ${Math.round(quizResult.score)}%. Se requiere 100% para aprobar. Intentos restantes: ${2 - getLessonAttempts(activeLesson.id)}`
+                                                                    }
+                                                                </p>
                                                             )
                                                         )}
-                                                    </p>
+                                                    </div>
                                                 </div>
+                                            </div>
+
+                                            {/* AI Analysis Section */}
+                                            <div className="space-y-4">
+                                                {!deepAnalysis ? (
+                                                    <button
+                                                        onClick={handleDeepAnalysis}
+                                                        disabled={isAnalyzingDeeply}
+                                                        className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/30 text-[#ffb700] font-black uppercase text-[10px] tracking-widest hover:bg-[#ffb700]/20 transition-all group"
+                                                    >
+                                                        {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} className="group-hover:scale-110 transition-transform" />}
+                                                        {isAnalyzingDeeply ? 'Extrayendo Inteligencia Profunda...' : 'Solicitar Análisis de Perfil con IA'}
+                                                    </button>
+                                                ) : (
+                                                    <div className="p-6 bg-[#001f3f] border border-[#ffb700]/30 rounded-3xl space-y-4 animate-in fade-in slide-in-from-bottom-4 shadow-inner">
+                                                        <div className="flex items-center gap-2 text-[#ffb700]">
+                                                            <Sparkles size={16} />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Reporte de Inteligencia Táctica (AI)</span>
+                                                        </div>
+                                                        <div
+                                                            className="text-[11px] text-gray-300 font-bold uppercase leading-relaxed font-montserrat prose prose-invert max-w-none"
+                                                            dangerouslySetInnerHTML={{ __html: deepAnalysis }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
@@ -505,20 +596,20 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                         {courseLessons.map((lesson, index) => (
                             <div
                                 key={lesson.id}
-                                className={`group/lesson flex items-center gap-4 p-5 rounded-3xl border cursor-pointer transition-all ${activeLesson?.id === lesson.id
+                                className={`group / lesson flex items - center gap - 4 p - 5 rounded - 3xl border cursor - pointer transition - all ${activeLesson?.id === lesson.id
                                     ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]'
                                     : 'bg-white/5 border-white/5 hover:bg-white/10'
-                                    }`}
+                                    } `}
                             >
                                 <div onClick={() => handleLessonSelect(lesson)} className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isLessonCompleted(lesson.id)
+                                    <div className={`w - 10 h - 10 rounded - 2xl flex items - center justify - center shrink - 0 border ${isLessonCompleted(lesson.id)
                                         ? 'bg-green-500/20 border-green-500/40 text-green-500'
                                         : 'bg-black/30 border-white/5 text-gray-600'
-                                        }`}>
+                                        } `}>
                                         {isLessonCompleted(lesson.id) ? <CheckCircle size={18} /> : <span className="font-bebas text-lg">0{index + 1}</span>}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-[10px] font-black uppercase truncate font-bebas tracking-wide ${activeLesson?.id === lesson.id ? 'text-white' : 'text-gray-400'}`}>
+                                        <p className={`text - [10px] font - black uppercase truncate font - bebas tracking - wide ${activeLesson?.id === lesson.id ? 'text-white' : 'text-gray-400'} `}>
                                             {lesson.title}
                                         </p>
                                         <p className="text-[8px] text-gray-600 font-bold uppercase">
@@ -552,7 +643,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-[#ffb700] transition-all duration-1000"
-                                    style={{ width: `${(progress.filter(p => courseLessons.some(cl => cl.id === p.lessonId) && p.status === 'COMPLETADO').length / courseLessons.length) * 100 || 0}%` }}
+                                    style={{ width: `${(progress.filter(p => courseLessons.some(cl => cl.id === p.lessonId) && p.status === 'COMPLETADO').length / courseLessons.length) * 100 || 0}% ` }}
                                 />
                             </div>
                         </div>

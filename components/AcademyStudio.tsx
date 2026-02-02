@@ -13,7 +13,16 @@ interface ManualQuestion {
     type: 'TEXT' | 'MULTIPLE' | 'DISC';
     question: string;
     options: string[];
+    optionCategories?: string[]; // New
     correctAnswer: string;
+}
+
+interface ResultMapping {
+    category?: string;
+    minScore?: number;
+    maxScore?: number;
+    title: string;
+    content: string;
 }
 
 const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) => {
@@ -30,13 +39,15 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
     const [lessonContent, setLessonContent] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
     const [xpReward, setXpReward] = useState(50);
+    const [resultAlgorithm, setResultAlgorithm] = useState<'HIGHEST_CATEGORY' | 'SCORE_PERCENTAGE'>('HIGHEST_CATEGORY');
+    const [resultMappings, setResultMappings] = useState<ResultMapping[]>([]);
     const [questions, setQuestions] = useState<ManualQuestion[]>([
-        { type: 'MULTIPLE', question: '', options: ['A. ', 'B. ', 'C. ', 'D. '], correctAnswer: 'A' }
+        { type: 'MULTIPLE', question: '', options: ['A. ', 'B. ', 'C. ', 'D. '], optionCategories: ['A', 'B', 'C', 'D'], correctAnswer: 'A' }
     ]);
     const [generatedJson, setGeneratedJson] = useState('');
 
     const addQuestion = () => {
-        setQuestions([...questions, { type: 'MULTIPLE', question: '', options: ['A. ', 'B. '], correctAnswer: 'A' }]);
+        setQuestions([...questions, { type: 'MULTIPLE', question: '', options: ['A. ', 'B. '], optionCategories: ['A', 'B'], correctAnswer: 'A' }]);
     };
 
     const removeQuestion = (index: number) => {
@@ -68,6 +79,27 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
         setQuestions(updated);
     };
 
+    const updateOptionCategory = (qIndex: number, optIndex: number, value: string) => {
+        const updated = [...questions];
+        if (!updated[qIndex].optionCategories) updated[qIndex].optionCategories = [];
+        updated[qIndex].optionCategories![optIndex] = value;
+        setQuestions(updated);
+    };
+
+    const addResultMapping = () => {
+        setResultMappings([...resultMappings, { title: '', content: '', category: 'D' }]);
+    };
+
+    const updateResultMapping = (index: number, field: keyof ResultMapping, value: any) => {
+        const updated = [...resultMappings];
+        updated[index] = { ...updated[index], [field]: value };
+        setResultMappings(updated);
+    };
+
+    const removeResultMapping = (index: number) => {
+        setResultMappings(resultMappings.filter((_, i) => i !== index));
+    };
+
     const generateManualJson = () => {
         const lessonId = `LEC_${Date.now()}`;
         const lesson = {
@@ -81,9 +113,12 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                 type: q.type,
                 question: q.question,
                 options: q.type !== 'TEXT' ? q.options.filter(o => o.trim()) : undefined,
+                optionCategories: q.type !== 'TEXT' ? q.optionCategories?.slice(0, q.options.length) : undefined,
                 correctAnswer: q.type === 'MULTIPLE' ? q.correctAnswer : undefined
             })).filter(q => q.question.trim()),
-            xpReward: xpReward
+            xpReward: xpReward,
+            resultAlgorithm: resultAlgorithm,
+            resultMappings: resultMappings.length > 0 ? resultMappings : undefined
         };
 
         const fullData = {
@@ -113,12 +148,19 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             setError(null);
             const data = JSON.parse(bulkJson);
 
-            if (!data.courses || !data.lessons) {
-                throw new Error('El formato JSON debe contener los arrays "courses" y "lessons".');
+            // Ensure we have at least courses or lessons, and they are arrays
+            if (!data.courses && !data.lessons) {
+                throw new Error('El formato JSON debe contener al menos el array "courses" o "lessons".');
             }
 
+            // Default to empty arrays if missing
+            const finalData = {
+                courses: Array.isArray(data.courses) ? data.courses : [],
+                lessons: Array.isArray(data.lessons) ? data.lessons : []
+            };
+
             setIsSaving(true);
-            const res = await saveBulkAcademyData(data);
+            const res = await saveBulkAcademyData(finalData);
 
             if (res.success) {
                 setSuccess(true);
@@ -356,13 +398,58 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                             </div>
 
                             <div className="space-y-3">
-                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">XP Recompensa</label>
-                                <input
-                                    type="number"
-                                    value={xpReward}
-                                    onChange={(e) => setXpReward(parseInt(e.target.value) || 0)}
-                                    className="w-24 bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#ffb700] outline-none"
-                                />
+                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Algoritmo de Resultado</label>
+                                <select
+                                    value={resultAlgorithm}
+                                    onChange={(e) => setResultAlgorithm(e.target.value as any)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#ffb700] outline-none"
+                                >
+                                    <option value="HIGHEST_CATEGORY">Categoría más repetida (D,I,S,C)</option>
+                                    <option value="SCORE_PERCENTAGE">% de Aciertos (Multirrespuesta)</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Mapeo de Resultados (D,I,S,C o %)</label>
+                                    <button
+                                        onClick={addResultMapping}
+                                        className="text-[8px] text-[#ffb700] font-black uppercase hover:underline"
+                                    >
+                                        + Añadir Mapping
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    {resultMappings.map((m, idx) => (
+                                        <div key={idx} className="bg-black/20 border border-white/5 rounded-xl p-4 space-y-2 relative group">
+                                            <button onClick={() => removeResultMapping(idx)} className="absolute top-2 right-2 text-red-500/50 hover:text-red-500">
+                                                <X size={14} />
+                                            </button>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Cat (A,B,C,D)"
+                                                    value={m.category}
+                                                    onChange={(e) => updateResultMapping(idx, 'category', e.target.value)}
+                                                    className="w-20 bg-black/40 border border-white/10 rounded-lg p-2 text-[10px] text-white"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Título del Perfil"
+                                                    value={m.title}
+                                                    onChange={(e) => updateResultMapping(idx, 'title', e.target.value)}
+                                                    className="flex-1 bg-black/40 border border-white/10 rounded-lg p-2 text-[10px] text-white"
+                                                />
+                                            </div>
+                                            <textarea
+                                                placeholder="Contenido del perfil (Soporta HTML)..."
+                                                value={m.content}
+                                                onChange={(e) => updateResultMapping(idx, 'content', e.target.value)}
+                                                className="w-full h-16 bg-black/40 border border-white/10 rounded-lg p-3 text-[10px] text-white"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             <hr className="border-white/10" />
@@ -408,7 +495,7 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
 
                                     {q.type !== 'TEXT' && (
                                         <div className="space-y-2">
-                                            <label className="text-[8px] text-gray-500 font-black uppercase">Opciones:</label>
+                                            <label className="text-[8px] text-gray-500 font-black uppercase">Opciones y Categorías (A,B,C,D):</label>
                                             {q.options.map((opt, optIndex) => (
                                                 <div key={optIndex} className="flex items-center gap-2">
                                                     <input
@@ -417,6 +504,17 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                                                         onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
                                                         className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-[10px] text-white focus:border-[#ffb700] outline-none"
                                                     />
+                                                    <select
+                                                        value={q.optionCategories?.[optIndex] || ''}
+                                                        onChange={(e) => updateOptionCategory(qIndex, optIndex, e.target.value)}
+                                                        className="w-16 bg-black/50 border border-white/10 rounded-lg p-2 text-[10px] text-[#ffb700] font-bold"
+                                                    >
+                                                        <option value="A">A</option>
+                                                        <option value="B">B</option>
+                                                        <option value="C">C</option>
+                                                        <option value="D">D</option>
+                                                        <option value="">-</option>
+                                                    </select>
                                                     {q.options.length > 2 && (
                                                         <button
                                                             onClick={() => removeOption(qIndex, optIndex)}

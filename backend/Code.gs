@@ -183,7 +183,7 @@ function enrollAgent(data) {
 }
 
 /**
- * @description Sube una imagen a Google Drive.
+ * @description Sube un archivo a Google Drive y devuelve su URL de descarga/vista.
  */
 function uploadImage(data) {
   const CONFIG = getGlobalConfig();
@@ -195,7 +195,13 @@ function uploadImage(data) {
 
   const newFile = folder.createFile(blob);
   newFile.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
-  const fileUrl = `https://lh3.googleusercontent.com/d/${newFile.getId()}`;
+  
+  // Para imágenes, usar el proxy de imágenes de Google para mejor visualización.
+  // Para otros archivos (PDF, DOC, etc.), usar el link de descarga directa.
+  const isImage = mimeType && mimeType.startsWith('image/');
+  const fileUrl = isImage 
+    ? `https://lh3.googleusercontent.com/d/${newFile.getId()}`
+    : `https://drive.google.com/uc?export=download&id=${newFile.getId()}`;
   
   return ContentService.createTextOutput(JSON.stringify({ success: true, url: fileUrl })).setMimeType(ContentService.MimeType.JSON);
 }

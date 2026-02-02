@@ -68,7 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto pb-24 md:pb-0 bg-[#001833]">
+        <main className="flex-1 overflow-y-auto pb-32 md:pb-0 bg-[#001833]">
           <div className="max-w-screen-xl mx-auto h-full">
             {children}
           </div>

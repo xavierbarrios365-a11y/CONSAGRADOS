@@ -149,12 +149,33 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             const data = JSON.parse(bulkJson);
             if (!data) throw new Error('El JSON está vacío.');
 
-            // Si es un array directo, lo tratamos como lecciones
-            const lessons = Array.isArray(data) ? data : (Array.isArray(data.lessons) ? data.lessons : []);
-            const courses = !Array.isArray(data) && Array.isArray(data.courses) ? data.courses : [];
+            let lessons: any[] = [];
+            let courses: any[] = [];
+
+            // 1. Caso: Formato "Test" (standalone test with meta/questions)
+            if (data.questions && Array.isArray(data.questions)) {
+                const lessonId = data.meta?.id || `TEST_${Date.now()}`;
+                lessons = [{
+                    id: lessonId,
+                    title: data.meta?.title || data.title || "Evaluación Importada",
+                    content: data.instructions || data.meta?.description || "Contenido de la evaluación",
+                    questions: data.questions,
+                    resultMappings: data.scoringGuide ? Object.entries(data.scoringGuide).map(([cat, content]) => ({
+                        category: cat,
+                        title: `Perfil ${cat}`,
+                        content: content as string
+                    })) : undefined,
+                    xpReward: 100,
+                    resultAlgorithm: 'HIGHEST_CATEGORY'
+                }];
+            } else {
+                // 2. Caso: Formato Estándar (courses/lessons o array directo)
+                lessons = Array.isArray(data) ? data : (Array.isArray(data.lessons) ? data.lessons : []);
+                courses = !Array.isArray(data) && Array.isArray(data.courses) ? data.courses : [];
+            }
 
             if (lessons.length === 0 && courses.length === 0) {
-                throw new Error('El formato JSON debe contener al menos una lección o un curso.');
+                throw new Error('Formato no reconocido. Asegúrate de incluir el array "lessons", "courses" o "questions".');
             }
 
             const finalData = { courses, lessons };
@@ -183,14 +204,17 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             setIsGenerating(true);
             const result = await processAssessmentAI(input, isImage);
             if (result) {
-                // If AI returns a raw array, wrap it as lessons
-                const lessons = Array.isArray(result) ? result : (result.lessons || []);
-                const courses = (!Array.isArray(result) && result.courses) ? result.courses : [];
+                let fullData: any;
 
-                const fullData = {
-                    courses,
-                    lessons
-                };
+                // Si la IA responde con formato "Test" directo (con array de questions en la raíz)
+                if (result.questions && Array.isArray(result.questions)) {
+                    fullData = result;
+                } else {
+                    const lessons = Array.isArray(result) ? result : (result.lessons || []);
+                    const courses = (!Array.isArray(result) && result.courses) ? result.courses : [];
+                    fullData = { courses, lessons };
+                }
+
                 setBulkJson(JSON.stringify(fullData, null, 2));
                 setActiveTab('BULK');
             }

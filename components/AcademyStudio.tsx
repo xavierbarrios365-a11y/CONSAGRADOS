@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { saveBulkAcademyData } from '../services/sheetsService';
-import { Upload, FileCode, CheckCircle, AlertCircle, Loader2, Save, X, Info, Sparkles, Camera, Image as ImageIcon } from 'lucide-react';
+import { Upload, FileCode, CheckCircle, AlertCircle, Loader2, Save, X, Info, Sparkles, Camera, Image as ImageIcon, Plus, Trash2, ClipboardCopy, PenTool } from 'lucide-react';
 import { processAssessmentAI } from '../services/geminiService';
 import { UserRole } from '../types';
 
@@ -9,14 +9,104 @@ interface AcademyStudioProps {
     onCancel: () => void;
 }
 
+interface ManualQuestion {
+    type: 'TEXT' | 'MULTIPLE' | 'DISC';
+    question: string;
+    options: string[];
+    correctAnswer: string;
+}
+
 const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) => {
     const [bulkJson, setBulkJson] = useState('');
-    const [activeTab, setActiveTab] = useState<'BULK' | 'AI'>('BULK');
+    const [activeTab, setActiveTab] = useState<'BULK' | 'AI' | 'MANUAL'>('BULK');
     const [aiInput, setAiInput] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+
+    // Manual Test Generator State
+    const [lessonTitle, setLessonTitle] = useState('');
+    const [lessonContent, setLessonContent] = useState('');
+    const [videoUrl, setVideoUrl] = useState('');
+    const [xpReward, setXpReward] = useState(50);
+    const [questions, setQuestions] = useState<ManualQuestion[]>([
+        { type: 'MULTIPLE', question: '', options: ['A. ', 'B. ', 'C. ', 'D. '], correctAnswer: 'A' }
+    ]);
+    const [generatedJson, setGeneratedJson] = useState('');
+
+    const addQuestion = () => {
+        setQuestions([...questions, { type: 'MULTIPLE', question: '', options: ['A. ', 'B. '], correctAnswer: 'A' }]);
+    };
+
+    const removeQuestion = (index: number) => {
+        setQuestions(questions.filter((_, i) => i !== index));
+    };
+
+    const updateQuestion = (index: number, field: keyof ManualQuestion, value: any) => {
+        const updated = [...questions];
+        updated[index] = { ...updated[index], [field]: value };
+        setQuestions(updated);
+    };
+
+    const addOption = (qIndex: number) => {
+        const updated = [...questions];
+        const nextLetter = String.fromCharCode(65 + updated[qIndex].options.length);
+        updated[qIndex].options.push(`${nextLetter}. `);
+        setQuestions(updated);
+    };
+
+    const updateOption = (qIndex: number, optIndex: number, value: string) => {
+        const updated = [...questions];
+        updated[qIndex].options[optIndex] = value;
+        setQuestions(updated);
+    };
+
+    const removeOption = (qIndex: number, optIndex: number) => {
+        const updated = [...questions];
+        updated[qIndex].options.splice(optIndex, 1);
+        setQuestions(updated);
+    };
+
+    const generateManualJson = () => {
+        const lessonId = `LEC_${Date.now()}`;
+        const lesson = {
+            id: lessonId,
+            courseId: "CURSO_PLACEHOLDER",
+            order: 1,
+            title: lessonTitle || "Nueva Lección",
+            videoUrl: videoUrl || "",
+            content: lessonContent || "<p>Contenido de la lección</p>",
+            questions: questions.map(q => ({
+                type: q.type,
+                question: q.question,
+                options: q.type !== 'TEXT' ? q.options.filter(o => o.trim()) : undefined,
+                correctAnswer: q.type === 'MULTIPLE' ? q.correctAnswer : undefined
+            })).filter(q => q.question.trim()),
+            xpReward: xpReward
+        };
+
+        const fullData = {
+            courses: [],
+            lessons: [lesson]
+        };
+
+        const json = JSON.stringify(fullData, null, 2);
+        setGeneratedJson(json);
+        return json;
+    };
+
+    const copyToClipboard = () => {
+        const json = generateManualJson();
+        navigator.clipboard.writeText(json);
+        setError(null);
+    };
+
+    const sendToBulkEditor = () => {
+        const json = generateManualJson();
+        setBulkJson(json);
+        setActiveTab('BULK');
+    };
 
     const handleBulkSave = async () => {
         try {
@@ -133,15 +223,21 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                     <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
                         <button
                             onClick={() => setActiveTab('BULK')}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'BULK' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500 hover:text-white'}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${activeTab === 'BULK' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500 hover:text-white'}`}
                         >
-                            <FileCode size={14} /> JSON Directo
+                            <FileCode size={12} /> JSON
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('MANUAL')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${activeTab === 'MANUAL' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            <PenTool size={12} /> Manual
                         </button>
                         <button
                             onClick={() => setActiveTab('AI')}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'AI' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500 hover:text-white'}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${activeTab === 'AI' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500 hover:text-white'}`}
                         >
-                            <Sparkles size={14} /> Generador IA
+                            <Sparkles size={12} /> IA
                         </button>
                     </div>
                     <button onClick={onCancel} className="p-2 text-gray-500 hover:text-white transition-colors">
@@ -172,7 +268,7 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                         </div>
                         <div className="space-y-2">
                             <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest ml-2">Formato Requerido:</p>
-                            <pre className="bg-black/50 p-4 rounded-2xl text-[8px] text-green-400/80 font-mono overflow-x-auto border border-white/5">
+                            <pre className="bg-black/50 p-4 rounded-2xl text-[8px] text-green-400/80 font-mono overflow-x-auto border border-white/5 max-h-[300px] overflow-y-auto">
                                 {exampleFormat}
                             </pre>
                         </div>
@@ -214,6 +310,176 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                             )}
                             {isSaving ? 'Sincronizando Base de Datos...' : 'Guardar Cambios Masivamente'}
                         </button>
+                    </div>
+                </div>
+            ) : activeTab === 'MANUAL' ? (
+                <div className="space-y-6 animate-in slide-in-from-bottom-4">
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4">
+                        <p className="text-[10px] text-green-400 font-black uppercase tracking-widest">
+                            💡 Generador Manual: Usa este formulario para crear tests sin necesidad de IA o conocimientos de JSON
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Form Panel */}
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Título de la Lección</label>
+                                <input
+                                    type="text"
+                                    value={lessonTitle}
+                                    onChange={(e) => setLessonTitle(e.target.value)}
+                                    placeholder="Ej: Evaluación de Identidad"
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#ffb700] outline-none"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">URL del Video (opcional)</label>
+                                <input
+                                    type="text"
+                                    value={videoUrl}
+                                    onChange={(e) => setVideoUrl(e.target.value)}
+                                    placeholder="https://youtube.com/watch?v=..."
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#ffb700] outline-none"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Contenido / Instrucciones</label>
+                                <textarea
+                                    value={lessonContent}
+                                    onChange={(e) => setLessonContent(e.target.value)}
+                                    placeholder="Escribe aquí las instrucciones o contenido de la lección..."
+                                    className="w-full h-20 bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#ffb700] outline-none"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">XP Recompensa</label>
+                                <input
+                                    type="number"
+                                    value={xpReward}
+                                    onChange={(e) => setXpReward(parseInt(e.target.value) || 0)}
+                                    className="w-24 bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#ffb700] outline-none"
+                                />
+                            </div>
+
+                            <hr className="border-white/10" />
+
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-[12px] text-[#ffb700] font-black uppercase tracking-widest">Preguntas</h4>
+                                <button
+                                    onClick={addQuestion}
+                                    className="flex items-center gap-2 px-4 py-2 bg-[#ffb700]/20 border border-[#ffb700]/30 rounded-xl text-[9px] text-[#ffb700] font-black uppercase hover:bg-[#ffb700]/30 transition-all"
+                                >
+                                    <Plus size={12} /> Añadir Pregunta
+                                </button>
+                            </div>
+
+                            {questions.map((q, qIndex) => (
+                                <div key={qIndex} className="bg-black/30 border border-white/10 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] text-[#ffb700] font-black uppercase">Pregunta {qIndex + 1}</span>
+                                        <button
+                                            onClick={() => removeQuestion(qIndex)}
+                                            className="p-1 text-red-500 hover:bg-red-500/20 rounded-lg transition-all"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+
+                                    <select
+                                        value={q.type}
+                                        onChange={(e) => updateQuestion(qIndex, 'type', e.target.value)}
+                                        className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-[10px] text-white font-bold uppercase"
+                                    >
+                                        <option value="MULTIPLE">Opción Múltiple</option>
+                                        <option value="TEXT">Respuesta Abierta</option>
+                                        <option value="DISC">Test DISC</option>
+                                    </select>
+
+                                    <textarea
+                                        value={q.question}
+                                        onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
+                                        placeholder="Escribe la pregunta..."
+                                        className="w-full h-16 bg-black/50 border border-white/10 rounded-xl p-3 text-[11px] text-white focus:border-[#ffb700] outline-none"
+                                    />
+
+                                    {q.type !== 'TEXT' && (
+                                        <div className="space-y-2">
+                                            <label className="text-[8px] text-gray-500 font-black uppercase">Opciones:</label>
+                                            {q.options.map((opt, optIndex) => (
+                                                <div key={optIndex} className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={opt}
+                                                        onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
+                                                        className="flex-1 bg-black/50 border border-white/10 rounded-lg p-2 text-[10px] text-white focus:border-[#ffb700] outline-none"
+                                                    />
+                                                    {q.options.length > 2 && (
+                                                        <button
+                                                            onClick={() => removeOption(qIndex, optIndex)}
+                                                            className="p-1 text-red-500/50 hover:text-red-500 transition-all"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => addOption(qIndex)}
+                                                className="text-[8px] text-[#ffb700] font-black uppercase hover:underline"
+                                            >
+                                                + Añadir opción
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {q.type === 'MULTIPLE' && (
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-[8px] text-gray-500 font-black uppercase">Respuesta Correcta:</label>
+                                            <select
+                                                value={q.correctAnswer}
+                                                onChange={(e) => updateQuestion(qIndex, 'correctAnswer', e.target.value)}
+                                                className="bg-black/50 border border-white/10 rounded-lg p-2 text-[10px] text-[#ffb700] font-bold"
+                                            >
+                                                {q.options.map((_, i) => (
+                                                    <option key={i} value={String.fromCharCode(65 + i)}>
+                                                        {String.fromCharCode(65 + i)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Preview Panel */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Vista Previa JSON</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={copyToClipboard}
+                                        className="flex items-center gap-1 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[8px] text-white font-black uppercase hover:bg-white/10 transition-all"
+                                    >
+                                        <ClipboardCopy size={10} /> Copiar
+                                    </button>
+                                </div>
+                            </div>
+                            <pre className="bg-black/50 p-4 rounded-2xl text-[9px] text-green-400/80 font-mono overflow-auto border border-white/5 h-[350px]">
+                                {generatedJson || generateManualJson()}
+                            </pre>
+
+                            <button
+                                onClick={sendToBulkEditor}
+                                className="w-full bg-[#ffb700] py-4 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 font-bebas"
+                            >
+                                <Save size={16} /> Enviar al Editor y Guardar
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : (

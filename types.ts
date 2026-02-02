@@ -78,7 +78,8 @@ export interface Course {
 export interface QuizQuestion {
   question: string;
   options: string[];
-  correctAnswer: string;
+  correctAnswer?: string;
+  type: 'TEXT' | 'MULTIPLE' | 'DISC';
 }
 
 export interface Lesson {

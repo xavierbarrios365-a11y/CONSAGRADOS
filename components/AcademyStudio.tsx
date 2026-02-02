@@ -43,9 +43,9 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
     const exampleFormat = `{
   "courses": [
     {
-      "id": "CURSO_01",
+      "id": "CURSO_ID",
       "title": "Misión Táctica",
-      "description": "Fundamentos de la luz",
+      "description": "Reporte de Campo",
       "imageUrl": "https://...",
       "requiredLevel": "RECLUTA"
     }
@@ -55,19 +55,24 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
       "id": "LEC_01",
       "courseId": "CURSO_ID",
       "order": 1,
-      "title": "Título Lección",
-      "videoUrl": "YouTube Link",
-      "content": "Contenido HTML",
+      "title": "Evaluación: Identidad",
+      "videoUrl": "",
+      "content": "<h1>Reporte de Campo</h1>",
       "questions": [
         {
-          "question": "¿Pregunta 1?",
-          "options": ["A", "B", "C", "D"],
-          "correctAnswer": "A"
+          "type": "TEXT",
+          "question": "¿Cómo aplicarías Génesis 1:27 a Sofía?"
         },
         {
-          "question": "¿Pregunta 2?",
-          "options": ["A", "B", "C", "D"],
+          "type": "MULTIPLE",
+          "question": "¿Cuál es la mentalidad?",
+          "options": ["A. Esclavo", "B. Hijo"],
           "correctAnswer": "B"
+        },
+        {
+          "type": "DISC",
+          "question": "1. Estás en un grupo...",
+          "options": ["A. Mandas", "B. Chiste", "C. Callado", "D. Análisis"]
         }
       ],
       "xpReward": 50
@@ -97,9 +102,9 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                     </div>
                     <div className="bg-black/30 rounded-2xl p-4 text-[9px] text-gray-400 font-bold uppercase leading-relaxed space-y-2 border border-white/5">
                         <p>1. Prepara tu curso en formato JSON (puedes usar una IA para generarlo basado en tus textos).</p>
-                        <p>2. Pega el código en el área de la derecha.</p>
+                        <p>2. Soporta 3 tipos de preguntas: <b>TEXT</b> (Abiertas), <b>MULTIPLE</b> (Cerradas) y <b>DISC</b> (Psicométricas).</p>
                         <p>3. El sistema buscará los IDs. Si ya existen, los actualizará. Si no, los creará.</p>
-                        <p>4. No es necesario llenar todas las opciones del quiz si no las usas.</p>
+                        <p>4. No es necesario llenar "correctAnswer" en preguntas TEXT o DISC.</p>
                     </div>
                     <div className="space-y-2">
                         <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest ml-2">Formato Requerido:</p>

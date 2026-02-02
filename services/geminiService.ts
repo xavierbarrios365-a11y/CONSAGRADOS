@@ -3,10 +3,14 @@ import { GoogleGenAI } from "@google/genai";
 import { Agent } from "../types";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-if (!apiKey) console.warn("🚨 GEMINI_API_KEY NO DETECTADA. Verifica tus variables de entorno (VITE_GEMINI_API_KEY).");
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {
+  if (!genAI) {
+    console.warn("🚨 AI OFFLINE: VITE_GEMINI_API_KEY no configurada.");
+    return "TACTICAL ANALYSIS UNAVAILABLE. SISTEMA SIN LLAVE DE ACCESO IA.";
+  }
+
   const stats = {
     totalAgents: agents.length,
     totalXp: agents.reduce((acc, curr) => acc + curr.xp, 0),
@@ -16,10 +20,8 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     }, {})
   };
 
-  if (!ai) return "TACTICAL ANALYSIS UNAVAILABLE. CONFIGURE API KEY.";
-
   try {
-    const response = await ai.models.generateContent({
+    const response = await genAI.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{
         role: 'user',
@@ -30,14 +32,21 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
         }]
       }]
     });
+
     return response.text;
-  } catch (error) {
-    console.error("Gemini analysis failed", error);
-    return "TACTICAL ANALYSIS UNAVAILABLE. SYSTEMS NOMINAL. MAINTAIN OPERATIONAL SECURITY.";
+  } catch (error: any) {
+    console.error("❌ Gemini analysis failed:", error);
+    if (error.message?.includes('API key') || error.status === 401) {
+      return "ERROR DE SEGURIDAD: LLAVE IA NO VÁLIDA O EXPIRADA.";
+    }
+    return "SISTEMA DE ANÁLISIS EN MANTENIMIENTO. MANTENGA POSICIONES.";
   }
 };
+
 export const processAssessmentAI = async (input: string, isImage: boolean = false) => {
-  if (!ai) return null;
+  if (!genAI) {
+    throw new Error("SISTEMA IA NO CONFIGURADO. FALTA LLAVE VITE_GEMINI_API_KEY EN .env.local");
+  }
 
   try {
     let parts: any[] = [];
@@ -75,7 +84,7 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
       Responde ÚNICAMENTE con el objeto JSON puro.`
     });
 
-    const result = await ai.models.generateContent({
+    const result = await genAI.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts }]
     });
@@ -83,13 +92,19 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     const text = result.text;
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error("Gemini AI Importer failed", error);
-    throw new Error("SISTEMA DE IA TEMPORALMENTE FUERA DE LÍNEA.");
+  } catch (error: any) {
+    console.error("❌ Gemini AI Importer failed:", error);
+    let msg = "FALLO ESTRUCTURAL IA.";
+    if (error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
+    throw new Error(`${msg} DETALLE: ${error.message || 'Error de conexión'}`);
   }
 };
+
 export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
-  if (!ai) return null;
+  if (!genAI) {
+    console.warn("🚨 Tactical Profile failed: genAI not initialized.");
+    return null;
+  }
 
   try {
     const prompt = `Analiza el desempeño de este agente y genera un perfil táctico de videojuego (estilo FIFA/RPG).
@@ -117,7 +132,7 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
       "summary": "Resumen aquí..."
     }`;
 
-    const result = await ai.models.generateContent({
+    const result = await genAI.models.generateContent({
       model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
@@ -126,7 +141,7 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
-    console.error("Gemini Tactical Profile failed", error);
+    console.error("❌ Gemini Tactical Profile failed:", error);
     return null;
   }
 };

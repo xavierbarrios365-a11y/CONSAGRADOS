@@ -150,6 +150,13 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                 </div>
             </div>
 
+            {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center gap-3 text-red-400 animate-in fade-in slide-in-from-top-2">
+                    <AlertCircle size={18} className="shrink-0" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
+                </div>
+            )}
+
             {activeTab === 'BULK' ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
                     <div className="space-y-4">
@@ -187,13 +194,6 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                             placeholder="Pega aquí tu código JSON..."
                             className="flex-1 min-h-[300px] w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-xs text-white font-mono focus:border-[#ffb700] outline-none transition-all scrollbar-thin"
                         />
-
-                        {error && (
-                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 text-red-400">
-                                <AlertCircle size={18} />
-                                <p className="text-[9px] font-black uppercase tracking-widest">{error}</p>
-                            </div>
-                        )}
 
                         {success && (
                             <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center gap-3 text-green-400">

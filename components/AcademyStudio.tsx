@@ -147,17 +147,17 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
         try {
             setError(null);
             const data = JSON.parse(bulkJson);
+            if (!data) throw new Error('El JSON está vacío.');
 
-            // Ensure we have at least courses or lessons, and they are arrays
-            if (!data.courses && !data.lessons) {
-                throw new Error('El formato JSON debe contener al menos el array "courses" o "lessons".');
+            // Si es un array directo, lo tratamos como lecciones
+            const lessons = Array.isArray(data) ? data : (Array.isArray(data.lessons) ? data.lessons : []);
+            const courses = !Array.isArray(data) && Array.isArray(data.courses) ? data.courses : [];
+
+            if (lessons.length === 0 && courses.length === 0) {
+                throw new Error('El formato JSON debe contener al menos una lección o un curso.');
             }
 
-            // Default to empty arrays if missing
-            const finalData = {
-                courses: Array.isArray(data.courses) ? data.courses : [],
-                lessons: Array.isArray(data.lessons) ? data.lessons : []
-            };
+            const finalData = { courses, lessons };
 
             setIsSaving(true);
             const res = await saveBulkAcademyData(finalData);
@@ -183,9 +183,13 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             setIsGenerating(true);
             const result = await processAssessmentAI(input, isImage);
             if (result) {
+                // If AI returns a raw array, wrap it as lessons
+                const lessons = Array.isArray(result) ? result : (result.lessons || []);
+                const courses = (!Array.isArray(result) && result.courses) ? result.courses : [];
+
                 const fullData = {
-                    courses: [],
-                    lessons: result.lessons || []
+                    courses,
+                    lessons
                 };
                 setBulkJson(JSON.stringify(fullData, null, 2));
                 setActiveTab('BULK');

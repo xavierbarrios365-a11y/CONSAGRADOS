@@ -133,9 +133,19 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     });
 
     const text = result.text || "";
-    // Limpieza más robusta de bloques de código markdown
-    const jsonStr = text.replace(/```(?:json)?/g, '').trim();
-    return JSON.parse(jsonStr);
+    // Extracción de JSON mucho más robusta (busca el primer { o [ y el último } o ])
+    const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+
+    if (!jsonMatch) {
+      throw new Error("LA IA NO GENERÓ UN FORMATO JSON VÁLIDO. REINTENTE CON OTRO TEXTO.");
+    }
+
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error("❌ Error parsing extracted JSON:", jsonMatch[0]);
+      throw new Error("EL CONTENIDO GENERADO TIENE ERRORES SINTÁCTICOS. POR FAVOR REFINE SU SOLICITUD.");
+    }
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Importer):", {
       status: error.status,

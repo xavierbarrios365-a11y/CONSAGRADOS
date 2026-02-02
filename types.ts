@@ -56,12 +56,41 @@ export enum AppView {
   CONTENT = 'content',
   CIU = 'CIU',
   SETTINGS = 'SETTINGS',
-  VISITOR = 'VISITOR'
+  VISITOR = 'VISITOR',
+  ACADEMIA = 'ACADEMIA'
 }
 
 export interface Visitor {
   id: string;
   name: string;
   visits: number;
-  status: 'VISITANTE' | 'POSIBLE RECLUTA';
+  status: string;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  requiredLevel: string;
+}
+
+export interface Lesson {
+  id: string;
+  courseId: string;
+  order: number;
+  title: string;
+  videoUrl: string;
+  content: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  xpReward: number;
+}
+
+export interface LessonProgress {
+  lessonId: string;
+  status: 'COMPLETADO' | 'FALLIDO';
+  score: number;
+  date: string;
 }

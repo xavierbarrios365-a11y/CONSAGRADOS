@@ -20,7 +20,11 @@ function getGlobalConfig() {
     DIRECTORY_SHEET_NAME: 'DIRECTORIO_OFICIAL',
     ENROLLMENT_SHEET_NAME: 'INSCRIPCIONES',
     ATTENDANCE_SHEET_NAME: 'ASISTENCIA',
-    GUIAS_SHEET_NAME: 'GUIAS'
+    ATTENDANCE_SHEET_NAME: 'ASISTENCIA',
+    GUIAS_SHEET_NAME: 'GUIAS',
+    ACADEMY_COURSES_SHEET: 'ACADEMIA_CURSOS',
+    ACADEMY_LESSONS_SHEET: 'ACADEMIA_LECCIONES',
+    ACADEMY_PROGRESS_SHEET: 'ACADEMIA_PROGRESO'
   };
 }
 
@@ -115,6 +119,10 @@ function doPost(e) {
         return getVisitorRadar();
       case 'deduct_percentage_points':
         return deductPercentagePoints(request.data);
+      case 'get_academy_data':
+        return getAcademyData(request.data);
+      case 'submit_quiz_result':
+        return submitQuizResult(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -564,6 +572,24 @@ function setupDatabase() {
   ];
   results.push(ensureSheetColumns(ss, CONFIG.GUIAS_SHEET_NAME, guiasHeaders));
   
+  // 5. ACADEMIA CURSOS
+  const coursesHeaders = [
+    'ID', 'TITULO', 'DESCRIPCION', 'IMAGEN_URL', 'NIVEL_REQUERIDO'
+  ];
+  results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_COURSES_SHEET, coursesHeaders));
+
+  // 6. ACADEMIA LECCIONES
+  const lessonsHeaders = [
+    'ID', 'ID_CURSO', 'ORDEN', 'TITULO', 'VIDEO_URL', 'CONTENIDO', 'PREGUNTA_QUIZ', 'OPCION_A', 'OPCION_B', 'OPCION_C', 'OPCION_D', 'RESPUESTA_CORRECTA', 'XP_RECOMPENSA'
+  ];
+  results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_LESSONS_SHEET, lessonsHeaders));
+
+  // 7. ACADEMIA PROGRESO
+  const progressHeaders = [
+    'ID_AGENTE', 'ID_LECCION', 'ESTADO', 'NOTA', 'FECHA'
+  ];
+  results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_PROGRESS_SHEET, progressHeaders));
+  
   const summary = results.join('\n');
   const telegramMessage = `🛠️ <b>SETUP DE BASE DE DATOS COMPLETADO</b>\n\n${summary}\n\n<i>Sistema CONSAGRADOS 2026 listo para operar.</i>`;
   sendTelegramNotification(telegramMessage);
@@ -832,7 +858,136 @@ function updateAgentPhoto(data) {
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
   sheet.getRange(rowIdx, photoCol).setValue(data.photoUrl);
-
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene los datos de la academia (cursos y lecciones).
+ */
+function getAcademyData(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
+  const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+  const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+  
+  if (!coursesSheet || !lessonsSheet) throw new Error("Hojas de academia no encontradas.");
+  
+  const coursesRaw = coursesSheet.getDataRange().getValues();
+  const coursesHeaders = coursesRaw.shift();
+  const courses = coursesRaw.map(row => ({
+    id: row[0],
+    title: row[1],
+    description: row[2],
+    imageUrl: row[3],
+    requiredLevel: row[4]
+  }));
+  
+  const lessonsRaw = lessonsSheet.getDataRange().getValues();
+  const lessonsHeaders = lessonsRaw.shift();
+  const lessons = lessonsRaw.map(row => ({
+    id: row[0],
+    courseId: row[1],
+    order: row[2],
+    title: row[3],
+    videoUrl: row[4],
+    content: row[5],
+    question: row[6],
+    options: [row[7], row[8], row[9], row[10]],
+    correctAnswer: row[11],
+    xpReward: row[12]
+  }));
+  
+  let progress = [];
+  if (data.agentId && progressSheet) {
+    const progressRaw = progressSheet.getDataRange().getValues();
+    progressRaw.shift();
+    progress = progressRaw
+      .filter(row => String(row[0]) === String(data.agentId))
+      .map(row => ({
+        lessonId: row[1],
+        status: row[2],
+        score: row[3],
+        date: row[4]
+      }));
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    data: { courses, lessons, progress } 
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Procesa el resultado de un quiz y otorga recompensas.
+ */
+function submitQuizResult(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+  const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  
+  if (!progressSheet || !lessonsSheet || !directorySheet) throw new Error("Error en la base de datos.");
+  
+  // 1. Validar lección y respuesta
+  const lessonsData = lessonsSheet.getDataRange().getValues();
+  const lesson = lessonsData.slice(1).find(row => String(row[0]) === String(data.lessonId));
+  
+  if (!lesson) throw new Error("Lección no encontrada.");
+  
+  const correctAnswer = String(lesson[11]).trim().toUpperCase();
+  const providedAnswer = String(data.answer).trim().toUpperCase();
+  const isCorrect = correctAnswer === providedAnswer;
+  const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
+  
+  // 2. Guardar progreso
+  progressSheet.appendRow([
+    data.agentId,
+    data.lessonId,
+    isCorrect ? 'COMPLETADO' : 'FALLIDO',
+    isCorrect ? 100 : 0,
+    new Date()
+  ]);
+  
+  // 3. Otorgar XP si es correcto
+  let agentName = "Agente";
+  if (isCorrect && xpReward > 0) {
+    const directoryData = directorySheet.getDataRange().getValues();
+    const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+    const idCol = headers.indexOf('ID');
+    const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
+    const leadershipColIdx = (headers.indexOf('PUNTOS LIDERAZGO') + 1) || (headers.indexOf('LIDERAZGO') + 1);
+    
+    const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+    if (rowIdx !== -1) {
+      agentName = directoryData[rowIdx][headers.indexOf('NOMBRE')] || "Agente";
+      // Sumar al XP total
+      if (xpColIdx > 0) {
+        const currentXp = parseInt(directorySheet.getRange(rowIdx + 1, xpColIdx).getValue()) || 0;
+        directorySheet.getRange(rowIdx + 1, xpColIdx).setValue(currentXp + xpReward);
+      }
+      // Sumar a Liderazgo/Academia (usando columna de Liderazgo por ahora)
+      if (leadershipColIdx > 0) {
+        const currentLead = parseInt(directorySheet.getRange(rowIdx + 1, leadershipColIdx).getValue()) || 0;
+        directorySheet.getRange(rowIdx + 1, leadershipColIdx).setValue(currentLead + xpReward);
+      }
+    }
+  }
+  
+  // 4. Notificar a Telegram
+  if (isCorrect) {
+    const lessonTitle = lesson[3];
+    const telegramMessage = `🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lessonTitle}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`;
+    sendTelegramNotification(telegramMessage);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    isCorrect, 
+    xpAwarded: xpReward 
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 

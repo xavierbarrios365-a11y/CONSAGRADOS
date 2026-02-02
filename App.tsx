@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from './components/Layout';
-import { AppView, Agent, UserRole, Visitor } from './types';
+import { AppView, Agent, UserRole, Visitor, Guide } from './types';
 import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import ContentModule from './components/ContentModule';
+import AcademyModule from './components/AcademyModule';
 import IntelligenceCenter from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
@@ -813,6 +814,8 @@ const App: React.FC = () => {
         );
       case AppView.CONTENT:
         return <ContentModule userRole={currentUser?.userRole || UserRole.STUDENT} />;
+      case AppView.ACADEMIA:
+        return <AcademyModule userRole={currentUser?.userRole || UserRole.STUDENT} agentId={currentUser?.id || ''} />;
       default: return null;
     }
   };

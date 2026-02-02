@@ -319,3 +319,23 @@ export const fetchVisitorRadar = async () => {
     return [];
   }
 };
+
+export const fetchAcademyData = async (agentId?: string) => {
+  try {
+    const response = await postToAction('get_academy_data', { agentId });
+    return response.success ? response.data : { courses: [], lessons: [], progress: [] };
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER DATOS ACADEMIA:", error);
+    return { courses: [], lessons: [], progress: [] };
+  }
+};
+
+export const submitQuizResult = async (agentId: string, lessonId: string, answer: string) => {
+  try {
+    const response = await postToAction('submit_quiz_result', { agentId, lessonId, answer });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ENVIAR QUIZ:", error);
+    return { success: false, error: error.message };
+  }
+};

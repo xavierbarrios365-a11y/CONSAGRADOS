@@ -376,3 +376,23 @@ export const updateTacticalStats = async (agentId: string, stats: any, summary: 
     return { success: false, error: error.message };
   }
 };
+
+export const deleteAcademyCourse = async (courseId: string) => {
+  try {
+    const response = await postToAction('delete_academy_course', { courseId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ELIMINAR CURSO:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const deleteAcademyLesson = async (lessonId: string) => {
+  try {
+    const response = await postToAction('delete_academy_lesson', { lessonId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ELIMINAR LECCIÓN:", error);
+    return { success: false, error: error.message };
+  }
+};

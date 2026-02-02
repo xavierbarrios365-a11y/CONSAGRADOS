@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView } from '../types';
-import { fetchAcademyData, submitQuizResult } from '../services/sheetsService';
-import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, FileCode } from 'lucide-react';
+import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse } from '../services/sheetsService';
+import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, FileCode, Trash2 } from 'lucide-react';
 import AcademyStudio from './AcademyStudio';
 
 interface AcademyModuleProps {
@@ -51,6 +51,33 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         setCourses(data.courses || []);
         setLessons(data.lessons || []);
         setProgress(data.progress || []);
+        setIsLoading(false);
+    };
+
+    const handleDeleteLesson = async (lessonId: string, title: string) => {
+        if (!confirm(`¿Eliminar la lección "${title}"? Esta acción no se puede deshacer.`)) return;
+        setIsLoading(true);
+        const result = await deleteAcademyLesson(lessonId);
+        if (result.success) {
+            setLessons(prev => prev.filter(l => l.id !== lessonId));
+            if (activeLesson?.id === lessonId) setActiveLesson(null);
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+        setIsLoading(false);
+    };
+
+    const handleDeleteCourse = async (courseId: string, title: string) => {
+        if (!confirm(`¿Eliminar el curso "${title}" y TODAS sus lecciones? Esta acción no se puede deshacer.`)) return;
+        setIsLoading(true);
+        const result = await deleteAcademyCourse(courseId);
+        if (result.success) {
+            setCourses(prev => prev.filter(c => c.id !== courseId));
+            setLessons(prev => prev.filter(l => l.courseId !== courseId));
+            setSelectedCourse(null);
+        } else {
+            alert(`Error: ${result.error}`);
+        }
         setIsLoading(false);
     };
 
@@ -205,38 +232,48 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                             courses.map(course => (
                                 <div
                                     key={course.id}
-                                    onClick={() => setSelectedCourse(course)}
-                                    className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all cursor-pointer shadow-xl hover:-translate-y-1"
+                                    className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all shadow-xl hover:-translate-y-1"
                                 >
-                                    <div className="h-40 bg-gray-900 relative">
-                                        {course.imageUrl ? (
-                                            <img src={course.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-white/5">
-                                                <BookOpen size={40} className="text-gray-700" />
-                                            </div>
-                                        )}
-                                        <div className="absolute top-4 left-4">
-                                            <span className="text-[8px] font-black bg-[#ffb700] text-[#001f3f] px-3 py-1 rounded-full uppercase tracking-widest font-bebas">
-                                                {course.requiredLevel}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 space-y-3">
-                                        <h3 className="text-lg font-bebas text-white uppercase tracking-wider">{course.title}</h3>
-                                        <p className="text-[9px] text-gray-500 font-bold uppercase leading-relaxed line-clamp-2">
-                                            {course.description}
-                                        </p>
-                                        <div className="flex items-center justify-between pt-2">
-                                            <div className="flex items-center gap-2">
-                                                <Loader2 size={12} className="text-[#ffb700]" />
-                                                <span className="text-[8px] text-[#ffb700] font-black uppercase">
-                                                    {lessons.filter(l => l.courseId === course.id).length} Lecciones
+                                    <div onClick={() => setSelectedCourse(course)} className="cursor-pointer">
+                                        <div className="h-40 bg-gray-900 relative">
+                                            {course.imageUrl ? (
+                                                <img src={course.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                                    <BookOpen size={40} className="text-gray-700" />
+                                                </div>
+                                            )}
+                                            <div className="absolute top-4 left-4">
+                                                <span className="text-[8px] font-black bg-[#ffb700] text-[#001f3f] px-3 py-1 rounded-full uppercase tracking-widest font-bebas">
+                                                    {course.requiredLevel}
                                                 </span>
                                             </div>
-                                            <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-all transform group-hover:translate-x-1" />
+                                        </div>
+                                        <div className="p-6 space-y-3">
+                                            <h3 className="text-lg font-bebas text-white uppercase tracking-wider">{course.title}</h3>
+                                            <p className="text-[9px] text-gray-500 font-bold uppercase leading-relaxed line-clamp-2">
+                                                {course.description}
+                                            </p>
+                                            <div className="flex items-center justify-between pt-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Loader2 size={12} className="text-[#ffb700]" />
+                                                    <span className="text-[8px] text-[#ffb700] font-black uppercase">
+                                                        {lessons.filter(l => l.courseId === course.id).length} Lecciones
+                                                    </span>
+                                                </div>
+                                                <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-all transform group-hover:translate-x-1" />
+                                            </div>
                                         </div>
                                     </div>
+                                    {userRole === UserRole.DIRECTOR && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
+                                            className="absolute top-4 right-4 p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                                            title="Eliminar Curso"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
                                 </div>
                             ))
                         )}
@@ -468,26 +505,36 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                         {courseLessons.map((lesson, index) => (
                             <div
                                 key={lesson.id}
-                                onClick={() => handleLessonSelect(lesson)}
-                                className={`flex items-center gap-4 p-5 rounded-3xl border cursor-pointer transition-all ${activeLesson?.id === lesson.id
+                                className={`group/lesson flex items-center gap-4 p-5 rounded-3xl border cursor-pointer transition-all ${activeLesson?.id === lesson.id
                                     ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]'
                                     : 'bg-white/5 border-white/5 hover:bg-white/10'
                                     }`}
                             >
-                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isLessonCompleted(lesson.id)
-                                    ? 'bg-green-500/20 border-green-500/40 text-green-500'
-                                    : 'bg-black/30 border-white/5 text-gray-600'
-                                    }`}>
-                                    {isLessonCompleted(lesson.id) ? <CheckCircle size={18} /> : <span className="font-bebas text-lg">0{index + 1}</span>}
+                                <div onClick={() => handleLessonSelect(lesson)} className="flex items-center gap-4 flex-1 min-w-0">
+                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isLessonCompleted(lesson.id)
+                                        ? 'bg-green-500/20 border-green-500/40 text-green-500'
+                                        : 'bg-black/30 border-white/5 text-gray-600'
+                                        }`}>
+                                        {isLessonCompleted(lesson.id) ? <CheckCircle size={18} /> : <span className="font-bebas text-lg">0{index + 1}</span>}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`text-[10px] font-black uppercase truncate font-bebas tracking-wide ${activeLesson?.id === lesson.id ? 'text-white' : 'text-gray-400'}`}>
+                                            {lesson.title}
+                                        </p>
+                                        <p className="text-[8px] text-gray-600 font-bold uppercase">
+                                            {isLessonCompleted(lesson.id) ? 'Status: Completado' : `Recompensa: +${lesson.xpReward} XP`}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className={`text-[10px] font-black uppercase truncate font-bebas tracking-wide ${activeLesson?.id === lesson.id ? 'text-white' : 'text-gray-400'}`}>
-                                        {lesson.title}
-                                    </p>
-                                    <p className="text-[8px] text-gray-600 font-bold uppercase">
-                                        {isLessonCompleted(lesson.id) ? 'Status: Completado' : `Recompensa: +${lesson.xpReward} XP`}
-                                    </p>
-                                </div>
+                                {userRole === UserRole.DIRECTOR && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteLesson(lesson.id, lesson.title); }}
+                                        className="p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all opacity-0 group-hover/lesson:opacity-100 shrink-0"
+                                        title="Eliminar Lección"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>

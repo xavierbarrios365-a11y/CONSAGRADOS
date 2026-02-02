@@ -1,14 +1,27 @@
 import { GoogleGenAI } from "@google/genai";
 import { Agent } from "../types";
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-const genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const getApiKey = () => {
+  const key = import.meta.env.VITE_GEMINI_API_KEY || '';
+  if (!key) {
+    console.warn("🚨 VITE_GEMINI_API_KEY no encontrada en .env.local");
+  }
+  return key;
+};
 
-if (!apiKey) {
-  console.warn("🚨 VITE_GEMINI_API_KEY no encontrada en .env.local");
-}
+let genAIInstance: any = null;
+
+const getGenAI = () => {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+  if (!genAIInstance) {
+    genAIInstance = new GoogleGenAI({ apiKey });
+  }
+  return genAIInstance;
+};
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {
+  const genAI = getGenAI();
   if (!genAI) {
     return "TACTICAL ANALYSIS UNAVAILABLE. SISTEMA SIN LLAVE DE ACCESO IA.";
   }
@@ -40,7 +53,8 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     console.error("❌ Gemini detailed error (Analysis):", {
       status: error.status,
       message: error.message,
-      details: error.details
+      details: error.details,
+      sdkResponse: error.sdkHttpResponse
     });
     if (error.status === 401 || error.message?.includes('API key')) {
       return "ERROR DE SEGURIDAD: LLAVE IA NO VÁLIDA O EXPIRADA.";
@@ -50,6 +64,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
 };
 
 export const processAssessmentAI = async (input: string, isImage: boolean = false) => {
+  const genAI = getGenAI();
   if (!genAI) {
     throw new Error("SISTEMA IA NO CONFIGURADO. FALTA LLAVE VITE_GEMINI_API_KEY.");
   }
@@ -96,13 +111,15 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     });
 
     const text = result.text || "";
-    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Limpieza más robusta de bloques de código markdown
+    const jsonStr = text.replace(/```(?:json)?/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Importer):", {
       status: error.status,
       message: error.message,
-      details: error.details
+      details: error.details,
+      sdkResponse: error.sdkHttpResponse
     });
     let msg = "FALLO ESTRUCTURAL IA.";
     if (error.status === 401 || error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
@@ -111,6 +128,7 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
 };
 
 export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
+  const genAI = getGenAI();
   if (!genAI) {
     return null;
   }
@@ -147,10 +165,13 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     });
 
     const text = result.text || "";
-    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const jsonStr = text.replace(/```(?:json)?/g, '').trim();
     return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error("❌ Gemini detailed error (Profile):", error);
+  } catch (error: any) {
+    console.error("❌ Gemini detailed error (Profile):", {
+      message: error.message,
+      sdkResponse: error.sdkHttpResponse
+    });
     return null;
   }
 };

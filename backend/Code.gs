@@ -127,6 +127,10 @@ function doPost(e) {
         return submitQuizResult(request.data);
       case 'save_bulk_academy_data':
         return saveBulkAcademyData(request.data);
+      case 'delete_academy_course':
+        return deleteAcademyCourse(request.data);
+      case 'delete_academy_lesson':
+        return deleteAcademyLesson(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -413,6 +417,64 @@ function deductPercentagePoints(data) {
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
+/**
+ * @description Elimina un curso de la academia por ID.
+ */
+function deleteAcademyCourse(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
+  const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+  
+  if (!coursesSheet) throw new Error("Hoja de cursos no encontrada.");
+  
+  const coursesValues = coursesSheet.getDataRange().getValues();
+  const rowIdx = coursesValues.findIndex(row => String(row[0]) === String(data.courseId));
+  
+  if (rowIdx === -1 || rowIdx === 0) throw new Error("Curso no encontrado.");
+  
+  const courseName = coursesValues[rowIdx][1];
+  coursesSheet.deleteRow(rowIdx + 1);
+  
+  // También eliminar lecciones asociadas
+  if (lessonsSheet) {
+    const lessonsValues = lessonsSheet.getDataRange().getValues();
+    for (let i = lessonsValues.length - 1; i > 0; i--) {
+      if (String(lessonsValues[i][1]) === String(data.courseId)) {
+        lessonsSheet.deleteRow(i + 1);
+      }
+    }
+  }
+  
+  const telegramMessage = `🗑️ <b>CURSO ELIMINADO</b>\n\n<b>• Nombre:</b> ${courseName}\n<b>• Ejecutado por:</b> Director\n\n<i>El curso y sus lecciones han sido retirados de la academia.</i>`;
+  sendTelegramNotification(telegramMessage);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: `Curso "${courseName}" eliminado.` })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Elimina una lección de la academia por ID.
+ */
+function deleteAcademyLesson(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+  
+  if (!lessonsSheet) throw new Error("Hoja de lecciones no encontrada.");
+  
+  const lessonsValues = lessonsSheet.getDataRange().getValues();
+  const rowIdx = lessonsValues.findIndex(row => String(row[0]) === String(data.lessonId));
+  
+  if (rowIdx === -1 || rowIdx === 0) throw new Error("Lección no encontrada.");
+  
+  const lessonTitle = lessonsValues[rowIdx][3];
+  lessonsSheet.deleteRow(rowIdx + 1);
+  
+  const telegramMessage = `🗑️ <b>LECCIÓN ELIMINADA</b>\n\n<b>• Título:</b> ${lessonTitle}\n<b>• Ejecutado por:</b> Director\n\n<i>La lección ha sido retirada de la academia.</i>`;
+  sendTelegramNotification(telegramMessage);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, message: `Lección "${lessonTitle}" eliminada.` })).setMimeType(ContentService.MimeType.JSON);
+}
 
 /**
  * @description Importa agentes desde la hoja de INSCRIPCIONES al directorio principal.

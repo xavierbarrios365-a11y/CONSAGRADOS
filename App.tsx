@@ -815,7 +815,11 @@ const App: React.FC = () => {
       case AppView.CONTENT:
         return <ContentModule userRole={currentUser?.userRole || UserRole.STUDENT} />;
       case AppView.ACADEMIA:
-        return <AcademyModule userRole={currentUser?.userRole || UserRole.STUDENT} agentId={currentUser?.id || ''} />;
+        return <AcademyModule
+          userRole={currentUser.userRole}
+          agentId={currentUser.id}
+          onActivity={resetSessionTimer}
+        />;
       default: return null;
     }
   };

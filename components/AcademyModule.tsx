@@ -7,9 +7,10 @@ import AcademyStudio from './AcademyStudio';
 interface AcademyModuleProps {
     userRole: UserRole;
     agentId: string;
+    onActivity?: () => void;
 }
 
-const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
+const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActivity }) => {
     const [courses, setCourses] = useState<Course[]>([]);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [progress, setProgress] = useState<LessonProgress[]>([]);
@@ -27,10 +28,22 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
     const [discScores, setDiscScores] = useState<{ [key: string]: number }>({ A: 0, B: 0, C: 0, D: 0 });
     const [quizResult, setQuizResult] = useState<{ isCorrect: boolean, xpAwarded: number, score: number, error?: string, profile?: string } | null>(null);
     const [isVideoWatched, setIsVideoWatched] = useState(false);
+    const [heartbeatActive, setHeartbeatActive] = useState(false);
 
     useEffect(() => {
         loadAcademy();
     }, [agentId]);
+
+    // Session Heartbeat while lesson is active
+    useEffect(() => {
+        if (!activeLesson || !onActivity) return;
+
+        const interval = setInterval(() => {
+            onActivity();
+        }, 120000); // Pulse every 2 minutes
+
+        return () => clearInterval(interval);
+    }, [activeLesson, onActivity]);
 
     const loadAcademy = async () => {
         setIsLoading(true);
@@ -266,16 +279,23 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId }) => {
                                         id="academy-player"
                                         src={`${(() => {
                                             let url = activeLesson.videoUrl;
+                                            let videoId = '';
                                             if (url.includes('youtu.be/')) {
-                                                const id = url.split('youtu.be/')[1].split(/[?#]/)[0];
-                                                return `https://www.youtube.com/embed/${id}`;
+                                                videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
+                                            } else if (url.includes('watch?v=')) {
+                                                videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
+                                            } else if (url.includes('embed/')) {
+                                                videoId = url.split('embed/')[1].split(/[?#]/)[0];
                                             }
-                                            if (url.includes('watch?v=')) {
-                                                const id = url.split('watch?v=')[1].split(/[&?#]/)[0];
-                                                return `https://www.youtube.com/embed/${id}`;
+
+                                            if (videoId) {
+                                                let baseUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
+                                                if (activeLesson.startTime) baseUrl += `&start=${activeLesson.startTime}`;
+                                                if (activeLesson.endTime) baseUrl += `&end=${activeLesson.endTime}`;
+                                                return baseUrl;
                                             }
-                                            return url.includes('embed/') ? url : url;
-                                        })()}?enablejsapi=1&rel=0`}
+                                            return url;
+                                        })()}`}
                                         className="w-full h-full"
                                         allowFullScreen
                                         onLoad={() => {

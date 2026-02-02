@@ -35,3 +35,55 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     return "TACTICAL ANALYSIS UNAVAILABLE. SYSTEMS NOMINAL. MAINTAIN OPERATIONAL SECURITY.";
   }
 };
+export const processAssessmentAI = async (input: string, isImage: boolean = false) => {
+  if (!ai) return null;
+
+  try {
+    let parts: any[] = [];
+    if (isImage) {
+      parts.push({
+        inlineData: {
+          data: input.split(',')[1] || input,
+          mimeType: "image/jpeg"
+        }
+      });
+    }
+
+    parts.push({
+      text: `Analiza esta evaluación (texto o imagen) y conviértela a nuestro formato JSON de Academia.
+      
+      ESQUEMA REQUERIDO:
+      {
+        "lessons": [
+          {
+            "id": "ID_GENERICO",
+            "title": "Título detectado",
+            "content": "Resumen o intro en HTML",
+            "questions": [
+              {
+                "type": "TEXT" | "MULTIPLE" | "DISC",
+                "question": "Texto de la pregunta",
+                "options": ["Opción A", "Opción B"...],
+                "correctAnswer": "X"
+              }
+            ]
+          }
+        ]
+      }
+
+      Responde ÚNICAMENTE con el objeto JSON puro.`
+    });
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: [{ role: 'user', parts }]
+    });
+
+    const text = result.text;
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("Gemini AI Importer failed", error);
+    throw new Error("SISTEMA DE IA TEMPORALMENTE FUERA DE LÍNEA.");
+  }
+};

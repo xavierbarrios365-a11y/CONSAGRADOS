@@ -91,6 +91,8 @@ export interface Lesson {
   content: string;
   questions: QuizQuestion[];
   xpReward: number;
+  startTime?: number;
+  endTime?: number;
 }
 
 export interface LessonProgress {

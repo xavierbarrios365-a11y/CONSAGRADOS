@@ -582,7 +582,7 @@ function setupDatabase() {
 
   // 6. ACADEMIA LECCIONES
   const lessonsHeaders = [
-    'ID', 'ID_CURSO', 'ORDEN', 'TITULO', 'VIDEO_URL', 'CONTENIDO', 'PREGUNTA_QUIZ', 'OPCION_A', 'OPCION_B', 'OPCION_C', 'OPCION_D', 'RESPUESTA_CORRECTA', 'XP_RECOMPENSA'
+    'ID', 'ID_CURSO', 'ORDEN', 'TITULO', 'VIDEO_URL', 'CONTENIDO', 'PREGUNTA_QUIZ', 'OPCION_A', 'OPCION_B', 'OPCION_C', 'OPCION_D', 'RESPUESTA_CORRECTA', 'XP_RECOMPENSA', 'START_TIME', 'END_TIME'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_LESSONS_SHEET, lessonsHeaders));
 
@@ -912,7 +912,9 @@ function getAcademyData(data) {
       videoUrl: row[4],
       content: row[5],
       questions: questions,
-      xpReward: row[12]
+      xpReward: row[12],
+      startTime: row[13],
+      endTime: row[14]
     };
   });
   
@@ -1083,7 +1085,9 @@ function saveBulkAcademyData(data) {
         optC,
         optD,
         correct,
-        lesson.xpReward || 10
+        lesson.xpReward || 10,
+        lesson.startTime || 0,
+        lesson.endTime || 0
       ];
       
       if (existingIdx !== -1) {

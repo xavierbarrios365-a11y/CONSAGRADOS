@@ -275,36 +275,44 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                             {/* Video Player Placeholder / YouTube */}
                             <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
                                 {activeLesson.videoUrl ? (
-                                    <iframe
-                                        id="academy-player"
-                                        src={`${(() => {
-                                            let url = activeLesson.videoUrl;
-                                            let videoId = '';
-                                            if (url.includes('youtu.be/')) {
-                                                videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
-                                            } else if (url.includes('watch?v=')) {
-                                                videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
-                                            } else if (url.includes('embed/')) {
-                                                videoId = url.split('embed/')[1].split(/[?#]/)[0];
-                                            }
+                                    <>
+                                        <iframe
+                                            id="academy-player"
+                                            src={`${(() => {
+                                                let url = activeLesson.videoUrl;
+                                                let videoId = '';
+                                                if (url.includes('youtu.be/')) {
+                                                    videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
+                                                } else if (url.includes('watch?v=')) {
+                                                    videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
+                                                } else if (url.includes('embed/')) {
+                                                    videoId = url.split('embed/')[1].split(/[?#]/)[0];
+                                                }
 
-                                            if (videoId) {
-                                                let baseUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
-                                                if (activeLesson.startTime) baseUrl += `&start=${activeLesson.startTime}`;
-                                                if (activeLesson.endTime) baseUrl += `&end=${activeLesson.endTime}`;
-                                                return baseUrl;
-                                            }
-                                            return url;
-                                        })()}`}
-                                        className="w-full h-full"
-                                        allowFullScreen
-                                        onLoad={() => {
-                                            // Activar gatillo de video después de un retardo o interacción
-                                            // Nota: En una app real usaríamos la API de Youtube completa
-                                            // Por ahora, simulamos interés si el iframe carga y pasa un tiempo
-                                            setTimeout(() => setIsVideoWatched(true), 15000);
-                                        }}
-                                    ></iframe>
+                                                if (videoId) {
+                                                    let baseUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
+                                                    if (activeLesson.startTime) baseUrl += `&start=${activeLesson.startTime}`;
+                                                    if (activeLesson.endTime) baseUrl += `&end=${activeLesson.endTime}`;
+                                                    return baseUrl;
+                                                }
+                                                return url;
+                                            })()}`}
+                                            className="w-full h-full"
+                                            allowFullScreen
+                                            onLoad={() => {
+                                                // Reducido a 3 segundos para mejor UX
+                                                setTimeout(() => setIsVideoWatched(true), 3000);
+                                            }}
+                                        ></iframe>
+                                        {!isVideoWatched && (
+                                            <button
+                                                onClick={() => setIsVideoWatched(true)}
+                                                className="absolute bottom-4 right-4 bg-black/80 hover:bg-[#ffb700] hover:text-[#001f3f] px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 transition-all z-10"
+                                            >
+                                                Omitir Video y Comenzar Test
+                                            </button>
+                                        )}
+                                    </>
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center space-y-4">
                                         <PlayCircle size={64} className="text-[#ffb700] opacity-20" />

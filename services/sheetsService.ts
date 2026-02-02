@@ -396,3 +396,13 @@ export const deleteAcademyLesson = async (lessonId: string) => {
     return { success: false, error: error.message };
   }
 };
+
+export const resetStudentAttempts = async (agentId: string) => {
+  try {
+    const response = await postToAction('reset_student_attempts', { agentId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO RESETEAR INTENTOS:", error);
+    return { success: false, error: error.message };
+  }
+};

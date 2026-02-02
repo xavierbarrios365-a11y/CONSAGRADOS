@@ -131,6 +131,8 @@ function doPost(e) {
         return deleteAcademyCourse(request.data);
       case 'delete_academy_lesson':
         return deleteAcademyLesson(request.data);
+      case 'reset_student_attempts':
+        return resetStudentAttempts(request.data);
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -647,7 +649,7 @@ function setupDatabase() {
 
   // 6. ACADEMIA LECCIONES
   const lessonsHeaders = [
-    'ID', 'ID_CURSO', 'ORDEN', 'TITULO', 'VIDEO_URL', 'CONTENIDO', 'PREGUNTA_QUIZ', 'OPCION_A', 'OPCION_B', 'OPCION_C', 'OPCION_D', 'RESPUESTA_CORRECTA', 'XP_RECOMPENSA', 'START_TIME', 'END_TIME'
+    'ID', 'ID_CURSO', 'ORDEN', 'TITULO', 'VIDEO_URL', 'CONTENIDO', 'PREGUNTA_QUIZ', 'OPCION_A', 'OPCION_B', 'OPCION_C', 'OPCION_D', 'RESPUESTA_CORRECTA', 'XP_RECOMPENSA', 'START_TIME', 'END_TIME', 'RESULT_ALGORITHM', 'RESULT_MAPPINGS'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_LESSONS_SHEET, lessonsHeaders));
 
@@ -979,22 +981,36 @@ function getAcademyData(data) {
       questions: questions,
       xpReward: row[12],
       startTime: row[13],
-      endTime: row[14]
+      endTime: row[14],
+      resultAlgorithm: row[15] || 'SCORE_PERCENTAGE',
+      resultMappings: row[16] ? JSON.parse(row[16]) : []
     };
   });
   
   let progress = [];
-  if (data.agentId && progressSheet) {
+  if (progressSheet) {
     const progressRaw = progressSheet.getDataRange().getValues();
     progressRaw.shift();
-    progress = progressRaw
-      .filter(row => String(row[0]) === String(data.agentId))
-      .map(row => ({
+    
+    if (data.agentId) {
+      progress = progressRaw
+        .filter(row => String(row[0]) === String(data.agentId))
+        .map(row => ({
+          lessonId: row[1],
+          status: row[2],
+          score: row[3],
+          date: row[4]
+        }));
+    } else {
+      // Retornar todo para auditoría (solo accesible por directores en el frontend)
+      progress = progressRaw.map(row => ({
+        agentId: row[0],
         lessonId: row[1],
         status: row[2],
         score: row[3],
         date: row[4]
       }));
+    }
   }
   
   return ContentService.createTextOutput(JSON.stringify({ 
@@ -1152,7 +1168,9 @@ function saveBulkAcademyData(data) {
         correct,
         lesson.xpReward || 10,
         lesson.startTime || 0,
-        lesson.endTime || 0
+        lesson.endTime || 0,
+        lesson.resultAlgorithm || 'SCORE_PERCENTAGE',
+        lesson.resultMappings ? JSON.stringify(lesson.resultMappings) : ''
       ];
       
       if (existingIdx !== -1) {
@@ -1192,5 +1210,32 @@ function updateTacticalStats(data) {
   sheet.getRange(row, updateCol).setValue(data.lastUpdate);
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Resetea los intentos y progreso de un estudiante en la academia.
+ */
+function resetStudentAttempts(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+  if (!progressSheet) throw new Error("Hoja de progreso no encontrada.");
+  
+  const range = progressSheet.getDataRange();
+  const values = range.getValues();
+  let deletedCount = 0;
+  
+  // Eliminamos de abajo hacia arriba para evitar problemas con los índices al borrar filas
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][0]) === String(data.agentId)) {
+      progressSheet.deleteRow(i + 1);
+      deletedCount++;
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    deletedCount 
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 

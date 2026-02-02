@@ -155,8 +155,21 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             // 1. Caso: Formato "Test" (standalone test with meta/questions)
             if (data.questions && Array.isArray(data.questions)) {
                 const lessonId = data.meta?.id || `TEST_${Date.now()}`;
+                const courseId = 'COURSE_TESTS'; // ID fijo para agrupar evaluaciones standalone
+
+                // Creamos el curso contenedor si no lo estamos enviando ya
+                courses = [{
+                    id: courseId,
+                    title: "EVALUACIONES Y TESTS",
+                    description: "Centro de evaluación de perfiles y aptitudes tácticas.",
+                    imageUrl: "https://images.unsplash.com/photo-1606326666490-4e73008713bc?q=80&w=1000",
+                    requiredLevel: "RECLUTA"
+                }];
+
                 lessons = [{
                     id: lessonId,
+                    courseId: courseId,
+                    order: 1,
                     title: data.meta?.title || data.title || "Evaluación Importada",
                     content: data.instructions || data.meta?.description || "Contenido de la evaluación",
                     questions: data.questions,
@@ -172,6 +185,21 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                 // 2. Caso: Formato Estándar (courses/lessons o array directo)
                 lessons = Array.isArray(data) ? data : (Array.isArray(data.lessons) ? data.lessons : []);
                 courses = !Array.isArray(data) && Array.isArray(data.courses) ? data.courses : [];
+
+                // Si hay lecciones sin curso, intentamos asignarles uno genérico
+                lessons = lessons.map(l => ({
+                    ...l,
+                    courseId: l.courseId || (courses[0]?.id || 'COURSE_GENERIC')
+                }));
+
+                if (courses.length === 0 && lessons.length > 0) {
+                    courses = [{
+                        id: 'COURSE_GENERIC',
+                        title: "UNIDADES DE ENTRENAMIENTO",
+                        description: "Lecciones y material de apoyo misceláneo.",
+                        requiredLevel: "RECLUTA"
+                    }];
+                }
             }
 
             if (lessons.length === 0 && courses.length === 0) {

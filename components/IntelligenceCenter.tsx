@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView } from '../types';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 
 interface CIUProps {

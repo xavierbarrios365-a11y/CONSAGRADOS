@@ -78,11 +78,14 @@ const App: React.FC = () => {
     setResetError('');
     setRevealedPin('');
     setSecurityAnswerInput('');
-    setScannedId('');
-    setScannedAgentForPoints(null);
     setSearchQuery('');
     setManualSearchQuery('');
     setShowManualResults(false);
+
+    // Force a total memory purge by reloading the page after a brief delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 150);
   }, []);
 
   const resetSessionTimer = useCallback(() => {
@@ -316,9 +319,10 @@ const App: React.FC = () => {
         }
         setCurrentUser(user);
         setIsLoggedIn(true);
-        if (user.userRole === UserRole.DIRECTOR) setView(AppView.CIU);
-        else if (user.userRole === UserRole.LEADER) setView(AppView.DIRECTORY);
-        else setView(AppView.PROFILE);
+        // Direct jump to appropriate view in a single state cycle
+        const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : (user.userRole === UserRole.LEADER ? AppView.DIRECTORY : AppView.PROFILE);
+        setView(targetView);
+        return;
       } else {
         setLoginError({ field: 'pin', message: `PIN INCORRECTO PARA ID: ${user.id}` });
       }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Trophy, Shield, Award, Target } from 'lucide-react';
+import { Trophy, Shield, Award, Target, Star, CheckCircle } from 'lucide-react';
+import { formatDriveUrl } from './DigitalIdCard';
 
 interface TacticalCertificateProps {
     agentName: string;
@@ -8,11 +9,13 @@ interface TacticalCertificateProps {
     onClose: () => void;
 }
 
+const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
+
 const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, courseTitle, date, onClose }) => {
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in overflow-y-auto">
             {/* Controls */}
-            <div className="absolute top-8 right-8 flex gap-4 z-[110]">
+            <div className="fixed top-8 right-8 flex gap-4 z-[110] print:hidden">
                 <button
                     onClick={() => window.print()}
                     className="px-6 py-3 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[10px] rounded-xl hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,183,0,0.3)]"
@@ -27,95 +30,142 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                 </button>
             </div>
 
-            {/* The Certificate Canvas - Designed to look like the Brandbook sheets */}
-            <div id="certificate-content" className="relative bg-[#0a0a0a] w-full max-w-[210mm] aspect-[210/297] md:aspect-[297/210] overflow-hidden border-[10px] border-[#1a1a1a] shadow-2xl flex flex-col md:flex-row print:m-0 print:border-none">
+            {/* The Certificate Canvas - Horizontal A4 format */}
+            <div id="certificate-content" className="relative bg-[#001f3f] w-full max-w-[297mm] aspect-[297/210] overflow-hidden border-[15px] border-double border-[#FFB700]/50 shadow-2xl flex flex-col p-12 md:p-16 print:m-0 print:border-[10px] print:shadow-none">
 
-                {/* Left Military Stripe / Tech Bar */}
-                <div className="w-full md:w-16 bg-[#001f3f] flex flex-row md:flex-col items-center justify-center gap-8 py-4 md:py-10 border-b md:border-b-0 md:border-r border-[#FFB700]/30">
-                    <div className="w-1 h-32 bg-[#FFB700] hidden md:block opacity-50" />
-                    <p className="font-bebas text-amber-500 text-3xl md:-rotate-90 whitespace-nowrap tracking-[0.5em] opacity-30 select-none">
-                        CONSAGRADOS ACADEMY
-                    </p>
-                    <div className="w-1 flex-grow bg-white/10 hidden md:block" />
-                    <Shield className="text-[#FFB700] mb-0 md:mb-4" size={24} />
-                    <div className="technical text-[6px] text-[#FFB700] rotate-0 md:-rotate-90 whitespace-nowrap opacity-50 tracking-widest">
-                        CONFIDENTIAL // V37-CORE
-                    </div>
-                </div>
+                {/* Formal Border Frame (Inner) */}
+                <div className="absolute inset-4 border border-[#FFB700]/30 pointer-events-none" />
 
-                {/* Main Content Area */}
-                <div className="flex-1 relative p-10 md:p-20 flex flex-col justify-between overflow-hidden">
-                    {/* Background Tech Watermark */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none w-full flex justify-center">
-                        <h1 className="text-[20rem] font-black leading-none select-none tracking-tighter">C</h1>
-                    </div>
+                {/* Decorative Corners */}
+                <div className="absolute top-8 left-8 w-12 h-12 border-t-2 border-l-2 border-[#FFB700] opacity-50" />
+                <div className="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-[#FFB700] opacity-50" />
+                <div className="absolute bottom-8 left-8 w-12 h-12 border-b-2 border-l-2 border-[#FFB700] opacity-50" />
+                <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-[#FFB700] opacity-50" />
 
-                    {/* Header */}
-                    <div className="relative">
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="h-[2px] w-12 bg-[#FFB700]"></div>
-                            <span className="text-[#FFB700] font-black uppercase tracking-[0.3em] text-[10px]">Doctrina de la Excelencia</span>
+                {/* Header Section */}
+                <div className="relative flex justify-between items-start mb-12">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <Shield className="text-[#FFB700]" size={32} />
+                            <div className="h-px w-24 bg-gradient-to-r from-[#FFB700] to-transparent" />
                         </div>
-                        <h1 className="font-bebas text-white text-6xl md:text-8xl leading-none tracking-tight">
-                            CERTIFICADO DE<br />
-                            <span className="text-[#FFB700]">COMPETENCIA TÁCTICA</span>
+                        <h1 className="font-bebas text-white text-5xl md:text-7xl leading-none tracking-tight">
+                            DIPLOMA DE<br />
+                            <span className="text-[#FFB700]">EXCELENCIA TÁCTICA</span>
                         </h1>
                     </div>
 
-                    {/* Body */}
-                    <div className="relative py-12 md:py-20">
-                        <p className="font-oswald text-gray-400 uppercase tracking-widest text-sm mb-4">Se otorga con honor el presente reconocimiento al Agente:</p>
-                        <h2 className="font-bebas text-6xl md:text-7xl text-white mb-8 border-b-4 border-[#FFB700] inline-block pb-2 animate-in slide-in-from-left duration-1000">
+                    {/* Brand Logo */}
+                    <div className="flex flex-col items-end gap-2">
+                        <img
+                            src={formatDriveUrl(OFFICIAL_LOGO)}
+                            className="w-24 md:w-32 object-contain filter brightness-0 invert"
+                            alt="Logo Consagrados"
+                        />
+                        <p className="font-bebas text-[10px] text-white/40 tracking-[0.4em] mr-2">SISTEMA CORE V.37</p>
+                    </div>
+                </div>
+
+                {/* Body Content */}
+                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 relative">
+                    {/* Watermark Logo */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+                        <img src={formatDriveUrl(OFFICIAL_LOGO)} className="w-[400px] h-[400px] object-contain" alt="" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="font-oswald text-gray-400 uppercase tracking-[0.3em] text-[10px] md:text-xs">Este reconocimiento se otorga formalmente al Agente:</p>
+                        <h2 className="font-bebas text-6xl md:text-8xl text-white tracking-widest drop-shadow-lg scale-y-110">
                             {agentName}
                         </h2>
-
-                        <div className="max-w-xl">
-                            <p className="text-gray-300 text-base md:text-lg font-medium leading-relaxed mb-6">
-                                Por haber demostrado resiliencia, disciplina y excelencia operativa durante la compleción exitosa de la unidad de entrenamiento nivel élite:
-                            </p>
-                            <div className="bg-[#1a1a1a] p-6 border-l-4 border-[#FFB700]">
-                                <h3 className="font-oswald text-2xl md:text-3xl text-white uppercase tracking-wider">{courseTitle}</h3>
-                                <p className="text-[#FFB700] text-[10px] font-black uppercase tracking-widest mt-2">Estado: EGRESADO CON HONOR // 100% COMPLETADO</p>
-                            </div>
-                        </div>
+                        <div className="h-px w-full max-w-2xl bg-gradient-to-r from-transparent via-[#FFB700] to-transparent mx-auto mt-4" />
                     </div>
 
-                    {/* Footer */}
-                    <div className="relative flex flex-col md:flex-row justify-between items-end md:items-center gap-8">
-                        <div className="space-y-2 order-2 md:order-1">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-[#FFB700] p-1.5 rounded-lg text-[#001f3f]">
-                                    <Award size={20} />
-                                </div>
-                                <div className="font-bebas text-2xl text-white tracking-widest">VALIDACIÓN ACADÉMICA</div>
-                            </div>
-                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">
-                                FECHA DE EMISIÓN: {date} // ID DE REGISTRO: CSA-{(Math.random() * 10000).toFixed(0)}
-                            </p>
-                        </div>
-
-                        <div className="text-right order-1 md:order-2">
-                            <p className="font-oswald text-[#FFB700] text-3xl font-black italic tracking-widest opacity-80 mb-1">#NOESPORVISTA</p>
-                            <p className="text-gray-600 text-[8px] font-black uppercase tracking-widest">
-                                EST. 2026 // TUREN, VENEZUELA
-                            </p>
+                    <div className="max-w-3xl space-y-4">
+                        <p className="text-gray-300 text-sm md:text-lg font-medium leading-relaxed uppercase tracking-wide">
+                            Por haber demostrado resiliencia excepcional, disciplina inquebrantable y superioridad técnica durante la compleción exitosa de la unidad de entrenamiento táctico:
+                        </p>
+                        <div className="inline-block px-8 py-3 bg-white/5 border border-white/10 rounded-lg relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#FFB700]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <h3 className="font-oswald text-2xl md:text-3xl text-[#FFB700] uppercase tracking-wider relative z-10">{courseTitle}</h3>
                         </div>
                     </div>
                 </div>
 
-                {/* Tech Deco Elements */}
-                <div className="absolute top-0 right-0 p-8 flex gap-2 opacity-20 hidden md:flex">
-                    <Target size={12} className="text-white" />
-                    <div className="w-12 h-[1px] bg-white mt-1.5" />
+                {/* Footer / Signatures Section */}
+                <div className="mt-12 flex justify-between items-end">
+                    {/* Left: Metadata */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-4 text-white/60">
+                            <Award size={20} className="text-[#FFB700]" />
+                            <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Validación Académica de Élite</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">FECHA DE EMISIÓN: {date}</p>
+                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">ID DE REGISTRO: CSA-{(Math.random() * 10000).toFixed(0)}</p>
+                            <p className="text-[8px] text-[#FFB700] font-black uppercase tracking-widest mt-2 flex items-center gap-2">
+                                <CheckCircle size={10} /> AUTENTICIDAD VERIFICADA POR OMNI AI
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Center: Signatures */}
+                    <div className="flex gap-20 items-end pb-4 hidden md:flex">
+                        <div className="text-center space-y-2">
+                            <div className="w-48 h-px bg-white/20 mx-auto" />
+                            <p className="text-[8px] text-white/50 font-black uppercase tracking-widest">Director de Academia</p>
+                        </div>
+                        <div className="text-center space-y-2">
+                            <div className="w-48 h-px bg-white/20 mx-auto" />
+                            <p className="text-[8px] text-white/50 font-black uppercase tracking-widest">Comandante General</p>
+                        </div>
+                    </div>
+
+                    {/* Right: Slogan & Location */}
+                    <div className="text-right">
+                        <div className="flex flex-col items-end">
+                            <div className="flex gap-1 mb-2">
+                                <Star size={12} className="text-[#FFB700]" />
+                                <Star size={12} className="text-[#FFB700]" />
+                                <Star size={12} className="text-[#FFB700]" />
+                                <Star size={12} className="text-[#FFB700]" />
+                                <Star size={12} className="text-[#FFB700]" />
+                            </div>
+                            <p className="font-oswald text-[#FFB700] text-3xl font-black italic tracking-[0.2em] mb-1">#NOESPORVISTA</p>
+                            <p className="text-white/40 text-[8px] font-black uppercase tracking-[0.3em]">
+                                TUREN, ESTADO PORTUGUESA // 2026
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div className="absolute bottom-10 left-20 opacity-[0.05] font-mono text-[8px] text-white space-y-1 hidden md:block">
-                    <div>SYSTEM://CONSAGRADOS-CORE_V37</div>
-                    <div>ENCRYPTION://AES-256-TACTICAL</div>
-                    <div>AUTHORIZATION://DIRECTOR_OVERRIDE</div>
-                </div>
+
+                {/* Technical Overlay */}
+                <div className="absolute top-1/2 left-0 h-32 w-1 bg-gradient-to-b from-transparent via-[#FFB700]/20 to-transparent" />
+                <div className="absolute top-1/2 right-0 h-32 w-1 bg-gradient-to-b from-transparent via-[#FFB700]/20 to-transparent" />
             </div>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @media print {
+                    @page {
+                        size: A4 landscape;
+                        margin: 0;
+                    }
+                    body {
+                        background: #001f3f !important;
+                        -webkit-print-color-adjust: exact;
+                    }
+                    #certificate-content {
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        max-width: none !important;
+                        border-width: 20px !important;
+                    }
+                }
+            `}} />
         </div>
     );
 };
+
 
 export default TacticalCertificate;

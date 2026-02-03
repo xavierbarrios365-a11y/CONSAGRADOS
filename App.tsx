@@ -70,6 +70,19 @@ const App: React.FC = () => {
     setView(AppView.PROFILE);
     localStorage.removeItem('consagrados_agent');
     setShowSessionWarning(false);
+
+    // Reset transient UI flags to prevent overlap
+    setIsMustChangeFlow(false);
+    setShowForgotPassword(false);
+    setForgotPasswordStep('ID');
+    setResetError('');
+    setRevealedPin('');
+    setSecurityAnswerInput('');
+    setScannedId('');
+    setScannedAgentForPoints(null);
+    setSearchQuery('');
+    setManualSearchQuery('');
+    setShowManualResults(false);
   }, []);
 
   const resetSessionTimer = useCallback(() => {
@@ -461,6 +474,7 @@ const App: React.FC = () => {
     switch (view) {
       case AppView.CIU:
         return <CIUModule
+          key={`ciu-${currentUser?.id}`}
           agents={agents}
           currentUser={currentUser}
           onUpdateNeeded={() => syncData(true)}
@@ -838,21 +852,27 @@ const App: React.FC = () => {
               <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             </button>
             <div className="w-full flex justify-center">
-              {currentUser && <DigitalIdCard key={currentUser?.id} agent={currentUser} />}
+              {currentUser && <DigitalIdCard key={`profile-${currentUser.id}`} agent={currentUser} />}
             </div>
           </div>
         );
       case AppView.ACADEMIA:
-        return <AcademyModule userRole={currentUser!.userRole} agentId={currentUser!.id} />;
+        return <AcademyModule key={`academy-${currentUser?.id}`} userRole={currentUser!.userRole} agentId={currentUser!.id} />;
       case AppView.RANKING:
-        return <TacticalRanking agents={agents} currentUser={currentUser} />;
+        return <TacticalRanking key={`ranking-${currentUser?.id}`} agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT:
-        return <ContentModule userRole={currentUser?.userRole || UserRole.STUDENT} />;
+        return <ContentModule key={`content-${currentUser?.id}`} userRole={currentUser?.userRole || UserRole.STUDENT} />;
       case AppView.CIU:
         return <CIUModule
-          userRole={currentUser.userRole}
-          agentId={currentUser.id}
-          onActivity={resetSessionTimer}
+          key={`ciu-${currentUser?.id}`}
+          agents={agents}
+          currentUser={currentUser}
+          onUpdateNeeded={() => syncData(true)}
+          intelReport={intelReport}
+          setView={setView}
+          visitorCount={visitorRadar.length}
+          onRefreshIntel={handleRefreshIntel}
+          isRefreshingIntel={isRefreshingIntel}
         />;
       default: return null;
     }

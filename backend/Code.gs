@@ -994,12 +994,13 @@ function getAcademyData(data) {
     
     if (data.agentId) {
       progress = progressRaw
-        .filter(row => String(row[0]) === String(data.agentId))
+        .filter(row => String(row[0]).trim() === String(data.agentId).trim())
         .map(row => ({
           lessonId: row[1],
           status: row[2],
           score: row[3],
-          date: row[4]
+          date: row[4],
+          attempts: row[5] || 0
         }));
     } else {
       // Retornar todo para auditoría (solo accesible por directores en el frontend)

@@ -61,12 +61,18 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             const data = await fetchAcademyData((userRole === UserRole.DIRECTOR && isAuditFetch) ? undefined : agentId);
             setCourses(data.courses || []);
             setLessons(data.lessons || []);
-            if (isAuditFetch || !allAgents.length) {
+
+            // Fix: setProgress must be called even if allAgents is being loaded
+            if (isAuditFetch) {
                 setAuditProgress(data.progress || []);
-                const agents = await fetchAgentsFromSheets();
-                if (agents) setAllAgents(agents);
             } else {
                 setProgress(data.progress || []);
+            }
+
+            // Load all agents if missing (needed for certificates and audit)
+            if (!allAgents.length) {
+                const agents = await fetchAgentsFromSheets();
+                if (agents) setAllAgents(agents);
             }
         } catch (err) {
             console.error(err);

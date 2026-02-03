@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView } from '../types';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
 import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints } from '../services/sheetsService';
+import TacticalRanking from './TacticalRanking';
 
 interface CIUProps {
   agents: Agent[];
@@ -18,6 +19,7 @@ interface CIUProps {
 }
 
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel }) => {
+  const [subView, setSubView] = useState<'PROFILE' | 'RANKING'>('PROFILE');
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
@@ -28,7 +30,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const totalAgents = agents.length;
   const totalLeaders = agents.filter(a => a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR).length;
 
-  // Lógica de Niveles y Rangos
   const getLevelInfo = (xp: number) => {
     if (xp < 300) return { current: 'RECLUTA', next: 'ACTIVO', target: 300, level: 0 };
     if (xp < 500) return { current: 'ACTIVO', next: 'CONSAGRADO', target: 500, level: 1 };
@@ -90,6 +91,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       setTimeout(() => setPhotoStatus('IDLE'), 3000);
     }
   };
+
   const handleUpdatePoints = async (type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
     if (!agent) return;
     if (points < 0 && !window.confirm(`🚨 ¿APLICAR SANCIÓN DE ${points} PUNTOS A ${agent.name}?`)) return;
@@ -202,243 +204,199 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             <p className="text-[10px] text-[#ffb700]/70 font-black uppercase tracking-[0.5em] opacity-70">Unified Intelligence Center // Consagrados 2026</p>
           </div>
 
-          <div className="w-full md:w-72">
-            <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
-            <select
-              value={selectedAgentId}
-              onChange={(e) => setSelectedAgentId(e.target.value)}
-              className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
+          <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
+            <button
+              onClick={() => setSubView('PROFILE')}
+              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${subView === 'PROFILE' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-white/40 hover:text-white'}`}
             >
-              {agents.map(a => (
-                <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
-              ))}
-            </select>
+              <Target size={14} /> Perfil Agente
+            </button>
+            <button
+              onClick={() => setSubView('RANKING')}
+              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${subView === 'RANKING' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-white/40 hover:text-white'}`}
+            >
+              <Trophy size={14} /> Ranking Global
+            </button>
           </div>
+
+          {subView === 'PROFILE' && (
+            <div className="w-full md:w-72">
+              <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
+              <select
+                value={selectedAgentId}
+                onChange={(e) => setSelectedAgentId(e.target.value)}
+                className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
+              >
+                {agents.map(a => (
+                  <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* PERFIL DEL AGENTE SELECCIONADO */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
+        {subView === 'RANKING' ? (
+          <div className="mt-8">
+            <TacticalRanking agents={agents} currentUser={currentUser} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* PERFIL DEL AGENTE SELECCIONADO */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
 
-              <div className="relative mb-8 group">
-                <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
-                <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
-                  <img
-                    src={formatDriveUrl(agent.photoUrl)}
-                    className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                    onError={(e) => {
-                      e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                      e.currentTarget.className = "w-full h-full object-cover opacity-20";
-                    }}
-                  />
+                <div className="relative mb-8 group">
+                  <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
+                  <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
+                    <img
+                      src={formatDriveUrl(agent.photoUrl)}
+                      className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                        e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                      }}
+                    />
 
-                  {isProspectoAscender && (
-                    <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
-                      PROSPECTO ASCENDER
+                    {isProspectoAscender && (
+                      <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
+                        PROSPECTO ASCENDER
+                      </div>
+                    )}
+
+                    {currentUser?.userRole === UserRole.DIRECTOR && (
+                      <div
+                        onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                        className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
+                      >
+                        {photoStatus === 'IDLE' ? (
+                          <>
+                            <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
+                            <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
+                            <p className="text-[9px] text-white font-black uppercase tracking-widest">
+                              {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
+                  </div>
+                </div>
+
+                <div className="space-y-4 z-10 w-full">
+                  <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
+                      <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
                     </div>
-                  )}
-
-                  {currentUser?.userRole === UserRole.DIRECTOR && (
-                    <div
-                      onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
-                      className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
-                    >
-                      {photoStatus === 'IDLE' ? (
-                        <>
-                          <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
-                          <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
-                          <p className="text-[9px] text-white font-black uppercase tracking-widest">
-                            {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
-                </div>
-              </div>
-
-              <div className="space-y-4 z-10 w-full">
-                <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
-                    <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
+                    {isProspectoAscender && (
+                      <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
+                    )}
                   </div>
-                  {isProspectoAscender && (
-                    <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
-                  )}
                 </div>
-              </div>
 
-              <div className="mt-8 w-full grid grid-cols-2 gap-3">
-                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
-                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
-                  <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
-                </div>
-                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
-                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
-                  <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
-                    {agent.accessLevel || 'ESTUDIANTE'}
-                  </p>
-                </div>
-              </div>
-
-              {/* RADAR TÁCTICO IN-CENTER */}
-              <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
-                <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
-                {agent.tacticalStats ? (
-                  <TacticalRadar stats={agent.tacticalStats} size={180} />
-                ) : (
-                  <div className="py-10 text-center opacity-30">
-                    <Sparkles size={32} className="mx-auto mb-2" />
-                    <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
+                <div className="mt-8 w-full grid grid-cols-2 gap-3">
+                  <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+                    <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
+                    <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* REPORTE TÁCTICO DE IA */}
-            <div className="bg-[#001833] border border-[#ffb700]/20 rounded-[3rem] p-10 relative overflow-hidden shadow-2xl group font-montserrat">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <Activity size={120} className="text-[#ffb700]" />
-              </div>
-
-              <div className="relative z-10 space-y-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-[#ffb700] rounded-full animate-pulse"></div>
-                    <h3 className="text-[10px] text-[#ffb700]/80 font-black uppercase tracking-[0.4em] font-bebas">SISTEMA ANALÍTICO V37 // LIVE INTEL</h3>
-                  </div>
-                  {onRefreshIntel && (
-                    <button
-                      onClick={onRefreshIntel}
-                      disabled={isRefreshingIntel}
-                      className="text-[#ffb700] hover:text-white transition-colors bg-white/5 p-2 rounded-lg border border-white/10 active:scale-95 disabled:opacity-50"
-                      title="Generar Nuevo Análisis con IA"
-                    >
-                      {isRefreshingIntel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                    </button>
-                  )}
-                </div>
-
-                <div className="bg-black/40 border border-white/5 rounded-2xl p-6 font-mono text-[11px] leading-relaxed text-[#f4f4f4]/80 backdrop-blur-sm shadow-inner">
-                  <div className="flex gap-3 items-start">
-                    <span className="text-[#ffb700] animate-pulse font-bold mt-1 font-bebas">{" >> "}</span>
-                    <p className="whitespace-pre-wrap lowercase tracking-wider">
-                      {intelReport || "INICIALIZANDO PROTOCOLOS DE ANÁLISIS... ESPERANDO DATOS NOMINALES."}
+                  <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+                    <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
+                    <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
+                      {agent.accessLevel || 'ESTUDIANTE'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center opacity-40">
-                  <div className="flex gap-4">
-                    <div className="h-1 w-8 bg-[#ffb700]/30 rounded-full"></div>
-                    <div className="h-1 w-12 bg-[#ffb700]/30 rounded-full"></div>
-                    <div className="h-1 w-4 bg-[#ffb700]/30 rounded-full"></div>
+                {/* RADAR TÁCTICO IN-CENTER */}
+                <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
+                  <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
+                  {agent.tacticalStats ? (
+                    <TacticalRadar stats={agent.tacticalStats} size={180} />
+                  ) : (
+                    <div className="py-10 text-center opacity-30">
+                      <Sparkles size={32} className="mx-auto mb-2" />
+                      <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ESTADÍSTICAS Y ACCIONES */}
+            <div className="lg:col-span-8 space-y-8">
+              <div className="grid grid-cols-3 gap-4">
+                <MetricCard
+                  icon={<Book className="text-[#ffb700]" size={16} />}
+                  label="BIBLIA"
+                  value={agent.bible}
+                  color="from-[#ffb700] to-orange-600"
+                  onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
+                  disabled={isUpdatingPoints}
+                />
+                <MetricCard
+                  icon={<FileText className="text-gray-400" size={16} />}
+                  label="NOTAS"
+                  value={agent.notes}
+                  color="from-gray-400 to-gray-600"
+                  onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
+                  disabled={isUpdatingPoints}
+                />
+                <MetricCard
+                  icon={<Star className="text-[#ffb700]" size={16} />}
+                  label="LÍDER"
+                  value={agent.leadership}
+                  color="from-[#ffb700] to-orange-600"
+                  onAdjust={(val) => handleUpdatePoints('LIDERAZGO', val)}
+                  disabled={isUpdatingPoints}
+                />
+              </div>
+
+              {/* PANEL DE SANCIONES */}
+              <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-red-500/20 rounded-lg">
+                    <Gavel className="text-red-500" size={20} />
                   </div>
-                  <p className="text-[7px] font-black text-white/20 uppercase tracking-widest font-montserrat text-right">ENCRIPTACIÓN NIVEL 7 ACTIVA</p>
+                  <div>
+                    <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
+                    <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <SanctionOption
+                    label="Inasistencia"
+                    sub="Faltó a actividad"
+                    pts="-5"
+                    onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+                    disabled={isUpdatingPoints}
+                  />
+                  <SanctionOption
+                    label="No Participó"
+                    sub="Sin aportes en clase"
+                    pts="-2"
+                    onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
+                    disabled={isUpdatingPoints}
+                  />
+                  <SanctionOption
+                    label="Expulsión"
+                    sub="Sanción Definitiva"
+                    pts="-50%"
+                    isCritical
+                    onClick={() => handlePercentageDeduction(50)}
+                    disabled={isUpdatingPoints}
+                  />
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="lg:col-span-8 space-y-4 font-montserrat">
-            <div className="bg-[#001833] border border-white/5 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl">
-              <div className="flex justify-between items-end mb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Zap size={14} className="text-[#ffb700]" />
-                    <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest font-bebas">Experiencia Operativa</p>
-                  </div>
-                  <p className="text-5xl font-bebas font-black text-white tracking-tight">
-                    {agent.xp} <span className="text-[#ffb700] text-xl ml-1">XP</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[8px] text-gray-500 font-black uppercase mb-1 font-bebas">Siguiente Nivel: {levelInfo?.next}</p>
-                  <p className="text-[10px] text-white font-bold">{agent.xp} / {levelInfo?.target}</p>
-                </div>
-              </div>
-              <div className="relative h-2 bg-[#000c19] rounded-full overflow-hidden border border-white/10">
-                <div
-                  className="h-full bg-gradient-to-r from-[#ffb700] to-orange-500 rounded-full transition-all duration-1000"
-                  style={{ width: `${Math.min(100, (agent.xp / (levelInfo?.target || 1000)) * 100)}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <MetricCard
-                icon={<Book className="text-[#ffb700]" size={16} />}
-                label="BIBLIA"
-                value={agent.bible}
-                color="from-[#ffb700] to-orange-600"
-                onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
-                disabled={isUpdatingPoints}
-              />
-              <MetricCard
-                icon={<FileText className="text-gray-400" size={16} />}
-                label="NOTAS"
-                value={agent.notes}
-                color="from-gray-400 to-gray-600"
-                onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
-                disabled={isUpdatingPoints}
-              />
-              <MetricCard
-                icon={<Star className="text-[#ffb700]" size={16} />}
-                label="LÍDER"
-                value={agent.leadership}
-                color="from-[#ffb700] to-orange-600"
-                onAdjust={(val) => handleUpdatePoints('LIDERAZGO', val)}
-                disabled={isUpdatingPoints}
-              />
-            </div>
-
-            {/* PANEL DE SANCIONES */}
-            <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-red-500/20 rounded-lg">
-                  <Gavel className="text-red-500" size={20} />
-                </div>
-                <div>
-                  <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
-                  <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SanctionOption
-                  label="Inasistencia"
-                  sub="Faltó a actividad"
-                  pts="-5"
-                  onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
-                  disabled={isUpdatingPoints}
-                />
-                <SanctionOption
-                  label="No Participó"
-                  sub="Sin aportes en clase"
-                  pts="-2"
-                  onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
-                  disabled={isUpdatingPoints}
-                />
-                <SanctionOption
-                  label="Expulsión"
-                  sub="Sanción Definitiva"
-                  pts="-50%"
-                  isCritical
-                  onClick={() => handlePercentageDeduction(50)}
-                  disabled={isUpdatingPoints}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
       <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */}
     </div>
@@ -482,21 +440,17 @@ const MetricCard = ({ icon, label, value, color, onAdjust, disabled }: { icon: a
   </div>
 );
 
-const SanctionOption = ({ label, sub, pts, onClick, disabled, isCritical }: any) => (
+const SanctionOption = ({ label, sub, pts, onClick, disabled, isCritical }: { label: string, sub: string, pts: string, onClick: () => void, disabled?: boolean, isCritical?: boolean }) => (
   <button
-    disabled={disabled}
     onClick={onClick}
-    className={`flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 ${isCritical
-      ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
-      : 'bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/20'
-      }`}
+    disabled={disabled}
+    className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all active:scale-95 disabled:opacity-50 ${isCritical ? 'bg-red-600/10 border-red-500/40 hover:bg-red-600/20' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
   >
-    <div className="text-left font-montserrat">
-      <p className={`text-[9px] font-black uppercase font-bebas ${isCritical ? 'text-red-500' : 'text-white'}`}>{label}</p>
-      <p className="text-[6px] text-gray-500 uppercase font-black">{sub}</p>
-    </div>
-    <span className="text-red-500 font-bebas font-black text-xl">{pts}</span>
+    <div className={`text-[12px] font-black mb-1 font-bebas ${isCritical ? 'text-red-500' : 'text-white'}`}>{label}</div>
+    <div className="text-[7px] text-white/40 font-bold uppercase tracking-widest mb-2 font-montserrat">{sub}</div>
+    <div className={`text-[10px] font-black font-bebas ${isCritical ? 'text-red-500' : 'text-red-400'}`}>{pts}</div>
   </button>
 );
 
-export default IntelligenceCenter;
+const CIUModule = IntelligenceCenter;
+export default CIUModule;

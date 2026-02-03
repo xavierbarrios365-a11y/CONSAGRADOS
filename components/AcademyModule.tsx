@@ -349,12 +349,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                             >
                                 Auditoría
                             </button>
-                            <button
-                                onClick={() => { setDirectorView('RANKING'); setShowStudio(false); }}
-                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${directorView === 'RANKING' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500 hover:text-white'}`}
-                            >
-                                Ranking
-                            </button>
                             <div className="w-px h-4 bg-white/10 mx-2 self-center" />
                             <button
                                 onClick={() => setShowStudio(!showStudio)}
@@ -431,82 +425,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                     </div>
                                 );
                             })}
-                        </div>
-                    </div>
-                ) : directorView === 'RANKING' ? (
-                    <div className="space-y-6 animate-in fade-in">
-                        <div className="bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-[2.5rem] p-8 flex items-center gap-6">
-                            <div className="w-16 h-16 bg-[#ffb700] rounded-3xl flex items-center justify-center text-[#001f3f] shadow-[0_0_30px_rgba(255,183,0,0.3)]">
-                                <Trophy size={32} />
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-bebas text-white uppercase tracking-widest">Cuadro de Honor Académico</h3>
-                                <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-widest opacity-60">Elite de entrenamiento en operaciones tácticas</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white/5 border border-white/5 rounded-[2.5rem] overflow-hidden">
-                            <table className="w-full text-left">
-                                <thead className="bg-black/20 border-b border-white/5">
-                                    <tr>
-                                        <th className="px-8 py-5 text-[9px] font-black text-gray-500 uppercase">Posición</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-gray-500 uppercase">Agente</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-gray-500 uppercase text-center">Unidades</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-gray-500 uppercase text-center">Precisión</th>
-                                        <th className="px-8 py-5 text-[9px] font-black text-gray-500 uppercase text-right">Efectividad</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {allAgents.map(agent => {
-                                        const studentProgress = auditProgress.filter(p => String(p.agentId) === String(agent.id));
-                                        const completed = studentProgress.filter(p => p.status === 'COMPLETADO');
-                                        const percent = lessons.length > 0 ? (completed.length / lessons.length) * 100 : 0;
-                                        const totalScore = completed.reduce((acc, p) => acc + (p.score || 0), 0);
-                                        const accuracy = completed.length > 0 ? totalScore / completed.length : 0;
-                                        return { ...agent, percent, accuracy, completedCount: completed.length };
-                                    }).sort((a, b) => b.percent - a.percent || b.accuracy - a.accuracy).map((agent, idx) => (
-                                        <tr key={agent.id} className="hover:bg-white/5 transition-all group">
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-bebas text-lg ${idx === 0 ? 'bg-[#ffb700] text-[#001f3f]' : idx === 1 ? 'bg-gray-400 text-[#001f3f]' : idx === 2 ? 'bg-orange-800 text-white' : 'bg-white/5 text-gray-500'}`}>
-                                                        {idx + 1}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-4">
-                                                    <img
-                                                        src={formatDriveUrl(agent.photoUrl)}
-                                                        className="w-10 h-10 rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all"
-                                                        onError={(e) => {
-                                                            e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commercial/7/7c/Profile_avatar_placeholder_large.png";
-                                                            e.currentTarget.className = "w-10 h-10 rounded-xl object-cover opacity-20";
-                                                        }}
-                                                    />
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-white uppercase">{agent.name}</p>
-                                                        <p className="text-[8px] text-gray-600 font-bold uppercase">{agent.rank}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5 text-center">
-                                                <span className="text-[10px] font-black text-white font-bebas">{agent.completedCount}/{lessons.length}</span>
-                                            </td>
-                                            <td className="px-8 py-5 text-center">
-                                                <div className="flex items-center justify-center gap-1 text-[10px] font-black text-[#ffb700] font-bebas">
-                                                    <Target size={12} />
-                                                    {Math.round(agent.accuracy)}%
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5 text-right">
-                                                <div className="inline-block px-4 py-2 rounded-xl bg-[#ffb700]/10 border border-[#ffb700]/20 text-[#ffb700] text-[10px] font-black font-bebas">
-                                                    {Math.round(agent.percent)}% COMPLETO
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 ) : (

@@ -6,12 +6,13 @@ import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import ContentModule from './components/ContentModule';
 import AcademyModule from './components/AcademyModule';
-import IntelligenceCenter from './components/IntelligenceCenter';
+import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
 import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
+import TacticalRanking from './components/TacticalRanking';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
@@ -459,7 +460,16 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (view) {
       case AppView.CIU:
-        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} />;
+        return <CIUModule
+          agents={agents}
+          currentUser={currentUser}
+          onUpdateNeeded={() => syncData(true)}
+          intelReport={intelReport}
+          setView={setView}
+          visitorCount={visitorRadar.length}
+          onRefreshIntel={handleRefreshIntel}
+          isRefreshingIntel={isRefreshingIntel}
+        />;
       case AppView.DIRECTORY:
         return (
           <div className="p-6 md:p-10 space-y-5 animate-in fade-in pb-24">
@@ -832,10 +842,14 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      case AppView.ACADEMIA:
+        return <AcademyModule userRole={currentUser!.userRole} agentId={currentUser!.id} />;
+      case AppView.RANKING:
+        return <TacticalRanking agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT:
         return <ContentModule userRole={currentUser?.userRole || UserRole.STUDENT} />;
-      case AppView.ACADEMIA:
-        return <AcademyModule
+      case AppView.CIU:
+        return <CIUModule
           userRole={currentUser.userRole}
           agentId={currentUser.id}
           onActivity={resetSessionTimer}

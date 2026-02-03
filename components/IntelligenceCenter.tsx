@@ -253,173 +253,180 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               )}
             </div>
           )}
-        </div>
+          <span className="text-[9px] font-black uppercase tracking-widest md:hidden lg:inline">Enviar Creds</span>
+        </button>
+              )}
+      </div>
+          )}
+    </div>
 
-        {subView === 'RANKING' ? (
-          <div className="mt-8">
-            <TacticalRanking agents={agents} currentUser={currentUser} />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* PERFIL DEL AGENTE SELECCIONADO */}
-            <div className="lg:col-span-4 space-y-6">
-              <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
+        {
+    subView === 'RANKING' ? (
+      <div className="mt-8">
+        <TacticalRanking agents={agents} currentUser={currentUser} />
+      </div>
+    ) : (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* PERFIL DEL AGENTE SELECCIONADO */}
+      <div className="lg:col-span-4 space-y-6">
+        <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
 
-                <div className="relative mb-8 group">
-                  <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
-                  <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
-                    <img
-                      src={formatDriveUrl(agent.photoUrl)}
-                      className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                        e.currentTarget.className = "w-full h-full object-cover opacity-20";
-                      }}
-                    />
+          <div className="relative mb-8 group">
+            <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
+            <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
+              <img
+                src={formatDriveUrl(agent.photoUrl)}
+                className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                onError={(e) => {
+                  e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                  e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                }}
+              />
 
-                    {isProspectoAscender && (
-                      <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
-                        PROSPECTO ASCENDER
-                      </div>
-                    )}
-
-                    {currentUser?.userRole === UserRole.DIRECTOR && (
-                      <div
-                        onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
-                        className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
-                      >
-                        {photoStatus === 'IDLE' ? (
-                          <>
-                            <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
-                            <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
-                            <p className="text-[9px] text-white font-black uppercase tracking-widest">
-                              {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
-                  </div>
+              {isProspectoAscender && (
+                <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
+                  PROSPECTO ASCENDER
                 </div>
+              )}
 
-                <div className="space-y-4 z-10 w-full">
-                  <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
-                      <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
-                    </div>
-                    {isProspectoAscender && (
-                      <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-8 w-full grid grid-cols-2 gap-3">
-                  <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
-                    <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
-                    <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
-                  </div>
-                  <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
-                    <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
-                    <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
-                      {agent.accessLevel || 'ESTUDIANTE'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* RADAR TÁCTICO IN-CENTER */}
-                <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
-                  <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
-                  {agent.tacticalStats ? (
-                    <TacticalRadar stats={agent.tacticalStats} size={180} />
+              {currentUser?.userRole === UserRole.DIRECTOR && (
+                <div
+                  onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                  className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
+                >
+                  {photoStatus === 'IDLE' ? (
+                    <>
+                      <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
+                      <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
+                    </>
                   ) : (
-                    <div className="py-10 text-center opacity-30">
-                      <Sparkles size={32} className="mx-auto mb-2" />
-                      <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
+                      <p className="text-[9px] text-white font-black uppercase tracking-widest">
+                        {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
+                      </p>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* ESTADÍSTICAS Y ACCIONES */}
-            <div className="lg:col-span-8 space-y-8">
-              <div className="grid grid-cols-3 gap-4">
-                <MetricCard
-                  icon={<Book className="text-[#ffb700]" size={16} />}
-                  label="BIBLIA"
-                  value={agent.bible}
-                  color="from-[#ffb700] to-orange-600"
-                  onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
-                  disabled={isUpdatingPoints}
-                />
-                <MetricCard
-                  icon={<FileText className="text-gray-400" size={16} />}
-                  label="NOTAS"
-                  value={agent.notes}
-                  color="from-gray-400 to-gray-600"
-                  onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
-                  disabled={isUpdatingPoints}
-                />
-                <MetricCard
-                  icon={<Star className="text-[#ffb700]" size={16} />}
-                  label="LÍDER"
-                  value={agent.leadership}
-                  color="from-[#ffb700] to-orange-600"
-                  onAdjust={(val) => handleUpdatePoints('LIDERAZGO', val)}
-                  disabled={isUpdatingPoints}
-                />
-              </div>
-
-              {/* PANEL DE SANCIONES */}
-              <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-red-500/20 rounded-lg">
-                    <Gavel className="text-red-500" size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
-                    <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <SanctionOption
-                    label="Inasistencia"
-                    sub="Faltó a actividad"
-                    pts="-5"
-                    onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
-                    disabled={isUpdatingPoints}
-                  />
-                  <SanctionOption
-                    label="No Participó"
-                    sub="Sin aportes en clase"
-                    pts="-2"
-                    onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
-                    disabled={isUpdatingPoints}
-                  />
-                  <SanctionOption
-                    label="Expulsión"
-                    sub="Sanción Definitiva"
-                    pts="-50%"
-                    isCritical
-                    onClick={() => handlePercentageDeduction(50)}
-                    disabled={isUpdatingPoints}
-                  />
-                </div>
-              </div>
+              )}
+              <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
             </div>
           </div>
-        )}
+
+          <div className="space-y-4 z-10 w-full">
+            <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
+            <div className="flex flex-col items-center gap-2">
+              <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
+                <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
+              </div>
+              {isProspectoAscender && (
+                <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8 w-full grid grid-cols-2 gap-3">
+            <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+              <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
+              <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
+            </div>
+            <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+              <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
+              <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
+                {agent.accessLevel || 'ESTUDIANTE'}
+              </p>
+            </div>
+          </div>
+
+          {/* RADAR TÁCTICO IN-CENTER */}
+          <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
+            <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
+            {agent.tacticalStats ? (
+              <TacticalRadar stats={agent.tacticalStats} size={180} />
+            ) : (
+              <div className="py-10 text-center opacity-30">
+                <Sparkles size={32} className="mx-auto mb-2" />
+                <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */}
+
+      {/* ESTADÍSTICAS Y ACCIONES */}
+      <div className="lg:col-span-8 space-y-8">
+        <div className="grid grid-cols-3 gap-4">
+          <MetricCard
+            icon={<Book className="text-[#ffb700]" size={16} />}
+            label="BIBLIA"
+            value={agent.bible}
+            color="from-[#ffb700] to-orange-600"
+            onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
+            disabled={isUpdatingPoints}
+          />
+          <MetricCard
+            icon={<FileText className="text-gray-400" size={16} />}
+            label="NOTAS"
+            value={agent.notes}
+            color="from-gray-400 to-gray-600"
+            onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
+            disabled={isUpdatingPoints}
+          />
+          <MetricCard
+            icon={<Star className="text-[#ffb700]" size={16} />}
+            label="LÍDER"
+            value={agent.leadership}
+            color="from-[#ffb700] to-orange-600"
+            onAdjust={(val) => handleUpdatePoints('LIDERAZGO', val)}
+            disabled={isUpdatingPoints}
+          />
+        </div>
+
+        {/* PANEL DE SANCIONES */}
+        <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-red-500/20 rounded-lg">
+              <Gavel className="text-red-500" size={20} />
+            </div>
+            <div>
+              <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
+              <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SanctionOption
+              label="Inasistencia"
+              sub="Faltó a actividad"
+              pts="-5"
+              onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+              disabled={isUpdatingPoints}
+            />
+            <SanctionOption
+              label="No Participó"
+              sub="Sin aportes en clase"
+              pts="-2"
+              onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
+              disabled={isUpdatingPoints}
+            />
+            <SanctionOption
+              label="Expulsión"
+              sub="Sanción Definitiva"
+              pts="-50%"
+              isCritical
+              onClick={() => handlePercentageDeduction(50)}
+              disabled={isUpdatingPoints}
+            />
+          </div>
+        </div>
+      </div>
     </div>
+  )
+  }
+      </div >
+  <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */ }
+    </div >
   );
 };
 

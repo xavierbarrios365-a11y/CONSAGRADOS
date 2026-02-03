@@ -133,6 +133,10 @@ function doPost(e) {
         return deleteAcademyLesson(request.data);
       case 'reset_student_attempts':
         return resetStudentAttempts(request.data);
+      case 'send_agent_credentials':
+        return sendAgentCredentials(request.data);
+      case 'bulk_send_credentials':
+        return bulkSendCredentials();
       default:
         throw new Error("Acción no reconocida.");
     }
@@ -194,7 +198,7 @@ function enrollAgent(data) {
   
   directorySheet.appendRow(newRow);
   
-  const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${data.nombre}\n<b>• ID Generado:</b> <code>${newId}</code>\n<b>• PIN de Acceso:</b> <code>${newPin}</code>\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
+  const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${data.nombre}\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID Generado:</b> <code>${newId}</code>\n<b>• PIN de Acceso:</b> <code>${newPin}</code>\n<b>• Pregunta:</b> ${data.preguntaSeguridad || '¿Cuál es tu color favorito?'}\n<b>• Respuesta:</b> ${data.respuestaSeguridad || 'Azul'}\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
   sendTelegramNotification(telegramMessage);
 
   return ContentService.createTextOutput(JSON.stringify({ success: true, newId: newId })).setMimeType(ContentService.MimeType.JSON);

@@ -406,3 +406,23 @@ export const resetStudentAttempts = async (agentId: string) => {
     return { success: false, error: error.message };
   }
 };
+
+export const sendAgentCredentials = async (agentId: string) => {
+  try {
+    const response = await postToAction('send_agent_credentials', { agentId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ENVÍO CREDENCIALES:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const bulkSendCredentials = async () => {
+  try {
+    const response = await postToAction('bulk_send_credentials', {});
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ENVÍO MASIVO CREDENCIALES:", error);
+    return { success: false, error: error.message };
+  }
+};

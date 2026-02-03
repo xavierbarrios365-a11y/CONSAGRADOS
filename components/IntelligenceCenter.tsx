@@ -220,17 +220,37 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
 
           {subView === 'PROFILE' && (
-            <div className="w-full md:w-72">
-              <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
-              <select
-                value={selectedAgentId}
-                onChange={(e) => setSelectedAgentId(e.target.value)}
-                className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
-              >
-                {agents.map(a => (
-                  <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
-                ))}
-              </select>
+            <div className="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
+              <div className="w-full md:w-72">
+                <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
+                <select
+                  value={selectedAgentId}
+                  onChange={(e) => setSelectedAgentId(e.target.value)}
+                  className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
+                >
+                  {agents.map(a => (
+                    <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
+                  ))}
+                </select>
+              </div>
+
+              {currentUser?.userRole === UserRole.DIRECTOR && (
+                <button
+                  onClick={async () => {
+                    const confirmSend = window.confirm("⚠️ TRANSMISIÓN DE SEGURIDAD\n\n¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?");
+                    if (confirmSend) {
+                      const res = await sendAgentCredentials(selectedAgentId);
+                      if (res.success) alert("✅ TRANSMISIÓN EXITOSA");
+                      else alert("❌ FALLO EN TRANSMISIÓN: " + res.error);
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl border border-blue-400/30 transition-all flex items-center gap-2 group shadow-lg shadow-blue-900/20"
+                  title="Enviar Credenciales a Telegram"
+                >
+                  <Send size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  <span className="text-[9px] font-black uppercase tracking-widest md:hidden lg:inline">Enviar Creds</span>
+                </button>
+              )}
             </div>
           )}
         </div>

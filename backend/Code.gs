@@ -1046,8 +1046,8 @@ function submitQuizResult(data) {
     if (progressData[existingProgressIdx][2] === 'COMPLETADO') {
       throw new Error("Esta lección ya ha sido superada.");
     }
-    if (attempts >= 2) { // Límite de 2 intentos sugerido
-      throw new Error("Has superado el límite de intentos (2). Contacta a un Director para desbloquear.");
+    if (attempts >= 1) { // Límite de 1 intento
+      throw new Error("Has finalizado esta evaluación. Contacta a un Director si necesitas un re-intento.");
     }
   }
 

@@ -109,6 +109,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     };
 
     const isLessonCompleted = (lessonId: string) => progress.some(p => p.lessonId === lessonId && p.status === 'COMPLETADO');
+    const hasAnyProgress = (lessonId: string) => progress.some(p => p.lessonId === lessonId);
 
     const isCourseCompleted = (courseId: string) => {
         const courseLessons = lessons.filter(l => l.courseId === courseId);
@@ -637,14 +638,22 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
                             {activeLesson.questions && activeLesson.questions.length > 0 && (
                                 <div className="bg-[#001833] border border-[#ffb700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-                                    {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
+                                    {hasAnyProgress(activeLesson.id) && quizState !== 'RESULT' ? (
                                         <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
-                                            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
-                                                <CheckCircle className="text-green-500" size={40} />
+                                            <div className={`w-20 h-20 ${isLessonCompleted(activeLesson.id) ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} rounded-full flex items-center justify-center mx-auto border`}>
+                                                {isLessonCompleted(activeLesson.id) ? (
+                                                    <CheckCircle className="text-green-500" size={40} />
+                                                ) : (
+                                                    <AlertCircle className="text-red-500" size={40} />
+                                                )}
                                             </div>
                                             <div className="space-y-2">
-                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">Lección Completada</h4>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">Unidad superada con éxito.</p>
+                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">
+                                                    {isLessonCompleted(activeLesson.id) ? 'Lección Completada' : 'Evaluación Finalizada'}
+                                                </h4>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
+                                                    {isLessonCompleted(activeLesson.id) ? 'Unidad superada con éxito.' : 'Has agotado tus intentos para esta unidad.'}
+                                                </p>
                                             </div>
                                         </div>
                                     ) : (
@@ -721,23 +730,22 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-4">
-                                                        {!deepAnalysis ? (
-                                                            <button onClick={handleDeepAnalysis} disabled={isAnalyzingDeeply} className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/30 text-[#ffb700] font-black uppercase text-[10px] tracking-widest">
-                                                                {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} />}
-                                                                Analizar con IA
-                                                            </button>
-                                                        ) : (
-                                                            <div className="p-6 bg-[#001f3f] border border-[#ffb700]/30 rounded-3xl space-y-4">
-                                                                <div className="flex items-center gap-2 text-[#ffb700] text-[10px] font-black uppercase tracking-widest"><Sparkles size={16} /> Reporte IA</div>
-                                                                <div className="text-[11px] text-gray-300 font-bold uppercase leading-relaxed font-montserrat prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
-                                                        <button onClick={() => handleLessonSelect(activeLesson)} className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl text-white font-black uppercase text-[10px] font-bebas">Reintentar</button>
+                                                    {userRole === UserRole.DIRECTOR && (
+                                                        <div className="space-y-4">
+                                                            {!deepAnalysis ? (
+                                                                <button onClick={handleDeepAnalysis} disabled={isAnalyzingDeeply} className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/30 text-[#ffb700] font-black uppercase text-[10px] tracking-widest">
+                                                                    {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} />}
+                                                                    Analizar con IA
+                                                                </button>
+                                                            ) : (
+                                                                <div className="p-6 bg-[#001f3f] border border-[#ffb700]/30 rounded-3xl space-y-4">
+                                                                    <div className="flex items-center gap-2 text-[#ffb700] text-[10px] font-black uppercase tracking-widest"><Sparkles size={16} /> Reporte IA</div>
+                                                                    <div className="text-[11px] text-gray-300 font-bold uppercase leading-relaxed font-montserrat prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     )}
+
                                                 </div>
                                             )}
                                         </>

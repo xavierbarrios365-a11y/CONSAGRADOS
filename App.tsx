@@ -470,25 +470,28 @@ const App: React.FC = () => {
                 placeholder="BUSCAR AGENTE..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#001833] border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] font-montserrat"
+                className="w-full bg-[#3A3A3A]/20 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#FFB700] font-montserrat"
               />
             </div>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {agents.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase())).map(a => (
-                <div key={a.id} onClick={() => setFoundAgent(a)} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-gray-900 overflow-hidden border border-white/5">
+                <div key={a.id} onClick={() => setFoundAgent(a)} className="bg-[#3A3A3A]/10 p-4 rounded-2xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors group">
+                  <div className="w-12 h-12 rounded-xl bg-[#3A3A3A]/30 overflow-hidden border border-[#FFB700]/20">
                     <img
                       src={formatDriveUrl(a.photoUrl)}
-                      className="w-full h-full object-cover grayscale"
-                      onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                        e.currentTarget.className = "w-full h-full object-cover opacity-20 transition-all";
+                      }}
                     />
                   </div>
                   <div className="flex-1 font-montserrat">
-                    <p className="text-[10px] font-black text-white uppercase font-bebas tracking-wider">{a.name}</p>
-                    <p className="text-[8px] text-[#ffb700] font-bold uppercase tracking-widest">{a.id}</p>
+                    <p className="text-[11px] font-black text-white uppercase font-bebas tracking-wide">{a.name}</p>
+                    <p className="text-[8px] text-[#FFB700] font-bold uppercase tracking-widest">{a.id}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[11px] font-black text-white">{a.xp} XP</p>
+                    <p className="text-[11px] font-black text-white font-bebas">{a.xp} XP</p>
                   </div>
                 </div>
               ))}
@@ -499,12 +502,12 @@ const App: React.FC = () => {
         return (
           <div className="p-6 md:p-10 flex flex-col items-center justify-between animate-in fade-in h-[calc(100svh-160px)] md:h-full pt-6 pb-10">
             <div className="text-center space-y-1 mb-4">
-              <h2 className="text-[12px] font-bebas text-white uppercase tracking-[0.3em]">Scanner Táctico</h2>
-              <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 text-center font-montserrat">Apunta al código QR del agente</p>
+              <h2 className="text-[14px] font-bebas text-white uppercase tracking-[0.3em] font-bebas">Scanner Táctico</h2>
+              <p className="text-[8px] text-[#FFB700] font-bold uppercase tracking-widest opacity-60 text-center font-montserrat">Apunta al código QR del agente</p>
             </div>
             <div className={`relative w-full max-w-[280px] md:max-w-xs aspect-square border-2 rounded-[2.5rem] overflow-hidden bg-black transition-all duration-300 scanner-frame ${scanStatus === 'SUCCESS' ? 'border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' :
-              scanStatus === 'SCANNING' ? 'border-[#ffb700] shadow-[0_0_50px_rgba(255,183,0,0.3)]' :
-                'border-[#ffb700]/20 shadow-[0_0_50px_rgba(255,183,0,0.1)]'
+              scanStatus === 'SCANNING' ? 'border-[#FFB700] shadow-[0_0_50px_rgba(255,183,0,0.3)]' :
+                'border-[#FFB700]/20 shadow-[0_0_50px_rgba(255,183,0,0.1)]'
               }`}>
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale opacity-70" />
               <div className={`absolute top-0 left-0 w-full h-0.5 shadow-[0_0_15px_blue] animate-scan-line ${scanStatus === 'SUCCESS' ? 'bg-green-500 shadow-green-500' :
@@ -527,7 +530,7 @@ const App: React.FC = () => {
                   placeholder="ID / NOMBRE..."
                   value={scannedId}
                   onChange={(e) => setScannedId(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-white text-[12px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#ffb700] transition-all text-center placeholder:opacity-30 font-bebas"
+                  className="w-full bg-[#3A3A3A]/20 border border-white/10 rounded-xl py-4 px-6 text-white text-[12px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#FFB700] transition-all text-center placeholder:opacity-30 font-bebas"
                 />
                 {scannedId && (
                   <button
@@ -563,7 +566,7 @@ const App: React.FC = () => {
                     onFocus={() => {
                       if (manualSearchQuery.length > 0) setShowManualResults(true);
                     }}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl py-4 pl-10 pr-4 text-white text-[10px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#ffb700] transition-all font-bebas"
+                    className="w-full bg-[#3A3A3A]/20 border border-white/20 rounded-xl py-4 pl-10 pr-4 text-white text-[10px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#FFB700] transition-all font-bebas"
                   />
                 </div>
 

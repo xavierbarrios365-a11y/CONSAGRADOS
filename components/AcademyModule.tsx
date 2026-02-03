@@ -6,6 +6,7 @@ import { processAssessmentAI, getDeepTestAnalysis } from '../services/geminiServ
 import { fetchAgentsFromSheets } from '../services/sheetsService';
 import AcademyStudio from './AcademyStudio';
 import TacticalCertificate from './TacticalCertificate';
+import { formatDriveUrl } from './DigitalIdCard';
 
 interface AcademyModuleProps {
     userRole: UserRole;
@@ -399,8 +400,15 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                 })();
 
                                 return (
-                                    <div key={agent.id} className="bg-[#001833] border border-white/5 rounded-3xl p-6 flex items-center gap-4 hover:border-[#ffb700]/30 transition-all">
-                                        <img src={agent.photoUrl || 'https://via.placeholder.com/100'} className="w-12 h-12 rounded-2xl object-cover border border-white/10" />
+                                    <div key={agent.id} className="bg-[#3A3A3A]/10 border border-white/5 rounded-3xl p-6 flex items-center gap-4 hover:border-[#FFB700]/30 transition-all group">
+                                        <img
+                                            src={formatDriveUrl(agent.photoUrl)}
+                                            className="w-12 h-12 rounded-2xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
+                                            onError={(e) => {
+                                                e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                                                e.currentTarget.className = "w-12 h-12 rounded-2xl object-cover border border-white/10 opacity-20";
+                                            }}
+                                        />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[10px] font-black text-white uppercase truncate">{agent.name}</p>
                                             <p className="text-[8px] text-gray-500 font-bold uppercase">{agent.id} • {agent.rank}</p>
@@ -467,7 +475,14 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                             </td>
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-4">
-                                                    <img src={agent.photoUrl || 'https://via.placeholder.com/100'} className="w-10 h-10 rounded-xl object-cover" />
+                                                    <img
+                                                        src={formatDriveUrl(agent.photoUrl)}
+                                                        className="w-10 h-10 rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all"
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commercial/7/7c/Profile_avatar_placeholder_large.png";
+                                                            e.currentTarget.className = "w-10 h-10 rounded-xl object-cover opacity-20";
+                                                        }}
+                                                    />
                                                     <div>
                                                         <p className="text-[10px] font-black text-white uppercase">{agent.name}</p>
                                                         <p className="text-[8px] text-gray-600 font-bold uppercase">{agent.rank}</p>
@@ -505,7 +520,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                             courses.map(course => (
                                 <div
                                     key={course.id}
-                                    className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all shadow-xl hover:-translate-y-1"
+                                    className="group relative bg-[#001f3f] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all shadow-xl hover:-translate-y-1"
                                 >
                                     <div onClick={() => setSelectedCourse(course)} className="cursor-pointer">
                                         <div className="h-40 bg-gray-900 relative">
@@ -643,7 +658,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                             </div>
 
                             {activeLesson.questions && activeLesson.questions.length > 0 && (
-                                <div className="bg-[#001833] border border-[#ffb700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
+                                <div className="bg-[#3A3A3A]/10 border border-[#FFB700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
                                     {hasAnyProgress(activeLesson.id) && quizState !== 'RESULT' ? (
                                         <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
                                             <div className={`w-20 h-20 ${isLessonCompleted(activeLesson.id) ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} rounded-full flex items-center justify-center mx-auto border`}>

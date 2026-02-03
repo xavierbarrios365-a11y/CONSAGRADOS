@@ -131,7 +131,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
 
   return (
     <div className="p-6 md:p-10 max-w-2xl mx-auto animate-in fade-in duration-500 pb-24 font-montserrat">
-      <div className="bg-[#001833] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
+      <div className="bg-[#001f3f] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FFB700] to-transparent opacity-30"></div>
         <div className="space-y-8">
           <div className="space-y-1">
             <h2 className="text-3xl font-bebas font-bold text-white tracking-widest">INSCRIPCIÓN</h2>
@@ -144,7 +145,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
             {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-video bg-white/5 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white/10 transition-all p-4"
+                className="w-full aspect-video bg-[#3A3A3A]/20 border-2 border-dashed border-[#FFB700]/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#3A3A3A]/30 transition-all p-4 group"
               >
                 {imagePreview ? (
                   <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />

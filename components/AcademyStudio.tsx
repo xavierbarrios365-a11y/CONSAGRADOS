@@ -308,7 +308,7 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
 }`;
 
     return (
-        <div className="bg-[#001833] border border-[#ffb700]/30 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_50px_rgba(255,183,0,0.1)] relative overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="bg-[#001f3f] border border-[#FFB700]/30 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_50px_rgba(255,183,0,0.1)] relative overflow-hidden animate-in fade-in zoom-in-95 font-montserrat">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-center gap-3">
                     <FileCode className="text-[#ffb700]" size={24} />
@@ -400,7 +400,7 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                         <button
                             onClick={handleBulkSave}
                             disabled={!bulkJson || isSaving || success}
-                            className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 font-bebas"
+                            className="w-full bg-[#FFB700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 font-bebas"
                         >
                             {isSaving ? (
                                 <Loader2 className="animate-spin" size={18} />
@@ -668,7 +668,7 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
                                     Tómale una foto a un test en papel o captura una pantalla y la IA lo estructurará.
                                 </p>
                             </div>
-                            <label className="cursor-pointer bg-[#ffb700] text-[#001f3f] px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2 font-bebas">
+                            <label className="cursor-pointer bg-[#FFB700] text-[#001f3f] px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2 font-bebas">
                                 <ImageIcon size={16} />
                                 Seleccionar Imagen
                                 <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />

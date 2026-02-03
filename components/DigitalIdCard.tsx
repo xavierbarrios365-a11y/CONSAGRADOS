@@ -18,8 +18,8 @@ export const formatDriveUrl = (url: string) => {
   // SI YA ES UN ENLACE DIRECTO DE GOOGLE CONTENT (LH3), LO DEJAMOS PASAR
   if (url.includes('googleusercontent.com')) return url;
 
-  // Extraer el ID de Google Drive (cubre múltiples formatos: /d/, open?id=, uc?id=, file/d/)
-  const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=)([\w-]{25,100})/;
+  // Extraer el ID de Google Drive (cubre múltiples formatos: /d/, open?id=, uc?id=, file/d/, preview)
+  const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=|\/file\/d\/|preview\/d\/)([\w-]{25,100})/;
   const match = url.match(driveRegex);
 
   let fileId = "";
@@ -34,7 +34,7 @@ export const formatDriveUrl = (url: string) => {
     /** 
      * Estrategia de Renderizado Definitiva:
      * El endpoint 'thumbnail' con 'sz=s1000' es el más permisivo y estable
-     * para incrustar imágenes de Google Drive en aplicaciones web modernas.
+     * Se puede añadir un cache-buster si hay problemas de actualización
      */
     return `https://drive.google.com/thumbnail?id=${fileId}&sz=s1000`;
   }

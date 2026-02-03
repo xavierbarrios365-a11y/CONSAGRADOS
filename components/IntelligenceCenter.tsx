@@ -228,7 +228,10 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   <img
                     src={formatDriveUrl(agent.photoUrl)}
                     className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                    onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                    onError={(e) => {
+                      e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                      e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                    }}
                   />
 
                   {isProspectoAscender && (
@@ -264,8 +267,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               <div className="space-y-4 z-10 w-full">
                 <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
                 <div className="flex flex-col items-center gap-2">
-                  <div className="inline-flex items-center gap-3 bg-[#ffb700]/10 border border-[#ffb700]/30 px-6 py-2 rounded-xl">
-                    <span className="text-[#ffb700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
+                  <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
+                    <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
                   </div>
                   {isProspectoAscender && (
                     <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
@@ -274,11 +277,11 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
 
               <div className="mt-8 w-full grid grid-cols-2 gap-3">
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-left">
+                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
                   <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
-                  <p className="text-[9px] font-mono text-[#ffb700] font-bold">{agent.id}</p>
+                  <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
                 </div>
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-left">
+                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
                   <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
                   <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
                     {agent.accessLevel || 'ESTUDIANTE'}

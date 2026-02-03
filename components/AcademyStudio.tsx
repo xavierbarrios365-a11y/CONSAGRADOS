@@ -284,24 +284,25 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
       "startTime": 0,
       "endTime": 300,
       "content": "<h1>Reporte de Campo</h1>",
+      "xpReward": 100,
+      "resultAlgorithm": "HIGHEST_CATEGORY",
+      "resultMappings": [
+        { "category": "A", "title": "EL COMANDANTE", "content": "<p>Liderazgo nato...</p>" }
+      ],
       "questions": [
         {
-          "type": "TEXT",
-          "question": "¿Cómo aplicarías Génesis 1:27 a Sofía?"
+          "type": "DISC",
+          "question": "1. Estás en un grupo...",
+          "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
+          "optionCategories": ["A", "B", "C", "D"]
         },
         {
           "type": "MULTIPLE",
           "question": "¿Cuál es la mentalidad?",
           "options": ["A. Esclavo", "B. Hijo"],
           "correctAnswer": "B"
-        },
-        {
-          "type": "DISC",
-          "question": "1. Estás en un grupo...",
-          "options": ["A", "B", "C", "D"]
         }
-      ],
-      "xpReward": 50
+      ]
     }
   ]
 }`;

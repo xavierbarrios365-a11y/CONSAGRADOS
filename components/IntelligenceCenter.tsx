@@ -13,9 +13,11 @@ interface CIUProps {
   intelReport?: string;
   setView?: (view: AppView) => void;
   visitorCount?: number;
+  onRefreshIntel?: () => void;
+  isRefreshingIntel?: boolean;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
@@ -310,13 +312,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     <div className="w-2 h-2 bg-[#ffb700] rounded-full animate-pulse"></div>
                     <h3 className="text-[10px] text-[#ffb700]/80 font-black uppercase tracking-[0.4em] font-bebas">SISTEMA ANALÍTICO V37 // LIVE INTEL</h3>
                   </div>
-                  {intelReport?.includes('UNAVAILABLE') && (
+                  {onRefreshIntel && (
                     <button
-                      onClick={() => window.location.reload()}
-                      className="text-[#ffb700] hover:text-white transition-colors"
-                      title="Reintentar conexión con IA"
+                      onClick={onRefreshIntel}
+                      disabled={isRefreshingIntel}
+                      className="text-[#ffb700] hover:text-white transition-colors bg-white/5 p-2 rounded-lg border border-white/10 active:scale-95 disabled:opacity-50"
+                      title="Generar Nuevo Análisis con IA"
                     >
-                      <RefreshCw size={14} />
+                      {isRefreshingIntel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     </button>
                   )}
                 </div>

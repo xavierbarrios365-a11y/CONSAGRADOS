@@ -1051,7 +1051,7 @@ function submitQuizResult(data) {
     }
   }
 
-  const isCorrect = data.score >= 100;
+  const isCorrect = data.score >= 60;
   const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
   attempts += 1;
 

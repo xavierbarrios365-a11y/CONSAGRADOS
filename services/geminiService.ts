@@ -76,48 +76,68 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
             mimeType: "image/jpeg"
           }
         },
-        `Analiza esta evaluación (imagen) y conviértela a nuestro formato JSON de Academia.
+        `Analiza esta imagen y conviértela en un JSON de Academia Táctica.
         
+        SOPORTA 4 ESCENARIOS:
+        1. CURSO: Si hay mucho texto instructivo, genera "courses" y "lessons".
+        2. TEST DE PERFIL (DISC): Usa "resultAlgorithm": "HIGHEST_CATEGORY" y "optionCategories": ["A", "B", "C", "D"]. Genera "resultMappings" para cada perfil.
+        3. EXAMEN: Usa "resultAlgorithm": "SCORE_PERCENTAGE". Genera "resultMappings" de Aprobado/Fallido y "correctAnswer" en cada pregunta.
+        4. ENCUESTA: Si no hay respuestas correctas ni perfiles, usa "resultAlgorithm": "NONE".
+
         ESQUEMA REQUERIDO:
         {
+          "courses": [...], // Solo si es un curso completo
           "lessons": [
             {
-              "id": "ID_GENERICO",
-              "title": "Título detectado",
-              "content": "Resumen o intro en HTML",
+              "id": "ID_AUTO",
+              "title": "...",
+              "resultAlgorithm": "HIGHEST_CATEGORY" | "SCORE_PERCENTAGE" | "NONE",
+              "resultMappings": [...], 
               "questions": [
                 {
                   "type": "TEXT" | "MULTIPLE" | "DISC",
-                  "question": "Texto de la pregunta",
-                  "options": ["Opción A", "Opción B"...],
-                  "correctAnswer": "X"
+                  "question": "...",
+                  "options": ["...", "..."], // Si aplica
+                  "optionCategories": ["A", "B"...], // Solo para perfiles
+                  "correctAnswer": "A" // Solo para exámenes
                 }
               ]
             }
           ]
         }
 
-        Responde ÚNICAMENTE con el objeto JSON puro.`
+        Responde ÚNICAMENTE con el JSON puro.`
       ];
     } else {
-      contents = `Analiza esta evaluación y conviértela a nuestro formato JSON de Academia.
+      contents = `Analiza este texto y conviértelo en un JSON de Academia Táctica.
       
-      TEXTO A ANALIZAR:
+      TEXTO A PROCESAR:
       ${input}
       
-      ESQUEMA REQUERIDO:
+      DETERMINA EL FORMATO ADECUADO:
+      1. CURSO: Contenido educativo con lecciones.
+      2. TEST DE PERFIL: Estilo DISC/Personalidad. Algoritmo: HIGHEST_CATEGORY. Requiere resultMappings por categoría.
+      3. EXAMEN: Evaluación de conocimiento. Algoritmo: SCORE_PERCENTAGE. Requiere correctAnswer y resultMappings de puntaje.
+      4. ENCUESTA/FEEDBACK: Recolección de datos. Algoritmo: NONE.
+
+      ESQUEMA JSON:
       {
         "lessons": [
           {
-            "id": "ID_GENERICO",
+            "id": "ID_AUTO",
             "title": "Título detectado",
-            "content": "Resumen o intro en HTML",
+            "resultAlgorithm": "...",
+            "resultMappings": [
+              { "category": "A", "title": "...", "content": "..." },
+              { "minScore": 0, "maxScore": 60, "title": "...", "content": "..." }
+            ],
             "questions": [
               {
                 "type": "TEXT" | "MULTIPLE" | "DISC",
-                "question": "Texto de la pregunta",
-                "options": ["Opción A", "Opción B"...],
-                "correctAnswer": "X"
+                "question": "...",
+                "options": ["...", "..."],
+                "optionCategories": ["A", "B"], // Requerido para perfiles
+                "correctAnswer": "A" // Requerido para exámenes
               }
             ]
           }
@@ -147,14 +167,11 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
       throw new Error("EL CONTENIDO GENERADO TIENE ERRORES SINTÁCTICOS. POR FAVOR REFINE SU SOLICITUD.");
     }
   } catch (error: any) {
-    console.error("❌ Gemini detailed error (Importer):", {
-      status: error.status,
-      message: error.message,
-    });
-    let msg = "FALLO ESTRUCTURAL IA.";
-    if (error.status === 401 || error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
-    if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
-      msg = "CUOTA IA EXCEDIDA. Espere unos minutos.";
+    console.error("AI Error:", error);
+    let msg = "EL CENTRO DE MANDO NO RESPONDE (ERROR DE IA).";
+    if (error.message?.includes('401') || error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
+    if (error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
+      msg = "CENTRO DE MANDO SOBRECARGADO (LIMITE DE TOKENS ALCANZADO). REINTENTA EN UNOS MINUTOS.";
     }
     throw new Error(`${msg} DETALLE: ${error.message || 'Error de conexión'}`);
   }

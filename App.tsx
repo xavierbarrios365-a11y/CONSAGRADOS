@@ -259,15 +259,16 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [syncData]);
 
-  useEffect(() => {
-    if (isLoggedIn && agents.length > 0) {
-      const fetchIntel = async () => {
-        const analysis = await getTacticalAnalysis(agents);
-        setIntelReport(analysis || 'ESTATUS NOMINAL.');
-      };
-      fetchIntel();
-    }
-  }, [isLoggedIn, agents]);
+  // ELIMINADO: Llamada automática a IA para evitar agotamiento de tokens
+  // useEffect(() => {
+  //   if (isLoggedIn && agents.length > 0) {
+  //     const fetchIntel = async () => {
+  //       const analysis = await getTacticalAnalysis(agents);
+  //       setIntelReport(analysis || 'ESTATUS NOMINAL.');
+  //     };
+  //     fetchIntel();
+  //   }
+  // }, [isLoggedIn, agents]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,10 +440,26 @@ const App: React.FC = () => {
     }
   };
 
+  const [isRefreshingIntel, setIsRefreshingIntel] = useState(false);
+
+  const handleRefreshIntel = async () => {
+    if (isRefreshingIntel) return;
+    setIsRefreshingIntel(true);
+    try {
+      const analysis = await getTacticalAnalysis(agents);
+      setIntelReport(analysis || 'ESTATUS NOMINAL.');
+    } catch (err) {
+      console.error("AI Refresh error", err);
+      setIntelReport("ERROR EN PROTOCOLO DE ANÁLISIS.");
+    } finally {
+      setIsRefreshingIntel(false);
+    }
+  };
+
   const renderContent = () => {
     switch (view) {
       case AppView.CIU:
-        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} />;
+        return <IntelligenceCenter key={currentUser?.id} agents={agents} currentUser={currentUser} onUpdateNeeded={syncData} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} />;
       case AppView.DIRECTORY:
         return (
           <div className="p-6 md:p-10 space-y-5 animate-in fade-in pb-24">

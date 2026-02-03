@@ -39,7 +39,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const [deepAnalysis, setDeepAnalysis] = useState<string | null>(null);
     const [isAnalyzingDeeply, setIsAnalyzingDeeply] = useState(false);
     const [isVideoWatched, setIsVideoWatched] = useState(false);
-    const [heartbeatActive, setHeartbeatActive] = useState(false);
 
     useEffect(() => {
         loadAcademy();
@@ -62,7 +61,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             const data = await fetchAcademyData((userRole === UserRole.DIRECTOR && isAuditFetch) ? undefined : agentId);
             setCourses(data.courses || []);
             setLessons(data.lessons || []);
-            if (isAuditFetch) {
+            if (isAuditFetch || !allAgents.length) {
                 setAuditProgress(data.progress || []);
                 const agents = await fetchAgentsFromSheets();
                 if (agents) setAllAgents(agents);
@@ -83,20 +82,20 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     }, [directorView]);
 
     const handleDeleteLesson = async (lessonId: string, title: string) => {
-        if (!confirm(`¿Eliminar la lección "${title}" ? Esta acción no se puede deshacer.`)) return;
+        if (!confirm(`¿Eliminar la lección "${title}"? Esta acción no se puede deshacer.`)) return;
         setIsLoading(true);
         const result = await deleteAcademyLesson(lessonId);
         if (result.success) {
             setLessons(prev => prev.filter(l => l.id !== lessonId));
             if (activeLesson?.id === lessonId) setActiveLesson(null);
         } else {
-            alert(`Error: ${result.error} `);
+            alert(`Error: ${result.error}`);
         }
         setIsLoading(false);
     };
 
     const handleDeleteCourse = async (courseId: string, title: string) => {
-        if (!confirm(`¿Eliminar el curso "${title}" y TODAS sus lecciones ? Esta acción no se puede deshacer.`)) return;
+        if (!confirm(`¿Eliminar el curso "${title}" y TODAS sus lecciones? Esta acción no se puede deshacer.`)) return;
         setIsLoading(true);
         const result = await deleteAcademyCourse(courseId);
         if (result.success) {
@@ -104,7 +103,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             setLessons(prev => prev.filter(l => l.courseId !== courseId));
             setSelectedCourse(null);
         } else {
-            alert(`Error: ${result.error} `);
+            alert(`Error: ${result.error}`);
         }
         setIsLoading(false);
     };
@@ -118,6 +117,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     };
 
     const handleDownloadCertificate = (course: Course) => {
+        console.log("🎓 Generando certificado para:", course.title);
         const agentName = allAgents.find(a => a.id === agentId)?.name || agentId;
         setCertificateData({
             agentName,
@@ -153,6 +153,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         setCorrectAnswersCount(0);
         setDiscScores({ A: 0, B: 0, C: 0, D: 0 });
         setQuizResult(null);
+        setUserAnswers([]);
+        setDeepAnalysis(null);
         setIsVideoWatched(false);
     };
 
@@ -171,7 +173,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         if (currentQuestion.type === 'DISC' && !selectedAnswer) return;
         if (currentQuestion.type === 'TEXT' && !textAnswer) return;
 
-        // Logic depending on type
         let newCorrectCount = correctAnswersCount;
         let newDiscScores = { ...discScores };
 
@@ -180,7 +181,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             if (isAnswerCorrect) newCorrectCount++;
             setCorrectAnswersCount(newCorrectCount);
         } else if (currentQuestion.type === 'DISC' || currentQuestion.optionCategories) {
-            // Extract category (either from optionCategories or from A, B, C, D letter)
             let category = '';
             if (currentQuestion.optionCategories) {
                 const optIdx = currentQuestion.options.findIndex(o => o === selectedAnswer);
@@ -196,29 +196,28 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         }
 
         if (currentQuestionIndex < activeLesson.questions.length - 1) {
-            // Save answer for context
             setUserAnswers(prev => [...prev, { question: currentQuestion.question, answer: selectedAnswer || textAnswer }]);
             setCurrentQuestionIndex(prev => prev + 1);
             setSelectedAnswer(null);
             setTextAnswer("");
         } else {
-            // Last question, submit result
             const finalAnswers = [...userAnswers, { question: currentQuestion.question, answer: selectedAnswer || textAnswer }];
             setUserAnswers(finalAnswers);
             setQuizState('SUBMITTING');
 
             let score = 100;
-            let profile = undefined;
-            let resultTitle = undefined;
-            let resultContent = undefined;
+            let profile: string | undefined = undefined;
+            let resultTitle: string | undefined = undefined;
+            let resultContent: string | undefined = undefined;
 
-            const isDiscOrCategory = activeLesson.questions.some(q => q.type === 'DISC' || q.optionCategories);
+            const isDiscType = activeLesson.questions.some(q => q.type === 'DISC');
+            const hasCategories = activeLesson.questions.some(q => q.optionCategories);
+            const useCategoryLogic = activeLesson.resultAlgorithm === 'HIGHEST_CATEGORY' || (isDiscType && !activeLesson.resultAlgorithm);
 
-            if (isDiscOrCategory) {
-                // Determine profile based on categories
+            if (useCategoryLogic) {
                 const maxLetter = Object.entries(newDiscScores).reduce((a, b) => b[1] > a[1] ? b : a)[0];
+                score = 100; // Completion score for profile tests
 
-                // Check if we have resultMappings in the lesson
                 if (activeLesson.resultMappings && activeLesson.resultMappings.length > 0) {
                     const mapping = activeLesson.resultMappings.find(m => m.category === maxLetter);
                     if (mapping) {
@@ -229,19 +228,25 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
                 if (!resultTitle) {
                     const profiles: { [key: string]: string } = {
-                        A: 'DIRECTOR (Dominante)',
-                        B: 'INFLUYENTE (Entusiasta)',
-                        C: 'ESTABLE (Cooperador)',
-                        D: 'ANALÍTICO (Preciso)'
+                        A: 'PERFIL D - EL COMANDANTE',
+                        B: 'PERFIL I - EL EMBAJADOR',
+                        C: 'PERFIL S - EL GUARDIÁN',
+                        D: 'PERFIL C - EL ESTRATEGA'
                     };
-                    profile = profiles[maxLetter] || `Categoría ${maxLetter} `;
+                    profile = profiles[maxLetter] || `Categoría ${maxLetter}`;
+                    resultTitle = profile;
+                    resultContent = `<p>Has sido identificado como <strong>${profile}</strong> basándose en tus respuestas tácticas.</p><p>Solicita un análisis profundo con IA para obtener tu reporte detallado.</p>`;
                 }
-            } else if (activeLesson.questions.some(q => q.type === 'MULTIPLE')) {
+            } else {
+                // Default to SCORE_PERCENTAGE logic
                 const multipleQuestions = activeLesson.questions.filter(q => q.type === 'MULTIPLE');
-                score = (newCorrectCount / multipleQuestions.length) * 100;
+                if (multipleQuestions.length > 0) {
+                    score = (newCorrectCount / multipleQuestions.length) * 100;
+                } else {
+                    score = 100; // Text-only or other types default to completion
+                }
 
-                // Also check SCORE_PERCENTAGE mappings if exist
-                if ((activeLesson.resultAlgorithm === 'SCORE_PERCENTAGE' || !activeLesson.resultAlgorithm) && activeLesson.resultMappings) {
+                if (activeLesson.resultMappings && activeLesson.resultMappings.length > 0) {
                     const sortedMappings = [...activeLesson.resultMappings].sort((a, b) => (b.minScore || 0) - (a.minScore || 0));
                     const mapping = sortedMappings.find(m =>
                         (m.minScore === undefined || score >= m.minScore) &&
@@ -313,7 +318,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         );
     }
 
-    // 1. View: Course List
     if (!selectedCourse) {
         return (
             <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-5xl mx-auto">
@@ -555,12 +559,10 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         );
     }
 
-    // 2. View: Lesson List or Active Lesson
     const courseLessons = lessons.filter(l => l.courseId === selectedCourse.id).sort((a, b) => a.order - b.order);
 
     return (
         <div className="animate-in fade-in pb-24">
-            {/* Header with Back Button */}
             <div className="bg-[#000c19]/50 border-b border-white/5 p-6 backdrop-blur-xl sticky top-0 z-20">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
                     <button
@@ -577,11 +579,9 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             </div>
 
             <div className="max-w-5xl mx-auto p-6 md:p-10 flex flex-col lg:flex-row gap-10">
-                {/* Main Content Area */}
                 <div className="flex-1 space-y-8">
                     {activeLesson ? (
                         <div className="space-y-8 animate-in slide-in-from-bottom-4">
-                            {/* Video Player Placeholder / YouTube */}
                             <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
                                 {activeLesson.videoUrl ? (
                                     <>
@@ -590,36 +590,27 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                             src={`${(() => {
                                                 let url = activeLesson.videoUrl;
                                                 let videoId = '';
-                                                if (url.includes('youtu.be/')) {
-                                                    videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
-                                                } else if (url.includes('watch?v=')) {
-                                                    videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
-                                                } else if (url.includes('embed/')) {
-                                                    videoId = url.split('embed/')[1].split(/[?#]/)[0];
-                                                }
-
+                                                if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
+                                                else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
+                                                else if (url.includes('embed/')) videoId = url.split('embed/')[1].split(/[?#]/)[0];
                                                 if (videoId) {
-                                                    let baseUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
-                                                    if (activeLesson.startTime) baseUrl += `&start=${activeLesson.startTime}`;
-                                                    if (activeLesson.endTime) baseUrl += `&end=${activeLesson.endTime}`;
-                                                    return baseUrl;
+                                                    let b = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
+                                                    if (activeLesson.startTime) b += `&start=${activeLesson.startTime}`;
+                                                    if (activeLesson.endTime) b += `&end=${activeLesson.endTime}`;
+                                                    return b;
                                                 }
                                                 return url;
-                                            })()
-                                                } `}
+                                            })()}`}
                                             className="w-full h-full"
                                             allowFullScreen
-                                            onLoad={() => {
-                                                // Reducido a 3 segundos para mejor UX
-                                                setTimeout(() => setIsVideoWatched(true), 3000);
-                                            }}
+                                            onLoad={() => setTimeout(() => setIsVideoWatched(true), 3000)}
                                         ></iframe>
                                         {!isVideoWatched && (
                                             <button
                                                 onClick={() => setIsVideoWatched(true)}
                                                 className="absolute bottom-4 right-4 bg-black/80 hover:bg-[#ffb700] hover:text-[#001f3f] px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 transition-all z-10"
                                             >
-                                                Omitir Video y Comenzar Test
+                                                Omitir Video
                                             </button>
                                         )}
                                     </>
@@ -631,7 +622,6 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                 )}
                             </div>
 
-                            {/* Lesson Text */}
                             <div className="space-y-4">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <h3 className="text-2xl font-bebas text-white uppercase tracking-wider">{activeLesson.title}</h3>
@@ -642,28 +632,19 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                         )}
                                     </div>
                                 </div>
-                                <div
-                                    className="text-[11px] md:text-xs text-gray-400 font-bold uppercase leading-relaxed font-montserrat whitespace-pre-wrap"
-                                    dangerouslySetInnerHTML={{ __html: activeLesson.content }}
-                                />
+                                <div className="text-[11px] md:text-xs text-gray-400 font-bold uppercase leading-relaxed font-montserrat whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
                             </div>
 
-                            {/* Quiz Engine */}
                             {activeLesson.questions && activeLesson.questions.length > 0 && (
                                 <div className="bg-[#001833] border border-[#ffb700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-                                    {isLessonCompleted(activeLesson.id) ? (
+                                    {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
                                         <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
                                             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
                                                 <CheckCircle className="text-green-500" size={40} />
                                             </div>
                                             <div className="space-y-2">
                                                 <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">Lección Completada</h4>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
-                                                    Has superado esta unidad de entrenamiento. El acceso al test ha sido bloqueado para preservar la integridad de tu registro táctico.
-                                                </p>
-                                            </div>
-                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 inline-block">
-                                                <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">Puntaje Registrado: {Math.round(progress.find(p => p.lessonId === activeLesson.id)?.score || 0)}%</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">Unidad superada con éxito.</p>
                                             </div>
                                         </div>
                                     ) : (
@@ -675,154 +656,87 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[8px] text-gray-500 font-bold uppercase">Intentos: {getLessonAttempts(activeLesson.id)}/2</div>
-                                                    {quizState !== 'RESULT' && (
-                                                        <span className="text-[10px] text-gray-500 font-bebas">PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}</span>
-                                                    )}
+                                                    {quizState !== 'RESULT' && <span className="text-[10px] text-gray-500 font-bebas">Q {currentQuestionIndex + 1} / {activeLesson.questions.length}</span>}
                                                 </div>
                                             </div>
 
                                             {(!isVideoWatched && activeLesson.videoUrl) && quizState !== 'RESULT' ? (
                                                 <div className="py-10 text-center space-y-4">
                                                     <PlayCircle size={40} className="mx-auto text-[#ffb700] animate-pulse" />
-                                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest font-bebas">Debes ver el video de entrenamiento antes de iniciar el quiz</p>
+                                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest font-bebas">Ve el video antes del test</p>
                                                 </div>
                                             ) : quizState !== 'RESULT' ? (
                                                 <>
-                                                    <p className="text-sm font-bold text-white font-montserrat uppercase leading-relaxed">
-                                                        {activeLesson.questions[currentQuestionIndex].question}
-                                                    </p>
-
+                                                    <p className="text-sm font-bold text-white font-montserrat uppercase leading-relaxed">{activeLesson.questions[currentQuestionIndex].question}</p>
                                                     {activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? (
-                                                        <textarea
-                                                            value={textAnswer}
-                                                            onChange={(e) => setTextAnswer(e.target.value)}
-                                                            placeholder="Escribe tu reporte táctico aquí..."
-                                                            className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-5 text-white text-[11px] font-bold uppercase tracking-wider focus:border-[#ffb700]/50 outline-none transition-all font-montserrat"
-                                                        />
+                                                        <textarea value={textAnswer} onChange={(e) => setTextAnswer(e.target.value)} placeholder="Tu reporte..." className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-5 text-white text-[11px] font-bold uppercase focus:border-[#ffb700]/50 outline-none transition-all" />
                                                     ) : (
                                                         <div className="grid grid-cols-1 gap-3">
                                                             {activeLesson.questions[currentQuestionIndex].options.map((option, idx) => (
-                                                                <button
-                                                                    key={idx}
-                                                                    onClick={() => handleAnswerSelect(option)}
-                                                                    className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option
-                                                                        ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]'
-                                                                        : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'
-                                                                        } font-bebas`}
-                                                                >
-                                                                    {option}
-                                                                </button>
+                                                                <button key={idx} onClick={() => handleAnswerSelect(option)} className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'} font-bebas`}>{option}</button>
                                                             ))}
                                                         </div>
                                                     )}
-
-                                                    <button
-                                                        onClick={handleNextQuestion}
-                                                        disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'}
-                                                        className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bebas"
-                                                    >
-                                                        {quizState === 'SUBMITTING' ? (
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <Loader2 size={16} className="animate-spin" />
-                                                                <span>Verificando...</span>
-                                                            </div>
-                                                        ) : (
-                                                            <span>{currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Evaluación'}</span>
-                                                        )}
+                                                    <button onClick={handleNextQuestion} disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'} className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bebas">
+                                                        {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : <span>{currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente' : 'Finalizar'}</span>}
                                                     </button>
                                                 </>
                                             ) : quizResult && (
                                                 <div className="space-y-6 animate-in zoom-in-95">
-                                                    <div className={`p-6 rounded-2xl border flex items-center gap-4 ${quizResult.isCorrect ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-red-500/20 border-red-500/30 text-red-400'
-                                                        }`}>
+                                                    <div className={`p-6 rounded-2xl border flex items-center gap-4 ${quizResult.isCorrect ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-red-500/20 border-red-500/30 text-red-400'}`}>
                                                         {quizResult.isCorrect ? <Trophy size={48} /> : <AlertCircle size={48} />}
                                                         <div>
                                                             <p className="font-bebas text-2xl uppercase leading-none">{quizResult.title || (quizResult.isCorrect ? '¡Misión Cumplida!' : 'Evaluación Fallida')}</p>
-                                                            <div className="text-[10px] font-bold uppercase mt-1 space-y-2">
+                                                            <div className="text-[10px] font-bold uppercase mt-1 space-y-2 text-white">
                                                                 {quizResult.content ? (
-                                                                    <div className="text-white bg-black/20 p-4 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: quizResult.content }} />
+                                                                    <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
                                                                 ) : quizResult.profile ? (
-                                                                    <div className="space-y-4 w-full">
-                                                                        <p className="text-white text-[12px] font-bold">Resumen de Perfil: <span className="text-[#ffb700]">{quizResult.profile}</span></p>
+                                                                    <div className="space-y-4">
+                                                                        <p>Perfil: <span className="text-[#ffb700]">{quizResult.profile}</span></p>
                                                                         <div className="grid grid-cols-4 gap-2">
-                                                                            {Object.entries(discScores).map(([category, count]) => (
-                                                                                <div key={category} className="bg-black/40 border border-white/10 rounded-xl p-3 text-center">
-                                                                                    <p className="text-[14px] font-bebas text-[#ffb700]">{category}</p>
-                                                                                    <p className="text-[10px] font-black text-white">{count}</p>
-                                                                                    <div className="h-1 w-full bg-white/5 rounded-full mt-2 overflow-hidden">
-                                                                                        <div
-                                                                                            className="h-full bg-[#ffb700]"
-                                                                                            style={{ width: `${(count / (activeLesson?.questions.length || 1)) * 100}%` }}
-                                                                                        />
-                                                                                    </div>
+                                                                            {Object.entries(discScores).map(([k, v]) => (
+                                                                                <div key={k} className="bg-black/40 p-2 rounded-xl text-center border border-white/5">
+                                                                                    <p className="text-[#ffb700] font-bebas">{k}</p>
+                                                                                    <p className="text-[10px]">{v}</p>
                                                                                 </div>
                                                                             ))}
                                                                         </div>
-                                                                        <p className="text-[8px] text-gray-500 uppercase font-black italic">Reporte táctico guardado. Solicita el análisis de IA para obtener el desglose profundo.</p>
                                                                     </div>
                                                                 ) : (
-                                                                    quizResult.error ? <p>{quizResult.error}</p> : (
-                                                                        <div className="space-y-1">
-                                                                            <p>
-                                                                                {quizResult.isCorrect
-                                                                                    ? `Has aprobado con ${Math.round(quizResult.score)}%. Has ganado +${quizResult.xpAwarded} XP Tácticos.`
-                                                                                    : `Puntaje: ${Math.round(quizResult.score)}%. Se requiere 100% para aprobar. Intentos restantes: ${2 - getLessonAttempts(activeLesson?.id || '')}`
-                                                                                }
-                                                                            </p>
-                                                                            {activeLesson?.questions.some(q => q.type === 'DISC') && (
-                                                                                <div className="grid grid-cols-4 gap-2 mt-4">
-                                                                                    {Object.entries(discScores).map(([category, count]) => (
-                                                                                        <div key={category} className="bg-black/40 border border-white/10 rounded-xl p-2 text-center">
-                                                                                            <p className="text-[12px] font-bebas text-[#ffb700]">{category}: {count}</p>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    )
+                                                                    <p>{quizResult.isCorrect ? `Aprobado (${Math.round(quizResult.score)}%)` : `Puntaje: ${Math.round(quizResult.score)}%`}</p>
                                                                 )}
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {/* AI Analysis Section */}
+                                                    <div className="mt-8 space-y-4 pt-6 border-t border-white/5">
+                                                        <h5 className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] font-bebas">Resumen Táctico:</h5>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            {userAnswers.map((ua, i) => (
+                                                                <div key={i} className="bg-black/20 border border-white/5 p-4 rounded-xl space-y-1">
+                                                                    <p className="text-[8px] text-gray-500 font-bold uppercase truncate">{i + 1}. {ua.question}</p>
+                                                                    <p className="text-[9px] text-white font-black uppercase font-bebas tracking-wide">R: {ua.answer}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
                                                     <div className="space-y-4">
                                                         {!deepAnalysis ? (
-                                                            <button
-                                                                onClick={handleDeepAnalysis}
-                                                                disabled={isAnalyzingDeeply}
-                                                                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/30 text-[#ffb700] font-black uppercase text-[10px] tracking-widest hover:bg-[#ffb700]/20 transition-all group"
-                                                            >
-                                                                {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} className="group-hover:scale-110 transition-transform" />}
-                                                                {isAnalyzingDeeply ? 'Extrayendo Inteligencia Profunda...' : 'Solicitar Análisis de Perfil con IA'}
+                                                            <button onClick={handleDeepAnalysis} disabled={isAnalyzingDeeply} className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/30 text-[#ffb700] font-black uppercase text-[10px] tracking-widest">
+                                                                {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} />}
+                                                                Analizar con IA
                                                             </button>
                                                         ) : (
-                                                            <div className="p-6 bg-[#001f3f] border border-[#ffb700]/30 rounded-3xl space-y-4 animate-in fade-in slide-in-from-bottom-4 shadow-inner">
-                                                                <div className="flex items-center gap-2 text-[#ffb700]">
-                                                                    <Sparkles size={16} />
-                                                                    <span className="text-[10px] font-black uppercase tracking-widest">Reporte de Inteligencia Táctica (AI)</span>
-                                                                </div>
-                                                                <div
-                                                                    className="text-[11px] text-gray-300 font-bold uppercase leading-relaxed font-montserrat prose prose-invert max-w-none"
-                                                                    dangerouslySetInnerHTML={{ __html: deepAnalysis }}
-                                                                />
+                                                            <div className="p-6 bg-[#001f3f] border border-[#ffb700]/30 rounded-3xl space-y-4">
+                                                                <div className="flex items-center gap-2 text-[#ffb700] text-[10px] font-black uppercase tracking-widest"><Sparkles size={16} /> Reporte IA</div>
+                                                                <div className="text-[11px] text-gray-300 font-bold uppercase leading-relaxed font-montserrat prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
                                                             </div>
                                                         )}
                                                     </div>
 
                                                     {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
-                                                        <button
-                                                            onClick={() => handleLessonSelect(activeLesson)}
-                                                            className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all font-bebas"
-                                                        >
-                                                            Reintentar Desafío
-                                                        </button>
-                                                    )}
-
-                                                    {getLessonAttempts(activeLesson.id) >= 2 && !quizResult.isCorrect && (
-                                                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
-                                                            <p className="text-[9px] text-red-400 font-black uppercase tracking-widest font-bebas">Acceso Bloqueado. Contacta a un Director.</p>
-                                                        </div>
+                                                        <button onClick={() => handleLessonSelect(activeLesson)} className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl text-white font-black uppercase text-[10px] font-bebas">Reintentar</button>
                                                     )}
                                                 </div>
                                             )}
@@ -833,66 +747,36 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20 bg-white/5 rounded-[3rem] border border-white/5">
-                            <div className="w-24 h-24 bg-[#ffb700]/10 rounded-full flex items-center justify-center border border-[#ffb700]/20">
-                                <Play className="text-[#ffb700]" size={40} />
-                            </div>
+                            <div className="w-24 h-24 bg-[#ffb700]/10 rounded-full flex items-center justify-center border border-[#ffb700]/20"><Play className="text-[#ffb700]" size={40} /></div>
                             <div className="space-y-2">
                                 <p className="text-xl font-bebas text-white uppercase tracking-widest">Listo para el Briefing</p>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">Selecciona una unidad de entrenamiento en el panel lateral para comenzar.</p>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">Selecciona una unidad de entrenamiento.</p>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Sidebar Lesson Selector */}
                 <div className="w-full lg:w-80 space-y-4">
                     <div className="flex items-center gap-2 px-2">
                         <GraduationCap size={16} className="text-[#ffb700]" />
-                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest font-bebas">Unidades de Despliegue</h4>
+                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest font-bebas">Unidades</h4>
                     </div>
-
                     <div className="space-y-2">
                         {courseLessons.map((lesson, index) => (
-                            <div
-                                key={lesson.id}
-                                className={`group/lesson flex items-center gap-4 p-5 rounded-3xl border cursor-pointer transition-all ${activeLesson?.id === lesson.id
-                                    ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]'
-                                    : 'bg-white/5 border-white/5 hover:bg-white/10'
-                                    }`}
-                            >
-                                <div onClick={() => handleLessonSelect(lesson)} className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isLessonCompleted(lesson.id)
-                                        ? 'bg-green-500/20 border-green-500/40 text-green-500'
-                                        : 'bg-black/30 border-white/5 text-gray-600'
-                                        }`}>
-                                        {isLessonCompleted(lesson.id) ? <CheckCircle size={18} /> : <span className="font-bebas text-lg">0{index + 1}</span>}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-[10px] font-black uppercase truncate font-bebas tracking-wide ${activeLesson?.id === lesson.id ? 'text-white' : 'text-gray-400'}`}>
-                                            {lesson.title}
-                                        </p>
-                                        <p className="text-[8px] text-gray-600 font-bold uppercase">
-                                            {isLessonCompleted(lesson.id) ? 'Status: Completado' : `Recompensa: +${lesson.xpReward} XP`}
-                                        </p>
-                                    </div>
+                            <div key={lesson.id} onClick={() => handleLessonSelect(lesson)} className={`flex items-center gap-4 p-5 rounded-3xl border cursor-pointer transition-all ${activeLesson?.id === lesson.id ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}>
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${isLessonCompleted(lesson.id) ? 'bg-green-500/20 border-green-500/40 text-green-500' : 'bg-black/30 border-white/5 text-gray-600'}`}>{isLessonCompleted(lesson.id) ? <CheckCircle size={18} /> : <span className="font-bebas text-lg">0{index + 1}</span>}</div>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-[10px] font-black uppercase truncate font-bebas tracking-wide ${activeLesson?.id === lesson.id ? 'text-white' : 'text-gray-400'}`}>{lesson.title}</p>
+                                    <p className="text-[8px] text-gray-600 font-bold uppercase">{isLessonCompleted(lesson.id) ? 'Completado' : `+${lesson.xpReward} XP`}</p>
                                 </div>
-                                {userRole === UserRole.DIRECTOR && (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteLesson(lesson.id, lesson.title); }}
-                                        className="p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all opacity-0 group-hover/lesson:opacity-100 shrink-0"
-                                        title="Eliminar Lección"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                )}
                             </div>
                         ))}
                     </div>
 
-                    <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-6 space-y-4">
+                    <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-[2rem] p-6 space-y-4">
                         <div className="flex items-center gap-3">
                             <Trophy className="text-[#ffb700]" size={16} />
-                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest font-bebas">Logros del Curso</h4>
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest font-bebas">Logros</h4>
                         </div>
                         <div className="space-y-1">
                             <div className="flex justify-between text-[8px] font-black uppercase text-gray-500 mb-1">
@@ -900,15 +784,19 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                 <span>{Math.round((progress.filter(p => courseLessons.some(cl => cl.id === p.lessonId) && p.status === 'COMPLETADO').length / courseLessons.length) * 100) || 0}%</span>
                             </div>
                             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-[#ffb700] transition-all duration-1000"
-                                    style={{ width: `${(progress.filter(p => courseLessons.some(cl => cl.id === p.lessonId) && p.status === 'COMPLETADO').length / courseLessons.length) * 100 || 0}% ` }}
-                                />
+                                <div className="h-full bg-[#ffb700] transition-all duration-1000" style={{ width: `${(progress.filter(p => courseLessons.some(cl => cl.id === p.lessonId) && p.status === 'COMPLETADO').length / courseLessons.length) * 100 || 0}%` }} />
                             </div>
                         </div>
+
+                        {selectedCourse && isCourseCompleted(selectedCourse.id) && (
+                            <button onClick={() => handleDownloadCertificate(selectedCourse)} className="w-full py-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center gap-3 text-green-500 text-[10px] font-black uppercase hover:bg-green-500/20 transition-all shadow-[0_0_20px_rgba(34,197,94,0.1)] group">
+                                <Trophy size={16} className="group-hover:scale-110 transition-transform" /> Ver Certificado
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
+
             {certificateData && (
                 <TacticalCertificate
                     agentName={certificateData.agentName}

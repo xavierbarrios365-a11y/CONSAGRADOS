@@ -415,6 +415,30 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     />
                   </div>
                 </div>
+
+                {currentUser?.userRole === UserRole.DIRECTOR && (
+                  <div className="p-8 bg-blue-950/20 border border-blue-500/20 rounded-3xl space-y-4 mt-8">
+                    <h4 className="text-white font-black uppercase tracking-widest text-xs flex items-center gap-2">
+                      <ShieldAlert className="text-blue-500" size={16} /> COMANDO DE OPERACIONES MASIVAS
+                    </h4>
+                    <p className="text-[10px] text-gray-400 font-bold leading-relaxed">
+                      Utiliza esta función para transmitir las credenciales de toda la base de datos de agentes al Telegram táctico configurado. Este proceso es irreversible.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        const safetyKey = prompt("⚠️ PROTOCOLO DE SEGURIDAD\n\nPara iniciar la transmisión masiva, escribe 'TRANSMITIR':");
+                        if (safetyKey === 'TRANSMITIR') {
+                          const res = await bulkSendCredentials();
+                          if (res.success) alert(`✅ TRANSMISIÓN COMPLETADA\n\nSe enviaron ${res.count} credenciales.`);
+                          else alert("❌ FALLO EN TRANSMISIÓN: " + (res.error || "Error desconocido"));
+                        }
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-900/40"
+                    >
+                      <Send size={16} /> Iniciar Transmisión Masiva
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )

@@ -66,7 +66,8 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'MUST_CHANGE': ['mustchangepassword', 'cambio_obligatorio_pin', 'cambio'],
       'STATS': ['tacticalstats', 'stats_json', 'stats'],
       'SUMMARY': ['tacticalsummary', 'tactor_summary', 'summary'],
-      'LAST_UPDATE': ['lastaiupdate', 'last_ai_update', 'update']
+      'LAST_UPDATE': ['lastaiupdate', 'last_ai_update', 'update'],
+      'BIOMETRIC': ['biometric_credential', 'biometric']
     };
 
     const isMatrix = Array.isArray(rawContent[0]);
@@ -168,7 +169,8 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
       }
     })(),
     tacticalSummary: getV('SUMMARY') || "",
-    lastAiUpdate: getV('LAST_UPDATE') || ""
+    lastAiUpdate: getV('LAST_UPDATE') || "",
+    biometricCredential: getV('BIOMETRIC') || ""
   };
 };
 
@@ -423,6 +425,26 @@ export const bulkSendCredentials = async () => {
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO ENVÍO MASIVO CREDENCIALES:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const registerBiometrics = async (agentId: string, credential: string) => {
+  try {
+    const response = await postToAction('register_biometrics', { agentId, credential });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO REGISTRO BIOMÉTRICO:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const verifyBiometrics = async (agentId: string) => {
+  try {
+    const response = await postToAction('verify_biometrics', { agentId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO VERIFICACIÓN BIOMÉTRICA:", error);
     return { success: false, error: error.message };
   }
 };

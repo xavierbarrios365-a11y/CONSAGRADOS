@@ -47,6 +47,7 @@ export interface Agent {
   };
   tacticalSummary?: string;
   lastAiUpdate?: string;
+  biometricCredential?: string;
 }
 
 export interface Guide {

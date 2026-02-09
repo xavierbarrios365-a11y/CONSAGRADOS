@@ -9,10 +9,12 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
+import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
+import { registerBiometrics, verifyBiometrics } from './services/sheetsService';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
@@ -55,6 +57,8 @@ const App: React.FC = () => {
   const [newQuestionInput, setNewQuestionInput] = useState('');
   const [newAnswerInput, setNewAnswerInput] = useState('');
   const [isUpdatingPin, setIsUpdatingPin] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [isAuthenticatingBio, setIsAuthenticatingBio] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -121,6 +125,9 @@ const App: React.FC = () => {
         }
       })
       .catch(err => console.error("Error obteniendo IP:", err));
+
+    // Verificar disponibilidad de biometría
+    isBiometricAvailable().then(setBiometricAvailable);
   }, []);
 
   // 2. Temporizador de Expiración (5 min)
@@ -328,6 +335,65 @@ const App: React.FC = () => {
       }
     } else {
       setLoginError({ field: 'id', message: `ID '${loginId}' NO RECONOCIDO EN EL DIRECTORIO.` });
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    if (!loginId) {
+      setLoginError({ field: 'id', message: "INGRESA TU ID PARA USAR BIOMETRÍA." });
+      return;
+    }
+
+    setIsAuthenticatingBio(true);
+    try {
+      // 1. Obtener credencial guardada del backend
+      const inputNumericId = loginId.replace(/[^0-9]/g, '');
+      const user = agents.find(a => a.id.replace(/[^0-9]/g, '') === inputNumericId);
+
+      if (!user || !user.biometricCredential) {
+        setLoginError({ field: 'both', message: "BIOMETRÍA NO REGISTRADA PARA ESTE AGENTE." });
+        setIsAuthenticatingBio(false);
+        return;
+      }
+
+      // 2. Autenticar localmente
+      const success = await authenticateBiometric(user.biometricCredential);
+
+      if (success) {
+        setLastActiveTime(Date.now());
+        localStorage.setItem('consagrados_agent', JSON.stringify(user));
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+        const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : (user.userRole === UserRole.LEADER ? AppView.DIRECTORY : AppView.PROFILE);
+        setView(targetView);
+      } else {
+        setLoginError({ field: 'both', message: "FALLO DE AUTENTICACIÓN BIOMÉTRICA." });
+      }
+    } catch (err) {
+      setLoginError({ field: 'both', message: "ERROR EN PROTOCOLO BIOMÉTRICO." });
+    } finally {
+      setIsAuthenticatingBio(false);
+    }
+  };
+
+  const handleRegisterBiometrics = async () => {
+    if (!currentUser) return;
+
+    try {
+      const credentialId = await registerBiometric(currentUser.id, currentUser.name);
+      if (credentialId) {
+        const res = await registerBiometrics(currentUser.id, credentialId);
+        if (res.success) {
+          alert("BIOMETRÍA REGISTRADA CON ÉXITO. AHORA PUEDES ENTRAR SIN PIN.");
+          syncData();
+        } else {
+          alert("ERROR AL GUARDAR CREDENCIAL EN EL SERVIDOR.");
+        }
+      } else {
+        alert("REGISTRO BIOMÉTRICO CANCELADO O FALLIDO.");
+      }
+    } catch (err) {
+      alert("ERROR EN EL SISTEMA BIOMÉTRICO.");
     }
   };
 
@@ -855,8 +921,25 @@ const App: React.FC = () => {
             >
               <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             </button>
-            <div className="w-full flex justify-center">
+            <div className="w-full flex flex-col items-center gap-6">
               {currentUser && <DigitalIdCard key={`profile-${currentUser.id}`} agent={currentUser} />}
+
+              {biometricAvailable && currentUser && !currentUser.biometricCredential && (
+                <button
+                  onClick={handleRegisterBiometrics}
+                  className="bg-white/5 border border-[#ffb700]/30 rounded-2xl py-4 px-8 text-[#ffb700] text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/10 transition-all flex items-center gap-3 active:scale-95"
+                >
+                  <Fingerprint size={18} />
+                  Activar Acceso Biométrico
+                </button>
+              )}
+
+              {currentUser?.biometricCredential && (
+                <div className="flex items-center gap-2 text-[8px] text-green-500 font-black uppercase tracking-widest bg-green-500/10 py-2 px-4 rounded-full border border-green-500/20">
+                  <Fingerprint size={12} />
+                  Acceso Biométrico Activo
+                </div>
+              )}
             </div>
           </div>
         );
@@ -938,6 +1021,18 @@ const App: React.FC = () => {
             >
               Entrar al Command Center
             </button>
+
+            {biometricAvailable && (
+              <button
+                type="button"
+                onClick={handleBiometricLogin}
+                disabled={isAuthenticatingBio}
+                className="w-full bg-white/5 border border-white/10 py-5 rounded-2xl text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/10 active:scale-[0.98] transition-all font-bebas flex items-center justify-center gap-3"
+              >
+                <Fingerprint size={20} className={isAuthenticatingBio ? "animate-pulse" : ""} />
+                {isAuthenticatingBio ? "Verificando..." : "Acceso Biométrico"}
+              </button>
+            )}
           </form>
 
           <div className="flex justify-center">

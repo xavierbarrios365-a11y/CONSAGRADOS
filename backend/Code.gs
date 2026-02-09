@@ -24,7 +24,9 @@ function getGlobalConfig() {
     GUIAS_SHEET_NAME: 'GUIAS',
     ACADEMY_COURSES_SHEET: 'ACADEMIA_CURSOS',
     ACADEMY_LESSONS_SHEET: 'ACADEMIA_LECCIONES',
-    ACADEMY_PROGRESS_SHEET: 'ACADEMIA_PROGRESO'
+    ACADEMY_PROGRESS_SHEET: 'ACADEMIA_PROGRESO',
+    ONESIGNAL_APP_ID: '9ae818a7-3330-4e3e-8c67-628041566835',
+    ONESIGNAL_REST_API_KEY: 'NDIxYmU4ZjAtMjYxYS00ZDM5LTg0MTItZDM3ZTUyMmE0YjY0' // Necesario para enviar notificaciones desde el backend
   };
 }
 
@@ -53,6 +55,40 @@ function sendTelegramNotification(message) {
     });
   } catch (error) {
     Logger.log(`Error al enviar notificación a Telegram: ${error.message}`);
+  }
+}
+
+/**
+ * @description Envía una notificación push vía OneSignal.
+ */
+function sendPushNotification(title, message) {
+  const CONFIG = getGlobalConfig();
+  if (!CONFIG.ONESIGNAL_APP_ID || !CONFIG.ONESIGNAL_REST_API_KEY) {
+    Logger.log("Configuración de OneSignal incompleta.");
+    return;
+  }
+
+  try {
+    const url = "https://onesignal.com/api/v1/notifications";
+    const payload = {
+      app_id: CONFIG.ONESIGNAL_APP_ID,
+      headings: { "en": title, "es": title },
+      contents: { "en": message, "es": message },
+      included_segments: ["All"]
+    };
+
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        "Authorization": "Basic " + CONFIG.ONESIGNAL_REST_API_KEY
+      },
+      payload: JSON.stringify(payload)
+    };
+
+    UrlFetchApp.fetch(url, options);
+  } catch (error) {
+    Logger.log(`Error al enviar Push Notification: ${error.message}`);
   }
 }
 
@@ -137,8 +173,12 @@ function doPost(e) {
         return sendAgentCredentials(request.data);
       case 'bulk_send_credentials':
         return bulkSendCredentials();
+      case 'register_biometrics':
+        return registerBiometrics(request.data);
+      case 'verify_biometrics':
+        return verifyBiometrics(request.data);
       default:
-        throw new Error("Acción no reconocida.");
+        throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
   } catch (error) {
     Logger.log(error);
@@ -624,7 +664,8 @@ function setupDatabase() {
     'FECHA DE NACIMIENTO', 'TALENTO', 'BAUTIZADO', 'RELACION CON DIOS',
     'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO',
     'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN',
-    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE'
+    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE',
+    'BIOMETRIC_CREDENTIAL'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
   
@@ -1141,6 +1182,11 @@ function saveBulkAcademyData(data) {
         coursesSheet.getRange(existingIdx + 1, 1, 1, newRow.length).setValues([newRow]);
       } else {
         coursesSheet.appendRow(newRow);
+        // Notificar nuevo curso
+        const title = "🚀 NUEVO CURSO DISPONIBLE";
+        const msg = `Se ha publicado el curso: ${course.title}. ¡Inicia tu entrenamiento ahora!`;
+        sendPushNotification(title, msg);
+        sendTelegramNotification(`🚀 <b>NUEVO CURSO PUBLICADO</b>\n\n<b>• Título:</b> ${course.title}\n\n<i>¡Agentes, a sus puestos! El nuevo material ya está en la academia.</i>`);
       }
     });
   }
@@ -1243,4 +1289,114 @@ function resetStudentAttempts(data) {
     deletedCount 
   })).setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * @description Envía las credenciales de un agente específico a Telegram.
+ */
+function sendAgentCredentials(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  const agent = directoryData.find(row => String(row[idCol]) === String(data.agentId));
+  
+  if (!agent) throw new Error("Agente no encontrado.");
+  
+  const name = agent[headers.indexOf('NOMBRE')];
+  const pin = agent[headers.indexOf('PIN')];
+  const question = agent[headers.indexOf('PREGUNTA_SEGURIDAD')];
+  const answer = agent[headers.indexOf('RESPUESTA_SEGURIDAD')];
+  const id = agent[idCol];
+
+  const message = `📡 <b>DESPLIEGUE DE CREDENCIALES</b>\n\n<b>• Agente:</b> ${name}\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID:</b> <code>${id}</code>\n<b>• PIN:</b> <code>${pin}</code>\n<b>• Pregunta:</b> ${question || 'S/D'}\n<b>• Respuesta:</b> ${answer || 'S/D'}`;
+  sendTelegramNotification(message);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Envía las credenciales de TODOS los agentes a Telegram.
+ */
+function bulkSendCredentials() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  const nameCol = headers.indexOf('NOMBRE');
+  const pinCol = headers.indexOf('PIN');
+  const questCol = headers.indexOf('PREGUNTA_SEGURIDAD');
+  const ansCol = headers.indexOf('RESPUESTA_SEGURIDAD');
+  
+  const agents = directoryData.slice(1);
+  let count = 0;
+
+  sendTelegramNotification(`⚠️ <b>INICIANDO TRANSMISIÓN MASIVA DE CREDENCIALES</b>\n\nProcesando <b>${agents.length}</b> registros...`);
+
+  agents.forEach(row => {
+    if (String(row[idCol]).trim()) {
+      const message = `📡 <b>CREDENCIALES - ${row[nameCol]}</b>\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID:</b> <code>${row[idCol]}</code>\n<b>• PIN:</b> <code>${row[pinCol]}</code>\n<b>• Q:</b> ${row[questCol] || 'S/D'}\n<b>• A:</b> ${row[ansCol] || 'S/D'}`;
+      sendTelegramNotification(message);
+      count++;
+    }
+  });
+
+  sendTelegramNotification(`✅ <b>TRANSMISIÓN COMPLETADA</b>\n\nSe enviaron <b>${count}</b> credenciales exitosamente.`);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, count: count })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Registra una credencial biométrica para un agente.
+ */
+function registerBiometrics(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  const bioCol = headers.indexOf('BIOMETRIC_CREDENTIAL') + 1;
+  
+  if (bioCol === 0) throw new Error("Columna BIOMETRIC_CREDENTIAL no encontrada.");
+
+  const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  sheet.getRange(rowIdx + 1, bioCol).setValue(data.credential);
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Verifica una credencial biométrica.
+ */
+function verifyBiometrics(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  const bioCol = headers.indexOf('BIOMETRIC_CREDENTIAL');
+  
+  const agent = directoryData.find(row => String(row[idCol]) === String(data.agentId));
+  if (!agent) throw new Error("Agente no encontrado.");
+
+  const storedCredential = agent[bioCol];
+  // La lógica de verificación real se hace en el frontend (comparación), 
+  // aquí solo devolvemos el "challenge" o la credencial almacenada para que el frontend la use.
+  
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    credential: storedCredential 
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 

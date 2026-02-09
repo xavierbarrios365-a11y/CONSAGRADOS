@@ -20,6 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
+  const APP_VERSION = "1.2.1"; // Incremento manual para forzar limpieza de caché
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -105,6 +106,20 @@ const App: React.FC = () => {
   }, [isLoggedIn, showSessionWarning]);
 
   // --- EFFECTS ---
+
+  // 0. Cache Busting y Verificación de Versión
+  useEffect(() => {
+    const savedVersion = localStorage.getItem('app_version');
+    if (savedVersion !== APP_VERSION) {
+      console.log(`Nueva versión detectada (${APP_VERSION}). Limpiando caché y reiniciando...`);
+
+      // Limpiar versiones antiguas pero mantener la sesión si es posible
+      localStorage.setItem('app_version', APP_VERSION);
+
+      // Forzar recarga omitiendo caché del navegador
+      window.location.reload();
+    }
+  }, []);
 
   // 1. Inicialización y Persistencia
   useEffect(() => {

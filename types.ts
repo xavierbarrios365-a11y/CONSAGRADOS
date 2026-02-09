@@ -82,7 +82,8 @@ export enum AppView {
 export interface Visitor {
   id: string;
   name: string;
-  visits: number;
+  visits?: number;
+  absences?: number;
   status: string;
 }
 

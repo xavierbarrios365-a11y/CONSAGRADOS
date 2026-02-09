@@ -9,7 +9,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -761,17 +761,34 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              <div className="bg-gradient-to-br from-[#ffb700]/20 to-transparent border border-[#ffb700]/30 rounded-[3rem] p-8 flex items-center justify-between overflow-hidden relative group shadow-2xl">
+              <div className="bg-gradient-to-br from-[#ffb700]/20 to-transparent border border-[#ffb700]/30 rounded-[3rem] p-8 flex flex-col gap-6 overflow-hidden relative group shadow-2xl">
                 <div className="absolute right-0 top-0 opacity-5 -translate-y-4 translate-x-4">
                   <Flame size={160} className="text-[#ffb700]" />
                 </div>
-                <div className="relative z-10">
-                  <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
-                  <p className="text-6xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
-                  <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-2">MANTENTE FIRME EN LA BRECHA</p>
+
+                <div className="flex items-center justify-between relative z-10 w-full">
+                  <div className="relative z-10">
+                    <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
+                    <p className="text-6xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
+                  </div>
+                  <div className="bg-[#ffb700] p-5 rounded-[2rem] shadow-[0_15px_30px_rgba(255,183,0,0.3)]">
+                    <Activity size={32} className="text-[#001f3f] animate-pulse" />
+                  </div>
                 </div>
-                <div className="bg-[#ffb700] p-5 rounded-[2rem] shadow-[0_15px_30px_rgba(255,183,0,0.3)]">
-                  <Activity size={32} className="text-[#001f3f] animate-pulse" />
+
+                {/* Progress Bar Tier System */}
+                <div className="w-full space-y-3 relative z-10">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-widest">Objetivo: 365 Días</span>
+                    <span className="text-[10px] text-white font-black">{Math.min(100, Math.floor(((currentUser?.streakCount || 0) / 365) * 100))}%</span>
+                  </div>
+                  <div className="h-3 w-full bg-white/5 rounded-full border border-white/5 overflow-hidden p-0.5">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#ffb700] to-orange-500 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(255,183,0,0.5)]"
+                      style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest text-center mt-2">MANTENTE FIRME EN LA BRECHA</p>
                 </div>
               </div>
 
@@ -790,149 +807,13 @@ const App: React.FC = () => {
             </div>
           </div>
         );
-      case AppView.CIU:
-        return <CIUModule
-          key={`ciu-${currentUser?.id}`}
-          agents={agents}
-          currentUser={currentUser}
-          onUpdateNeeded={() => syncData(true)}
-          intelReport={intelReport}
-          setView={setView}
-          visitorCount={visitorRadar.length}
-          onRefreshIntel={handleRefreshIntel}
-          isRefreshingIntel={isRefreshingIntel}
-        />;
-      case AppView.DIRECTORY:
-        return (
-          <div className="p-6 md:p-10 space-y-5 animate-in fade-in pb-24">
-            <div className="relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
-              <input
-                type="text"
-                placeholder="BUSCAR AGENTE..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#3A3A3A]/20 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#FFB700] font-montserrat"
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              {agents.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase())).map(a => (
-                <div key={a.id} onClick={() => setFoundAgent(a)} className="bg-[#3A3A3A]/10 p-4 rounded-2xl border border-white/5 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors group">
-                  <div className="w-12 h-12 rounded-xl bg-[#3A3A3A]/30 overflow-hidden border border-[#FFB700]/20">
-                    <img
-                      src={formatDriveUrl(a.photoUrl)}
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                        e.currentTarget.className = "w-full h-full object-cover opacity-20 transition-all";
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1 font-montserrat">
-                    <p className="text-[11px] font-black text-white uppercase font-bebas tracking-wide">{a.name}</p>
-                    <p className="text-[8px] text-[#FFB700] font-bold uppercase tracking-widest">{a.id}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] font-black text-white font-bebas">{a.xp} XP</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case AppView.SCANNER:
-        return (
-          <div className="flex flex-col min-h-screen bg-[#001f3f] animate-in fade-in pb-32">
-            <div className="p-6 md:p-10 space-y-8 flex-1 flex flex-col font-montserrat">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="p-5 bg-[#ffb700]/10 rounded-[2.5rem] border border-[#ffb700]/20">
-                  <QrCode size={48} className="text-[#ffb700]" />
-                </div>
-                <h2 className="text-5xl font-bebas font-black text-white uppercase tracking-widest leading-none">ESCÁNER TÁCTICO</h2>
-              </div>
-
-              <div className="flex-1 min-h-[450px] relative bg-black/40 rounded-[3rem] border-2 border-white/5 overflow-hidden shadow-inner group">
-                {scanStatus === 'SCANNING' ? (
-                  <>
-                    <video ref={videoRef} className="w-full h-full object-cover grayscale opacity-60" playsInline autoPlay muted />
-                    <div className="absolute inset-0 border-[50px] border-black/60 flex items-center justify-center">
-                      <div className="w-64 h-64 border-2 border-[#ffb700] rounded-3xl relative">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-[#ffb700] shadow-[0_0_30px_rgba(255,183,0,1)] animate-scan-line"></div>
-                      </div>
-                    </div>
-                    <button onClick={stopScanner} className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-500 px-10 py-5 rounded-2xl text-white text-[11px] font-black uppercase tracking-widest active:scale-95 shadow-2xl font-bebas">Abortar Misión</button>
-                  </>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center p-10 text-center space-y-8">
-                    <Activity className="text-white/5" size={80} />
-                    <button onClick={startScanner} className="bg-[#ffb700] text-[#001f3f] px-16 py-6 rounded-2xl font-black uppercase text-[12px] tracking-widest shadow-[0_20px_50px_rgba(255,183,0,0.3)] active:scale-105 transition-all font-bebas">Iniciar Óptica</button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.5em] text-center">O BUSCADOR DE AGENTES</p>
-                <div className="relative group">
-                  <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#ffb700]" size={24} />
-                  <input
-                    type="text"
-                    placeholder="INGRESAR IDENTIDAD AGENTE..."
-                    value={manualSearchQuery}
-                    onChange={(e) => {
-                      setManualSearchQuery(e.target.value);
-                      setShowManualResults(true);
-                      setScannedId('');
-                    }}
-                    className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] py-8 pl-20 pr-10 text-white text-[14px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700]/30 transition-all font-bebas"
-                  />
-                </div>
-
-                {showManualResults && manualSearchQuery && (
-                  <div className="bg-[#001f3f] border border-white/10 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-2xl animate-in slide-in-from-top-4 z-50 relative">
-                    <div className="max-h-80 overflow-y-auto p-4 space-y-2">
-                      {agents
-                        .filter(a => a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) || a.id.includes(manualSearchQuery))
-                        .slice(0, 15)
-                        .map(agent => (
-                          <div
-                            key={agent.id}
-                            onClick={() => {
-                              setScannedId(agent.id);
-                              setManualSearchQuery(agent.name);
-                              setShowManualResults(false);
-                            }}
-                            className={`flex items-center gap-6 p-5 rounded-[2rem] cursor-pointer transition-all ${scannedId === agent.id ? 'bg-[#ffb700] text-[#001f3f]' : 'hover:bg-white/5 text-white/40 hover:text-white'}`}
-                          >
-                            <img src={formatDriveUrl(agent.photoUrl)} className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-lg" />
-                            <div className="flex-1 overflow-hidden">
-                              <p className="text-[12px] font-black uppercase truncate font-bebas tracking-widest">{agent.name}</p>
-                              <p className="text-[10px] font-bold opacity-50">{agent.id}</p>
-                            </div>
-                            <ChevronRight size={20} />
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => processScan()}
-                disabled={!scannedId || scanStatus !== 'IDLE'}
-                className={`w-full py-8 rounded-[2.5rem] font-black text-[14px] uppercase tracking-widest transition-all font-bebas ${!scannedId || scanStatus !== 'IDLE' ? 'bg-gray-900 text-gray-700' : 'bg-[#ffb700] text-[#001f3f] shadow-[0_25px_60px_rgba(255,183,0,0.3)]'} active:scale-95`}
-              >
-                {scanStatus !== 'IDLE' ? 'PROCESANDO REGISTRO...' : 'CONFIRMAR OPERACIÓN'}
-              </button>
-            </div>
-          </div>
-        );
       case AppView.VISITOR:
         return (
-          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24">
+          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24 relative min-h-[calc(100svh-160px)]">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="text-left space-y-1">
                 <h2 className="text-2xl font-bebas text-white uppercase tracking-widest">Radar de Visitantes</h2>
-                <p className="text-[8px] text-[#ffb700] font-bold uppercase tracking-widest opacity-60 font-montserrat">Seguimiento de posibles reclutas detectados</p>
+                <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest opacity-60 font-montserrat">Seguimiento de posibles reclutas detectados</p>
               </div>
               <div className="flex gap-2">
                 <input
@@ -941,9 +822,8 @@ const App: React.FC = () => {
                   placeholder="NOMBRE DEL VISITANTE..."
                   className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[10px] font-black uppercase tracking-widest focus:border-[#ffb700] outline-none transition-all flex-1 md:w-64 font-bebas"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const val = (e.currentTarget as HTMLInputElement).value;
-                      if (val) processScan(val);
+                    if (e.key === 'Enter' && e.currentTarget.value) {
+                      processScan(e.currentTarget.value);
                       e.currentTarget.value = '';
                     }
                   }}
@@ -980,20 +860,20 @@ const App: React.FC = () => {
                       setScannedId(v.id);
                       setView(AppView.SCANNER);
                     }}
-                    className={`p-6 rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden group ${v.status === 'POSIBLE RECLUTA'
-                      ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 shadow-[0_10px_30px_rgba(249,115,22,0.1)]'
+                    className={`p-6 rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden group ${v.status === 'INSCRIPCIÓN INMEDIATA'
+                      ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20'
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500/20 border-orange-500/40 text-orange-500' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                        <Target size={24} className={v.status === 'POSIBLE RECLUTA' ? 'animate-pulse' : ''} />
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${v.status === 'INSCRIPCIÓN INMEDIATA' ? 'bg-orange-500/20 border-orange-500/40 text-orange-500' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                        <Target size={24} className={v.status === 'INSCRIPCIÓN INMEDIATA' ? 'animate-pulse' : ''} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-white uppercase truncate font-bebas tracking-wider">{v.name}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">{v.visits} ENTRADAS</span>
-                          <span className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-500'}`}>{v.status}</span>
+                          <span className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">{v.visits || v.absences} {v.visits ? 'VISITAS' : 'FALTAS'}</span>
+                          <span className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${v.status === 'INSCRIPCIÓN INMEDIATA' || v.status === 'SALIDA DEL SISTEMA' ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-500'}`}>{v.status}</span>
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-colors" />
@@ -1001,20 +881,6 @@ const App: React.FC = () => {
                   </div>
                 ))
               )}
-            </div>
-
-            <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="text-[#ffb700]" size={16} />
-                <h4 className="text-[10px] font-black text-white uppercase tracking-widest font-bebas">Inteligencia de Reclutamiento</h4>
-              </div>
-              <p className="text-[8px] text-gray-400 font-bold leading-relaxed uppercase font-montserrat">
-                El Radar rastrea automáticamente los IDs ingresados manualmente o escaneados que no están en el Directorio Oficial.
-                <br /><br />
-                <span className="text-[#ffb700]">VISITANTE:</span> 1 asistencia detectada.
-                <br />
-                <span className="text-orange-500 font-black">POSIBLE RECLUTA:</span> 2 o más asistencias. Requiere registro inmediato.
-              </p>
             </div>
 
             {/* Floating Quick Add for Mobile */}
@@ -1033,80 +899,115 @@ const App: React.FC = () => {
         return <EnrollmentForm onSuccess={handleEnrollmentSuccess} userRole={currentUser?.userRole} />;
       case AppView.PROFILE:
         return (
-          <div className="p-6 md:p-10 min-h-[calc(100svh-160px)] md:h-full flex flex-col items-center justify-center animate-in fade-in relative">
+          <div className="p-6 md:p-10 min-h-[calc(100svh-160px)] md:h-full flex flex-col items-center justify-center animate-in fade-in relative pb-32">
             <button
-              onClick={() => setView(AppView.CIU)}
+              onClick={() => setView(AppView.HOME)}
               className="absolute top-6 right-6 md:top-10 md:right-10 bg-white/5 hover:bg-white/10 p-4 rounded-2xl border border-white/10 text-gray-400 hover:text-white transition-all active:scale-95 group z-50"
             >
               <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             </button>
-            <div className="w-full flex flex-col items-center gap-6 max-w-sm">
-              <div className="w-full flex justify-center mb-4">
+            <div className="w-full flex flex-col items-center gap-8 max-w-sm">
+              <div className="w-full flex justify-center">
                 {currentUser && <DigitalIdCard key={`profile-${currentUser.id}`} agent={currentUser} />}
               </div>
 
               {/* Toast de Éxito */}
               {successMessage && (
-                <div className="w-full bg-green-500/20 border border-green-500/40 rounded-2xl p-4 animate-in slide-in-from-top-4">
-                  <p className="text-[10px] text-green-500 font-black uppercase tracking-widest text-center">{successMessage}</p>
+                <div className="w-full bg-green-500/20 border border-green-500/40 rounded-3xl p-5 animate-in slide-in-from-top-4 shadow-xl">
+                  <p className="text-[10px] text-green-500 font-black uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                    <Shield size={14} /> {successMessage}
+                  </p>
                 </div>
               )}
 
-              {/* Sección de Seguridad y Acceso Refinada */}
-              <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
-                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                  <Shield size={18} className="text-[#ffb700]" />
-                  <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Seguridad & Acceso</h3>
+              {/* PROTOCOLOS DE SEGURIDAD Y ACCESO */}
+              <div className="w-full space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] font-bebas">Seguridad Táctica</p>
+                  <Shield size={14} className="text-[#ffb700] opacity-40" />
                 </div>
 
-                {/* Botón para forzar permiso de notificaciones */}
-                <button
-                  onClick={handlePromptNotifications}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-8 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-95"
-                >
-                  <Plus size={14} className="text-[#ffb700]" />
-                  Recibir Notificaciones Push
-                </button>
-
-                {!biometricAvailable && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 space-y-2">
-                    <p className="text-[7px] text-red-500 font-black uppercase tracking-widest text-center">Biometría No Disponible</p>
-                    <p className="text-[6px] text-gray-500 font-bold uppercase tracking-widest text-center leading-relaxed">
-                      Requiere conexión segura (HTTPS) y hardware compatible (FaceID/Huella).
-                    </p>
-                  </div>
-                )}
-
-                {biometricAvailable && currentUser && !currentUser.biometricCredential && (
+                <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6 shadow-2xl backdrop-blur-md">
+                  {/* Botón Cambiar PIN - Resaltado a petición */}
                   <button
-                    onClick={handleRegisterBiometrics}
-                    disabled={isRegisteringBio}
-                    className="w-full bg-[#ffb700] border border-[#ffb700]/30 rounded-2xl py-4 px-8 text-[#001f3f] text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/80 transition-all flex items-center justify-center gap-3 active:scale-95 shadow-[0_10px_30px_rgba(255,183,0,0.2)]"
+                    onClick={() => setIsMustChangeFlow(true)}
+                    className="w-full bg-blue-600/20 border border-blue-500/30 rounded-2xl py-5 px-8 text-blue-400 text-[11px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-3 active:scale-95 shadow-lg group"
                   >
-                    {isRegisteringBio ? <Loader2 size={18} className="animate-spin" /> : <Fingerprint size={18} />}
-                    {isRegisteringBio ? "Procesando..." : "Activar FaceID / Huella"}
+                    <RotateCcw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+                    Cambiar PIN o Pregunta
                   </button>
-                )}
 
-                {currentUser?.biometricCredential && (
-                  <div className="flex flex-col items-center gap-3 p-4 bg-green-500/5 rounded-2xl border border-green-500/20">
-                    <div className="flex items-center gap-2 text-[8px] text-green-500 font-black uppercase tracking-widest">
-                      <Fingerprint size={14} />
-                      Acceso Biométrico Activo
+                  <div className="h-px bg-white/5 w-full"></div>
+
+                  {/* Biometría */}
+                  {biometricAvailable ? (
+                    currentUser && !currentUser.biometricCredential ? (
+                      <button
+                        onClick={handleRegisterBiometrics}
+                        disabled={isRegisteringBio}
+                        className="w-full bg-[#ffb700] border border-[#ffb700]/30 rounded-2xl py-4 px-8 text-[#001f3f] text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/80 transition-all flex items-center justify-center gap-3 active:scale-95"
+                      >
+                        {isRegisteringBio ? <Loader2 size={18} className="animate-spin" /> : <Fingerprint size={18} />}
+                        Activar FaceID / Huella
+                      </button>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 p-4 bg-green-500/5 rounded-2xl border border-green-500/10">
+                        <div className="flex items-center gap-2 text-[8px] text-green-500 font-black uppercase tracking-widest">
+                          <Fingerprint size={14} />
+                          Biometría Enlazada
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="p-4 bg-red-500/5 rounded-2xl border border-red-500/10 text-center">
+                      <p className="text-[7px] text-red-500 font-bold uppercase tracking-widest">Biometría No Soportada</p>
                     </div>
-                    <p className="text-[6px] text-gray-500 font-bold uppercase tracking-widest text-center">
-                      Tu identidad está vinculada a este dispositivo.
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                <button
-                  onClick={() => setIsMustChangeFlow(true)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-8 text-gray-400 text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-95"
-                >
-                  <RotateCcw size={14} />
-                  Cambiar PIN / Pregunta
-                </button>
+                  {/* Notificaciones */}
+                  <button
+                    onClick={handlePromptNotifications}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-8 text-gray-400 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-95"
+                  >
+                    <Bell size={14} />
+                    Probar Notificaciones
+                  </button>
+                </div>
+              </div>
+
+              {/* PROTOCOLO DE SIMULACIÓN (DIRECTOR ONLY) */}
+              {currentUser?.userRole === UserRole.DIRECTOR && (
+                <div className="w-full space-y-4 pt-4 border-t border-white/5 animate-in slide-in-from-bottom-2">
+                  <div className="flex items-center justify-between px-2">
+                    <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.3em] font-bebas">Simulador de Identidad</p>
+                    <Crown size={14} className="text-[#ffb700] animate-pulse" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 bg-black/40 p-2 rounded-2xl border border-white/5 shadow-inner">
+                    <button
+                      onClick={() => setViewingAsRole(UserRole.DIRECTOR)}
+                      className={`py-3 rounded-xl text-[8px] font-black uppercase transition-all tracking-widest ${viewingAsRole === UserRole.DIRECTOR || viewingAsRole === null ? 'bg-[#ffb700] text-[#001f3f] shadow-lg shadow-[#ffb700]/10' : 'text-white/40 hover:text-white'}`}
+                    >
+                      Director
+                    </button>
+                    <button
+                      onClick={() => setViewingAsRole(UserRole.LEADER)}
+                      className={`py-3 rounded-xl text-[8px] font-black uppercase transition-all tracking-widest ${viewingAsRole === UserRole.LEADER ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : 'text-white/40 hover:text-white'}`}
+                    >
+                      Líder
+                    </button>
+                    <button
+                      onClick={() => setViewingAsRole(UserRole.STUDENT)}
+                      className={`py-3 rounded-xl text-[8px] font-black uppercase transition-all tracking-widest ${viewingAsRole === UserRole.STUDENT ? 'bg-gray-600 text-white shadow-lg shadow-gray-500/10' : 'text-white/40 hover:text-white'}`}
+                    >
+                      Estudiante
+                    </button>
+                  </div>
+                  <p className="text-[7px] text-white/20 font-bold uppercase tracking-[0.2em] text-center">CAMBIO DE VISTA TEMPORAL ACTIVADO</p>
+                </div>
+              )}
+
+              <div className="pt-4 opacity-20 hover:opacity-100 transition-opacity">
+                <p className="text-[7px] text-gray-500 font-black uppercase tracking-[0.5em] text-center">Protocolo v1.6.4 Phase II</p>
               </div>
             </div>
           </div>

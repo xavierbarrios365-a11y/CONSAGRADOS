@@ -211,11 +211,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             <DailyVerse verse={dailyVerse || null} />
           </div>
 
-          <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
-            <div className="px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 bg-[#ffb700] text-[#001f3f]">
-              <Target size={14} /> Gestión de Agentes
-            </div>
-          </div>
 
           <div className="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
             <div className="w-full md:w-72">

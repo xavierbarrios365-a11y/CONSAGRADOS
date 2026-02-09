@@ -103,13 +103,42 @@ function doGet(e) {
   }
   try {
     const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-    const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
-        if (!sheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
+    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    const strikesSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
     
-    // Simplificado: Solo devuelve los datos crudos. El frontend hará el procesamiento.
-    const data = sheet.getDataRange().getValues();
+    if (!directorySheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
     
-    return ContentService.createTextOutput(JSON.stringify({ data: data })).setMimeType(ContentService.MimeType.JSON);
+    const directoryData = directorySheet.getDataRange().getValues();
+    const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+    
+    // Virtual Join de Rachas
+    if (strikesSheet) {
+      const strikeData = strikesSheet.getDataRange().getValues();
+      const strikeHeaders = strikeData[0].map(h => String(h).trim().toUpperCase());
+      const strikeAgentIdIdx = strikeHeaders.indexOf('AGENT_ID');
+      const streakCountIdx = strikeHeaders.indexOf('STREAK_COUNT');
+      const tasksJsonIdx = strikeHeaders.indexOf('TASKS_JSON');
+      
+      const streakMap = new Map();
+      if (strikeAgentIdIdx !== -1) {
+        for (let i = 1; i < strikeData.length; i++) {
+          streakMap.set(String(strikeData[i][strikeAgentIdIdx]), {
+            streak: strikeData[i][streakCountIdx] || 0,
+            tasks: strikeData[i][tasksJsonIdx] || '[]'
+          });
+        }
+      }
+      
+      // Inyectar columnas virtuales en la respuesta
+      directoryData[0].push('STREAK_COUNT', 'TASKS_JSON');
+      for (let i = 1; i < directoryData.length; i++) {
+        const agentId = String(directoryData[i][0]);
+        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]' };
+        directoryData[i].push(streakInfo.streak, streakInfo.tasks);
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ data: directoryData })).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     Logger.log(error);
     return ContentService.createTextOutput(JSON.stringify({ error: error.message })).setMimeType(ContentService.MimeType.JSON);

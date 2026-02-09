@@ -33,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
 
   return (
     <div className="flex flex-col h-screen bg-[#001f3f] text-[#f4f4f4] overflow-hidden font-montserrat">
-      <header className="h-16 border-b border-white/5 bg-black/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30 pt-[env(safe-area-inset-top)]">
+      <header className="min-h-[4rem] h-auto border-b border-white/5 bg-black/50 backdrop-blur-md px-6 py-2 flex items-center justify-between shrink-0 z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-3">
           <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-7 md:h-8 w-auto object-contain transition-transform active:scale-95" />
           <div className="flex flex-col">

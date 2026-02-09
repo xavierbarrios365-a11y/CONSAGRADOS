@@ -4,8 +4,19 @@
  * Maneja la autenticación biométrica (FaceID/Fingerprint) usando WebAuthn.
  */
 
+// Helper para convertir string base64/base64url a Uint8Array de forma robusta
+const base64ToUint8Array = (base64: string): Uint8Array => {
+    const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+    const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(b64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+};
+
 export const isBiometricAvailable = async (): Promise<boolean> => {
-    // Verificar si el navegador soporta WebAuthn y si el dispositivo tiene biometría
     if (window.PublicKeyCredential) {
         const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
         return available;
@@ -43,8 +54,7 @@ export const registerBiometric = async (userId: string, userName: string): Promi
         });
 
         if (credential) {
-            // En una implementación real, enviaríamos la clave pública al servidor.
-            // Para este proyecto, usaremos el ID de la credencial como "token" de prueba.
+            // Retornamos el ID en formato string (base64url por defecto en WebAuthn)
             return (credential as any).id;
         }
     } catch (error) {
@@ -61,7 +71,7 @@ export const authenticateBiometric = async (storedCredentialId: string): Promise
         const publicKeyCredentialRequestOptions: any = {
             challenge: challenge,
             allowCredentials: [{
-                id: Uint8Array.from(atob(storedCredentialId.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)),
+                id: base64ToUint8Array(storedCredentialId),
                 type: 'public-key',
             }],
             userVerification: "required",

@@ -96,11 +96,14 @@
     window.OneSignal = window.OneSignal || [];
     OneSignal.push(function () {
       OneSignal.init({
-        appId: "c05267b7-737a-4f55-b692-3c2fe2d20677", // ID Real proporcionado por el usuario
+        appId: "c05267b7-737a-4f55-b692-3c2fe2d20677",
         safari_web_id: "web.onesignal.auto.17b43c6b-967b-402a-9e11-e6c1e345678a",
         notifyButton: {
-          enable: true,
+          enable: false, // Usaremos nuestro propio botón táctico
         },
+        allowLocalhood: true,
+        serviceWorkerParam: { scope: "/" },
+        serviceWorkerPath: "sw.js",
       });
     });
   </script>

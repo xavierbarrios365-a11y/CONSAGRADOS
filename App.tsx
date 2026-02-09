@@ -20,7 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.3.0"; // Smart Login, Duolingo Streaks, Safe Area Insets
+  const APP_VERSION = "1.4.0"; // Simulation, Biometric Fix, OneSignal v16
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -66,6 +66,7 @@ const App: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isRegisteringBio, setIsRegisteringBio] = useState(false);
   const [rememberedUser, setRememberedUser] = useState<{ id: string; name: string; photoUrl: string } | null>(null);
+  const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null); // Solo para simulador de Director
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -477,12 +478,40 @@ const App: React.FC = () => {
   };
 
   const handlePromptNotifications = () => {
-    const oneSignal = (window as any).OneSignal;
-    if (oneSignal) {
-      oneSignal.push(() => {
-        oneSignal.SlidingPermissionPrompt.push({ force: true });
-        setSuccessMessage("🔔 SOLICITUD DE NOTIFICACIONES ENVIADA");
+    const OneSignal = (window as any).OneSignal;
+    if (OneSignal) {
+      OneSignal.push(() => {
+        // Estándar OneSignal v16: Notifications.requestPermission()
+        if (OneSignal.Notifications) {
+          OneSignal.Notifications.requestPermission();
+        } else {
+          OneSignal.showNativePrompt();
+        }
       });
+    } else {
+      alert("SISTEMA DE NOTIFICACIONES NO INICIALIZADO");
+    }
+  };
+
+  const handleVerseQuizComplete = async () => {
+    if (!currentUser) return;
+
+    // Simular que todas las tareas se mantienen y solo se asegura que el verso esté OK
+    const updatedTasks = currentUser.weeklyTasks?.map(t =>
+      t.id === 'verse' ? { ...t, completed: true } : t
+    ) || [];
+
+    const isWeekComplete = updatedTasks.length > 0 && updatedTasks.every(t => t.completed);
+
+    try {
+      const res = await updateAgentStreaks(currentUser.id, isWeekComplete, updatedTasks);
+      if (res.success) {
+        setCurrentUser({ ...currentUser, weeklyTasks: updatedTasks, streakCount: res.streak });
+        setSuccessMessage("🛡️ RACHA ACTUALIZADA: SABIDURÍA REGISTRADA");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (err) {
+      console.error("Error al actualizar racha por verso:", err);
     }
   };
 
@@ -630,6 +659,8 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    const effectiveRole = viewingAsRole || currentUser?.userRole || UserRole.STUDENT;
+
     switch (view) {
       case AppView.CIU:
         return <CIUModule
@@ -1052,6 +1083,24 @@ const App: React.FC = () => {
                   <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Seguridad & Acceso</h3>
                 </div>
 
+                {/* SIMULADOR DE ROLES PARA DIRECTOR */}
+                {currentUser?.userRole === UserRole.DIRECTOR && (
+                  <div className="bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-2xl p-4 space-y-3">
+                    <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest text-center">Modo Simulación de Director</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT].map(role => (
+                        <button
+                          key={role}
+                          onClick={() => setViewingAsRole(role)}
+                          className={`py-2 rounded-xl text-[8px] font-black uppercase transition-all ${viewingAsRole === role || (!viewingAsRole && currentUser.userRole === role) ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                        >
+                          {role}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Botón para forzar permiso de notificaciones */}
                 <button
                   onClick={handlePromptNotifications}
@@ -1060,6 +1109,11 @@ const App: React.FC = () => {
                   <Plus size={14} className="text-[#ffb700]" />
                   Recibir Notificaciones Push
                 </button>
+
+                {/* Versículo Diario con Quiz */}
+                <div className="pt-4 border-t border-white/5">
+                  <DailyVerse verse={dailyVerse} onQuizComplete={handleVerseQuizComplete} />
+                </div>
 
                 {!biometricAvailable && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 space-y-2">
@@ -1105,11 +1159,11 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.ACADEMIA:
-        return <AcademyModule key={`academy-${currentUser?.id}`} userRole={currentUser!.userRole} agentId={currentUser!.id} />;
+        return <AcademyModule key={`academy-${currentUser?.id}`} userRole={effectiveRole} agentId={currentUser!.id} />;
       case AppView.RANKING:
         return <TacticalRanking key={`ranking-${currentUser?.id}`} agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT:
-        return <ContentModule key={`content-${currentUser?.id}`} userRole={currentUser?.userRole || UserRole.STUDENT} />;
+        return <ContentModule key={`content-${currentUser?.id}`} userRole={effectiveRole} />;
       case AppView.CIU:
         return <CIUModule
           key={`ciu-${currentUser?.id}`}
@@ -1391,7 +1445,7 @@ const App: React.FC = () => {
     <Layout
       activeView={view}
       setView={setView}
-      userRole={currentUser?.userRole || UserRole.STUDENT}
+      userRole={viewingAsRole || currentUser?.userRole || UserRole.STUDENT}
       userName={currentUser?.name || 'Agente'}
       onLogout={handleLogout}
       notificationCount={notificationCount}

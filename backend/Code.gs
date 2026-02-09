@@ -1538,7 +1538,34 @@ function updateStreaks(data) {
       streakData.LAST_COMPLETED_DATE = todayStr;
       
       sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakData.STREAK_COUNT} días!`);
-    }
+
+      // --- HITOS DE XP (Cada 5 días) ---
+      if (streakData.STREAK_COUNT % 5 === 0) {
+        let bonusXP = 0;
+        if (streakData.STREAK_COUNT === 5) bonusXP = 5;
+        else if (streakData.STREAK_COUNT >= 10 && streakData.STREAK_COUNT < 20) bonusXP = 7.5;
+        else if (streakData.STREAK_COUNT >= 20) bonusXP = 10;
+
+        if (bonusXP > 0) {
+          try {
+            const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+            const dirData = dirSheet.getDataRange().getValues();
+            const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+            const xpColIdx = (dirHeaders.indexOf('XP') + 1) || (dirHeaders.indexOf('PUNTOS XP') + 1);
+            const idColIdx = dirHeaders.indexOf('ID');
+
+            const agentRowIdx = dirData.findIndex(row => String(row[idColIdx]) === String(data.agentId));
+            if (agentRowIdx !== -1 && xpColIdx > 0) {
+              const currentXp = parseInt(dirSheet.getRange(agentRowIdx + 1, xpColIdx).getValue()) || 0;
+              dirSheet.getRange(agentRowIdx + 1, xpColIdx).setValue(currentXp + bonusXP);
+              
+              sendPushNotification("⭐ BONO DE RACHA", `¡Excelente constancia! Has ganado +${bonusXP} XP extra por tu hito de ${streakData.STREAK_COUNT} días.`);
+            }
+          } catch (e) {
+            console.error("Error acreditando bono de racha:", e);
+          }
+        }
+      }
     
     const row = [streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_DATE, streakData.TASKS_JSON];
     sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);

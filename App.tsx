@@ -107,12 +107,10 @@ const App: React.FC = () => {
   const handleLogout = useCallback(() => {
     console.log("🔴 PROTOCOLO DE CIERRE DE SESIÓN INICIADO");
 
-    // 1. Limpiar persistencia de inmediato
-    localStorage.removeItem('consagrados_agent');
-    localStorage.removeItem('last_active_time');
-    localStorage.removeItem('remembered_user'); // Limpiar también usuario recordado para evitar bucles
+    // 1. Limpiar persistencia de inmediato y de forma agresiva
+    localStorage.clear(); // Limpiar TODO para evitar cualquier residuo de sesión o recordatorios
 
-    // 2. Limpiar estados
+    // 2. Limpiar estados de React
     setIsLoggedIn(false);
     setCurrentUser(null);
     setFoundAgent(null);
@@ -122,10 +120,12 @@ const App: React.FC = () => {
     setShowSessionWarning(false);
     setIsMustChangeFlow(false);
     setShowForgotPassword(false);
+    setRememberedUser(null);
+    setViewingAsRole(null);
 
-    // 3. Forzar purga total
+    // 3. Forzar purga total y recarga limpia
     setTimeout(() => {
-      window.location.href = window.location.origin + window.location.pathname + "?v=" + Date.now();
+      window.location.replace(window.location.origin + window.location.pathname + "?logout=" + Date.now());
     }, 50);
   }, []);
 

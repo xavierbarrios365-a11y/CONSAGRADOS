@@ -11,13 +11,10 @@ interface DailyVerseProps {
 const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
     const [showQuiz, setShowQuiz] = useState(false);
     const [quizCompleted, setQuizCompleted] = useState(false);
-    const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-
-    // Generar opciones una sola vez cuando el componente se monta o el verso cambia
-    // IMPORTANTE: Todos los hooks deben estar ANTES de cualquier return condicional
-    const [options, setOptions] = useState<string[]>([]);
-    const [correctIndex, setCorrectIndex] = useState<number>(-1);
+    const [inputValue, setInputValue] = useState('');
+    const [missingWord, setMissingWord] = useState('');
+    const [displayVerse, setDisplayVerse] = useState('');
 
     // Verificar si ya completó el quiz hoy
     useEffect(() => {
@@ -28,13 +25,21 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
         }
     }, []);
 
-    // Generar opciones cuando el verso cambia
+    // Preparar el reto cuando el verso cambia
     useEffect(() => {
-        if (verse) {
-            const correctAnswer = verse.reference.split(' ')[0];
-            const opts = [correctAnswer, 'Mateo', 'Marcos', 'Lucas'].sort(() => Math.random() - 0.5);
-            setOptions(opts);
-            setCorrectIndex(opts.indexOf(correctAnswer));
+        if (verse && verse.verse) {
+            const words = verse.verse.split(' ');
+            // Filtrar palabras de más de 4 letras para que sea un reto real
+            const candidates = words.filter(w => w.replace(/[.,;]/g, '').length > 4);
+            const target = candidates.length > 0
+                ? candidates[Math.floor(Math.random() * candidates.length)]
+                : words[Math.floor(words.length / 2)];
+
+            const cleanTarget = target.replace(/[.,;]/g, '');
+            setMissingWord(cleanTarget);
+
+            const newDisplay = verse.verse.replace(target, '__________');
+            setDisplayVerse(newDisplay);
         }
     }, [verse]);
 
@@ -45,23 +50,22 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
         </div>
     );
 
-    const handleAnswer = (index: number) => {
-        setSelectedAnswer(index);
-        const correct = index === correctIndex;
-        setIsCorrect(correct);
-
-        if (correct) {
-            // Vibración de feedback
+    const checkAnswer = () => {
+        if (inputValue.trim().toLowerCase() === missingWord.toLowerCase()) {
             if (navigator.vibrate) navigator.vibrate(100);
+            setIsCorrect(true);
 
             const today = new Date().toISOString().split('T')[0];
             localStorage.setItem('verse_quiz_completed', today);
             setQuizCompleted(true);
 
-            // Callback para marcar racha
             setTimeout(() => {
                 if (onQuizComplete) onQuizComplete();
-            }, 1500);
+            }, 1000);
+        } else {
+            setIsCorrect(false);
+            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            setTimeout(() => setIsCorrect(null), 2000);
         }
     };
 
@@ -109,33 +113,40 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                 )}
 
                 {showQuiz && !quizCompleted && (
-                    <div className="w-full mt-4 space-y-4 animate-in slide-in-from-bottom-2 bg-black/20 p-4 rounded-[2rem] border border-white/5">
+                    <div className="w-full mt-4 space-y-4 animate-in slide-in-from-bottom-2 bg-black/40 p-6 rounded-[2rem] border border-[#ffb700]/30 shadow-[0_0_30px_rgba(255,183,0,0.1)]">
                         <div className="flex flex-col items-center gap-1 mb-2">
                             <Sparkles className="text-[#ffb700] animate-bounce" size={20} />
-                            <p className="text-[11px] text-white font-black uppercase tracking-widest">¡RETO DE MEMORIA ACTIVO!</p>
-                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">¿De qué libro era el versículo?</p>
+                            <p className="text-[11px] text-[#ffb700] font-black uppercase tracking-widest">Reto de Memoria Táctica</p>
+                            <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">Escribe la palabra que falta</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            {options.map((opt, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => handleAnswer(i)}
-                                    disabled={selectedAnswer !== null}
-                                    className={`py-4 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg
-                                        ${selectedAnswer === i
-                                            ? (isCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
-                                            : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white'
-                                        }
-                                        ${selectedAnswer !== null && i === correctIndex && 'ring-2 ring-green-500 border-green-500'}
-                                    `}
-                                >
-                                    {opt}
-                                </button>
-                            ))}
+
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-4">
+                            <p className="text-xs text-white/80 italic font-montserrat leading-relaxed">
+                                {displayVerse}
+                            </p>
                         </div>
+
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
+                                placeholder="Escribe aquí..."
+                                className={`w-full bg-black/50 border ${isCorrect === false ? 'border-red-500' : 'border-white/10'} rounded-xl py-4 px-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-[#ffb700] focus:ring-1 focus:ring-[#ffb700] outline-none transition-all placeholder:text-white/20`}
+                                autoFocus
+                            />
+                            <button
+                                onClick={checkAnswer}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#ffb700] text-[#001f3f] px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                            >
+                                Validar
+                            </button>
+                        </div>
+
                         {isCorrect === false && (
-                            <p className="text-red-500 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 mt-2 animate-bounce">
-                                <XCircle size={14} /> El nodo no olvida. Intenta mañana.
+                            <p className="text-red-500 text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1 animate-bounce">
+                                <XCircle size={12} /> Palabra incorrecta. ¡Concéntrate!
                             </p>
                         )}
                     </div>

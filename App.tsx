@@ -8,13 +8,14 @@ import ContentModule from './components/ContentModule';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
-import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint } from 'lucide-react';
+import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
-import { registerBiometrics, verifyBiometrics } from './services/sheetsService';
+import DailyVerse from './components/DailyVerse';
+import { DailyVerse as DailyVerseType } from './types';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
@@ -59,6 +60,8 @@ const App: React.FC = () => {
   const [isUpdatingPin, setIsUpdatingPin] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [isAuthenticatingBio, setIsAuthenticatingBio] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0); // Iniciado en 0 como se pidió
+  const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -128,7 +131,31 @@ const App: React.FC = () => {
 
     // Verificar disponibilidad de biometría
     isBiometricAvailable().then(setBiometricAvailable);
+
+    // Obtener versículo del día
+    fetchDailyVerse().then(res => {
+      if (res.success) setDailyVerse(res.data);
+    });
   }, []);
+
+  // Lógica de Rachas (Ejemplo simple: si ha visto la academia y tiene XP > 0)
+  useEffect(() => {
+    if (currentUser && currentUser.weeklyTasks) {
+      const academyTask = currentUser.weeklyTasks.find(t => t.id === 'academy');
+      if (academyTask && !academyTask.completed && view === AppView.ACADEMIA) {
+        // Simular cumplimiento de tarea
+        const updatedTasks = currentUser.weeklyTasks.map(t =>
+          t.id === 'academy' ? { ...t, completed: true } : t
+        );
+        const isWeekComplete = updatedTasks.every(t => t.completed);
+        updateAgentStreaks(currentUser.id, isWeekComplete, updatedTasks).then(res => {
+          if (res.success) {
+            setCurrentUser(prev => prev ? { ...prev, weeklyTasks: updatedTasks, streakCount: res.streak } : null);
+          }
+        });
+      }
+    }
+  }, [view, currentUser]);
 
   // 2. Temporizador de Expiración (5 min)
   useEffect(() => {
@@ -921,25 +948,83 @@ const App: React.FC = () => {
             >
               <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             </button>
-            <div className="w-full flex flex-col items-center gap-6">
-              {currentUser && <DigitalIdCard key={`profile-${currentUser.id}`} agent={currentUser} />}
+            <div className="w-full flex flex-col items-center gap-6 max-w-sm">
+              <div className="w-full flex justify-center mb-4">
+                {currentUser && <DigitalIdCard key={`profile-${currentUser.id}`} agent={currentUser} />}
+              </div>
 
-              {biometricAvailable && currentUser && !currentUser.biometricCredential && (
-                <button
-                  onClick={handleRegisterBiometrics}
-                  className="bg-white/5 border border-[#ffb700]/30 rounded-2xl py-4 px-8 text-[#ffb700] text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/10 transition-all flex items-center gap-3 active:scale-95"
-                >
-                  <Fingerprint size={18} />
-                  Activar Acceso Biométrico
-                </button>
-              )}
+              {/* Versículo del Día en Perfil */}
+              <DailyVerse verse={dailyVerse} />
 
-              {currentUser?.biometricCredential && (
-                <div className="flex items-center gap-2 text-[8px] text-green-500 font-black uppercase tracking-widest bg-green-500/10 py-2 px-4 rounded-full border border-green-500/20">
-                  <Fingerprint size={12} />
-                  Acceso Biométrico Activo
+              {/* Sistema de Rachas (Streaks) */}
+              <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3">
+                    <Flame size={20} className="text-orange-500 animate-pulse" />
+                    <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Tu Racha Táctica</h3>
+                  </div>
+                  <span className="text-2xl font-black text-orange-500 font-bebas">{currentUser?.streakCount || 0}</span>
                 </div>
-              )}
+
+                <div className="space-y-4">
+                  <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 text-center">Tareas Semanales</p>
+                  {currentUser?.weeklyTasks?.map(task => (
+                    <div key={task.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${task.completed ? 'text-green-500' : 'text-gray-400'}`}>
+                        {task.title}
+                      </span>
+                      {task.completed ? <CheckCircle2 size={18} className="text-green-500" /> : <Circle size={18} className="text-gray-700" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sección de Seguridad y Acceso Refinada */}
+              <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <Shield size={18} className="text-[#ffb700]" />
+                  <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Seguridad & Acceso</h3>
+                </div>
+
+                {!biometricAvailable && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 space-y-2">
+                    <p className="text-[7px] text-red-500 font-black uppercase tracking-widest text-center">Biometría No Disponible</p>
+                    <p className="text-[6px] text-gray-500 font-bold uppercase tracking-widest text-center leading-relaxed">
+                      Requiere conexión segura (HTTPS) y hardware compatible (FaceID/Huella).
+                    </p>
+                  </div>
+                )}
+
+                {biometricAvailable && currentUser && !currentUser.biometricCredential && (
+                  <button
+                    onClick={handleRegisterBiometrics}
+                    className="w-full bg-[#ffb700] border border-[#ffb700]/30 rounded-2xl py-4 px-8 text-[#001f3f] text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/80 transition-all flex items-center justify-center gap-3 active:scale-95 shadow-[0_10px_30px_rgba(255,183,0,0.2)]"
+                  >
+                    <Fingerprint size={18} />
+                    Activar FaceID / Huella
+                  </button>
+                )}
+
+                {currentUser?.biometricCredential && (
+                  <div className="flex flex-col items-center gap-3 p-4 bg-green-500/5 rounded-2xl border border-green-500/20">
+                    <div className="flex items-center gap-2 text-[8px] text-green-500 font-black uppercase tracking-widest">
+                      <Fingerprint size={14} />
+                      Acceso Biométrico Activo
+                    </div>
+                    <p className="text-[6px] text-gray-500 font-bold uppercase tracking-widest text-center">
+                      Tu identidad está vinculada a este dispositivo.
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setIsMustChangeFlow(true)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-8 text-gray-400 text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-95"
+                >
+                  <RotateCcw size={14} />
+                  Cambiar PIN / Pregunta
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -1198,6 +1283,7 @@ const App: React.FC = () => {
       userRole={currentUser?.userRole || UserRole.STUDENT}
       userName={currentUser?.name || 'Agente'}
       onLogout={handleLogout}
+      notificationCount={notificationCount}
     >
       <div className="relative h-full">
         {renderContent()}

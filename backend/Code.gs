@@ -25,8 +25,10 @@ function getGlobalConfig() {
     ACADEMY_COURSES_SHEET: 'ACADEMIA_CURSOS',
     ACADEMY_LESSONS_SHEET: 'ACADEMIA_LECCIONES',
     ACADEMY_PROGRESS_SHEET: 'ACADEMIA_PROGRESO',
-    ONESIGNAL_APP_ID: '9ae818a7-3330-4e3e-8c67-628041566835',
-    ONESIGNAL_REST_API_KEY: 'NDIxYmU4ZjAtMjYxYS00ZDM5LTg0MTItZDM3ZTUyMmE0YjY0' // Necesario para enviar notificaciones desde el backend
+    STREAKS_SHEET: 'RACHAS',
+    VERSES_SHEET: 'VERSICULO_DIARIO',
+    ONESIGNAL_APP_ID: 'c05267b7-737a-4f55-b692-3c2fe2d20677',
+    ONESIGNAL_REST_API_KEY: '8ccEyat7we65m1kdya83cl6nge' // Actualizado desde captura de pantalla
   };
 }
 
@@ -177,6 +179,10 @@ function doPost(e) {
         return registerBiometrics(request.data);
       case 'verify_biometrics':
         return verifyBiometrics(request.data);
+      case 'get_daily_verse':
+        return getDailyVerse();
+      case 'update_streaks':
+        return updateStreaks(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -424,9 +430,21 @@ function updateAgentPoints(data) {
   if (xpColIdx > 0) {
     const currentXp = parseInt(sheet.getRange(rowIdx, xpColIdx).getValue()) || 0;
     sheet.getRange(rowIdx, xpColIdx).setValue(currentXp + data.points);
+
+    // Notificación de XP si es un cambio positivo
+    if (data.points > 0) {
+      const messages = [
+        "¡Excelente trabajo, Agente! Has ganado méritos.",
+        "Tu fe y disciplina están rindiendo frutos. +XP",
+        "Sigue así, el Command Center reconoce tu esfuerzo.",
+        "Has subido en el rango de influencia. ¡Felicidades!"
+      ];
+      const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+      sendPushNotification("⭐ MÉRITOS OBTENIDOS", `${randomMsg} (+${data.points} XP)`);
+    }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, newVal: (currentVal + data.points) })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function deductPercentagePoints(data) {
@@ -703,6 +721,18 @@ function setupDatabase() {
     'ID_AGENTE', 'ID_LECCION', 'ESTADO', 'NOTA', 'FECHA', 'INTENTOS'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.ACADEMY_PROGRESS_SHEET, progressHeaders));
+
+  // 8. RACHAS
+  const streakHeaders = [
+    'AGENT_ID', 'STREAK_COUNT', 'LAST_COMPLETED_WEEK', 'TASKS_JSON'
+  ];
+  results.push(ensureSheetColumns(ss, CONFIG.STREAKS_SHEET, streakHeaders));
+
+  // 9. VERSICULO DIARIO
+  const verseHeaders = [
+    'DATE', 'VERSE', 'REFERENCE'
+  ];
+  results.push(ensureSheetColumns(ss, CONFIG.VERSES_SHEET, verseHeaders));
   
   const summary = results.join('\n');
   const telegramMessage = `🛠️ <b>SETUP DE BASE DE DATOS COMPLETADO</b>\n\n${summary}\n\n<i>Sistema CONSAGRADOS 2026 listo para operar.</i>`;
@@ -1397,6 +1427,116 @@ function verifyBiometrics(data) {
     success: true, 
     credential: storedCredential 
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene el versículo del día.
+ */
+function getDailyVerse() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.VERSES_SHEET);
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Hoja de versos no encontrada" })).setMimeType(ContentService.MimeType.JSON);
+  
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) {
+     // Versículo por defecto si no hay nada en la hoja
+     return ContentService.createTextOutput(JSON.stringify({ 
+       success: true, 
+       data: { verse: "Mas el que persevere hasta el fin, este será salvo.", reference: "Mateo 24:13" } 
+     })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Buscar el verso de hoy por fecha (formato YYYY-MM-DD)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const headers = values[0];
+  const dateIdx = headers.indexOf('DATE');
+  const verseIdx = headers.indexOf('VERSE');
+  const refIdx = headers.indexOf('REFERENCE');
+
+  const verseFound = values.slice(1).find(row => {
+    const rowDate = row[dateIdx];
+    const rowDateStr = rowDate instanceof Date ? rowDate.toISOString().split('T')[0] : String(rowDate);
+    return rowDateStr === todayStr;
+  });
+
+  if (verseFound) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: true, 
+      data: { verse: verseFound[verseIdx], reference: verseFound[refIdx] } 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Si no hay para hoy, dar uno aleatorio
+  const randomRow = values[Math.floor(Math.random() * (values.length - 1)) + 1];
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    data: { verse: randomRow[verseIdx], reference: randomRow[refIdx] } 
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Actualiza el contador de rachas y tareas semanales de un agente.
+ */
+function updateStreaks(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+  if (!sheet) throw new Error("Hoja de rachas no encontrada");
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const agentIdIdx = headers.indexOf('AGENT_ID');
+  const streakIdx = headers.indexOf('STREAK_COUNT');
+  const lastWeekIdx = headers.indexOf('LAST_COMPLETED_WEEK');
+  const tasksIdx = headers.indexOf('TASKS_JSON');
+
+  const rowIdx = values.findIndex(row => String(row[agentIdIdx]) === String(data.agentId));
+  
+  const currentWeek = getWeekNumber(new Date());
+  
+  const streakData = {
+    AGENT_ID: data.agentId,
+    STREAK_COUNT: 0,
+    LAST_COMPLETED_WEEK: '',
+    TASKS_JSON: JSON.stringify(data.tasks || [])
+  };
+
+  if (rowIdx !== -1) {
+    streakData.STREAK_COUNT = values[rowIdx][streakIdx];
+    streakData.LAST_COMPLETED_WEEK = values[rowIdx][lastWeekIdx];
+    
+    // Lógica de racha
+    if (data.isWeekComplete) {
+      if (streakData.LAST_COMPLETED_WEEK !== currentWeek) {
+        streakData.STREAK_COUNT = (parseInt(streakData.STREAK_COUNT) || 0) + 1;
+        streakData.LAST_COMPLETED_WEEK = currentWeek;
+        
+        // Notificación de Racha
+        sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de la semana. ¡Tu racha ahora es de ${streakData.STREAK_COUNT}!`);
+      }
+    }
+    
+    const row = [streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_WEEK, streakData.TASKS_JSON];
+    sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);
+  } else {
+    // Nuevo registro
+    if (data.isWeekComplete) {
+      streakData.STREAK_COUNT = 1;
+      streakData.LAST_COMPLETED_WEEK = currentWeek;
+    }
+    sheet.appendRow([streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_WEEK, streakData.TASKS_JSON]);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakData.STREAK_COUNT })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getWeekNumber(d) {
+  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${weekNo}`;
 }
 
 

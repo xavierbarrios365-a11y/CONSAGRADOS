@@ -48,6 +48,13 @@ export interface Agent {
   tacticalSummary?: string;
   lastAiUpdate?: string;
   biometricCredential?: string;
+  streakCount?: number;
+  weeklyTasks?: { id: string; title: string; completed: boolean }[];
+}
+
+export interface DailyVerse {
+  verse: string;
+  reference: string;
 }
 
 export interface Guide {

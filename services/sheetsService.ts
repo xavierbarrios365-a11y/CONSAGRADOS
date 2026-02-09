@@ -67,7 +67,9 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'STATS': ['tacticalstats', 'stats_json', 'stats'],
       'SUMMARY': ['tacticalsummary', 'tactor_summary', 'summary'],
       'LAST_UPDATE': ['lastaiupdate', 'last_ai_update', 'update'],
-      'BIOMETRIC': ['biometric_credential', 'biometric']
+      'BIOMETRIC': ['biometric_credential', 'biometric'],
+      'STREAK': ['streak_count', 'streak'],
+      'TASKS': ['tasks_json', 'tasks']
     };
 
     const isMatrix = Array.isArray(rawContent[0]);
@@ -170,7 +172,13 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
     })(),
     tacticalSummary: getV('SUMMARY') || "",
     lastAiUpdate: getV('LAST_UPDATE') || "",
-    biometricCredential: getV('BIOMETRIC') || ""
+    biometricCredential: getV('BIOMETRIC') || "",
+    streakCount: parseInt(getV('STREAK')) || 0,
+    weeklyTasks: getV('TASKS') ? JSON.parse(getV('TASKS')) : [
+      { id: 'attendance', title: 'Asistoria Semanal', completed: false },
+      { id: 'academy', title: 'Completar 1 Lección', completed: false },
+      { id: 'bible', title: 'Lectura Diaria', completed: false }
+    ]
   };
 };
 
@@ -445,6 +453,26 @@ export const verifyBiometrics = async (agentId: string) => {
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO VERIFICACIÓN BIOMÉTRICA:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const fetchDailyVerse = async () => {
+  try {
+    const response = await postToAction('get_daily_verse', {});
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER VERSÍCULO:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateAgentStreaks = async (agentId: string, isWeekComplete: boolean, tasks: any[]) => {
+  try {
+    const response = await postToAction('update_streaks', { agentId, isWeekComplete, tasks });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ACTUALIZACIÓN RACHAS:", error);
     return { success: false, error: error.message };
   }
 };

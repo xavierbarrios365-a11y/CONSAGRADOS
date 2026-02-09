@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy } from 'lucide-react';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from './DigitalIdCard';
 
@@ -11,11 +11,12 @@ interface LayoutProps {
   userRole: UserRole;
   userName: string;
   onLogout: () => void;
+  notificationCount: number;
 }
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, notificationCount }) => {
   const allNavItems = [
     { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
     { id: AppView.DIRECTORY, icon: <Users size={20} />, label: 'Directorio', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
@@ -41,6 +42,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <div className="relative cursor-pointer group p-2 text-gray-500 hover:text-[#ffb700] transition-colors" title="Notificaciones">
+            <Bell size={20} className="group-hover:animate-swing" />
+            {notificationCount > 0 && (
+              <span className="absolute -top-0 -right-0 h-4 min-w-[1rem] flex items-center justify-center bg-red-600 text-[8px] font-black text-white px-1 rounded-full border-2 border-[#001f3f]">
+                {notificationCount > 9 ? '+9' : notificationCount}
+              </span>
+            )}
+            {notificationCount === 0 && (
+              <span className="absolute -top-0 -right-0 h-2 w-2 bg-[#ffb700]/40 rounded-full border-2 border-[#001f3f]"></span>
+            )}
+          </div>
+
           <div className="text-right">
             <p className="text-[10px] font-black text-white uppercase leading-none">{userName.split(' ')[0]}</p>
             <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest">{userRole}</p>

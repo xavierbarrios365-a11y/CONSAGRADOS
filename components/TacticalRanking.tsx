@@ -61,7 +61,7 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
     };
 
     return (
-        <div className="p-4 md:p-8 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="p-4 md:p-8 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-full overflow-x-hidden pb-32">
             {/* Header Section */}
             <div className="relative overflow-hidden bg-[#001f3f] border border-[#FFB700]/20 rounded-[3rem] p-8 md:p-12 shadow-2xl">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFB700]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>

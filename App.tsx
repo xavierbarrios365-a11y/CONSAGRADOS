@@ -20,7 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.5.0"; // Final Polish: Bio Resilience, Memory Quiz, OS Ready
+  const APP_VERSION = "1.6.0"; // UI Refactor, Pure Session, Minimalist Profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -74,20 +74,22 @@ const App: React.FC = () => {
   // --- FUNCIONES DE AYUDA (DEFINIDAS ANTES DE LOS EFFECTS) ---
 
   const handleLogout = useCallback(() => {
+    console.log("🔴 PROTOCOLO DE CIERRE DE SESIÓN INICIADO");
+
+    // 1. Limpiar estados de UI y Sesión
     setIsLoggedIn(false);
     setCurrentUser(null);
     setFoundAgent(null);
     setLoginId('');
     setLoginPin('');
-    // Al cerrar sesión, el siguiente login debería empezar en HOME (o CIU si es Director)
     setView(AppView.HOME);
-    localStorage.removeItem('consagrados_agent');
-    localStorage.removeItem('last_active_time');
-    // Mantener el usuario recordado para quiick login
-    // NO eliminamos 'remembered_user' aquí para permitir re-entrada rápida
     setShowSessionWarning(false);
 
-    // Reset transient UI flags to prevent overlap
+    // 2. Limpiar persistencia esencial
+    localStorage.removeItem('consagrados_agent');
+    localStorage.removeItem('last_active_time');
+
+    // 3. Reset flags de estados transientes
     setIsMustChangeFlow(false);
     setShowForgotPassword(false);
     setForgotPasswordStep('ID');
@@ -98,10 +100,11 @@ const App: React.FC = () => {
     setManualSearchQuery('');
     setShowManualResults(false);
 
-    // Force a total memory purge by reloading the page after a brief delay
+    // 4. Forzar purga total de memoria mediante recarga tras un breve delay
     setTimeout(() => {
+      console.log("♻️ RECARGA DE SISTEMA PARA PURGA TOTAL");
       window.location.reload();
-    }, 150);
+    }, 200);
   }, []);
 
   const resetSessionTimer = useCallback(() => {
@@ -339,7 +342,11 @@ const App: React.FC = () => {
           const updatedSelf = sheetAgents.find(a =>
             String(a.id).toUpperCase().replace(/[^0-9A-Z]/gi, '') === String(currentUser.id).toUpperCase().replace(/[^0-9A-Z]/gi, '')
           );
-          if (updatedSelf) setCurrentUser(updatedSelf);
+          if (updatedSelf) {
+            setCurrentUser(updatedSelf);
+            // PERSISTENCIA: Actualizar local storage para evitar datos obsoletos al recargar
+            localStorage.setItem('consagrados_agent', JSON.stringify(updatedSelf));
+          }
         }
       }
     } catch (err) {
@@ -664,6 +671,15 @@ const App: React.FC = () => {
 
   const [isRefreshingIntel, setIsRefreshingIntel] = useState(false);
 
+  const startScanner = () => {
+    setScanStatus('SCANNING');
+  };
+
+  const stopScanner = () => {
+    setScanStatus('IDLE');
+    setScannedId('');
+  };
+
   const handleRefreshIntel = async () => {
     if (isRefreshingIntel) return;
     setIsRefreshingIntel(true);
@@ -684,46 +700,43 @@ const App: React.FC = () => {
     switch (view) {
       case AppView.HOME:
         return (
-          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-2xl mx-auto">
-            <div className="flex flex-col items-center text-center space-y-2 mb-4">
-              <h2 className="text-4xl font-bebas font-black text-white tracking-widest">BIENVENIDO, AGENTE</h2>
-              <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em]">Nodo de Control Central // {currentUser?.name.split(' ')[0]}</p>
+          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
+            <div className="flex flex-col items-center text-center space-y-4 mb-4">
+              <div className="p-4 bg-[#ffb700]/10 rounded-full border border-[#ffb700]/20 animate-pulse">
+                <Shield size={32} className="text-[#ffb700]" />
+              </div>
+              <div>
+                <h2 className="text-4xl font-bebas font-black text-white tracking-widest leading-none">NODO CENTRAL</h2>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mt-1">{currentUser?.name}</p>
+              </div>
             </div>
 
-            {/* Status Radar: Racha y Tareas */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="bg-gradient-to-br from-orange-500/20 to-transparent border border-orange-500/30 rounded-[2.5rem] p-8 flex items-center justify-between overflow-hidden relative group">
-                <div className="absolute -right-4 -top-4 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-                  <Activity size={100} className="text-orange-500" />
+            <div className="grid grid-cols-1 gap-6">
+              <div className="bg-gradient-to-br from-[#ffb700]/20 to-transparent border border-[#ffb700]/30 rounded-[3rem] p-8 flex items-center justify-between overflow-hidden relative group shadow-2xl">
+                <div className="absolute right-0 top-0 opacity-5 -translate-y-4 translate-x-4">
+                  <Flame size={160} className="text-[#ffb700]" />
                 </div>
                 <div className="relative z-10">
-                  <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Tu Racha Actual</p>
-                  <p className="text-5xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
-                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest mt-2">{currentUser?.streakCount === 0 ? '¡COMIENZA TU RACHA HOY!' : '¡MANTÉN EL FUEGO ENCENDIDO!'}</p>
+                  <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
+                  <p className="text-6xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
+                  <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-2">MANTENTE FIRME EN LA BRECHA</p>
                 </div>
-                <div className="relative z-10 p-4 bg-orange-500 rounded-3xl shadow-[0_10px_30px_rgba(249,115,22,0.4)]">
-                  <Activity size={32} className="text-white animate-pulse" />
+                <div className="bg-[#ffb700] p-5 rounded-[2rem] shadow-[0_15px_30px_rgba(255,183,0,0.3)]">
+                  <Activity size={32} className="text-[#001f3f] animate-pulse" />
                 </div>
               </div>
 
               <DailyVerse verse={dailyVerse} onQuizComplete={handleVerseQuizComplete} />
             </div>
 
-            {/* Quick Links for Students */}
             <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setView(AppView.ACADEMIA)}
-                className="p-6 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95"
-              >
-                <Database size={24} className="text-[#ffb700]" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Academia</span>
+              <button onClick={() => setView(AppView.ACADEMIA)} className="p-8 bg-white/5 border border-white/5 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
+                <Database size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Academia</span>
               </button>
-              <button
-                onClick={() => setView(AppView.CONTENT)}
-                className="p-6 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95"
-              >
-                <BookOpen size={24} className="text-[#ffb700]" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Material</span>
+              <button onClick={() => setView(AppView.CONTENT)} className="p-8 bg-white/5 border border-white/5 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
+                <BookOpen size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Material</span>
               </button>
             </div>
           </div>
@@ -780,152 +793,76 @@ const App: React.FC = () => {
         );
       case AppView.SCANNER:
         return (
-          <div className="p-6 md:p-10 flex flex-col items-center justify-between animate-in fade-in h-[calc(100svh-160px)] md:h-full pt-6 pb-10">
-            <div className="text-center space-y-1 mb-4">
-              <h2 className="text-[14px] font-bebas text-white uppercase tracking-[0.3em] font-bebas">Scanner Táctico</h2>
-              <p className="text-[8px] text-[#FFB700] font-bold uppercase tracking-widest opacity-60 text-center font-montserrat">Apunta al código QR del agente</p>
-            </div>
-            <div className={`relative w-full max-w-[280px] md:max-w-xs aspect-square border-2 rounded-[2.5rem] overflow-hidden bg-black transition-all duration-300 scanner-frame ${scanStatus === 'SUCCESS' ? 'border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' :
-              scanStatus === 'SCANNING' ? 'border-[#FFB700] shadow-[0_0_50px_rgba(255,183,0,0.3)]' :
-                'border-[#FFB700]/20 shadow-[0_0_50px_rgba(255,183,0,0.1)]'
-              }`}>
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale opacity-70" />
-              <div className={`absolute top-0 left-0 w-full h-0.5 shadow-[0_0_15px_blue] animate-scan-line ${scanStatus === 'SUCCESS' ? 'bg-green-500 shadow-green-500' :
-                scanStatus === 'SCANNING' ? 'bg-[#ffb700] shadow-[#ffb700]' :
-                  'bg-[#ffb700] shadow-[#ffb700]'
-                }`}></div>
+          <div className="flex flex-col min-h-screen bg-[#001f3f] animate-in fade-in pb-32">
+            <div className="p-6 md:p-10 space-y-8 flex-1 flex flex-col font-montserrat">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-5 bg-[#ffb700]/10 rounded-[2.5rem] border border-[#ffb700]/20">
+                  <QrCode size={48} className="text-[#ffb700]" />
+                </div>
+                <h2 className="text-5xl font-bebas font-black text-white uppercase tracking-widest leading-none">ESCÁNER TÁCTICO</h2>
+              </div>
 
-              {/* Overlay táctico */}
-              <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none"></div>
-              <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border rounded-3xl transition-colors ${scanStatus === 'SUCCESS' ? 'border-green-500/50' :
-                scanStatus === 'SCANNING' ? 'border-yellow-500/50' :
-                  'border-blue-500/30'
-                }`}></div>
-            </div>
-
-            <div className="w-full max-w-[280px] md:max-w-xs space-y-4 z-10">
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="ID / NOMBRE..."
-                  value={scannedId}
-                  onChange={(e) => setScannedId(e.target.value)}
-                  className="w-full bg-[#3A3A3A]/20 border border-white/10 rounded-xl py-4 px-6 text-white text-[12px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#FFB700] transition-all text-center placeholder:opacity-30 font-bebas"
-                />
-                {scannedId && (
-                  <button
-                    onClick={() => {
-                      setScannedId('');
-                      setManualSearchQuery('');
-                      setShowManualResults(false);
-                    }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-                {!scannedId && (
-                  <p className="absolute -bottom-6 left-0 w-full text-center text-[6px] text-gray-500 font-black uppercase tracking-[0.2em] opacity-40 animate-pulse font-montserrat">
-                    ¿SIN QR? ESCRIBE EL NOMBRE PARA EL RADAR
-                  </p>
+              <div className="flex-1 min-h-[450px] relative bg-black/40 rounded-[3rem] border-2 border-white/5 overflow-hidden shadow-inner group">
+                {scanStatus === 'SCANNING' ? (
+                  <>
+                    <video ref={videoRef} className="w-full h-full object-cover grayscale opacity-60" playsInline />
+                    <div className="absolute inset-0 border-[50px] border-black/60 flex items-center justify-center">
+                      <div className="w-64 h-64 border-2 border-[#ffb700] rounded-3xl relative">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-[#ffb700] shadow-[0_0_30px_rgba(255,183,0,1)] animate-scan-line"></div>
+                      </div>
+                    </div>
+                    <button onClick={stopScanner} className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-500 px-10 py-5 rounded-2xl text-white text-[11px] font-black uppercase tracking-widest active:scale-95 shadow-2xl font-bebas">Abortar Misión</button>
+                  </>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-10 text-center space-y-8">
+                    <Activity className="text-white/5" size={80} />
+                    <button onClick={startScanner} className="bg-[#ffb700] text-[#001f3f] px-16 py-6 rounded-2xl font-black uppercase text-[12px] tracking-widest shadow-[0_20px_50px_rgba(255,183,0,0.3)] active:scale-105 transition-all font-bebas">Iniciar Óptica</button>
+                  </div>
                 )}
               </div>
 
-              {/* Lista de Búsqueda Manual */}
-              <div className="relative">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+              <div className="space-y-4">
+                <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.5em] text-center">O BUSCADOR DE AGENTES</p>
+                <div className="relative group">
+                  <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#ffb700]" size={24} />
                   <input
                     type="text"
-                    placeholder="BUSCAR NOMBRE O ID..."
+                    placeholder="INGRESAR IDENTIDAD AGENTE..."
                     value={manualSearchQuery}
                     onChange={(e) => {
                       setManualSearchQuery(e.target.value);
-                      setShowManualResults(e.target.value.length > 0);
+                      setShowManualResults(true);
+                      setScannedId('');
                     }}
-                    onFocus={() => {
-                      if (manualSearchQuery.length > 0) setShowManualResults(true);
-                    }}
-                    className="w-full bg-[#3A3A3A]/20 border border-white/20 rounded-xl py-4 pl-10 pr-4 text-white text-[10px] font-black uppercase tracking-[0.2em] outline-none focus:border-[#FFB700] transition-all font-bebas"
+                    className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] py-8 pl-20 pr-10 text-white text-[14px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700]/30 transition-all font-bebas"
                   />
                 </div>
 
-                {showManualResults && (
-                  <div className="absolute bottom-full mb-2 w-full bg-[#001f3f] border border-[#ffb700]/30 rounded-[2rem] max-h-60 overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] z-[100] animate-in fade-in slide-in-from-bottom-4">
-                    <div className="p-3 border-b border-white/5 bg-white/5">
-                      <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest">Resultados de Búsqueda</p>
-                    </div>
-
-                    {/* Opción Permanente de Registro en Radar */}
-                    {manualSearchQuery.length > 0 && (
-                      <div
-                        onClick={() => {
-                          setScannedId(manualSearchQuery);
-                          setShowManualResults(false);
-                          processScan(manualSearchQuery);
-                        }}
-                        className="p-6 text-center bg-orange-500/10 border-b border-orange-500/20 hover:bg-orange-500/20 cursor-pointer group transition-all"
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <Plus size={24} className="text-orange-500 group-hover:scale-110 transition-transform" />
-                          <p className="text-[10px] text-white font-black uppercase tracking-[0.2em] font-bebas">REGISTRAR "{manualSearchQuery}" EN RADAR</p>
-                          <p className="text-[7px] text-orange-500 font-bold uppercase tracking-widest">TAP PARA GUARDAR VISITA AHORA</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Agentes en Directorio */}
-                    {agents
-                      .filter(a =>
-                        a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) ||
-                        a.id.toLowerCase().includes(manualSearchQuery.toLowerCase())
-                      )
-                      .slice(0, 5)
-                      .map(a => (
-                        <div
-                          key={a.id}
-                          onClick={() => {
-                            setScannedId(a.id);
-                            setManualSearchQuery(a.name);
-                            setShowManualResults(false);
-                          }}
-                          className="flex items-center gap-3 p-4 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors text-left"
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-[#ffb700]/10 border border-[#ffb700]/30 flex items-center justify-center shrink-0">
-                            <Shield size={18} className="text-[#ffb700]" />
-                          </div>
-                          <div className="flex-1 overflow-hidden">
-                            <p className="text-[11px] font-black text-white uppercase truncate font-bebas">{a.name}</p>
-                            <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-widest">{a.rank} | {a.id}</p>
-                          </div>
-                        </div>
-                      ))}
-
-                    {/* Visitantes en Radar */}
-                    {visitorRadar
-                      .filter(v => v.name.toLowerCase().includes(manualSearchQuery.toLowerCase()))
-                      .map(v => (
-                        <div
-                          key={v.id}
-                          onClick={() => {
-                            setScannedId(v.id);
-                            setManualSearchQuery(v.name);
-                            setShowManualResults(false);
-                          }}
-                          className="flex items-center gap-3 p-4 hover:bg-orange-500/10 cursor-pointer border-b border-white/5 transition-colors text-left"
-                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500/20 border-orange-500/40 text-orange-500' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                            <Target size={18} />
-                          </div>
-                          <div className="flex-1 overflow-hidden">
-                            <p className="text-[10px] font-black text-white uppercase truncate font-bebas">{v.name}</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[7px] text-gray-400 font-black uppercase tracking-widest">{v.visits} VISITAS</span>
-                              <span className={`text-[6px] px-1.5 py-0.5 rounded font-bold ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500/20 text-orange-400' : 'bg-white/10 text-gray-500'}`}>{v.status}</span>
+                {showManualResults && manualSearchQuery && (
+                  <div className="bg-[#001f3f] border border-white/10 rounded-[2.5rem] overflow-hidden backdrop-blur-3xl shadow-2xl animate-in slide-in-from-top-4 z-50 relative">
+                    <div className="max-h-80 overflow-y-auto p-4 space-y-2">
+                      {agents
+                        .filter(a => a.name.toLowerCase().includes(manualSearchQuery.toLowerCase()) || a.id.includes(manualSearchQuery))
+                        .slice(0, 15)
+                        .map(agent => (
+                          <div
+                            key={agent.id}
+                            onClick={() => {
+                              setScannedId(agent.id);
+                              setManualSearchQuery(agent.name);
+                              setShowManualResults(false);
+                            }}
+                            className={`flex items-center gap-6 p-5 rounded-[2rem] cursor-pointer transition-all ${scannedId === agent.id ? 'bg-[#ffb700] text-[#001f3f]' : 'hover:bg-white/5 text-white/40 hover:text-white'}`}
+                          >
+                            <img src={formatDriveUrl(agent.photoUrl)} className="w-12 h-12 rounded-xl object-cover border border-white/10 shadow-lg" />
+                            <div className="flex-1 overflow-hidden">
+                              <p className="text-[12px] font-black uppercase truncate font-bebas tracking-widest">{agent.name}</p>
+                              <p className="text-[10px] font-bold opacity-50">{agent.id}</p>
                             </div>
+                            <ChevronRight size={20} />
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -933,63 +870,10 @@ const App: React.FC = () => {
               <button
                 onClick={() => processScan()}
                 disabled={!scannedId || scanStatus !== 'IDLE'}
-                className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all font-bebas ${!scannedId || scanStatus !== 'IDLE'
-                  ? 'bg-gray-800 text-gray-500'
-                  : agents.some(a => String(a.id).trim().toUpperCase() === scannedId.trim().toUpperCase())
-                    ? 'bg-[#ffb700] text-[#001f3f] shadow-[0_10px_30px_rgba(255,183,0,0.2)]'
-                    : 'bg-orange-500 text-white shadow-[0_10px_30px_rgba(249,115,22,0.2)]'
-                  } active:scale-95`}
+                className={`w-full py-8 rounded-[2.5rem] font-black text-[14px] uppercase tracking-widest transition-all font-bebas ${!scannedId || scanStatus !== 'IDLE' ? 'bg-gray-900 text-gray-700' : 'bg-[#ffb700] text-[#001f3f] shadow-[0_25px_60px_rgba(255,183,0,0.3)]'} active:scale-95`}
               >
-                {scanStatus !== 'IDLE'
-                  ? 'Procesando...'
-                  : agents.some(a => String(a.id).trim().toUpperCase() === scannedId.trim().toUpperCase())
-                    ? 'Confirmar Asistencia'
-                    : 'Registrar en Radar'
-                }
+                {scanStatus !== 'IDLE' ? 'PROCESANDO REGISTRO...' : 'CONFIRMAR OPERACIÓN'}
               </button>
-
-              {/* Radar de Visitantes */}
-              <div className="pt-4 border-t border-white/5 space-y-3">
-                <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between px-2 cursor-pointer group">
-                  <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas flex items-center gap-2 group-hover:text-white transition-colors text-left uppercase">
-                    <Target size={10} className="animate-pulse" /> Radar de Visitantes
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[6px] text-gray-600 font-bold uppercase tracking-widest leading-none">{visitorRadar.length} detectados</span>
-                    <ChevronRight size={10} className="text-gray-600 group-hover:text-white transition-all group-hover:translate-x-0.5" />
-                  </div>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none pr-4">
-                  {visitorRadar.map(v => (
-                    <div
-                      key={v.id}
-                      onClick={() => {
-                        if (scanStatus === 'IDLE') {
-                          setScannedId(v.id);
-                          setManualSearchQuery(v.name);
-                        }
-                      }}
-                      className={`shrink-0 w-28 p-3 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${v.status === 'POSIBLE RECLUTA'
-                        ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 shadow-[0_5px_15px_rgba(249,115,22,0.1)]'
-                        : 'bg-white/5 border-white/10 hover:bg-white/10'
-                        } ${scannedId === v.id ? 'ring-2 ring-[#ffb700] border-[#ffb700]' : ''}`}
-                    >
-                      <div className="flex flex-col gap-1 items-center text-center">
-                        <p className="text-[8px] font-black text-white uppercase truncate w-full font-bebas">{v.name}</p>
-                        <div className={`px-2 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest ${v.status === 'POSIBLE RECLUTA' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-[#ffb700]'
-                          }`}>
-                          {v.visits} ENTRADAS
-                        </div>
-                        <p className={`text-[5px] font-black uppercase tracking-widest mt-0.5 ${v.status === 'POSIBLE RECLUTA' ? 'text-orange-400' : 'text-gray-500'
-                          }`}>
-                          {v.status}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -1119,53 +1003,12 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Sistema de Rachas (Streaks) */}
-              <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3">
-                    <Flame size={20} className="text-orange-500 animate-pulse" />
-                    <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Tu Racha Táctica</h3>
-                  </div>
-                  <span className="text-2xl font-black text-orange-500 font-bebas">{currentUser?.streakCount || 0}</span>
-                </div>
-
-                <div className="space-y-4">
-                  <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 text-center">Tareas Semanales</p>
-                  {currentUser?.weeklyTasks?.map(task => (
-                    <div key={task.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${task.completed ? 'text-green-500' : 'text-gray-400'}`}>
-                        {task.title}
-                      </span>
-                      {task.completed ? <CheckCircle2 size={18} className="text-green-500" /> : <Circle size={18} className="text-gray-700" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Sección de Seguridad y Acceso Refinada */}
               <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                   <Shield size={18} className="text-[#ffb700]" />
                   <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Seguridad & Acceso</h3>
                 </div>
-
-                {/* SIMULADOR DE ROLES PARA DIRECTOR */}
-                {currentUser?.userRole === UserRole.DIRECTOR && (
-                  <div className="bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-2xl p-4 space-y-3">
-                    <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest text-center">Modo Simulación de Director</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT].map(role => (
-                        <button
-                          key={role}
-                          onClick={() => setViewingAsRole(role)}
-                          className={`py-2 rounded-xl text-[8px] font-black uppercase transition-all ${viewingAsRole === role || (!viewingAsRole && currentUser.userRole === role) ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
-                        >
-                          {role}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Botón para forzar permiso de notificaciones */}
                 <button
@@ -1175,11 +1018,6 @@ const App: React.FC = () => {
                   <Plus size={14} className="text-[#ffb700]" />
                   Recibir Notificaciones Push
                 </button>
-
-                {/* Versículo Diario con Quiz */}
-                <div className="pt-4 border-t border-white/5">
-                  <DailyVerse verse={dailyVerse} onQuizComplete={handleVerseQuizComplete} />
-                </div>
 
                 {!biometricAvailable && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 space-y-2">
@@ -1225,14 +1063,14 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.ACADEMIA:
-        return <AcademyModule key={`academy-${currentUser?.id}`} userRole={effectiveRole} agentId={currentUser!.id} />;
+        return currentUser ? <AcademyModule key={`academy-${currentUser.id}`} userRole={effectiveRole} agentId={currentUser.id} /> : null;
       case AppView.RANKING:
-        return <TacticalRanking key={`ranking-${currentUser?.id}`} agents={agents} currentUser={currentUser} />;
+        return <TacticalRanking key={`ranking-${currentUser?.id || 'none'}`} agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT:
         return <ContentModule key={`content-${currentUser?.id}`} userRole={effectiveRole} />;
       case AppView.CIU:
-        return <CIUModule
-          key={`ciu-${currentUser?.id}`}
+        return currentUser ? <CIUModule
+          key={`ciu-${currentUser.id}`}
           agents={agents}
           currentUser={currentUser}
           onUpdateNeeded={() => syncData(true)}
@@ -1241,7 +1079,7 @@ const App: React.FC = () => {
           visitorCount={visitorRadar.length}
           onRefreshIntel={handleRefreshIntel}
           isRefreshingIntel={isRefreshingIntel}
-        />;
+        /> : null;
       default: return null;
     }
   };

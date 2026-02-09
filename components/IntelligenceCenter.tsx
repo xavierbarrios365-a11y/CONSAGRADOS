@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
@@ -21,12 +21,12 @@ interface CIUProps {
 }
 
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, dailyVerse }) => {
-  const [subView, setSubView] = useState<'PROFILE' | 'RANKING'>('PROFILE');
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
 
   const totalAgents = agents.length;
@@ -96,7 +96,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
   const handleUpdatePoints = async (type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
     if (!agent) return;
-    if (points < 0 && !window.confirm(`🚨 ¿APLICAR SANCIÓN DE ${points} PUNTOS A ${agent.name}?`)) return;
+    const absPoints = Math.abs(points);
+    if (points < 0 && !window.confirm(`🚨 ¿APLICAR SANCIÓN DE ${absPoints} PUNTOS A ${agent.name}?`)) return;
 
     setIsUpdatingPoints(true);
     try {
@@ -211,247 +212,227 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
 
           <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">
-            <button
-              onClick={() => setSubView('PROFILE')}
-              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${subView === 'PROFILE' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-white/40 hover:text-white'}`}
-            >
-              <Target size={14} /> Perfil Agente
-            </button>
-            <button
-              onClick={() => setSubView('RANKING')}
-              className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${subView === 'RANKING' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-white/40 hover:text-white'}`}
-            >
-              <Trophy size={14} /> Ranking Global
-            </button>
+            <div className="px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 bg-[#ffb700] text-[#001f3f]">
+              <Target size={14} /> Gestión de Agentes
+            </div>
           </div>
 
-          {subView === 'PROFILE' && (
-            <div className="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
-              <div className="w-full md:w-72">
-                <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
-                <select
-                  value={selectedAgentId}
-                  onChange={(e) => setSelectedAgentId(e.target.value)}
-                  className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
-                >
-                  {agents.map(a => (
-                    <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
-                  ))}
-                </select>
-              </div>
-
-              {currentUser?.userRole === UserRole.DIRECTOR && (
-                <button
-                  onClick={async () => {
-                    const confirmSend = window.confirm("⚠️ TRANSMISIÓN DE SEGURIDAD\n\n¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?");
-                    if (confirmSend) {
-                      const res = await sendAgentCredentials(selectedAgentId);
-                      if (res.success) alert("✅ TRANSMISIÓN EXITOSA");
-                      else alert("❌ FALLO EN TRANSMISIÓN: " + res.error);
-                    }
-                  }}
-                  className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl border border-blue-400/30 transition-all flex items-center gap-2 group shadow-lg shadow-blue-900/20"
-                  title="Enviar Credenciales a Telegram"
-                >
-                  <Send size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                  <span className="text-[9px] font-black uppercase tracking-widest md:hidden lg:inline">Enviar Creds</span>
-                </button>
-              )}
+          <div className="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
+            <div className="w-full md:w-72">
+              <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
+              <select
+                value={selectedAgentId}
+                onChange={(e) => setSelectedAgentId(e.target.value)}
+                className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
+              >
+                {agents.map(a => (
+                  <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
+                ))}
+              </select>
             </div>
-          )}
+
+            {currentUser?.userRole === UserRole.DIRECTOR && (
+              <button
+                onClick={async () => {
+                  const confirmSend = window.confirm("⚠️ TRANSMISIÓN DE SEGURIDAD\n\n¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?");
+                  if (confirmSend) {
+                    const res = await sendAgentCredentials(selectedAgentId);
+                    if (res.success) alert("✅ TRANSMISIÓN EXITOSA");
+                    else alert("❌ FALLO EN TRANSMISIÓN: " + res.error);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl border border-blue-400/30 transition-all flex items-center gap-2 group shadow-lg shadow-blue-900/20"
+                title="Enviar Credenciales a Telegram"
+              >
+                <Send size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                <span className="text-[9px] font-black uppercase tracking-widest md:hidden lg:inline">Enviar Creds</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {
-          subView === 'RANKING' ? (
-            <div className="mt-8">
-              <TacticalRanking agents={agents} currentUser={currentUser} />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* PERFIL DEL AGENTE SELECCIONADO */}
-              <div className="lg:col-span-4 space-y-6">
-                <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* PERFIL DEL AGENTE SELECCIONADO */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
 
-                  <div className="relative mb-8 group">
-                    <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
-                    <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
-                      <img
-                        src={formatDriveUrl(agent.photoUrl)}
-                        className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                        onError={(e) => {
-                          e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                          e.currentTarget.className = "w-full h-full object-cover opacity-20";
-                        }}
-                      />
+              <div className="relative mb-8 group">
+                <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
+                <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
+                  <img
+                    src={formatDriveUrl(agent.photoUrl)}
+                    className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                      e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                    }}
+                  />
 
-                      {isProspectoAscender && (
-                        <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
-                          PROSPECTO ASCENDER
+                  {isProspectoAscender && (
+                    <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
+                      PROSPECTO ASCENDER
+                    </div>
+                  )}
+
+                  {currentUser?.userRole === UserRole.DIRECTOR && (
+                    <div
+                      onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                      className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
+                    >
+                      {photoStatus === 'IDLE' ? (
+                        <>
+                          <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
+                          <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
+                          <p className="text-[9px] text-white font-black uppercase tracking-widest">
+                            {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
+                          </p>
                         </div>
                       )}
-
-                      {currentUser?.userRole === UserRole.DIRECTOR && (
-                        <div
-                          onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
-                          className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
-                        >
-                          {photoStatus === 'IDLE' ? (
-                            <>
-                              <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
-                              <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center">
-                              <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
-                              <p className="text-[9px] text-white font-black uppercase tracking-widest">
-                                {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
                     </div>
-                  </div>
-
-                  <div className="space-y-4 z-10 w-full">
-                    <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
-                        <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
-                      </div>
-                      {isProspectoAscender && (
-                        <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-8 w-full grid grid-cols-2 gap-3">
-                    <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
-                      <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
-                      <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
-                    </div>
-                    <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
-                      <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
-                      <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
-                        {agent.accessLevel || 'ESTUDIANTE'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* RADAR TÁCTICO IN-CENTER */}
-                  <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
-                    <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
-                    {agent.tacticalStats ? (
-                      <TacticalRadar stats={agent.tacticalStats} size={180} />
-                    ) : (
-                      <div className="py-10 text-center opacity-30">
-                        <Sparkles size={32} className="mx-auto mb-2" />
-                        <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
-                      </div>
-                    )}
-                  </div>
+                  )}
+                  <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
                 </div>
               </div>
 
-              {/* ESTADÍSTICAS Y ACCIONES */}
-              <div className="lg:col-span-8 space-y-8">
-                <div className="grid grid-cols-3 gap-4">
-                  <MetricCard
-                    icon={<Book className="text-[#ffb700]" size={16} />}
-                    label="BIBLIA"
-                    value={agent.bible}
-                    color="from-[#ffb700] to-orange-600"
-                    onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
-                    disabled={isUpdatingPoints}
-                  />
-                  <MetricCard
-                    icon={<FileText className="text-gray-400" size={16} />}
-                    label="NOTAS"
-                    value={agent.notes}
-                    color="from-gray-400 to-gray-600"
-                    onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
-                    disabled={isUpdatingPoints}
-                  />
-                  <MetricCard
-                    icon={<Star className="text-[#ffb700]" size={16} />}
-                    label="LÍDER"
-                    value={agent.leadership}
-                    color="from-[#ffb700] to-orange-600"
-                    onAdjust={(val) => handleUpdatePoints('LIDERAZGO', val)}
-                    disabled={isUpdatingPoints}
-                  />
-                </div>
-
-                {/* PANEL DE SANCIONES */}
-                <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-red-500/20 rounded-lg">
-                      <Gavel className="text-red-500" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
-                      <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
-                    </div>
+              <div className="space-y-4 z-10 w-full">
+                <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
+                    <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <SanctionOption
-                      label="Inasistencia"
-                      sub="Faltó a actividad"
-                      pts="-5"
-                      onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
-                      disabled={isUpdatingPoints}
-                    />
-                    <SanctionOption
-                      label="No Participó"
-                      sub="Sin aportes en clase"
-                      pts="-2"
-                      onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
-                      disabled={isUpdatingPoints}
-                    />
-                    <SanctionOption
-                      label="Expulsión"
-                      sub="Sanción Definitiva"
-                      pts="-50%"
-                      isCritical
-                      onClick={() => handlePercentageDeduction(50)}
-                      disabled={isUpdatingPoints}
-                    />
-                  </div>
+                  {isProspectoAscender && (
+                    <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
+                  )}
                 </div>
+              </div>
 
-                {currentUser?.userRole === UserRole.DIRECTOR && (
-                  <div className="p-8 bg-blue-950/20 border border-blue-500/20 rounded-3xl space-y-4 mt-8">
-                    <h4 className="text-white font-black uppercase tracking-widest text-xs flex items-center gap-2">
-                      <ShieldAlert className="text-blue-500" size={16} /> COMANDO DE OPERACIONES MASIVAS
-                    </h4>
-                    <p className="text-[10px] text-gray-400 font-bold leading-relaxed">
-                      Utiliza esta función para transmitir las credenciales de toda la base de datos de agentes al Telegram táctico configurado. Este proceso es irreversible.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        const safetyKey = prompt("⚠️ PROTOCOLO DE SEGURIDAD\n\nPara iniciar la transmisión masiva, escribe 'TRANSMITIR':");
-                        if (safetyKey === 'TRANSMITIR') {
-                          const res = await bulkSendCredentials();
-                          if (res.success) alert(`✅ TRANSMISIÓN COMPLETADA\n\nSe enviaron ${res.count} credenciales.`);
-                          else alert("❌ FALLO EN TRANSMISIÓN: " + (res.error || "Error desconocido"));
-                        }
-                      }}
-                      className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-900/40"
-                    >
-                      <Send size={16} /> Iniciar Transmisión Masiva
-                    </button>
+              <div className="mt-8 w-full grid grid-cols-2 gap-3">
+                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
+                  <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
+                </div>
+                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
+                  <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
+                    {agent.accessLevel || 'ESTUDIANTE'}
+                  </p>
+                </div>
+              </div>
+
+              {/* RADAR TÁCTICO IN-CENTER */}
+              <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
+                <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
+                {agent.tacticalStats ? (
+                  <TacticalRadar stats={agent.tacticalStats} size={180} />
+                ) : (
+                  <div className="py-10 text-center opacity-30">
+                    <Sparkles size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
                   </div>
                 )}
               </div>
             </div>
-          )
-        }
-      </div >
+          </div>
+
+          {/* ESTADÍSTICAS Y ACCIONES */}
+          <div className="lg:col-span-8 space-y-8">
+            <div className="grid grid-cols-2 gap-4">
+              <MetricCard
+                icon={<Zap className="text-[#ffb700]" size={16} />}
+                label="COMPROMISO"
+                value={agent.bible}
+                color="from-[#ffb700] to-orange-600"
+                onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
+                disabled={isUpdatingPoints}
+              />
+              <MetricCard
+                icon={<Star className="text-blue-400" size={16} />}
+                label="SERVICIO"
+                value={agent.notes}
+                color="from-blue-400 to-blue-600"
+                onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
+                disabled={isUpdatingPoints}
+              />
+            </div>
+
+            {/* PANEL DE SANCIONES */}
+            <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <Gavel className="text-red-500" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
+                  <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <SanctionOption
+                  label="Protocolo"
+                  sub="Falla técnica de conducta"
+                  pts="-5"
+                  onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+                  disabled={isUpdatingPoints}
+                />
+                <SanctionOption
+                  label="No Participó"
+                  sub="Sin aportes en clase"
+                  pts="-2"
+                  onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
+                  disabled={isUpdatingPoints}
+                />
+                <SanctionOption
+                  label="Indisciplina"
+                  sub="Falta de respeto o orden"
+                  pts="-5"
+                  onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+                  disabled={isUpdatingPoints}
+                />
+                <SanctionOption
+                  label="Expulsión"
+                  sub="Sanción Definitiva"
+                  pts="-50%"
+                  isCritical
+                  onClick={() => handlePercentageDeduction(50)}
+                  disabled={isUpdatingPoints}
+                />
+              </div>
+            </div>
+
+            {currentUser?.userRole === UserRole.DIRECTOR && (
+              <div className="p-8 bg-blue-950/20 border border-blue-500/20 rounded-3xl space-y-4 mt-8">
+                <h4 className="text-white font-black uppercase tracking-widest text-xs flex items-center gap-2">
+                  <ShieldAlert className="text-blue-500" size={16} /> COMANDO DE OPERACIONES MASIVAS
+                </h4>
+                <p className="text-[10px] text-gray-400 font-bold leading-relaxed">
+                  Utiliza esta función para transmitir las credenciales de toda la base de datos de agentes al Telegram táctico configurado. Este proceso es irreversible.
+                </p>
+                <button
+                  onClick={async () => {
+                    const safetyKey = prompt("⚠️ PROTOCOLO DE SEGURIDAD\n\nPara iniciar la transmisión masiva, escribe 'TRANSMITIR':");
+                    if (safetyKey === 'TRANSMITIR') {
+                      const res = await bulkSendCredentials();
+                      if (res.success) alert(`✅ TRANSMISIÓN COMPLETADA\n\nSe enviaron ${res.count} credenciales.`);
+                      else alert("❌ FALLO EN TRANSMISIÓN: " + (res.error || "Error desconocido"));
+                    }
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-900/40"
+                >
+                  <Send size={16} /> Iniciar Transmisión Masiva
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */}
-    </div >
+    </div>
   );
 };
 
@@ -465,20 +446,22 @@ const MetricCard = ({ icon, label, value, color, onAdjust, disabled }: { icon: a
           </div>
           <p className="text-[7px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); onAdjust?.(-5); }}
             disabled={disabled}
-            className="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/10 rounded text-red-500 hover:bg-red-500/20 active:scale-90 transition-all"
+            className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-red-500 hover:bg-red-500/20 active:scale-90 transition-all shadow-lg"
+            title="Descontar 5"
           >
-            <Minus size={10} />
+            <Minus size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onAdjust?.(5); }}
             disabled={disabled}
-            className="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/10 rounded text-green-500 hover:bg-green-500/20 active:scale-90 transition-all"
+            className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-green-500 hover:bg-green-500/20 active:scale-90 transition-all shadow-lg"
+            title="Sumar 5"
           >
-            <Plus size={10} />
+            <Plus size={14} />
           </button>
         </div>
       </div>

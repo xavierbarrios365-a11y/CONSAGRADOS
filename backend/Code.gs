@@ -104,7 +104,7 @@ function doGet(e) {
   try {
     const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
     const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
+        if (!sheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
     
     // Simplificado: Solo devuelve los datos crudos. El frontend hará el procesamiento.
     const data = sheet.getDataRange().getValues();
@@ -361,23 +361,23 @@ function getVisitorRadar() {
   
   const attendanceData = attendanceSheet.getDataRange().getValues();
   const directoryData = directorySheet.getDataRange().getValues();
-  
+
   const registeredIds = new Set(directoryData.slice(1).map(row => String(row[0]).trim().toUpperCase()));
   
   const visitorMap = new Map();
-  
+    
   for (let i = 1; i < attendanceData.length; i++) {
     const id = String(attendanceData[i][0]).trim();
     if (id && !registeredIds.has(id.toUpperCase())) {
       const count = (visitorMap.get(id) || 0) + 1;
       visitorMap.set(id, count);
-    }
+        }
   }
   
-  const radar = [];
-  visitorMap.forEach((count, id) => {
-    // Solo incluir en el radar si ha venido 3 o más veces
-    if (count >= 3) {
+    const radar = [];
+    visitorMap.forEach((count, id) => {
+// Solo incluir en el radar si ha venido 3 o más veces
+    if (count >= 3) { 
       radar.push({
         id: id,
         name: id, 
@@ -1566,6 +1566,7 @@ function updateStreaks(data) {
           }
         }
       }
+    }
     
     const row = [streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_DATE, streakData.TASKS_JSON];
     sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);

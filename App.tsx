@@ -107,8 +107,14 @@ const App: React.FC = () => {
   const handleLogout = useCallback(() => {
     console.log("🔴 PROTOCOLO DE CIERRE DE SESIÓN INICIADO");
 
-    // 1. Limpiar persistencia de inmediato y de forma agresiva
-    localStorage.clear(); // Limpiar TODO para evitar cualquier residuo de sesión o recordatorios
+    // 1. Limpiar persistencia de sesión EXCEPTO el usuario recordado
+    const remembered = localStorage.getItem('remembered_user');
+    const version = localStorage.getItem('app_version');
+
+    localStorage.clear();
+
+    if (remembered) localStorage.setItem('remembered_user', remembered);
+    if (version) localStorage.setItem('app_version', version);
 
     // 2. Limpiar estados de React
     setIsLoggedIn(false);
@@ -120,8 +126,16 @@ const App: React.FC = () => {
     setShowSessionWarning(false);
     setIsMustChangeFlow(false);
     setShowForgotPassword(false);
-    setRememberedUser(null);
     setViewingAsRole(null);
+    // Preservar rememberedUser en el estado si existe
+    if (remembered) {
+      try {
+        setRememberedUser(JSON.parse(remembered));
+        setLoginId(JSON.parse(remembered).id);
+      } catch (e) { }
+    } else {
+      setRememberedUser(null);
+    }
 
     // 3. Forzar purga total y recarga limpia
     setTimeout(() => {
@@ -278,12 +292,12 @@ const App: React.FC = () => {
   }, [resetSessionTimer]);
 
   useEffect(() => {
-    if (view === AppView.SCANNER) {
+    if (view === AppView.SCANNER && scanStatus === 'SCANNING') {
       let active = true;
       const startCamera = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: 1280, height: 720 }
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
           });
           if (videoRef.current && active) {
             videoRef.current.srcObject = stream;
@@ -296,7 +310,6 @@ const App: React.FC = () => {
             const scan = () => {
               if (!active) return;
               if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && context) {
-                // Optimización: Escanear a baja resolución para mayor velocidad
                 const scanWidth = Math.min(videoRef.current.videoWidth, 480);
                 const scanHeight = Math.min(videoRef.current.videoHeight, Math.floor(480 * (videoRef.current.videoHeight / videoRef.current.videoWidth)));
 
@@ -310,7 +323,7 @@ const App: React.FC = () => {
                     inversionAttempts: "attemptBoth",
                   });
 
-                  if (code && code.data && code.data !== scannedId && scanStatus === 'IDLE') {
+                  if (code && code.data && code.data !== scannedId) {
                     const now = Date.now();
                     if (now - lastScanTime > 2000) {
                       console.log("✅ QR DETECTADO:", code.data);
@@ -326,16 +339,13 @@ const App: React.FC = () => {
                       lastScanTime = now;
                       setTimeout(() => processScan(code.data), 500);
                     }
-                  } else if (!code && scanStatus === 'IDLE' && scannedId) {
-                    setScannedId('');
                   }
                 } catch (qrErr) {
                   console.error("Error en jsQR loop:", qrErr);
                 }
               }
-              requestAnimationFrame(scan);
+              if (active) requestAnimationFrame(scan);
             };
-            console.log("🚀 Iniciando loop de escaneo...");
             requestAnimationFrame(scan);
           }
         } catch (err) {
@@ -352,7 +362,7 @@ const App: React.FC = () => {
         }
       };
     }
-  }, [view]);
+  }, [view, scanStatus]);
 
   const syncData = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsSyncing(true);
@@ -692,10 +702,11 @@ const App: React.FC = () => {
   const handleIncrementPoints = async (type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO') => {
     if (!scannedAgentForPoints) return;
     setIsUpdatingPoints(true);
+    const label = type === 'BIBLIA' ? 'COMPROMISO' : 'SERVICIO';
     try {
       const res = await updateAgentPoints(scannedAgentForPoints.id, type, 10);
       if (res.success) {
-        alert(`+10 PUNTOS DE ${type} ASIGNADOS A ${scannedAgentForPoints.name.split(' ')[0]}`);
+        alert(`+10 PUNTOS DE ${label} ASIGNADOS A ${scannedAgentForPoints.name.split(' ')[0]}`);
         syncData(); // Sincronizar para ver los nuevos puntos
       } else {
         alert("ERROR AL ACTUALIZAR PUNTOS");
@@ -1297,6 +1308,15 @@ const App: React.FC = () => {
               >
                 {isUpdatingPin ? 'Guardando Configuración...' : 'Finalizar y Entrar'}
               </button>
+
+              {!currentUser?.mustChangePassword && (
+                <button
+                  onClick={() => setIsMustChangeFlow(false)}
+                  className="w-full text-[8px] text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors"
+                >
+                  Omitir por ahora
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1413,22 +1433,16 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 gap-3">
                 <PointButton
-                  label="Trajo Biblia (+10)"
+                  label="Compromiso (+10)"
                   onClick={() => handleIncrementPoints('BIBLIA')}
                   disabled={isUpdatingPoints}
-                  icon={<Database size={16} />}
+                  icon={<Zap size={16} />}
                 />
                 <PointButton
-                  label="Trajo Apuntes (+10)"
+                  label="Servicio (+10)"
                   onClick={() => handleIncrementPoints('APUNTES')}
                   disabled={isUpdatingPoints}
-                  icon={<RefreshCw size={16} />}
-                />
-                <PointButton
-                  label="Participación (+10)"
-                  onClick={() => handleIncrementPoints('LIDERAZGO')}
-                  disabled={isUpdatingPoints}
-                  icon={<Activity size={16} />}
+                  icon={<Star size={16} />}
                 />
               </div>
 

@@ -433,6 +433,7 @@ function updateAgentPoints(data) {
 
     // Notificación de XP si es un cambio positivo
     if (data.points > 0) {
+      // Evitar notificaciones duplicadas en un corto periodo (opcional, pero buena práctica)
       const messages = [
         "¡Excelente trabajo, Agente! Has ganado méritos.",
         "Tu fe y disciplina están rindiendo frutos. +XP",
@@ -1447,17 +1448,29 @@ function getDailyVerse() {
      })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Buscar el verso de hoy por fecha (formato YYYY-MM-DD)
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Buscar el verso de hoy por fecha
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const todayFormat2 = Utilities.formatDate(today, "GMT-4", "dd/MM/yyyy");
+  
   const headers = values[0];
   const dateIdx = headers.indexOf('DATE');
   const verseIdx = headers.indexOf('VERSE');
   const refIdx = headers.indexOf('REFERENCE');
 
   const verseFound = values.slice(1).find(row => {
-    const rowDate = row[dateIdx];
-    const rowDateStr = rowDate instanceof Date ? rowDate.toISOString().split('T')[0] : String(rowDate);
-    return rowDateStr === todayStr;
+    let rowDate = row[dateIdx];
+    if (!rowDate) return false;
+    
+    // Convertir cualquier formato de fecha a string YYYY-MM-DD para comparar
+    let rowDateStr = "";
+    if (rowDate instanceof Date) {
+      rowDateStr = rowDate.toISOString().split('T')[0];
+    } else {
+      rowDateStr = String(rowDate).trim();
+    }
+    
+    return rowDateStr === todayStr || rowDateStr === todayFormat2;
   });
 
   if (verseFound) {

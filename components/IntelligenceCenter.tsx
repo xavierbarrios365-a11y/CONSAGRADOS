@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Agent, UserRole, AppView } from '../types';
+import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
+import DailyVerse from './DailyVerse';
 import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
@@ -16,9 +17,10 @@ interface CIUProps {
   visitorCount?: number;
   onRefreshIntel?: () => void;
   isRefreshingIntel?: boolean;
+  dailyVerse?: DailyVerseType | null;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, dailyVerse }) => {
   const [subView, setSubView] = useState<'PROFILE' | 'RANKING'>('PROFILE');
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
@@ -202,6 +204,10 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               NODO DE INTELIGENCIA
             </h1>
             <p className="text-[10px] text-[#ffb700]/70 font-black uppercase tracking-[0.5em] opacity-70">Unified Intelligence Center // Consagrados 2026</p>
+          </div>
+
+          <div className="w-full lg:w-96">
+            <DailyVerse verse={dailyVerse || null} />
           </div>
 
           <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5">

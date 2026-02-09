@@ -9,7 +9,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -62,6 +62,8 @@ const App: React.FC = () => {
   const [isAuthenticatingBio, setIsAuthenticatingBio] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0); // Iniciado en 0 como se pidió
   const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isRegisteringBio, setIsRegisteringBio] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -156,6 +158,14 @@ const App: React.FC = () => {
       }
     }
   }, [view, currentUser]);
+
+  // Limpiar mensaje de éxito después de unos segundos
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   // 2. Temporizador de Expiración (5 min)
   useEffect(() => {
@@ -405,22 +415,31 @@ const App: React.FC = () => {
 
   const handleRegisterBiometrics = async () => {
     if (!currentUser) return;
-
+    setIsRegisteringBio(true);
     try {
       const credentialId = await registerBiometric(currentUser.id, currentUser.name);
       if (credentialId) {
         const res = await registerBiometrics(currentUser.id, credentialId);
         if (res.success) {
-          alert("BIOMETRÍA REGISTRADA CON ÉXITO. AHORA PUEDES ENTRAR SIN PIN.");
-          syncData();
-        } else {
-          alert("ERROR AL GUARDAR CREDENCIAL EN EL SERVIDOR.");
+          setCurrentUser({ ...currentUser, biometricCredential: credentialId });
+          setSuccessMessage("🛡️ BIOMETRÍA ACTIVADA: ACCESO BLINDADO");
         }
-      } else {
-        alert("REGISTRO BIOMÉTRICO CANCELADO O FALLIDO.");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Fallo Biometría:", error);
       alert("ERROR EN EL SISTEMA BIOMÉTRICO.");
+    } finally {
+      setIsRegisteringBio(false);
+    }
+  };
+
+  const handlePromptNotifications = () => {
+    const oneSignal = (window as any).OneSignal;
+    if (oneSignal) {
+      oneSignal.push(() => {
+        oneSignal.SlidingPermissionPrompt.push({ force: true });
+        setSuccessMessage("🔔 SOLICITUD DE NOTIFICACIONES ENVIADA");
+      });
     }
   };
 
@@ -953,8 +972,12 @@ const App: React.FC = () => {
                 {currentUser && <DigitalIdCard key={`profile-${currentUser.id}`} agent={currentUser} />}
               </div>
 
-              {/* Versículo del Día en Perfil */}
-              <DailyVerse verse={dailyVerse} />
+              {/* Toast de Éxito */}
+              {successMessage && (
+                <div className="w-full bg-green-500/20 border border-green-500/40 rounded-2xl p-4 animate-in slide-in-from-top-4">
+                  <p className="text-[10px] text-green-500 font-black uppercase tracking-widest text-center">{successMessage}</p>
+                </div>
+              )}
 
               {/* Sistema de Rachas (Streaks) */}
               <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-6">
@@ -986,6 +1009,15 @@ const App: React.FC = () => {
                   <h3 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">Seguridad & Acceso</h3>
                 </div>
 
+                {/* Botón para forzar permiso de notificaciones */}
+                <button
+                  onClick={handlePromptNotifications}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-8 text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-95"
+                >
+                  <Plus size={14} className="text-[#ffb700]" />
+                  Recibir Notificaciones Push
+                </button>
+
                 {!biometricAvailable && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 space-y-2">
                     <p className="text-[7px] text-red-500 font-black uppercase tracking-widest text-center">Biometría No Disponible</p>
@@ -998,10 +1030,11 @@ const App: React.FC = () => {
                 {biometricAvailable && currentUser && !currentUser.biometricCredential && (
                   <button
                     onClick={handleRegisterBiometrics}
+                    disabled={isRegisteringBio}
                     className="w-full bg-[#ffb700] border border-[#ffb700]/30 rounded-2xl py-4 px-8 text-[#001f3f] text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/80 transition-all flex items-center justify-center gap-3 active:scale-95 shadow-[0_10px_30px_rgba(255,183,0,0.2)]"
                   >
-                    <Fingerprint size={18} />
-                    Activar FaceID / Huella
+                    {isRegisteringBio ? <Loader2 size={18} className="animate-spin" /> : <Fingerprint size={18} />}
+                    {isRegisteringBio ? "Procesando..." : "Activar FaceID / Huella"}
                   </button>
                 )}
 

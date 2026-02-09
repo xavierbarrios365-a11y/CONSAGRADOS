@@ -30,10 +30,14 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
         </div>
     );
 
-    // Generar pregunta simple basada en la referencia
-    const correctAnswer = verse.reference.split(' ')[0]; // Ej: "Juan" de "Juan 3:16"
-    const options = [correctAnswer, 'Mateo', 'Marcos', 'Lucas'].sort(() => Math.random() - 0.5);
-    const correctIndex = options.indexOf(correctAnswer);
+    // Generar opciones una sola vez al cargar el componente o cuando cambie el verso
+    const options = React.useMemo(() => {
+        const correctAnswer = verse?.reference.split(' ')[0] || '';
+        return [correctAnswer, 'Mateo', 'Marcos', 'Lucas'].sort(() => Math.random() - 0.5);
+    }, [verse]);
+
+    const correctAnswerStr = verse?.reference.split(' ')[0] || '';
+    const correctIndex = options.indexOf(correctAnswerStr);
 
     const handleAnswer = (index: number) => {
         setSelectedAnswer(index);
@@ -68,15 +72,24 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                     {quizCompleted && <CheckCircle2 size={14} className="text-green-500" />}
                 </div>
 
-                <p className="text-sm md:text-base text-white font-bold italic leading-relaxed font-montserrat">
-                    "{verse.verse}"
-                </p>
+                {!showQuiz ? (
+                    <>
+                        <p className="text-sm md:text-base text-white font-bold italic leading-relaxed font-montserrat">
+                            "{verse.verse}"
+                        </p>
 
-                <div className="pt-2">
-                    <span className="px-4 py-1.5 bg-[#ffb700] text-[#001f3f] text-[9px] font-black uppercase tracking-widest rounded-full font-bebas">
-                        {verse.reference}
-                    </span>
-                </div>
+                        <div className="pt-2">
+                            <span className="px-4 py-1.5 bg-[#ffb700] text-[#001f3f] text-[9px] font-black uppercase tracking-widest rounded-full font-bebas">
+                                {verse.reference}
+                            </span>
+                        </div>
+                    </>
+                ) : (
+                    <div className="py-6 flex flex-col items-center justify-center space-y-2 opacity-50">
+                        <Quote size={40} className="text-gray-500 animate-pulse" />
+                        <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">¿Recordaste el mensaje base?</p>
+                    </div>
+                )}
 
                 {/* Quiz Duolingo-Style */}
                 {!quizCompleted && !showQuiz && (

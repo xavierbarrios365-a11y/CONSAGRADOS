@@ -20,7 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.4.0"; // Simulation, Biometric Fix, OneSignal v16
+  const APP_VERSION = "1.4.1"; // HOME View, DailyVerse Fixes, OS v16 Polish
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [showPin, setShowPin] = useState(false);
   const [loginError, setLoginError] = useState<{ field: 'id' | 'pin' | 'both' | null, message: string | null }>({ field: null, message: null });
 
-  const [view, setView] = useState<AppView>(AppView.PROFILE);
+  const [view, setView] = useState<AppView>(AppView.HOME);
   const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   const [isSyncing, setIsSyncing] = useState(false);
   const [intelReport, setIntelReport] = useState<string>('SISTEMAS EN LÍNEA...');
@@ -79,7 +79,8 @@ const App: React.FC = () => {
     setFoundAgent(null);
     setLoginId('');
     setLoginPin('');
-    setView(AppView.PROFILE);
+    // Al cerrar sesión, el siguiente login debería empezar en HOME (o CIU si es Director)
+    setView(AppView.HOME);
     localStorage.removeItem('consagrados_agent');
     localStorage.removeItem('last_active_time');
     // Mantener el usuario recordado para quiick login
@@ -407,8 +408,8 @@ const App: React.FC = () => {
         setIsLoggedIn(true);
         // Guardar usuario para quick login futuro
         localStorage.setItem('remembered_user', JSON.stringify({ id: user.id, name: user.name, photoUrl: user.photoUrl }));
-        // Direct jump to appropriate view in a single state cycle
-        const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : (user.userRole === UserRole.LEADER ? AppView.DIRECTORY : AppView.PROFILE);
+        // Redirigir según rol
+        const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : AppView.HOME;
         setView(targetView);
         return;
       } else {
@@ -445,7 +446,7 @@ const App: React.FC = () => {
         localStorage.setItem('consagrados_agent', JSON.stringify(user));
         setCurrentUser(user);
         setIsLoggedIn(true);
-        const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : (user.userRole === UserRole.LEADER ? AppView.DIRECTORY : AppView.PROFILE);
+        const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : AppView.HOME;
         setView(targetView);
       } else {
         setLoginError({ field: 'both', message: "FALLO DE AUTENTICACIÓN BIOMÉTRICA." });
@@ -480,12 +481,19 @@ const App: React.FC = () => {
   const handlePromptNotifications = () => {
     const OneSignal = (window as any).OneSignal;
     if (OneSignal) {
-      OneSignal.push(() => {
-        // Estándar OneSignal v16: Notifications.requestPermission()
-        if (OneSignal.Notifications) {
-          OneSignal.Notifications.requestPermission();
-        } else {
-          OneSignal.showNativePrompt();
+      OneSignal.push(async () => {
+        try {
+          // Estándar OneSignal v16: Notifications.requestPermission()
+          if (OneSignal.Notifications) {
+            await OneSignal.Notifications.requestPermission();
+            setSuccessMessage("🔔 SOLICITUD DE PERMISOS LANZADA");
+          } else {
+            OneSignal.showNativePrompt();
+            setSuccessMessage("🔔 PROTOCOLO DE NOTIFICACIÓN ACTIVADO");
+          }
+        } catch (err) {
+          console.error("OneSignal Error:", err);
+          alert("ERROR AL LANZAR NOTIFICACIONES: " + err);
         }
       });
     } else {
@@ -662,6 +670,52 @@ const App: React.FC = () => {
     const effectiveRole = viewingAsRole || currentUser?.userRole || UserRole.STUDENT;
 
     switch (view) {
+      case AppView.HOME:
+        return (
+          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-2xl mx-auto">
+            <div className="flex flex-col items-center text-center space-y-2 mb-4">
+              <h2 className="text-4xl font-bebas font-black text-white tracking-widest">BIENVENIDO, AGENTE</h2>
+              <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em]">Nodo de Control Central // {currentUser?.name.split(' ')[0]}</p>
+            </div>
+
+            {/* Status Radar: Racha y Tareas */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-gradient-to-br from-orange-500/20 to-transparent border border-orange-500/30 rounded-[2.5rem] p-8 flex items-center justify-between overflow-hidden relative group">
+                <div className="absolute -right-4 -top-4 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                  <Activity size={100} className="text-orange-500" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Tu Racha Actual</p>
+                  <p className="text-5xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
+                  <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest mt-2">{currentUser?.streakCount === 0 ? '¡COMIENZA TU RACHA HOY!' : '¡MANTÉN EL FUEGO ENCENDIDO!'}</p>
+                </div>
+                <div className="relative z-10 p-4 bg-orange-500 rounded-3xl shadow-[0_10px_30px_rgba(249,115,22,0.4)]">
+                  <Activity size={32} className="text-white animate-pulse" />
+                </div>
+              </div>
+
+              <DailyVerse verse={dailyVerse} onQuizComplete={handleVerseQuizComplete} />
+            </div>
+
+            {/* Quick Links for Students */}
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setView(AppView.ACADEMIA)}
+                className="p-6 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95"
+              >
+                <Database size={24} className="text-[#ffb700]" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Academia</span>
+              </button>
+              <button
+                onClick={() => setView(AppView.CONTENT)}
+                className="p-6 bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95"
+              >
+                <BookOpen size={24} className="text-[#ffb700]" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Material</span>
+              </button>
+            </div>
+          </div>
+        );
       case AppView.CIU:
         return <CIUModule
           key={`ciu-${currentUser?.id}`}

@@ -75,7 +75,8 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
   VISITOR = 'VISITOR',
   ACADEMIA = 'ACADEMIA',
-  RANKING = 'RANKING'
+  RANKING = 'RANKING',
+  HOME = 'home'
 }
 
 export interface Visitor {

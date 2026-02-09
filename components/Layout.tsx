@@ -18,6 +18,7 @@ const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, notificationCount }) => {
   const allNavItems = [
+    { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
     { id: AppView.DIRECTORY, icon: <Users size={20} />, label: 'Directorio', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.SCANNER, icon: <QrCode size={20} />, label: 'Asistencia', roles: [UserRole.DIRECTOR, UserRole.LEADER] },

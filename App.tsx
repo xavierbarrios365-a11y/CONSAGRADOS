@@ -20,7 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.4.1"; // HOME View, DailyVerse Fixes, OS v16 Polish
+  const APP_VERSION = "1.5.0"; // Final Polish: Bio Resilience, Memory Quiz, OS Ready
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -449,10 +449,15 @@ const App: React.FC = () => {
         const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : AppView.HOME;
         setView(targetView);
       } else {
-        setLoginError({ field: 'both', message: "FALLO DE AUTENTICACIÓN BIOMÉTRICA." });
+        setLoginError({ field: 'both', message: "BIOMETRÍA NO VINCULADA O RECHAZADA. ENTRA CON PIN PARA RE-VINCULAR." });
       }
-    } catch (err) {
-      setLoginError({ field: 'both', message: "ERROR EN PROTOCOLO BIOMÉTRICO." });
+    } catch (err: any) {
+      console.error("Bio Error:", err);
+      if (err.name === 'NotAllowedError' || err.name === 'NotFoundError') {
+        setLoginError({ field: 'both', message: "ESTE EQUIPO NO TIENE TU LLAVE. ENTRA CON PIN Y ACTÍVALA EN PERFIL." });
+      } else {
+        setLoginError({ field: 'both', message: "FALLO DE SEGURIDAD BIOMÉTRICA." });
+      }
     } finally {
       setIsAuthenticatingBio(false);
     }
@@ -480,6 +485,13 @@ const App: React.FC = () => {
 
   const handlePromptNotifications = () => {
     const OneSignal = (window as any).OneSignal;
+    const isReady = (window as any).OneSignalReady;
+
+    if (!isReady) {
+      setSuccessMessage("📡 CONECTANDO CON NODO DE NOTIFICACIONES...");
+      return;
+    }
+
     if (OneSignal) {
       OneSignal.push(async () => {
         try {

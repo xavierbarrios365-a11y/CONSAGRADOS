@@ -99,11 +99,14 @@
         appId: "c05267b7-737a-4f55-b692-3c2fe2d20677",
         safari_web_id: "web.onesignal.auto.17b43c6b-967b-402a-9e11-e6c1e345678a",
         notifyButton: {
-          enable: false, // Usaremos nuestro propio botón táctico
+          enable: false,
         },
         allowLocalhood: true,
         serviceWorkerParam: { scope: "/" },
         serviceWorkerPath: "sw.js",
+      }).then(() => {
+        window.OneSignalReady = true;
+        console.log("OneSignal v16 Ready");
       });
     });
   </script>

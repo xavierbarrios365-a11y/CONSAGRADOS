@@ -30,14 +30,18 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
         </div>
     );
 
-    // Generar opciones una sola vez al cargar el componente o cuando cambie el verso
-    const options = React.useMemo(() => {
-        const correctAnswer = verse?.reference.split(' ')[0] || '';
-        return [correctAnswer, 'Mateo', 'Marcos', 'Lucas'].sort(() => Math.random() - 0.5);
-    }, [verse]);
+    // Generar opciones una sola vez cuando el componente se monta o el verso cambia
+    const [options, setOptions] = useState<string[]>([]);
+    const [correctIndex, setCorrectIndex] = useState<number>(-1);
 
-    const correctAnswerStr = verse?.reference.split(' ')[0] || '';
-    const correctIndex = options.indexOf(correctAnswerStr);
+    useEffect(() => {
+        if (verse) {
+            const correctAnswer = verse.reference.split(' ')[0];
+            const opts = [correctAnswer, 'Mateo', 'Marcos', 'Lucas'].sort(() => Math.random() - 0.5);
+            setOptions(opts);
+            setCorrectIndex(opts.indexOf(correctAnswer));
+        }
+    }, [verse]);
 
     const handleAnswer = (index: number) => {
         setSelectedAnswer(index);
@@ -103,20 +107,24 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                 )}
 
                 {showQuiz && !quizCompleted && (
-                    <div className="w-full mt-4 space-y-3 animate-in slide-in-from-bottom-2">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">¿De qué libro es este versículo?</p>
-                        <div className="grid grid-cols-2 gap-2">
+                    <div className="w-full mt-4 space-y-4 animate-in slide-in-from-bottom-2 bg-black/20 p-4 rounded-[2rem] border border-white/5">
+                        <div className="flex flex-col items-center gap-1 mb-2">
+                            <Sparkles className="text-[#ffb700] animate-bounce" size={20} />
+                            <p className="text-[11px] text-white font-black uppercase tracking-widest">¡RETO DE MEMORIA ACTIVO!</p>
+                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">¿De qué libro era el versículo?</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                             {options.map((opt, i) => (
                                 <button
                                     key={i}
                                     onClick={() => handleAnswer(i)}
                                     disabled={selectedAnswer !== null}
-                                    className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95
+                                    className={`py-4 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg
                                         ${selectedAnswer === i
                                             ? (isCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
-                                            : 'bg-white/10 text-white hover:bg-white/20'
+                                            : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10 hover:text-white'
                                         }
-                                        ${selectedAnswer !== null && i === correctIndex && 'ring-2 ring-green-500'}
+                                        ${selectedAnswer !== null && i === correctIndex && 'ring-2 ring-green-500 border-green-500'}
                                     `}
                                 >
                                     {opt}
@@ -124,8 +132,8 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                             ))}
                         </div>
                         {isCorrect === false && (
-                            <p className="text-red-500 text-[9px] font-bold flex items-center justify-center gap-1">
-                                <XCircle size={12} /> Intenta de nuevo mañana
+                            <p className="text-red-500 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1 mt-2 animate-bounce">
+                                <XCircle size={14} /> El nodo no olvida. Intenta mañana.
                             </p>
                         )}
                     </div>

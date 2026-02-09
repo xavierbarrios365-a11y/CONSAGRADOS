@@ -14,6 +14,11 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
+    // Generar opciones una sola vez cuando el componente se monta o el verso cambia
+    // IMPORTANTE: Todos los hooks deben estar ANTES de cualquier return condicional
+    const [options, setOptions] = useState<string[]>([]);
+    const [correctIndex, setCorrectIndex] = useState<number>(-1);
+
     // Verificar si ya completó el quiz hoy
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -23,17 +28,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
         }
     }, []);
 
-    if (!verse) return (
-        <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 animate-pulse">
-            <div className="h-4 bg-white/10 rounded w-3/4 mb-4 mx-auto"></div>
-            <div className="h-3 bg-white/5 rounded w-1/4 mx-auto"></div>
-        </div>
-    );
-
-    // Generar opciones una sola vez cuando el componente se monta o el verso cambia
-    const [options, setOptions] = useState<string[]>([]);
-    const [correctIndex, setCorrectIndex] = useState<number>(-1);
-
+    // Generar opciones cuando el verso cambia
     useEffect(() => {
         if (verse) {
             const correctAnswer = verse.reference.split(' ')[0];
@@ -42,6 +37,13 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
             setCorrectIndex(opts.indexOf(correctAnswer));
         }
     }, [verse]);
+
+    if (!verse) return (
+        <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 animate-pulse">
+            <div className="h-4 bg-white/10 rounded w-3/4 mb-4 mx-auto"></div>
+            <div className="h-3 bg-white/5 rounded w-1/4 mx-auto"></div>
+        </div>
+    );
 
     const handleAnswer = (index: number) => {
         setSelectedAnswer(index);

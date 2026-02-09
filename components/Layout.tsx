@@ -50,9 +50,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
                 {notificationCount > 9 ? '+9' : notificationCount}
               </span>
             )}
-            {notificationCount === 0 && (
-              <span className="absolute -top-0 -right-0 h-2 w-2 bg-[#ffb700]/40 rounded-full border-2 border-[#001f3f]"></span>
-            )}
+            {/* Indicador sutil de estado activo - sin punto confuso */}
           </div>
 
           <div className="text-right">

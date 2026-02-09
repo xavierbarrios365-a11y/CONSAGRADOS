@@ -19,6 +19,37 @@ import { DailyVerse as DailyVerseType } from './types';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
+const LoadingScreen = ({ message }: { message: string }) => (
+  <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 space-y-6 animate-in fade-in">
+    <div className="w-20 h-20 bg-[#ffb700]/10 rounded-full flex items-center justify-center border-2 border-[#ffb700]/20 animate-pulse shadow-[0_0_50px_rgba(255,183,0,0.1)]">
+      <Activity className="text-[#ffb700]" size={40} />
+    </div>
+    <div className="space-y-2 text-center">
+      <p className="text-[#ffb700] text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">{message}</p>
+      <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden mx-auto">
+        <div className="w-1/2 h-full bg-[#ffb700] animate-[shimmer_2s_infinite] shadow-[0_0_10px_rgba(255,183,0,0.5)]"></div>
+      </div>
+    </div>
+    <style>{`
+      @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+    `}</style>
+  </div>
+);
+
+const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClick: () => void, disabled: boolean, icon: any }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/10 hover:border-[#ffb700]/50 transition-all disabled:opacity-50 font-bebas"
+  >
+    <div className="flex items-center gap-3">
+      <span className="text-[#ffb700]">{icon}</span>
+      {label}
+    </div>
+    <div className="w-5 h-5 rounded-full bg-[#ffb700]/10 border border-[#ffb700]/30 flex items-center justify-center text-[10px] text-[#ffb700]">+</div>
+  </button>
+);
+
 const App: React.FC = () => {
   const APP_VERSION = "1.6.0"; // UI Refactor, Pure Session, Minimalist Profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -76,7 +107,12 @@ const App: React.FC = () => {
   const handleLogout = useCallback(() => {
     console.log("🔴 PROTOCOLO DE CIERRE DE SESIÓN INICIADO");
 
-    // 1. Limpiar estados de UI y Sesión
+    // 1. Limpiar persistencia de inmediato
+    localStorage.removeItem('consagrados_agent');
+    localStorage.removeItem('last_active_time');
+    localStorage.removeItem('remembered_user'); // Limpiar también usuario recordado para evitar bucles
+
+    // 2. Limpiar estados
     setIsLoggedIn(false);
     setCurrentUser(null);
     setFoundAgent(null);
@@ -84,27 +120,13 @@ const App: React.FC = () => {
     setLoginPin('');
     setView(AppView.HOME);
     setShowSessionWarning(false);
-
-    // 2. Limpiar persistencia esencial
-    localStorage.removeItem('consagrados_agent');
-    localStorage.removeItem('last_active_time');
-
-    // 3. Reset flags de estados transientes
     setIsMustChangeFlow(false);
     setShowForgotPassword(false);
-    setForgotPasswordStep('ID');
-    setResetError('');
-    setRevealedPin('');
-    setSecurityAnswerInput('');
-    setSearchQuery('');
-    setManualSearchQuery('');
-    setShowManualResults(false);
 
-    // 4. Forzar purga total de memoria mediante recarga tras un breve delay
+    // 3. Forzar purga total
     setTimeout(() => {
-      console.log("♻️ RECARGA DE SISTEMA PARA PURGA TOTAL");
-      window.location.reload();
-    }, 200);
+      window.location.href = window.location.origin + window.location.pathname + "?v=" + Date.now();
+    }, 50);
   }, []);
 
   const resetSessionTimer = useCallback(() => {
@@ -344,8 +366,10 @@ const App: React.FC = () => {
           );
           if (updatedSelf) {
             setCurrentUser(updatedSelf);
-            // PERSISTENCIA: Actualizar local storage para evitar datos obsoletos al recargar
-            localStorage.setItem('consagrados_agent', JSON.stringify(updatedSelf));
+            // PERSISTENCIA: Solo actualizar si todavía estamos logueados (evita sobreescribir logout)
+            if (localStorage.getItem('consagrados_agent')) {
+              localStorage.setItem('consagrados_agent', JSON.stringify(updatedSelf));
+            }
           }
         }
       }
@@ -474,17 +498,30 @@ const App: React.FC = () => {
     if (!currentUser) return;
     setIsRegisteringBio(true);
     try {
-      const credentialId = await registerBiometric(currentUser.id, currentUser.name);
+      // Pasar credenciales existentes para evitar duplicados y permitir múltiples dispositivos
+      const existingCredentials = currentUser.biometricCredential
+        ? [currentUser.biometricCredential]
+        : [];
+
+      const credentialId = await registerBiometric(
+        currentUser.id,
+        currentUser.name,
+        existingCredentials
+      );
+
       if (credentialId) {
         const res = await registerBiometrics(currentUser.id, credentialId);
         if (res.success) {
           setCurrentUser({ ...currentUser, biometricCredential: credentialId });
+          localStorage.setItem('consagrados_agent', JSON.stringify({ ...currentUser, biometricCredential: credentialId }));
           setSuccessMessage("🛡️ BIOMETRÍA ACTIVADA: ACCESO BLINDADO");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Fallo Biometría:", error);
-      alert("ERROR EN EL SISTEMA BIOMÉTRICO.");
+      // Mostrar mensaje específico del error
+      const msg = error.message || "ERROR EN EL SISTEMA BIOMÉTRICO.";
+      alert(msg);
     } finally {
       setIsRegisteringBio(false);
     }
@@ -531,11 +568,12 @@ const App: React.FC = () => {
     const isWeekComplete = updatedTasks.length > 0 && updatedTasks.every(t => t.completed);
 
     try {
-      const res = await updateAgentStreaks(currentUser.id, isWeekComplete, updatedTasks);
+      // Lógica de racha diaria: siempre enviamos que se completó el verso
+      const res = await updateAgentStreaks(currentUser.id, true, updatedTasks);
       if (res.success) {
         setCurrentUser({ ...currentUser, weeklyTasks: updatedTasks, streakCount: res.streak });
         setSuccessMessage("🛡️ RACHA ACTUALIZADA: SABIDURÍA REGISTRADA");
-        setTimeout(() => setSuccessMessage(null), 3000);
+        syncData(true); // Sincronizar en segundo plano
       }
     } catch (err) {
       console.error("Error al actualizar racha por verso:", err);
@@ -805,7 +843,7 @@ const App: React.FC = () => {
               <div className="flex-1 min-h-[450px] relative bg-black/40 rounded-[3rem] border-2 border-white/5 overflow-hidden shadow-inner group">
                 {scanStatus === 'SCANNING' ? (
                   <>
-                    <video ref={videoRef} className="w-full h-full object-cover grayscale opacity-60" playsInline />
+                    <video ref={videoRef} className="w-full h-full object-cover grayscale opacity-60" playsInline autoPlay muted />
                     <div className="absolute inset-0 border-[50px] border-black/60 flex items-center justify-center">
                       <div className="w-64 h-64 border-2 border-[#ffb700] rounded-3xl relative">
                         <div className="absolute top-0 left-0 w-full h-1 bg-[#ffb700] shadow-[0_0_30px_rgba(255,183,0,1)] animate-scan-line"></div>
@@ -1345,6 +1383,11 @@ const App: React.FC = () => {
     );
   }
 
+  // SAFETY CHECK: Evitar "Pantalla Azul" si isLoggedIn es true pero currentUser aún no está hidratado
+  if (isLoggedIn && !currentUser) {
+    return <LoadingScreen message="CONECTANDO CON EL NODO CENTRAL..." />;
+  }
+
   return (
     <Layout
       activeView={view}
@@ -1449,19 +1492,5 @@ const App: React.FC = () => {
     </Layout>
   );
 };
-
-const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClick: () => void, disabled: boolean, icon: any }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#ffb700]/10 hover:border-[#ffb700]/50 transition-all disabled:opacity-50 font-bebas"
-  >
-    <div className="flex items-center gap-3">
-      <span className="text-[#ffb700]">{icon}</span>
-      {label}
-    </div>
-    <div className="w-5 h-5 rounded-full bg-[#ffb700]/10 border border-[#ffb700]/30 flex items-center justify-center text-[10px] text-[#ffb700]">+</div>
-  </button>
-);
 
 export default App;

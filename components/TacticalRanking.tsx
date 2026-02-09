@@ -96,25 +96,25 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                             <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5 shadow-inner">
                                 <button
                                     onClick={() => setActiveCategory('AGENTS')}
-                                    className={`flex-1 py-3 px-6 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 ${activeCategory === 'AGENTS' ? 'bg-[#FFB700] text-[#001f3f]' : 'text-white/40 hover:text-white'}`}
+                                    className={`flex-1 py-3 px-2 md:px-6 rounded-xl text-[8px] md:text-[10px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 ${activeCategory === 'AGENTS' ? 'bg-[#FFB700] text-[#001f3f]' : 'text-white/40 hover:text-white'}`}
                                 >
-                                    <Users size={14} /> Ranking Agentes
+                                    <Users size={14} /> Agentes
                                 </button>
                                 <button
                                     onClick={() => setActiveCategory('LEADERS')}
-                                    className={`flex-1 py-3 px-6 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 ${activeCategory === 'LEADERS' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                    className={`flex-1 py-3 px-2 md:px-6 rounded-xl text-[8px] md:text-[10px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 ${activeCategory === 'LEADERS' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
                                 >
-                                    <Crown size={14} /> Ranking Líderes
+                                    <Crown size={14} /> Líderes
                                 </button>
                             </div>
 
                             {activeCategory === 'AGENTS' && (
-                                <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
+                                <div className="flex gap-1 p-1 bg-black/20 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-[90vw] md:max-w-none">
                                     {tiers.map(tier => (
                                         <button
                                             key={tier}
                                             onClick={() => setActiveTier(tier)}
-                                            className={`flex-1 py-2 px-4 rounded-lg text-[8px] font-black uppercase transition-all whitespace-nowrap border ${activeTier === tier ? 'bg-white/10 text-white border-white/20' : 'text-white/30 hover:text-white/50 border-transparent'}`}
+                                            className={`flex-1 py-2 px-3 rounded-lg text-[7px] md:text-[8px] font-black uppercase transition-all whitespace-nowrap border ${activeTier === tier ? 'bg-white/10 text-white border-white/20' : 'text-white/30 hover:text-white/50 border-transparent'}`}
                                         >
                                             {tier}
                                         </button>

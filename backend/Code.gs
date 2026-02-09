@@ -20,7 +20,6 @@ function getGlobalConfig() {
     DIRECTORY_SHEET_NAME: 'DIRECTORIO_OFICIAL',
     ENROLLMENT_SHEET_NAME: 'INSCRIPCIONES',
     ATTENDANCE_SHEET_NAME: 'ASISTENCIA',
-    ATTENDANCE_SHEET_NAME: 'ASISTENCIA',
     GUIAS_SHEET_NAME: 'GUIAS',
     ACADEMY_COURSES_SHEET: 'ACADEMIA_CURSOS',
     ACADEMY_LESSONS_SHEET: 'ACADEMIA_LECCIONES',
@@ -377,12 +376,15 @@ function getVisitorRadar() {
   
   const radar = [];
   visitorMap.forEach((count, id) => {
-    radar.push({
-      id: id,
-      name: id, // El ID de un visitante suele ser su nombre ingresado manualmente
-      visits: count,
-      status: count >= 2 ? 'POSIBLE RECLUTA' : 'VISITANTE'
-    });
+    // Solo incluir en el radar si ha venido 3 o más veces
+    if (count >= 3) {
+      radar.push({
+        id: id,
+        name: id, 
+        visits: count,
+        status: 'INSCRIPCIÓN INMEDIATA'
+      });
+    }
   });
   
   // Ordenar por visitas (más frecuentes primero)
@@ -1490,6 +1492,7 @@ function getDailyVerse() {
 
 /**
  * @description Actualiza el contador de rachas y tareas semanales de un agente.
+ * v3: Lógica de racha DIARIA vinculada a la fecha.
  */
 function updateStreaks(data) {
   const CONFIG = getGlobalConfig();
@@ -1501,55 +1504,52 @@ function updateStreaks(data) {
   const headers = values[0];
   const agentIdIdx = headers.indexOf('AGENT_ID');
   const streakIdx = headers.indexOf('STREAK_COUNT');
-  const lastWeekIdx = headers.indexOf('LAST_COMPLETED_WEEK');
+  const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE'); 
   const tasksIdx = headers.indexOf('TASKS_JSON');
 
   const rowIdx = values.findIndex(row => String(row[agentIdIdx]) === String(data.agentId));
   
-  const currentWeek = getWeekNumber(new Date());
+  const today = new Date();
+  const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
   
   const streakData = {
     AGENT_ID: data.agentId,
     STREAK_COUNT: 0,
-    LAST_COMPLETED_WEEK: '',
+    LAST_COMPLETED_DATE: '',
     TASKS_JSON: JSON.stringify(data.tasks || [])
   };
 
   if (rowIdx !== -1) {
-    streakData.STREAK_COUNT = values[rowIdx][streakIdx];
-    streakData.LAST_COMPLETED_WEEK = values[rowIdx][lastWeekIdx];
+    streakData.STREAK_COUNT = parseInt(values[rowIdx][streakIdx]) || 0;
+    streakData.LAST_COMPLETED_DATE = String(values[rowIdx][lastDateIdx]);
     
-    // Lógica de racha
-    if (data.isWeekComplete) {
-      if (streakData.LAST_COMPLETED_WEEK !== currentWeek) {
-        streakData.STREAK_COUNT = (parseInt(streakData.STREAK_COUNT) || 0) + 1;
-        streakData.LAST_COMPLETED_WEEK = currentWeek;
-        
-        // Notificación de Racha
-        sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de la semana. ¡Tu racha ahora es de ${streakData.STREAK_COUNT}!`);
+    // Si hoy completó la tarea y no se había registrado hoy
+    if (streakData.LAST_COMPLETED_DATE !== todayStr) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
+      
+      // Si la última vez fue ayer, +1. Si no, racha = 1.
+      if (streakData.LAST_COMPLETED_DATE === yesterdayStr) {
+        streakData.STREAK_COUNT += 1;
+      } else {
+        streakData.STREAK_COUNT = 1;
       }
+      streakData.LAST_COMPLETED_DATE = todayStr;
+      
+      sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakData.STREAK_COUNT} días!`);
     }
     
-    const row = [streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_WEEK, streakData.TASKS_JSON];
+    const row = [streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_DATE, streakData.TASKS_JSON];
     sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);
   } else {
-    // Nuevo registro
-    if (data.isWeekComplete) {
-      streakData.STREAK_COUNT = 1;
-      streakData.LAST_COMPLETED_WEEK = currentWeek;
-    }
-    sheet.appendRow([streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_WEEK, streakData.TASKS_JSON]);
+    // Nuevo registro: Primera racha
+    streakData.STREAK_COUNT = 1;
+    streakData.LAST_COMPLETED_DATE = todayStr;
+    sheet.appendRow([streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_DATE, streakData.TASKS_JSON]);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakData.STREAK_COUNT })).setMimeType(ContentService.MimeType.JSON);
-}
-
-function getWeekNumber(d) {
-  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${weekNo}`;
 }
 
 

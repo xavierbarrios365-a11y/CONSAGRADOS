@@ -53,12 +53,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
             {/* Indicador sutil de estado activo - sin punto confuso */}
           </div>
 
-          <div className="text-right">
-            <p className="text-[10px] font-black text-white uppercase leading-none">{userName.split(' ')[0]}</p>
-            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest">{userRole}</p>
+          <div className="text-right hidden xs:block">
+            <p className="text-[10px] font-black text-white uppercase leading-none tracking-wider">{userName.split(' ')[0]}</p>
+            <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest opacity-80">{userRole}</p>
           </div>
-          <button onClick={onLogout} className="p-2 text-gray-500 hover:text-white transition-colors bg-white/5 rounded-lg">
-            <LogOut size={16} />
+          <button onClick={onLogout} className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group" title="Cerrar Sesión">
+            <LogOut size={18} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
         </div>
       </header>
@@ -89,18 +89,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-xl px-4 py-3 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-2xl px-6 py-4 flex justify-around items-center z-40 pb-[max(1.2rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         {filteredNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center transition-all active:scale-90 ${activeView === item.id ? 'text-[#ffb700]' : 'text-gray-500'
+            className={`flex flex-col items-center transition-all active:scale-90 relative ${activeView === item.id ? 'text-[#ffb700]' : 'text-gray-500 hover:text-gray-400'
               }`}
             title={item.label}
           >
-            <div className={`p-2 rounded-xl ${activeView === item.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/20' : ''}`}>
+            <div className={`p-2.5 rounded-2xl transition-all duration-300 ${activeView === item.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/20 shadow-[0_0_20px_rgba(255,183,0,0.1)]' : ''}`}>
               {item.icon}
             </div>
+            {activeView === item.id && (
+              <div className="absolute -bottom-1 w-1 h-1 bg-[#ffb700] rounded-full animate-pulse"></div>
+            )}
           </button>
         ))}
       </nav>

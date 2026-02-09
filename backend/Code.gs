@@ -345,13 +345,13 @@ function registerIdScan(payload) {
      }
    }
    
-   // AUTO-XP: +10 por asistencia
+   // AUTO-XP: +10 por asistencia -> Sumar a Liderazgo para visualización frontal
    if (agentRowIdx !== -1) {
      const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
-     const xpCol = headers.indexOf('XP') + 1 || headers.indexOf('PUNTOS XP') + 1;
-     if (xpCol > 0) {
-       const currentXp = parseInt(directorySheet.getRange(agentRowIdx, xpCol).getValue()) || 0;
-       directorySheet.getRange(agentRowIdx, xpCol).setValue(currentXp + 10);
+     const leadCol = headers.indexOf('PUNTOS LIDERAZGO') + 1;
+     if (leadCol > 0) {
+       const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
+       directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
      }
    }
    
@@ -1580,13 +1580,13 @@ function updateStreaks(data) {
             const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
             const dirData = dirSheet.getDataRange().getValues();
             const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
-            const xpColIdx = (dirHeaders.indexOf('XP') + 1) || (dirHeaders.indexOf('PUNTOS XP') + 1);
+            const leadColIdx = (dirHeaders.indexOf('PUNTOS LIDERAZGO') + 1);
             const idColIdx = dirHeaders.indexOf('ID');
 
             const agentRowIdx = dirData.findIndex(row => String(row[idColIdx]) === String(data.agentId));
-            if (agentRowIdx !== -1 && xpColIdx > 0) {
-              const currentXp = parseInt(dirSheet.getRange(agentRowIdx + 1, xpColIdx).getValue()) || 0;
-              dirSheet.getRange(agentRowIdx + 1, xpColIdx).setValue(currentXp + bonusXP);
+            if (agentRowIdx !== -1 && leadColIdx > 0) {
+              const currentLead = parseInt(dirSheet.getRange(agentRowIdx + 1, leadColIdx).getValue()) || 0;
+              dirSheet.getRange(agentRowIdx + 1, leadColIdx).setValue(currentLead + bonusXP);
               
               sendPushNotification("⭐ BONO DE RACHA", `¡Excelente constancia! Has ganado +${bonusXP} XP extra por tu hito de ${streakData.STREAK_COUNT} días.`);
             }

@@ -256,12 +256,12 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       const now = Date.now();
       const diff = now - lastActiveTime;
-      if (diff >= 300000) {
+      if (diff >= 2700000) { // 45 MINUTOS DE GRACIA
         handleLogout();
-      } else if (diff >= 210000) { // Aviso a los 3.5 min para dar tiempo en móvil
+      } else if (diff >= 2100000) { // Aviso a los 35 min
         setShowSessionWarning(true);
       }
-    }, 5000); // Intervalo más largo para ahorrar batería
+    }, 10000); // Intervalo de 10s para ahorro energético
 
     return () => clearInterval(interval);
   }, [isLoggedIn, lastActiveTime, handleLogout]);
@@ -275,12 +275,12 @@ const App: React.FC = () => {
         .then(res => res.json())
         .then(data => {
           if (data.ip && data.ip !== sessionIp) {
-            alert("CAMBIO DE RED DETECTADO. Cierre de sesión por seguridad.");
-            handleLogout();
+            console.warn("CAMBIO DE RED DETECTADO (ROAMING). SESIÓN PERSISTENTE ACTIVADA.");
+            // handleLogout(); // Desactivado por feedback para mejorar estabilidad en móviles
           }
         })
         .catch(console.error);
-    }, 60000);
+    }, 120000); // Cada 2 minutos es suficiente
 
     return () => clearInterval(interval);
   }, [isLoggedIn, sessionIp, handleLogout]);
@@ -344,9 +344,9 @@ const App: React.FC = () => {
                   console.error("Error en jsQR loop:", qrErr);
                 }
               }
-              if (active) requestAnimationFrame(scan);
+              if (active) setTimeout(scan, 200); // Reducir a 5 FPS para ahorro de batería masivo en móvil
             };
-            requestAnimationFrame(scan);
+            setTimeout(scan, 200);
           }
         } catch (err) {
           console.error("Error al acceder a la cámara:", err);
@@ -1088,9 +1088,10 @@ const App: React.FC = () => {
         return <TacticalRanking key={`ranking-${currentUser?.id || 'none'}`} agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT:
         return <ContentModule key={`content-${currentUser?.id}`} userRole={effectiveRole} />;
+      case AppView.DIRECTORY:
       case AppView.CIU:
         return currentUser ? <CIUModule
-          key={`ciu-${currentUser.id}`}
+          key={`ciu-dir-${currentUser.id}`}
           agents={agents}
           currentUser={currentUser}
           onUpdateNeeded={() => syncData(true)}
@@ -1099,7 +1100,97 @@ const App: React.FC = () => {
           visitorCount={visitorRadar.length}
           onRefreshIntel={handleRefreshIntel}
           isRefreshingIntel={isRefreshingIntel}
+          dailyVerse={dailyVerse}
         /> : null;
+      case AppView.VISITOR:
+        return (
+          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24 relative min-h-[calc(100svh-160px)]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="text-left space-y-1">
+                <h2 className="text-2xl font-bebas text-white uppercase tracking-widest">Radar de Visitantes</h2>
+                <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest opacity-60 font-montserrat">Seguimiento de posibles reclutas detectados</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="manual-visitor-name"
+                  placeholder="NOMBRE DEL VISITANTE..."
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[10px] font-black uppercase tracking-widest focus:border-[#ffb700] outline-none transition-all flex-1 md:w-64 font-bebas"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value) {
+                      processScan(e.currentTarget.value);
+                      e.currentTarget.value = '';
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const input = document.getElementById('manual-visitor-name') as HTMLInputElement;
+                    if (input.value) {
+                      processScan(input.value);
+                      input.value = '';
+                    }
+                  }}
+                  className="bg-[#ffb700] p-3 rounded-xl text-[#001f3f] shadow-[0_5px_15px_rgba(255,183,0,0.3)] hover:scale-105 active:scale-95 transition-all"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visitorRadar.length === 0 ? (
+                <div className="col-span-full py-20 text-center space-y-4 bg-white/5 rounded-[2.5rem] border border-white/5">
+                  <Target size={40} className="mx-auto text-gray-700" />
+                  <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest font-bebas leading-relaxed">
+                    No se han detectado visitantes nuevos.<br />
+                    Los visitantes aparecen automáticamente al escanear IDs no registrados.
+                  </p>
+                </div>
+              ) : (
+                visitorRadar.map(v => (
+                  <div
+                    key={v.id}
+                    onClick={() => {
+                      setScannedId(v.id);
+                      setView(AppView.SCANNER);
+                    }}
+                    className={`p-6 rounded-[2.5rem] border transition-all cursor-pointer relative overflow-hidden group ${v.status === 'INSCRIPCIÓN INMEDIATA'
+                      ? 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                      }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${v.status === 'INSCRIPCIÓN INMEDIATA' ? 'bg-orange-500/20 border-orange-500/40 text-orange-500' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                        <Target size={24} className={v.status === 'INSCRIPCIÓN INMEDIATA' ? 'animate-pulse' : ''} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-white uppercase truncate font-bebas tracking-wider">{v.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">{v.visits || v.absences} {v.visits ? 'VISITAS' : 'FALTAS'}</span>
+                          <span className={`text-[7px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${v.status === 'INSCRIPCIÓN INMEDIATA' || v.status === 'SALIDA DEL SISTEMA' ? 'bg-orange-500 text-white' : 'bg-white/10 text-gray-500'}`}>{v.status}</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-colors" />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                const name = window.prompt("INGRESA NOMBRE DEL VISITANTE:");
+                if (name) processScan(name);
+              }}
+              className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(249,115,22,0.4)] z-[60] active:scale-90 transition-all border-2 border-white/20"
+            >
+              <Plus size={28} />
+            </button>
+          </div>
+        );
+      case AppView.ENROLLMENT:
+        return <EnrollmentForm onSuccess={handleEnrollmentSuccess} userRole={currentUser?.userRole} />;
       default: return null;
     }
   };

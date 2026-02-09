@@ -9,7 +9,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -51,7 +51,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.6.5"; // Dashboard Revert, Manual Search Polish
+  const APP_VERSION = "1.6.7"; // Total Restoration & Fixes
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -69,8 +69,6 @@ const App: React.FC = () => {
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
-  const [manualSearchQuery, setManualSearchQuery] = useState('');
-  const [showManualResults, setShowManualResults] = useState(false);
   const [visitorRadar, setVisitorRadar] = useState<Visitor[]>([]);
 
   // Estados de Seguridad y Sesión
@@ -78,7 +76,7 @@ const App: React.FC = () => {
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [sessionIp, setSessionIp] = useState<string>(localStorage.getItem('consagrados_ip') || '');
 
-  // Estados de Seguridad Avanzada (Restaurados)
+  // Estados de Seguridad Avanzada 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordStep, setForgotPasswordStep] = useState<'ID' | 'QUESTION' | 'SUCCESS'>('ID');
   const [securityAnswerInput, setSecurityAnswerInput] = useState('');
@@ -377,33 +375,56 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              <div className="bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col gap-6 overflow-hidden relative shadow-2xl">
+              <div
+                onClick={() => setView(AppView.RANKING)}
+                className="bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col gap-6 overflow-hidden relative shadow-2xl cursor-pointer active:scale-[0.98] transition-all group"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Flame size={120} className="text-[#ffb700]" />
+                </div>
                 <div className="relative z-10 w-full flex justify-between items-center">
                   <div>
-                    <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha Acumulada</p>
+                    <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
                     <p className="text-6xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
                   </div>
-                  <div className="bg-[#ffb700] p-6 rounded-3xl">
+                  <div className="bg-[#ffb700] p-6 rounded-3xl shadow-[0_0_30px_rgba(255,183,0,0.3)]">
                     <Flame size={40} className="text-[#001f3f]" />
                   </div>
                 </div>
-                <div className="w-full space-y-3 relative z-10">
+
+                <div className="w-full space-y-4 relative z-10">
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#ffb700]" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
+                    <div className="h-full bg-[#ffb700] shadow-[0_0_15px_rgba(255,183,0,0.5)] transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
                   </div>
-                  <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest text-center mt-2">OBJETIVO: 365 DÍAS DE CONSAGRACIÓN</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest italic">Objetivo: 365 días</p>
+                    <button className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest flex items-center gap-2">
+                      Ver Racha <ChevronRight size={10} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setView(AppView.CIU)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/30 transition-all active:scale-95 shadow-lg group">
+                <Users size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Gente</span>
+              </button>
               <button onClick={() => setView(AppView.ACADEMIA)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
                 <Database size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
                 <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Academia</span>
               </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <button onClick={() => setView(AppView.CONTENT)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
                 <BookOpen size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
                 <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Material</span>
+              </button>
+              <button onClick={() => setView(AppView.RANKING)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
+                <Trophy size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Ranking</span>
               </button>
             </div>
           </div>
@@ -468,7 +489,7 @@ const App: React.FC = () => {
                     disabled={!scannedId}
                     className="w-full bg-[#ffb700] py-5 rounded-3xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                   >
-                    <CheckCircle2 size={18} /> Confirmar Registro
+                    <CheckCircle2 size={18} /> Confirmar Asistencia
                   </button>
                 </div>
               </div>
@@ -496,12 +517,62 @@ const App: React.FC = () => {
       case AppView.CONTENT: return <ContentModule agents={agents} currentUser={currentUser} setView={setView} onUpdateNeeded={() => syncData(true)} />;
       case AppView.PROFILE:
         return (
-          <div className="p-10 flex flex-col items-center justify-center animate-in fade-in">
+          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-32 max-w-2xl mx-auto font-montserrat flex flex-col items-center">
+            <div className="w-full flex justify-between items-center mb-4">
+              <h2 className="text-3xl font-bebas text-white tracking-widest uppercase truncate">Expediente de Agente</h2>
+              <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                <Shield className="text-[#ffb700]" size={20} />
+              </div>
+            </div>
+
             {currentUser && <DigitalIdCard agent={currentUser} />}
-            <button onClick={handleLogout} className="mt-10 px-10 py-4 bg-red-600/20 border border-red-500/30 rounded-2xl text-red-500 font-black uppercase text-[10px] tracking-widest hover:bg-red-500 hover:text-white transition-all">Cerrar Sesión Táctica</button>
+
+            <div className="w-full grid grid-cols-1 gap-3 mt-6">
+              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
+                <div className="flex items-center gap-3">
+                  <Key size={18} className="text-[#ffb700]" />
+                  Gestionar Seguridad
+                </div>
+                <ChevronRight size={14} className="text-gray-500" />
+              </button>
+              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
+                <div className="flex items-center gap-3">
+                  <Bell size={18} className="text-[#ffb700]" />
+                  Centro de Notificaciones
+                </div>
+                <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-bold">3</div>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-3 px-6 py-5 bg-red-600/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-600 hover:text-white transition-all font-bebas mt-4 shadow-lg active:scale-95"
+              >
+                <LogOut size={18} /> Cerrar Conexión
+              </button>
+            </div>
           </div>
         );
-      case AppView.RANKING: return <TacticalRanking agents={agents} currentUser={currentUser} />;
+      case AppView.RANKING:
+        return (
+          <div className="space-y-0 min-h-full">
+            <div className="bg-[#ffb700] p-8 pb-12 flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-[#001f3f] rounded-full flex items-center justify-center shadow-xl border-4 border-[#ffb700]">
+                <Flame size={32} className="text-[#ffb700] animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-[#001f3f] font-bebas text-4xl font-black tracking-widest">RACHA DIARIA</h3>
+                <p className="text-[10px] text-[#001f3f]/70 font-black uppercase tracking-widest">Consagrados Force 2026</p>
+              </div>
+            </div>
+
+            <div className="px-6 -mt-8">
+              <DailyVerse verse={dailyVerse || null} />
+            </div>
+
+            <div className="p-6">
+              <TacticalRanking agents={agents} currentUser={currentUser} />
+            </div>
+          </div>
+        );
       case AppView.ENROLLMENT: return <EnrollmentForm onSuccess={() => { alert("Inscripción exitosa"); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} />;
       default: return null;
     }
@@ -529,7 +600,7 @@ const App: React.FC = () => {
   if (isLoggedIn && !currentUser) return <LoadingScreen message="INICIALIZANDO CONEXIÓN..." />;
 
   return (
-    <Layout activeView={view} setView={setView} userRole={currentUser?.userRole || UserRole.STUDENT} userName={currentUser?.name || 'Agente'} onLogout={handleLogout}>
+    <Layout activeView={view} setView={setView} userRole={currentUser?.userRole || UserRole.STUDENT} userName={currentUser?.name || 'Agente'} onLogout={handleLogout} notificationCount={notificationCount}>
       <div className="relative h-full overflow-y-auto no-scrollbar">{renderContent()}</div>
 
       {scannedAgentForPoints && (

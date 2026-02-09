@@ -425,9 +425,55 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             )}
           </div>
         </div>
+        {/* DIRECTORIO VISUAL (GRILLA DE AGENTES) */}
+        <div className="mt-12 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <div>
+              <h3 className="text-white font-black text-xs uppercase tracking-widest font-bebas">Directorio de Agentes</h3>
+              <p className="text-[7px] text-[#ffb700]/70 font-bold uppercase tracking-widest font-montserrat">Exploración visual de toda la fuerza</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-[#ffb700] rounded-full animate-pulse"></div>
+              <span className="text-[9px] text-white/40 font-black uppercase tracking-widest">{agents.length} AGENTES</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pb-20 no-scrollbar">
+            {agents.map(a => (
+              <button
+                key={a.id}
+                onClick={() => {
+                  setSelectedAgentId(a.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`group relative aspect-square rounded-3xl overflow-hidden border-2 transition-all p-1 active:scale-95 ${String(selectedAgentId) === String(a.id)
+                  ? 'border-[#ffb700] bg-[#ffb700]/10 shadow-[0_0_20px_rgba(255,183,0,0.2)]'
+                  : 'border-white/5 bg-white/5 hover:border-white/20'
+                  }`}
+              >
+                <img
+                  src={formatDriveUrl(a.photoUrl)}
+                  className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-500"
+                  onError={(e) => { e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"; }}
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center">
+                  <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
+                  <p className="text-[6px] font-bold text-[#ffb700]">{a.xp} XP</p>
+                </div>
+                {String(selectedAgentId) === String(a.id) && (
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-[#ffb700] rounded-full shadow-[0_0_10px_rgba(255,183,0,0.5)]"></div>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */}
     </div>
+      </div >
+  <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */ }
+    </div >
   );
 };
 

@@ -22,16 +22,10 @@ interface CIUProps {
 
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, dailyVerse }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
-  const [searchTerm, setSearchTerm] = useState('');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const filteredAgentsList = agents.filter(a =>
-    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.id.includes(searchTerm)
-  );
 
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
 
@@ -219,41 +213,17 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
 
           <div className="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
-            <div className="w-full md:w-80 relative group">
-              <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Buscador Táctico de Agentes</p>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="BUSCAR POR NOMBRE O ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none hover:bg-[#ffb700]/10 font-bebas transition-all"
-                />
-                {searchTerm && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#001f3f] border border-[#ffb700]/30 rounded-2xl shadow-2xl max-h-64 overflow-y-auto z-[100] p-2 space-y-1 animate-in slide-in-from-top-2">
-                    {filteredAgentsList.length > 0 ? (
-                      filteredAgentsList.slice(0, 10).map(a => (
-                        <button
-                          key={a.id}
-                          onClick={() => {
-                            setSelectedAgentId(a.id);
-                            setSearchTerm('');
-                          }}
-                          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${selectedAgentId === a.id ? 'bg-[#ffb700] text-[#001f3f]' : 'hover:bg-white/5 text-white/70'}`}
-                        >
-                          <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-full object-cover border border-white/10" />
-                          <div className="text-left">
-                            <p className="text-[10px] font-black uppercase leading-none">{a.name}</p>
-                            <p className="text-[8px] opacity-70">ID: {a.id}</p>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="p-4 text-[9px] text-gray-500 font-black uppercase text-center">Sin coincidencias</p>
-                    )}
-                  </div>
-                )}
-              </div>
+            <div className="w-full md:w-72">
+              <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
+              <select
+                value={selectedAgentId}
+                onChange={(e) => setSelectedAgentId(e.target.value)}
+                className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
+              >
+                {agents.map(a => (
+                  <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
+                ))}
+              </select>
             </div>
 
             {currentUser?.userRole === UserRole.DIRECTOR && (
@@ -454,44 +424,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
             )}
           </div>
-        </div>
-      </div>
-      {/* DIRECTORIO VISUAL (GRILLA DE AGENTES) */}
-      <div className="mt-12 space-y-6">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-xl font-bebas font-black text-white uppercase tracking-widest flex items-center gap-3">
-            <Users size={20} className="text-[#ffb700]" />
-            AGENTES EN EL CAMPO ({agents.length})
-          </h3>
-          <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] opacity-60">Status: Operacional</p>
-        </div>
-
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pb-20">
-          {agents.map(a => (
-            <button
-              key={a.id}
-              onClick={() => {
-                setSelectedAgentId(a.id);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className={`flex flex-col items-center gap-3 p-4 rounded-3xl border transition-all active:scale-90 group ${selectedAgentId === a.id ? 'bg-[#ffb700]/10 border-[#ffb700]/40 ring-1 ring-[#ffb700]/20' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
-            >
-              <div className="relative">
-                <img
-                  src={formatDriveUrl(a.photoUrl)}
-                  className={`w-12 h-12 rounded-2xl object-cover border-2 transition-transform group-hover:scale-105 ${selectedAgentId === a.id ? 'border-[#ffb700]' : 'border-white/10'}`}
-                  onError={(e) => {
-                    e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                    e.currentTarget.className = "w-12 h-12 object-cover opacity-20";
-                  }}
-                />
-              </div>
-              <div className="text-center min-w-0 w-full">
-                <p className="text-[7px] font-black text-white uppercase truncate tracking-wide leading-none mb-1">{a.name.split(' ')[0]}</p>
-                <p className="text-[5px] text-[#ffb700] font-bold uppercase tracking-widest opacity-50">ID: {a.id}</p>
-              </div>
-            </button>
-          ))}
         </div>
       </div>
       <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */}

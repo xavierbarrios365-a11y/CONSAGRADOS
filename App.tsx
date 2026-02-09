@@ -20,7 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.2.5"; // Incremento manual para forzar actualización total
+  const APP_VERSION = "1.3.0"; // Smart Login, Duolingo Streaks, Safe Area Insets
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -65,6 +65,7 @@ const App: React.FC = () => {
   const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isRegisteringBio, setIsRegisteringBio] = useState(false);
+  const [rememberedUser, setRememberedUser] = useState<{ id: string; name: string; photoUrl: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -80,6 +81,8 @@ const App: React.FC = () => {
     setView(AppView.PROFILE);
     localStorage.removeItem('consagrados_agent');
     localStorage.removeItem('last_active_time');
+    // Mantener el usuario recordado para quiick login
+    // NO eliminamos 'remembered_user' aquí para permitir re-entrada rápida
     setShowSessionWarning(false);
 
     // Reset transient UI flags to prevent overlap
@@ -161,6 +164,16 @@ const App: React.FC = () => {
 
     // Verificar disponibilidad de biometría
     isBiometricAvailable().then(setBiometricAvailable);
+
+    // Cargar usuario recordado para quick login
+    const storedRememberedUser = localStorage.getItem('remembered_user');
+    if (storedRememberedUser) {
+      try {
+        const parsed = JSON.parse(storedRememberedUser);
+        setRememberedUser(parsed);
+        setLoginId(parsed.id); // Pre-llenar el ID para login rápido
+      } catch { }
+    }
 
     // Obtener versículo del día
     fetchDailyVerse().then(res => {
@@ -391,6 +404,8 @@ const App: React.FC = () => {
         }
         setCurrentUser(user);
         setIsLoggedIn(true);
+        // Guardar usuario para quick login futuro
+        localStorage.setItem('remembered_user', JSON.stringify({ id: user.id, name: user.name, photoUrl: user.photoUrl }));
         // Direct jump to appropriate view in a single state cycle
         const targetView = user.userRole === UserRole.DIRECTOR ? AppView.CIU : (user.userRole === UserRole.LEADER ? AppView.DIRECTORY : AppView.PROFILE);
         setView(targetView);
@@ -1120,30 +1135,65 @@ const App: React.FC = () => {
         <div className="w-full max-w-sm space-y-10 z-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
           <div className="text-center">
             <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo Consagrados" className="h-28 w-auto mx-auto mb-6 drop-shadow-[0_0_30px_rgba(255,183,0,0.4)]" />
-            <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] mb-1">CONSAGRADOS</h1>
-            <div className="space-y-1 mt-2">
-              <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
-                No pedimos permiso para ser luz.
-              </p>
-              <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
-                Vivimos en un mundo que celebra lo superficial y premia lo frágil.
-              </p>
-              <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
-                Pero nosotros no somos de ese mundo.
-              </p>
-            </div>
+
+            {/* SMART LOGIN: Si hay un usuario recordado, mostramos bienvenida rápida */}
+            {rememberedUser ? (
+              <>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-2 animate-pulse">Bienvenido de nuevo</p>
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full border-2 border-[#ffb700]/50 overflow-hidden">
+                    <img
+                      src={formatDriveUrl(rememberedUser.photoUrl)}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"; }}
+                    />
+                  </div>
+                  <h1 className="text-2xl font-bebas font-bold text-white tracking-wide">{rememberedUser.name.split(' ')[0]}</h1>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('remembered_user');
+                    setRememberedUser(null);
+                    setLoginId('');
+                    setLoginPin('');
+                  }}
+                  className="text-[8px] text-gray-500 font-bold uppercase tracking-widest hover:text-[#ffb700] transition-colors"
+                >
+                  ¿No eres tú? Cambiar de agente
+                </button>
+              </>
+            ) : (
+              <>
+                <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] mb-1">CONSAGRADOS</h1>
+                <div className="space-y-1 mt-2">
+                  <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
+                    No pedimos permiso para ser luz.
+                  </p>
+                  <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
+                    Vivimos en un mundo que celebra lo superficial y premia lo frágil.
+                  </p>
+                  <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.2em] opacity-80 font-montserrat leading-relaxed">
+                    Pero nosotros no somos de ese mundo.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="text"
-                placeholder="ID O CÉDULA"
-                value={loginId}
-                onChange={(e) => setLoginId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] transition-all focus:bg-white/10 font-montserrat"
-              />
-            </div>
+            {/* Mostrar campo ID solo si no hay usuario recordado */}
+            {!rememberedUser && (
+              <div>
+                <input
+                  type="text"
+                  placeholder="ID O CÉDULA"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] transition-all focus:bg-white/10 font-montserrat"
+                />
+              </div>
+            )}
             <div className="relative">
               <input
                 type={showPin ? "text" : "password"}

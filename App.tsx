@@ -20,7 +20,7 @@ import { DailyVerse as DailyVerseType } from './types';
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.2.1"; // Incremento manual para forzar limpieza de caché
+  const APP_VERSION = "1.2.5"; // Incremento manual para forzar actualización total
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState('');
@@ -79,6 +79,7 @@ const App: React.FC = () => {
     setLoginPin('');
     setView(AppView.PROFILE);
     localStorage.removeItem('consagrados_agent');
+    localStorage.removeItem('last_active_time');
     setShowSessionWarning(false);
 
     // Reset transient UI flags to prevent overlap
@@ -100,7 +101,9 @@ const App: React.FC = () => {
 
   const resetSessionTimer = useCallback(() => {
     if (isLoggedIn) {
-      setLastActiveTime(Date.now());
+      const now = Date.now();
+      setLastActiveTime(now);
+      localStorage.setItem('last_active_time', String(now));
       if (showSessionWarning) setShowSessionWarning(false);
     }
   }, [isLoggedIn, showSessionWarning]);
@@ -124,12 +127,22 @@ const App: React.FC = () => {
   // 1. Inicialización y Persistencia
   useEffect(() => {
     const storedUser = localStorage.getItem('consagrados_agent');
+    const storedLastActive = localStorage.getItem('last_active_time');
+
     if (storedUser) {
       try {
         const agent = JSON.parse(storedUser);
-        setIsLoggedIn(true);
-        setCurrentUser(agent);
-        setLastActiveTime(Date.now());
+        const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
+        const now = Date.now();
+
+        // Expira si han pasado más de 12 horas (sesión larga) o si el tiempo de inactividad fue superado
+        if (now - lastActive > 300000 && lastActive !== 0) {
+          handleLogout();
+        } else {
+          setIsLoggedIn(true);
+          setCurrentUser(agent);
+          setLastActiveTime(now);
+        }
       } catch (e) {
         localStorage.removeItem('consagrados_agent');
       }
@@ -191,10 +204,10 @@ const App: React.FC = () => {
       const diff = now - lastActiveTime;
       if (diff >= 300000) {
         handleLogout();
-      } else if (diff >= 270000) {
+      } else if (diff >= 210000) { // Aviso a los 3.5 min para dar tiempo en móvil
         setShowSessionWarning(true);
       }
-    }, 1000);
+    }, 5000); // Intervalo más largo para ahorrar batería
 
     return () => clearInterval(interval);
   }, [isLoggedIn, lastActiveTime, handleLogout]);

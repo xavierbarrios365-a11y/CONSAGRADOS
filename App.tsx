@@ -9,7 +9,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -807,6 +807,76 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      case AppView.SCANNER:
+        return (
+          <div className="fixed inset-0 z-50 bg-[#001f3f] flex flex-col p-6 animate-in fade-in">
+            <div className="flex justify-between items-center mb-8">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bebas text-white tracking-widest uppercase">Escáner Táctico</h2>
+                <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest opacity-60">Fuerza de Tareas Consagrados 2026</p>
+              </div>
+              <button
+                onClick={() => setView(AppView.HOME)}
+                className="p-4 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:text-white transition-all active:scale-95"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden rounded-[3rem] border border-white/5 bg-black/40 shadow-2xl">
+              <div className="absolute inset-0 z-0">
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-50" />
+              </div>
+
+              <div className="relative z-10 w-64 h-64 border-2 border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center p-8 bg-black/20 backdrop-blur-sm scanner-frame transition-all duration-500">
+                {scanStatus === 'SCANNING' ? (
+                  <>
+                    <div className="w-full h-[2px] bg-[#ffb700] absolute top-0 left-0 animate-scan-line shadow-[0_0_15px_rgba(255,183,0,1)]"></div>
+                    <QrCode size={48} className="text-[#ffb700] animate-pulse mb-4" />
+                    <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest animate-pulse">Detectando Identidad...</p>
+                  </>
+                ) : scanStatus === 'SUCCESS' ? (
+                  <>
+                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4 border border-white/20">
+                      <CheckCircle2 size={32} className="text-white" />
+                    </div>
+                    <p className="text-[10px] text-green-500 font-black uppercase tracking-widest">Identidad Verificada</p>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle size={48} className="text-red-500 mb-4" />
+                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">Protocolo Inactivo</p>
+                    <button onClick={startScanner} className="mt-4 px-6 py-2 bg-blue-600 rounded-xl text-[8px] font-black text-white hover:bg-blue-500 transition-all">REINICIAR</button>
+                  </>
+                )}
+              </div>
+
+              <div className="absolute bottom-10 left-10 right-10 flex flex-col gap-4">
+                <input
+                  type="text"
+                  placeholder="ID MANUAL..."
+                  value={scannedId}
+                  onChange={(e) => setScannedId(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && scannedId) processScan(scannedId);
+                  }}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] text-center"
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-center gap-6">
+              <div className="flex flex-col items-center gap-1 opacity-40">
+                <Shield size={16} className="text-[#ffb700]" />
+                <span className="text-[6px] font-black text-white uppercase tracking-[0.3em]">Cifrado Activo</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 opacity-40">
+                <Database size={16} className="text-[#ffb700]" />
+                <span className="text-[6px] font-black text-white uppercase tracking-[0.3em]">Nodo Central</span>
+              </div>
+            </div>
+          </div>
+        );
       case AppView.VISITOR:
         return (
           <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24 relative min-h-[calc(100svh-160px)]">
@@ -1152,20 +1222,35 @@ const App: React.FC = () => {
             </button>
           </div>
 
-          <div className="pt-8 border-t border-white/5 flex flex-col items-center gap-2 opacity-30">
-            <Activity size={16} className="text-[#ffb700]" />
-            <p className="text-[7px] font-black text-gray-500 uppercase tracking-[0.4em] font-bebas">SISTEMAS OPERATIVOS NOMINALES</p>
-          </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* MODAL: CAMBIO OBLIGATORIO DE PIN */}
+  if (isLoggedIn && !currentUser) {
+    return <LoadingScreen message="CONECTANDO CON EL NODO CENTRAL..." />;
+  }
+
+  return (
+    <Layout
+      activeView={view}
+      setView={setView}
+      userRole={viewingAsRole || currentUser?.userRole || UserRole.STUDENT}
+      userName={currentUser?.name || 'Agente'}
+      onLogout={handleLogout}
+      notificationCount={notificationCount}
+    >
+      <div className="relative h-full overflow-y-auto no-scrollbar">
+        {renderContent()}
+
+        {/* MODAL: CAMBIO OBLIGATORIO DE PIN (Accesible también desde perfil) */}
         {isMustChangeFlow && (
-          <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
+          <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
             <div className="w-full max-w-sm bg-[#0a0a0a] border border-yellow-500/30 rounded-[3rem] p-8 space-y-8 shadow-[0_0_50px_rgba(234,179,8,0.2)]">
               <div className="text-center space-y-2">
                 <AlertCircle className="mx-auto text-yellow-500" size={40} />
-                <h3 className="text-white font-black uppercase tracking-widest text-sm">CAMBIO DE PIN OBLIGATORIO</h3>
-                <p className="text-[9px] text-yellow-500/70 font-bold uppercase tracking-[0.2em]">DETECTADO PRIMER INICIO DE SESIÓN</p>
+                <h3 className="text-white font-black uppercase tracking-widest text-sm">GESTIÓN DE SEGURIDAD</h3>
+                <p className="text-[9px] text-yellow-500/70 font-bold uppercase tracking-[0.2em]">ACTUALIZACIÓN DE CREDENCIALES</p>
               </div>
               <div className="space-y-4">
                 <input
@@ -1210,21 +1295,19 @@ const App: React.FC = () => {
                 {isUpdatingPin ? 'Guardando Configuración...' : 'Finalizar y Entrar'}
               </button>
 
-              {!currentUser?.mustChangePassword && (
-                <button
-                  onClick={() => setIsMustChangeFlow(false)}
-                  className="w-full text-[8px] text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  Omitir por ahora
-                </button>
-              )}
+              <button
+                onClick={() => setIsMustChangeFlow(false)}
+                className="w-full text-[8px] text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors"
+              >
+                Cancelar Operación
+              </button>
             </div>
           </div>
         )}
 
         {/* MODAL: OLVIDÉ MI CONTRASEÑA */}
         {showForgotPassword && (
-          <div className="fixed inset-0 z-[200] bg-black/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in">
+          <div className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in fade-in">
             <div className="w-full max-w-sm space-y-8">
               <button
                 onClick={() => setShowForgotPassword(false)}
@@ -1300,26 +1383,6 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    );
-  }
-
-  // SAFETY CHECK: Evitar "Pantalla Azul" si isLoggedIn es true pero currentUser aún no está hidratado
-  if (isLoggedIn && !currentUser) {
-    return <LoadingScreen message="CONECTANDO CON EL NODO CENTRAL..." />;
-  }
-
-  return (
-    <Layout
-      activeView={view}
-      setView={setView}
-      userRole={viewingAsRole || currentUser?.userRole || UserRole.STUDENT}
-      userName={currentUser?.name || 'Agente'}
-      onLogout={handleLogout}
-      notificationCount={notificationCount}
-    >
-      <div className="relative h-full">
-        {renderContent()}
 
         {scannedAgentForPoints && (
           <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">

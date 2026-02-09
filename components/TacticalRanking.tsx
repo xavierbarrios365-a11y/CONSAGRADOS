@@ -69,7 +69,7 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                             <span className="text-[8px] md:text-[10px] font-black text-[#FFB700] uppercase tracking-[0.2em] font-bebas">Escuadrón de Élite</span>
                         </div>
                         <h2 className="text-4xl md:text-7xl font-bebas text-white uppercase leading-none tracking-tight">
-                            HALL OF <span className="text-[#FFB700] drop-shadow-[0_0_15px_rgba(255,183,0,0.4)]">FAME</span>
+                            CUADRO DE <span className="text-[#FFB700] drop-shadow-[0_0_15px_rgba(255,183,0,0.4)]">HONOR</span>
                         </h2>
                         <p className="text-[10px] md:text-sm text-white/50 font-montserrat max-w-md uppercase font-black tracking-widest leading-relaxed">
                             {activeCategory === 'LEADERS' ? 'Los capitanes que comandan la victoria.' : 'El escalafón de los guerreros más letales.'}
@@ -111,89 +111,86 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
 
             {sortedAgents.length > 0 ? (
                 <>
-                    {/* Podium Section - Mobile Friendly Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-4 items-end max-w-5xl mx-auto px-2 mt-4 md:mt-8">
-                        {/* First Place - Top on Mobile, Middle on MD */}
-                        {topThree[0] && (
-                            <div className={`flex flex-col items-center space-y-4 order-1 md:order-2 scale-100 md:scale-110 z-10 transition-all duration-1000 mb-8 md:mb-0`}>
-                                <div className="relative mb-2 md:mb-4">
-                                    <Crown className="absolute -top-8 md:-top-10 left-1/2 -translate-x-1/2 text-[#FFB700] w-10 h-10 md:w-14 md:h-14 drop-shadow-[0_0_25px_rgba(255,183,0,0.6)] animate-pulse" />
-                                </div>
-                                <div className="relative group">
-                                    <div className="absolute -inset-4 md:-inset-6 bg-[#FFB700]/20 rounded-full blur-[30px] md:blur-[40px] animate-pulse"></div>
-                                    <img
-                                        src={formatDriveUrl(topThree[0].photoUrl)}
-                                        className="relative w-36 h-36 md:w-44 md:h-44 rounded-full border-4 border-[#FFB700] object-cover shadow-[0_0_50px_rgba(255,183,0,0.4)] transition-all"
-                                        onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
-                                    />
-                                    <div className={`absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 w-12 h-12 md:w-16 md:h-16 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-4 border-[#001f3f] rounded-2xl flex items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
-                                        <span className="font-bebas text-2xl md:text-4xl">1</span>
-                                    </div>
-                                </div>
-                                <div className="text-center">
-                                    <p className={`text-[12px] md:text-[14px] font-black ${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'} uppercase tracking-[0.4em] font-bebas`}>{topThree[0].rank || 'GENERAL'}</p>
-                                    <h3 className="text-2xl md:text-3xl font-bebas text-white uppercase tracking-[0.1em]">{topThree[0].name}</h3>
-                                    <div className={`flex items-center justify-center gap-2 ${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'}`}>
-                                        <Flame size={20} fill="currentColor" className="animate-pulse" />
-                                        <span className="text-xl md:text-2xl font-black">{topThree[0].xp} XP</span>
-                                    </div>
-                                </div>
-                                <div className={`w-full h-40 md:h-56 bg-gradient-to-b ${activeCategory === 'LEADERS' ? 'from-blue-600/20' : 'from-[#FFB700]/20'} via-black/40 to-transparent rounded-t-3xl border-t border-x ${activeCategory === 'LEADERS' ? 'border-blue-600/40' : 'border-[#FFB700]/30'} flex flex-col items-center justify-end pb-8`}>
-                                    <Star size={36} className={`${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'} animate-spin-slow`} />
-                                </div>
-                            </div>
-                        )}
+                    {/* Podium Section - Stepped Horizontal Layout (Now also for Mobile) */}
+                    <div className="flex items-end justify-center gap-2 md:gap-8 max-w-5xl mx-auto px-1 md:px-4 mt-8 md:mt-12">
 
-                        {/* Second Place */}
+                        {/* Second Place - Left Side */}
                         {topThree[1] && (
-                            <div className={`flex flex-col items-center space-y-3 md:space-y-4 order-2 md:order-1 transition-all duration-700`}>
+                            <div className="flex flex-col items-center space-y-2 md:space-y-4 w-[28%] md:w-auto transition-all duration-700 animate-in slide-in-from-left-4">
                                 <div className="relative group">
+                                    <div className="absolute -inset-2 bg-gray-400/10 rounded-full blur-xl md:blur-2xl"></div>
                                     <img
                                         src={formatDriveUrl(topThree[1].photoUrl)}
-                                        className="relative w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-gray-400/30 object-cover grayscale group-hover:grayscale-0 transition-all shadow-xl"
+                                        className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale transition-all shadow-xl"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-8 h-8 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-xl flex items-center justify-center text-gray-400">
-                                        <span className="font-bebas text-lg md:text-xl">2</span>
+                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-6 h-6 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-lg md:rounded-xl flex items-center justify-center text-gray-400">
+                                        <span className="font-bebas text-xs md:text-xl">2</span>
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[8px] md:text-[10px] font-black text-white/40 uppercase tracking-widest">{topThree[1].rank || 'AGENTE'}</p>
-                                    <h3 className="text-md md:text-lg font-bebas text-white uppercase tracking-wider">{topThree[1].name}</h3>
+                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase tracking-wider truncate w-20 sm:w-24 md:w-auto">{topThree[1].name}</h3>
                                     <div className="flex items-center justify-center gap-1 text-gray-400">
-                                        <Zap size={12} fill="currentColor" />
-                                        <span className="text-[10px] md:text-[11px] font-black">{topThree[1].xp} XP</span>
+                                        <Zap size={8} className="md:size-3" fill="currentColor" />
+                                        <span className="text-[8px] md:text-[11px] font-black">{topThree[1].xp} </span>
                                     </div>
                                 </div>
-                                <div className="w-full h-20 md:h-32 bg-gradient-to-b from-gray-400/10 via-white/5 to-transparent rounded-t-3xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-4">
-                                    <Medal size={24} className="text-gray-400 opacity-50" />
+                                <div className="w-full h-12 md:h-32 bg-gradient-to-b from-gray-400/10 via-white/5 to-transparent rounded-t-xl md:rounded-t-3xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-2 md:pb-4">
+                                    <Medal size={12} className="md:size-6 text-gray-400 opacity-50" />
                                 </div>
                             </div>
                         )}
 
-                        {/* Third Place */}
+                        {/* First Place - Center and Elevated */}
+                        {topThree[0] && (
+                            <div className="flex flex-col items-center space-y-3 md:space-y-6 w-[36%] md:w-auto scale-105 md:scale-125 z-10 transition-all duration-1000 animate-in zoom-in-95">
+                                <div className="relative mb-0 md:mb-2">
+                                    <Crown className="absolute -top-4 md:-top-10 left-1/2 -translate-x-1/2 text-[#FFB700] w-6 h-6 md:w-16 md:h-16 drop-shadow-[0_0_20px_rgba(255,183,0,0.6)] animate-pulse" />
+                                    <div className="absolute -inset-4 md:-inset-10 bg-[#FFB700]/10 rounded-full blur-[20px] md:blur-[50px] animate-pulse"></div>
+                                    <img
+                                        src={formatDriveUrl(topThree[0].photoUrl)}
+                                        className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)]"
+                                        onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                    />
+                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
+                                        <span className="font-bebas text-lg md:text-3xl font-black">1</span>
+                                    </div>
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase tracking-widest truncate w-24 sm:w-32 md:w-auto drop-shadow-md">{topThree[0].name}</h3>
+                                    <div className="flex items-center justify-center gap-1 text-[#FFB700]">
+                                        <Flame size={10} className="md:size-5 animate-pulse" fill="currentColor" />
+                                        <span className="text-[10px] md:text-xl font-black">{topThree[0].xp} XP</span>
+                                    </div>
+                                </div>
+                                <div className={`w-full h-20 md:h-56 bg-gradient-to-b ${activeCategory === 'LEADERS' ? 'from-blue-600/20' : 'from-[#FFB700]/10'} via-black/40 to-transparent rounded-t-xl md:rounded-t-[3rem] border-t border-x ${activeCategory === 'LEADERS' ? 'border-blue-600/40' : 'border-[#FFB700]/30'} flex flex-col items-center justify-end pb-4 md:pb-8 shadow-2xl`}>
+                                    <Star size={14} className={`md:size-8 ${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'} animate-spin-slow`} />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Third Place - Right Side */}
                         {topThree[2] && (
-                            <div className={`flex flex-col items-center space-y-3 md:space-y-4 order-3 md:order-3 transition-all duration-700`}>
+                            <div className="flex flex-col items-center space-y-2 md:space-y-4 w-[28%] md:w-auto transition-all duration-700 animate-in slide-in-from-right-4">
                                 <div className="relative group">
                                     <img
                                         src={formatDriveUrl(topThree[2].photoUrl)}
-                                        className="relative w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-orange-800/30 object-cover grayscale group-hover:grayscale-0 transition-all shadow-lg"
+                                        className="relative w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale transition-all shadow-xl"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-7 h-7 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-xl flex items-center justify-center text-orange-800">
-                                        <span className="font-bebas text-md md:text-lg">3</span>
+                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-5 h-5 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-lg md:rounded-xl flex items-center justify-center text-orange-800">
+                                        <span className="font-bebas text-[10px] md:text-lg">3</span>
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[8px] md:text-[10px] font-black text-white/40 uppercase tracking-widest">{topThree[2].rank || 'AGENTE'}</p>
-                                    <h3 className="text-sm md:text-md font-bebas text-white uppercase tracking-wider">{topThree[2].name}</h3>
-                                    <div className="flex items-center justify-center gap-1 text-orange-800">
-                                        <Zap size={10} fill="currentColor" />
-                                        <span className="text-[9px] md:text-[10px] font-black">{topThree[2].xp} XP</span>
+                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase tracking-wider truncate w-16 sm:w-20 md:w-auto">{topThree[2].name}</h3>
+                                    <div className="flex items-center justify-center gap-1 text-orange-800/60">
+                                        <Zap size={8} className="md:size-3" fill="currentColor" />
+                                        <span className="text-[8px] md:text-[10px] font-black">{topThree[2].xp} XP</span>
                                     </div>
                                 </div>
-                                <div className="w-full h-16 md:h-24 bg-gradient-to-b from-orange-800/10 via-white/5 to-transparent rounded-t-3xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-3">
-                                    <Medal size={20} className="text-orange-800 opacity-50" />
+                                <div className="w-full h-8 md:h-24 bg-gradient-to-b from-orange-800/10 via-white/5 to-transparent rounded-t-lg md:rounded-t-2xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-2 md:pb-3">
+                                    <Medal size={10} className="md:size-5 text-orange-800 opacity-50" />
                                 </div>
                             </div>
                         )}

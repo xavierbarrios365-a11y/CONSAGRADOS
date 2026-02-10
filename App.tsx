@@ -9,7 +9,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -51,7 +51,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.6.8"; // Official Restoration Release
+  const APP_VERSION = "1.6.9"; // UI Corrections Release
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -96,6 +96,9 @@ const App: React.FC = () => {
   const [isRegisteringBio, setIsRegisteringBio] = useState(false);
   const [rememberedUser, setRememberedUser] = useState<{ id: string; name: string; photoUrl: string } | null>(null);
   const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [directorySearch, setDirectorySearch] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -179,8 +182,32 @@ const App: React.FC = () => {
     if (storedLastId) setLoginId(storedLastId);
 
     fetchDailyVerse().then(res => {
-      if (res.success) setDailyVerse(res.data);
+      if (res.success && res.data) {
+        setDailyVerse(res.data);
+      } else {
+        // Fallback para que siempre se muestre un versículo
+        setDailyVerse({ verse: 'Porque donde están dos o tres congregados en mi nombre, allí estoy yo en medio de ellos.', reference: 'Mateo 18:20' });
+      }
+    }).catch(() => {
+      setDailyVerse({ verse: 'Porque donde están dos o tres congregados en mi nombre, allí estoy yo en medio de ellos.', reference: 'Mateo 18:20' });
     });
+
+    // PWA Install Prompt
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isInstalled = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+      if (!isInstalled) setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if already installed
+    const isInstalled = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (!isInstalled && !localStorage.getItem('pwa_banner_dismissed')) {
+      setShowInstallBanner(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, [handleLogout]);
 
   useEffect(() => {
@@ -403,11 +430,9 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {dailyVerse && (
-              <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
-                <DailyVerse verse={dailyVerse} />
-              </div>
-            )}
+            <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
+              <DailyVerse verse={dailyVerse || { verse: 'Cargando versículo del día...', reference: '' }} />
+            </div>
 
             <div className="grid grid-cols-1 gap-6">
               <div
@@ -434,7 +459,7 @@ const App: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest italic">Objetivo: 365 días</p>
                     <button className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest flex items-center gap-2">
-                      Ver Racha <Sparkles size={10} />
+                      Ver Ranking <ChevronRight size={10} />
                     </button>
                   </div>
                 </div>
@@ -442,24 +467,13 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setView(AppView.CIU)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/30 transition-all active:scale-95 shadow-lg group">
-                <Users size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Gente</span>
-              </button>
               <button onClick={() => setView(AppView.ACADEMIA)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
                 <Database size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
                 <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Academia</span>
               </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <button onClick={() => setView(AppView.CONTENT)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
                 <BookOpen size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
                 <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Material</span>
-              </button>
-              <button onClick={() => setView(AppView.RANKING)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
-                <Trophy size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Ranking</span>
               </button>
             </div>
           </div>
@@ -532,6 +546,53 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.DIRECTORY:
+        return (
+          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24 max-w-4xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+              <div>
+                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Directorio de Agentes</h2>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Toca un agente para ver su perfil</p>
+              </div>
+              <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
+                <Users className="text-[#ffb700]" size={18} />
+                <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{agents.length} Agentes</span>
+              </div>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="BUSCAR AGENTE..."
+                value={directorySearch}
+                onChange={(e) => setDirectorySearch(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all placeholder:text-white/20"
+              />
+              <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-white/30" />
+            </div>
+
+            <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4 pb-10">
+              {agents
+                .filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch))
+                .map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setFoundAgent(a)}
+                    className="group relative aspect-square rounded-3xl overflow-hidden border-2 border-white/5 bg-white/5 hover:border-[#ffb700]/30 transition-all p-1 active:scale-95"
+                  >
+                    <img
+                      src={formatDriveUrl(a.photoUrl)}
+                      className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-500"
+                      onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center">
+                      <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
+                      <p className="text-[6px] font-bold text-[#ffb700]">{a.xp} XP</p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </div>
+        );
       case AppView.CIU:
         return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} onAgentClick={(a) => setFoundAgent(a)} /> : null;
       case AppView.VISITOR:
@@ -795,6 +856,47 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center justify-center p-6 animate-in fade-in">
           <button onClick={() => setFoundAgent(null)} className="mb-10 text-white/50 hover:text-white uppercase transition-colors text-[10px] font-black tracking-[0.4em]">Cerrar Expediente</button>
           <DigitalIdCard agent={foundAgent} />
+        </div>
+      )}
+
+      {showInstallBanner && (
+        <div className="fixed bottom-20 md:bottom-6 left-4 right-4 z-[90] animate-in slide-in-from-bottom-4 duration-500">
+          <div className="max-w-md mx-auto bg-[#001833] border border-[#ffb700]/30 rounded-2xl p-5 shadow-2xl flex items-center gap-4">
+            <div className="p-3 bg-[#ffb700]/10 rounded-xl shrink-0">
+              <Download size={20} className="text-[#ffb700]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black text-white uppercase tracking-widest leading-tight">Instalar App</p>
+              <p className="text-[8px] text-white/50 font-bold uppercase tracking-wider mt-0.5">Para eliminar barras del navegador</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => {
+                      setDeferredPrompt(null);
+                      setShowInstallBanner(false);
+                    });
+                  } else {
+                    alert("Para instalar: toca el menú del navegador (⋮) y selecciona 'Agregar a pantalla de inicio' o 'Instalar aplicación'.");
+                  }
+                }}
+                className="px-4 py-2.5 bg-[#ffb700] rounded-xl text-[#001f3f] text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Instalar
+              </button>
+              <button
+                onClick={() => {
+                  setShowInstallBanner(false);
+                  localStorage.setItem('pwa_banner_dismissed', 'true');
+                }}
+                className="p-2.5 text-gray-500 hover:text-white transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

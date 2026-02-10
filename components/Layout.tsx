@@ -93,15 +93,15 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center transition-all active:scale-90 relative ${activeView === item.id ? 'text-[#ffb700]' : 'text-gray-500 hover:text-gray-400'
+            className={`flex flex-col items-center relative transition-all duration-200 ${activeView === item.id ? 'text-[#ffb700] scale-110' : 'text-gray-500 hover:text-gray-400'
               }`}
             title={item.label}
           >
-            <div className={`p-2 rounded-2xl transition-all duration-300 ${activeView === item.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/20 shadow-[0_0_20px_rgba(255,183,0,0.1)]' : ''}`}>
+            <div className={`p-2 rounded-xl transition-all duration-200 ${activeView === item.id ? 'bg-[#ffb700]/15 border border-[#ffb700]/30 shadow-[0_0_15px_rgba(255,183,0,0.1)]' : 'bg-transparent border border-transparent'}`}>
               {item.icon}
             </div>
             {activeView === item.id && (
-              <div className="absolute -bottom-1 w-1 h-1 bg-[#ffb700] rounded-full animate-pulse"></div>
+              <div className="absolute -bottom-1 w-1 h-1 bg-[#ffb700] rounded-full shadow-[0_0_8px_#ffb700]"></div>
             )}
           </button>
         ))}

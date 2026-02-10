@@ -18,9 +18,10 @@ interface CIUProps {
   onRefreshIntel?: () => void;
   isRefreshingIntel?: boolean;
   onAgentClick?: (agent: Agent) => void;
+  userRole?: UserRole;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick, userRole }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
@@ -134,12 +135,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   };
 
   return (
-    <div className="min-h-full bg-[#001f3f] p-4 md:p-8 animate-in fade-in duration-700">
+    <div className="min-h-full bg-[#001f3f] p-4 md:p-6 animate-in fade-in duration-700">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* PANEL DE CONTROL DE ALTO MANDO */}
-        {currentUser?.userRole === UserRole.DIRECTOR && (
-          <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-[2.5rem] p-6 mb-8 backdrop-blur-md">
+        {userRole === UserRole.DIRECTOR && (
+          <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-4 mb-6 backdrop-blur-md">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-[#ffb700] rounded-2xl shadow-lg">
@@ -180,18 +181,18 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         )}
 
         {/* Global Stats Summary */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl text-center">
-            <p className="text-[7px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL AGENTES</p>
-            <p className="text-xl font-bebas font-black text-white">{totalAgents}</p>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-[#001833] border border-white/5 p-3 rounded-xl text-center">
+            <p className="text-[6px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL AGENTES</p>
+            <p className="text-lg font-bebas font-black text-white">{totalAgents}</p>
           </div>
-          <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl text-center">
-            <p className="text-[7px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL LÍDERES</p>
-            <p className="text-xl font-bebas font-black text-[#ffb700]">{totalLeaders}</p>
+          <div className="bg-[#001833] border border-white/5 p-3 rounded-xl text-center">
+            <p className="text-[6px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL LÍDERES</p>
+            <p className="text-lg font-bebas font-black text-[#ffb700]">{totalLeaders}</p>
           </div>
-          <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl text-center">
-            <p className="text-[7px] text-gray-500 font-black uppercase mb-1 font-bebas">RADAR (VISITAS)</p>
-            <p className="text-xl font-bebas font-black text-orange-500">{visitorCount || 0}</p>
+          <div className="bg-[#001833] border border-white/5 p-3 rounded-xl text-center">
+            <p className="text-[6px] text-gray-500 font-black uppercase mb-1 font-bebas">RADAR (VISITAS)</p>
+            <p className="text-lg font-bebas font-black text-orange-500">{visitorCount || 0}</p>
           </div>
         </div>
 
@@ -226,7 +227,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </select>
             </div>
 
-            {currentUser?.userRole === UserRole.DIRECTOR && (
+            {userRole === UserRole.DIRECTOR && (
               <button
                 onClick={async () => {
                   const confirmSend = window.confirm("⚠️ TRANSMISIÓN DE SEGURIDAD\n\n¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?");
@@ -249,15 +250,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* PERFIL DEL AGENTE SELECCIONADO */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="relative bg-[#001833] border-2 border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col items-center text-center shadow-2xl overflow-hidden font-montserrat">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-50"></div>
+            <div className="relative bg-[#001833] border border-white/10 rounded-3xl p-6 flex flex-col items-center text-center shadow-xl overflow-hidden font-montserrat">
+              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-30"></div>
 
-              <div className="relative mb-8 group">
-                <div className="absolute inset-0 bg-[#ffb700] rounded-[3.5rem] blur-2xl opacity-10"></div>
-                <div className="w-52 h-52 rounded-[3.5rem] border-4 border-white/5 p-2 bg-[#000c19] shadow-inner relative overflow-hidden">
+              <div className="relative mb-6 group">
+                <div className="absolute inset-0 bg-[#ffb700] rounded-2xl blur-xl opacity-10"></div>
+                <div className="w-32 h-32 rounded-2xl border-2 border-white/5 p-1 bg-[#000c19] shadow-inner relative overflow-hidden">
                   <img
                     src={formatDriveUrl(agent.photoUrl)}
-                    className="w-full h-full rounded-[2.8rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                    className="w-full h-full rounded-xl object-cover grayscale hover:grayscale-0 transition-all duration-700"
                     onError={(e) => {
                       e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
                       e.currentTarget.className = "w-full h-full object-cover opacity-20";
@@ -270,7 +271,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     </div>
                   )}
 
-                  {currentUser?.userRole === UserRole.DIRECTOR && (
+                  {userRole === UserRole.DIRECTOR && (
                     <div
                       onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
                       className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
@@ -400,7 +401,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
             </div>
 
-            {currentUser?.userRole === UserRole.DIRECTOR && (
+            {userRole === UserRole.DIRECTOR && (
               <div className="p-8 bg-blue-950/20 border border-blue-500/20 rounded-3xl space-y-4 mt-8">
                 <h4 className="text-white font-black uppercase tracking-widest text-xs flex items-center gap-2">
                   <ShieldAlert className="text-blue-500" size={16} /> COMANDO DE OPERACIONES MASIVAS
@@ -431,39 +432,37 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 };
 
 const MetricCard = ({ icon, label, value, color, onAdjust, disabled }: { icon: any, label: string, value: number, color: string, onAdjust?: (val: number) => void, disabled?: boolean }) => (
-  <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl relative overflow-hidden group hover:border-[#ffb700]/20 transition-colors font-montserrat">
+  <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-[#ffb700]/20 transition-colors font-montserrat">
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-white/5 rounded-xl border border-white/5">
+          <div className="p-1.5 bg-white/5 rounded-lg border border-white/5">
             {icon}
           </div>
-          <p className="text-[7px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
+          <p className="text-[8px] text-white/40 font-black uppercase tracking-widest leading-tight font-bebas">{label}</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdjust?.(-5); }}
-            disabled={disabled}
-            className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-red-500 hover:bg-red-500/20 active:scale-90 transition-all shadow-lg"
-            title="Descontar 5"
-          >
-            <Minus size={14} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdjust?.(5); }}
-            disabled={disabled}
-            className="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-green-500 hover:bg-green-500/20 active:scale-90 transition-all shadow-lg"
-            title="Sumar 5"
-          >
-            <Plus size={14} />
-          </button>
-        </div>
+        <p className="text-2xl font-bebas font-black text-white tracking-tight leading-none">{value}</p>
       </div>
-      <div>
-        <p className="text-3xl font-bebas font-black text-white tracking-tight leading-none mb-2">{value}</p>
-        <div className="w-full h-1 bg-[#000c19] rounded-full overflow-hidden border border-white/5">
-          <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-1000`} style={{ width: `${Math.min(100, value)}%` }}></div>
-        </div>
+
+      <div className="w-full h-1 bg-[#000c19] rounded-full overflow-hidden border border-white/5">
+        <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-1000`} style={{ width: `${Math.min(100, value)}%` }}></div>
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); onAdjust?.(-5); }}
+          disabled={disabled}
+          className="flex-1 py-3 flex items-center justify-center bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 hover:bg-red-500/20 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest gap-2"
+        >
+          <Minus size={12} /> Descontar
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onAdjust?.(5); }}
+          disabled={disabled}
+          className="flex-1 py-3 flex items-center justify-center bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 hover:bg-green-500/20 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest gap-2"
+        >
+          <Plus size={12} /> Sumar
+        </button>
       </div>
     </div>
   </div>

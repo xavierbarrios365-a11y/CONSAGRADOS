@@ -437,8 +437,9 @@ const App: React.FC = () => {
     setIsRefreshingIntel(false);
   };
 
+  const effectiveRole = viewingAsRole || currentUser?.userRole || UserRole.STUDENT;
+
   const renderContent = () => {
-    const effectiveRole = viewingAsRole || currentUser?.userRole || UserRole.STUDENT;
     switch (view) {
       case AppView.HOME:
         return (
@@ -654,7 +655,7 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.CIU:
-        return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} onAgentClick={(a) => setFoundAgent(a)} /> : null;
+        return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} onAgentClick={(a) => setFoundAgent(a)} userRole={effectiveRole} /> : null;
       case AppView.VISITOR:
         return (
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
@@ -983,7 +984,7 @@ const App: React.FC = () => {
   if (isLoggedIn && !currentUser) return <LoadingScreen message="INICIALIZANDO CONEXIÓN..." />;
 
   return (
-    <Layout activeView={view} setView={setView} userRole={currentUser?.userRole || UserRole.STUDENT} userName={currentUser?.name || 'Agente'} onLogout={handleLogout} notificationCount={notificationCount}>
+    <Layout activeView={view} setView={setView} userRole={effectiveRole} userName={currentUser?.name || 'Agente'} onLogout={handleLogout} notificationCount={notificationCount}>
       <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
         {renderContent()}
       </div>

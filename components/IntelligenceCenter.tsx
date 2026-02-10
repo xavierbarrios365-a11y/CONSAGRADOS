@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
@@ -185,6 +185,32 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   </button>
                 )}
                 <button
+                  onClick={async () => {
+                    if (window.confirm("🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿Estás seguro de realizar una PURGA TOTAL?\nEsto cerrará tu sesión, borrará el caché del navegador y forzará la descarga de la última versión del sistema.\n\nUsa esto solo si detectas errores persistentes.")) {
+                      try {
+                        if ('caches' in window) {
+                          const cacheNames = await caches.keys();
+                          await Promise.all(cacheNames.map(name => caches.delete(name)));
+                        }
+                        if ('serviceWorker' in navigator) {
+                          const registrations = await navigator.serviceWorker.getRegistrations();
+                          await Promise.all(registrations.map(reg => reg.unregister()));
+                        }
+                        const remembered = localStorage.getItem('remembered_user');
+                        localStorage.clear();
+                        if (remembered) localStorage.setItem('remembered_user', remembered);
+                        window.location.reload();
+                      } catch (err) {
+                        alert("FALLO EN PURGA: Intente manualmente.");
+                      }
+                    }
+                  }}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all shadow-xl active:scale-95 font-bebas"
+                >
+                  <Trash2 size={16} />
+                  Purga de Emergencia
+                </button>
+                <button
                   onClick={handleImportInscriptions}
                   disabled={isReconstructing}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-[#ffb700] text-[#001f3f] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-xl active:scale-95 disabled:opacity-50 font-bebas"
@@ -222,6 +248,23 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   />
                 </div>
                 <div className="md:col-span-3">
+                  <button
+                    onClick={() => {
+                      if ((window as any).OneSignal) {
+                        const OS = (window as any).OneSignal;
+                        console.log("OS: Disparando Slidedown Manual...");
+                        OS.push(() => {
+                          OS.Slidedown.prompt({ force: true });
+                        });
+                      } else {
+                        alert("OS: El sistema de notificaciones no ha cargado aún.");
+                      }
+                    }}
+                    className="w-full h-full bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-600/30 transition-all py-3 px-6"
+                  >
+                    <Bell size={16} />
+                    Forzar Activación Notificaciones
+                  </button>
                   <button
                     onClick={handleBroadcast}
                     disabled={isSendingBroadcast || !broadcastData.title || !broadcastData.message}

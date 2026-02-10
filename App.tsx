@@ -142,11 +142,46 @@ const App: React.FC = () => {
   }, [isLoggedIn, showSessionWarning]);
 
   useEffect(() => {
-    const savedVersion = localStorage.getItem('app_version');
-    if (savedVersion !== APP_VERSION) {
-      localStorage.setItem('app_version', APP_VERSION);
-      window.location.reload();
-    }
+    const checkVersionAndPurge = async () => {
+      const savedVersion = localStorage.getItem('app_version');
+      if (savedVersion && savedVersion !== APP_VERSION) {
+        console.log(`🚀 NUEVA VERSIÓN DETECTADA: ${savedVersion} -> ${APP_VERSION}. Iniciando purga táctica...`);
+
+        try {
+          // 1. Limpiar Caches del Navegador
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+          }
+
+          // 2. Desregistrar Service Workers
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(reg => reg.unregister()));
+          }
+
+          // 3. Limpiar memorias (manteniendo el usuario recordado)
+          const remembered = localStorage.getItem('remembered_user');
+          const dismissedBanner = localStorage.getItem('pwa_banner_dismissed');
+          localStorage.clear();
+          if (remembered) localStorage.setItem('remembered_user', remembered);
+          if (dismissedBanner) localStorage.setItem('pwa_banner_dismissed', dismissedBanner);
+
+          localStorage.setItem('app_version', APP_VERSION);
+
+          // 4. Recarga forzosa
+          window.location.reload();
+        } catch (err) {
+          console.error("Fallo en purga atómica:", err);
+          localStorage.setItem('app_version', APP_VERSION);
+          window.location.reload();
+        }
+      } else {
+        localStorage.setItem('app_version', APP_VERSION);
+      }
+    };
+
+    checkVersionAndPurge();
   }, []);
 
   useEffect(() => {
@@ -250,13 +285,17 @@ const App: React.FC = () => {
     // Proactive OneSignal Prompt - REFORZADO V16
     if (isLoggedIn && (window as any).OneSignal) {
       const OS = (window as any).OneSignal;
+      console.log("OS: Verificando estado para prompt automático...");
       OS.push(() => {
-        // En V16 manejamos el permiso de forma asíncrona o vía Slidedown
-        if (OS.Notifications && OS.Notifications.permission !== 'granted') {
-          console.log("OS: Permiso no otorgado. Intentando disparar Slidedown...");
+        const currentPermission = OS.Notifications ? OS.Notifications.permission : 'unknown';
+        console.log(`OS: Permiso Actual = ${currentPermission}`);
+
+        if (currentPermission !== 'granted' && currentPermission !== 'denied') {
+          console.log("OS: Intentando disparar Slidedown automático en 8s...");
           setTimeout(() => {
+            console.log("OS: Disparando Slidedown automático AHORA (force: true)");
             OS.Slidedown.prompt({ force: true });
-          }, 5000); // 5 segundos después del login para asegurar visibilidad
+          }, 8000); // 8 segundos para asegurar que todo cargó incluyendo el CSS de OS
         }
       });
     }

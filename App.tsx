@@ -861,7 +861,10 @@ const App: React.FC = () => {
           </div>
 
           {rememberedUser && showQuickLogin ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <form
+              onSubmit={(e) => handleLogin(e, rememberedUser.id)}
+              className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
+            >
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <img
@@ -883,19 +886,26 @@ const App: React.FC = () => {
                     type="password"
                     placeholder="INTRODUCE TU PIN"
                     value={loginPin}
-                    onChange={(e) => setLoginPin(e.target.value)}
+                    onChange={(e) => {
+                      setLoginPin(e.target.value);
+                      if (loginError.message) setLoginError({ field: null, message: null });
+                    }}
                     autoFocus
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center"
+                    className={`w-full bg-white/5 border ${loginError.message ? 'border-red-500' : 'border-white/10'} rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center`}
                   />
                   <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30" />
                 </div>
 
+                {loginError.message && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center gap-3 animate-in fade-in zoom-in-95">
+                    <AlertCircle className="text-red-500 shrink-0" size={14} />
+                    <p className="text-red-500 text-[8px] font-black uppercase tracking-widest">{loginError.message}</p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-3">
                   <button
-                    onClick={() => {
-                      setLoginId(rememberedUser.id);
-                      setShowQuickLogin(false);
-                    }}
+                    type="submit"
                     className="w-full bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
                   >
                     Acceder ahora
@@ -921,6 +931,7 @@ const App: React.FC = () => {
                       localStorage.removeItem('remembered_user');
                       setLoginId('');
                       setLoginPin('');
+                      setLoginError({ field: null, message: null });
                     }}
                     className="w-full py-4 text-white/30 hover:text-white/60 text-[8px] font-black uppercase tracking-widest transition-all"
                   >
@@ -928,7 +939,7 @@ const App: React.FC = () => {
                   </button>
                 </div>
               </div>
-            </div>
+            </form>
           ) : (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-4">
@@ -960,13 +971,13 @@ const App: React.FC = () => {
                   type="submit"
                   className="flex-1 bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
                 >
-                  Acceder al Nodo
+                  Ingresar al Sistema
                 </button>
 
                 {biometricAvailable && (
                   <button
                     type="button"
-                    onClick={handleBiometricLogin}
+                    onClick={() => handleBiometricLogin()}
                     disabled={isAuthenticatingBio}
                     className="w-20 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#ffb700] hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50"
                     title="Acceso Biométrico"

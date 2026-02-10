@@ -282,23 +282,42 @@ const App: React.FC = () => {
   }, [resetSessionTimer]);
 
   useEffect(() => {
-    // Proactive OneSignal Prompt - REFORZADO V16
-    if (isLoggedIn && (window as any).OneSignal) {
-      const OS = (window as any).OneSignal;
-      console.log("OS: Verificando estado para prompt automático...");
-      OS.push(() => {
-        const currentPermission = OS.Notifications ? OS.Notifications.permission : 'unknown';
-        console.log(`OS: Permiso Actual = ${currentPermission}`);
+    // OneSignal v16 Consolidated Initialization
+    const initOneSignal = async () => {
+      const OS = (window as any).OneSignal || [];
+      if (!(window as any).OneSignal) {
+        (window as any).OneSignal = OS;
+      }
 
-        if (currentPermission !== 'granted' && currentPermission !== 'denied') {
-          console.log("OS: Intentando disparar Slidedown automático en 8s...");
-          setTimeout(() => {
-            console.log("OS: Disparando Slidedown automático AHORA (force: true)");
-            OS.Slidedown.prompt({ force: true });
-          }, 8000); // 8 segundos para asegurar que todo cargó incluyendo el CSS de OS
-        }
+      OS.push(() => {
+        OS.init({
+          appId: "c05267b7-737a-4f55-b692-3c2fe2d20677",
+          safari_web_id: "web.onesignal.auto.17b43c6b-967b-402a-9e11-e6c1e345678a",
+          notifyButton: { enable: false },
+          allowLocalhood: true,
+          serviceWorkerParam: { scope: "/" },
+          serviceWorkerPath: "sw.js"
+        }).then(() => {
+          console.log("OS: SDK Consolidado Listo.");
+
+          if (isLoggedIn) {
+            setTimeout(() => {
+              const perm = OS.Notifications ? OS.Notifications.permission : 'unknown';
+              if (perm !== 'granted') {
+                console.log("OS: Disparando suscripción garantizada...");
+                OS.Slidedown.prompt({ force: true });
+                // Respaldo inmediato si el slidedown falla en abrirse
+                if (OS.Notifications) OS.Notifications.requestPermission();
+              }
+            }, 5000);
+          }
+        }).catch((err: any) => {
+          console.error("OS: Fallo en App Init:", err);
+        });
       });
-    }
+    };
+
+    initOneSignal();
   }, [isLoggedIn]);
 
   useEffect(() => {

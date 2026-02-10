@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle } from 'lucide-react';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
+import { generateTacticalProfile } from '../services/geminiService';
 
 interface CIUProps {
   agents: Agent[];
@@ -25,10 +28,25 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const [onlineAgencies, setOnlineAgencies] = useState<Record<string, boolean>>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'presence'), (snapshot) => {
+      const presenceMap: Record<string, boolean> = {};
+      snapshot.forEach(doc => {
+        if (doc.data().status === 'online') {
+          presenceMap[doc.id] = true;
+        }
+      });
+      setOnlineAgencies(presenceMap);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
 
@@ -60,6 +78,28 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       alert("❌ FALLO DE CONEXIÓN");
     } finally {
       setIsSendingBroadcast(false);
+    }
+  };
+
+  const handleGenerateAiProfile = async () => {
+    if (!agent) return;
+    setIsGeneratingAi(true);
+    try {
+      // Obtenemos progreso de academia si existe (por ahora pasamos vacío o mock)
+      const aiProfile = await generateTacticalProfile(agent, []);
+      if (aiProfile) {
+        const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
+        if (res.success) {
+          alert("✅ PERFIL DE INTELIGENCIA ACTUALIZADO");
+          if (onUpdateNeeded) onUpdateNeeded();
+        } else {
+          alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
+        }
+      }
+    } catch (err) {
+      alert("❌ FALLO EN EL CEREBRO IA");
+    } finally {
+      setIsGeneratingAi(false);
     }
   };
 
@@ -307,7 +347,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
               >
                 {agents.map(a => (
-                  <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">{a.name} [{a.id}]</option>
+                  <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">
+                    {onlineAgencies[a.id] ? '🟢 ' : ''}{a.name} [{a.id}]
+                  </option>
                 ))}
               </select>
             </div>
@@ -340,6 +382,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
               <div className="relative mb-6 group">
                 <div className="absolute inset-0 bg-[#ffb700] rounded-2xl blur-xl opacity-10"></div>
+                {onlineAgencies[agent.id] && (
+                  <div className="absolute -top-1 -right-1 z-20 flex items-center gap-1.5 bg-green-500 text-white text-[8px] font-black px-2 py-1 rounded-full animate-pulse shadow-lg shadow-green-900/50">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                    ONLINE
+                  </div>
+                )}
                 <div className="w-32 h-32 rounded-2xl border-2 border-white/5 p-1 bg-[#000c19] shadow-inner relative overflow-hidden">
                   <img
                     src={formatDriveUrl(agent.photoUrl)}
@@ -389,6 +437,22 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   {isProspectoAscender && (
                     <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
                   )}
+                </div>
+
+                <div className="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-4 mt-2">
+                  <p className="text-[7px] text-indigo-400 font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <Sparkles size={10} /> Resumen Táctico de IA
+                  </p>
+                  <p className="text-[9px] text-slate-300 italic leading-relaxed">
+                    {agent.tacticalSummary || '"Sin análisis táctico reciente. Solicite actualización."'}
+                  </p>
+                  <button
+                    onClick={handleGenerateAiProfile}
+                    disabled={isGeneratingAi}
+                    className="mt-3 w-full py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar Cerebro IA'}
+                  </button>
                 </div>
               </div>
 

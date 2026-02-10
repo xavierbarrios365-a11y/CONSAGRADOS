@@ -11,12 +11,16 @@ import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import NotificationInbox from './components/NotificationInbox';
-import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics, fetchNotifications } from './services/sheetsService';
+import TacticalChat from './components/TacticalChat';
+import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics, fetchNotifications, syncFcmToken } from './services/sheetsService';
+import { requestForToken, onMessageListener, db } from './firebase-config';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
+import SpiritualAdvisor from './components/SpiritualAdvisor';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
@@ -103,6 +107,8 @@ const App: React.FC = () => {
   const [directorySearch, setDirectorySearch] = useState('');
   const [showInbox, setShowInbox] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -285,34 +291,64 @@ const App: React.FC = () => {
   }, [resetSessionTimer]);
 
   useEffect(() => {
-    // OneSignal v16 - Silent Production Configuration
-    const initOneSignal = () => {
-      const OS = (window as any).OneSignal || [];
-      if (!(window as any).OneSignal) (window as any).OneSignal = OS;
-
-      OS.push(() => {
-        OS.init({
-          appId: "c05267b7-737a-4f55-b692-3c2fe2d20677",
-          safari_web_id: "web.onesignal.auto.17b43c6b-967b-402a-9e11-e6c1e345678a",
-          notifyButton: { enable: false },
-          allowLocalhood: true,
-          serviceWorkerParam: { scope: "/" },
-          serviceWorkerPath: "sw.js"
-        }).catch(() => { });
-
-        // Soft prompt trigger
-        if (isLoggedIn) {
-          setTimeout(() => {
-            if (OS.Notifications && OS.Notifications.permission === 'default') {
-              OS.Slidedown.prompt();
-            }
-          }, 15000); // Wait 15s of organic usage
+    // Firebase Cloud Messaging Integration
+    const initFirebaseMessaging = async () => {
+      try {
+        const token = await requestForToken();
+        if (token) {
+          console.log("FCM Token listo para sincronización:", token);
+          if (currentUser) {
+            syncFcmToken(currentUser.id, token).then(res => {
+              if (res.success) console.log("Token sincronizado con el mando central.");
+            });
+          }
         }
-      });
+
+        onMessageListener().then((payload: any) => {
+          console.log("Notificación recibida:", payload);
+          // Actualizamos contador de inbox para forzar refresco visual
+          fetchNotifications().then(notifs => {
+            const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+            setUnreadNotifications(notifs.filter(n => !readIds.includes(n.id)).length);
+          });
+        });
+      } catch (e) {
+        console.error("Error inicializando Firebase:", e);
+      }
     };
 
-    initOneSignal();
+    if (isLoggedIn) {
+      initFirebaseMessaging();
+    }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    // --- SISTEMA DE PRESENCIA (FIRESTORE) ---
+    if (currentUser && isLoggedIn) {
+      const updatePresence = async (status: 'online' | 'offline') => {
+        try {
+          await setDoc(doc(db, 'presence', currentUser.id), {
+            status,
+            lastSeen: serverTimestamp(),
+            agentName: currentUser.name
+          }, { merge: true });
+        } catch (e) {
+          console.error("Error actualizando presencia:", e);
+        }
+      };
+
+      updatePresence('online');
+
+      // Limpieza al cerrar o cambiar de usuario
+      const handleBeforeUnload = () => updatePresence('offline');
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        updatePresence('offline');
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [currentUser, isLoggedIn]);
 
   useEffect(() => {
     // Verificación periódica de notificaciones internas
@@ -1105,6 +1141,33 @@ const App: React.FC = () => {
           onClose={() => setShowInbox(false)}
           onTotalReadUpdate={setUnreadNotifications}
         />
+      )}
+
+      {isChatOpen && currentUser && (
+        <TacticalChat currentUser={currentUser} onClose={() => setIsChatOpen(false)} />
+      )}
+
+      {isAdvisorOpen && currentUser && (
+        <SpiritualAdvisor currentUser={currentUser} onClose={() => setIsAdvisorOpen(false)} />
+      )}
+
+      {isLoggedIn && !isChatOpen && (
+        <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-[45]">
+          <button
+            onClick={() => setIsAdvisorOpen(true)}
+            className="p-4 bg-indigo-900/80 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all active:scale-95 animate-in fade-in border border-indigo-500/30 backdrop-blur-md"
+            title="Consejero Táctico"
+          >
+            <Shield size={24} className="text-indigo-300" />
+          </button>
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="p-4 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-500 transition-all active:scale-95 animate-in fade-in"
+            title="Chat Táctico"
+          >
+            <MessageSquare size={24} />
+          </button>
+        </div>
       )}
 
       {scannedAgentForPoints && (

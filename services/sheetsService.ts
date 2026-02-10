@@ -491,3 +491,13 @@ export const broadcastNotification = async (title: string, message: string) => {
     return { success: false, error: error.message };
   }
 };
+
+export const syncFcmToken = async (agentId: string, token: string) => {
+  try {
+    const response = await postToAction('sync_fcm_token', { agentId, token });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO SINCRONIZACIÓN FCM TOKEN:", error);
+    return { success: false, error: error.message };
+  }
+};

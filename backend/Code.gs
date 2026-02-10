@@ -27,8 +27,12 @@ function getGlobalConfig() {
     STREAKS_SHEET: 'RACHAS',
     VERSES_SHEET: 'VERSICULO_DIARIO',
     NOTIFICATIONS_SHEET: 'NOTIFICACIONES',
-    ONESIGNAL_APP_ID: 'c05267b7-737a-4f55-b692-3c2fe2d20677',
-    ONESIGNAL_REST_API_KEY: '8ccEyat7we65m1kdya83cl6nge' // Actualizado desde captura de pantalla
+    SERVICE_ACCOUNT: {
+      "project_id": "consagrados-c2d78",
+      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDNq6kEzfZMRDLP\nDvSGS3cLuUnf5zFbwFZppBtEyvyKTxL8m80E0BV8rQYmAlaSdG1vEd8bCsqiVp1Y\nVrFc/05yPCUdNRBJjj+6fj6hfq4rGKgm1nq4Wy3SaOAkFNPUS6hO6Ucx4q6+zk7q\n32KdJMfiXOv2cj3nHyBspbq1XG2Leg2zJaxY741Tan8bfnHjLsV29Q4NAVHopEsc\nYaqEQLSzAYA6yIwMe2qJqwbYJPny8Hsh9gKbb9QTTggEIeI5QrPT/KH6fE3nXRfh\n3gX4Kg8OgQ9cWoBompqj55PM9rdkhGHQA1HN0ylV2Fjykfj0Jq+dPhn2oM3UKn+W\nvhJLortDAgMBAAECggEAXOHiUe4mBilifMo3OhMIrz29lCWXz+Tb4ZegTQAS7u9p\nFrXR8BN9MLH/LdkuebOk3F1I0bCc9JWDN6rnLKWMKuDorfkR4vYf57wt0scgJwxa\nnDeOcoWS+wwr9X+GbsDAQOrvISNLYZZQY5gAtBExSBRI6CKNvDv9a7Ooz1Dvk+X5\n129n2U7vOm9oOWcWI4ysjID0L3TfO6jEMBIlH4cxBM4jZXf3v1NYH6IMZxPKI86D\nD97OHngSm8DJQdmVApDsI9Bnt70HHQlSSFDkeien4r3au+7rL1dUuo4wpw7+BcxT\nuSlfFpXldDDSjtLXSjoCKkULJ0gBfUUQurMR+9iYqQKBgQD9S8ULmkpvnYtmbI7H\n6EKrfrB7YPPM0bEpGM/ZBOAuUTlQ+Mx23r+pWgHcOCttyT1+bsaFA8s2OwSJGUjw\nKoGSmX8EgzfPJ1K6+OZTvqC1pPDfXjWMV9PaGmsTkGL2SXuP1RSstee5oav8D617\ns+i0k+406ngIqOg0NcJNVyyKHwKBgQDP3bxEZW1QNjmVAS6MzMCygKzYfMzKHe4O\nkjtj/1XdLhLhUf3n6cPAZjY9bYmp/Wzd1csc6gufhAdV4ObhkgL0ieWy6lw/fKpi\nkeiYjXP8DfnEov1w+s+OhJDBncH1mfReRXJxtzNooLNo+QXx1CNEeiJ7JgdTD+MW\n0VV58DWyXQKBgHNUXJO73MiVYzNvmlNLXY/YT2Ld8iQAFjowIfMeVTTBpudHYVF+\neqYRZWdv69ZBGs7GgX1vDMfUd2w1JxCzSewGF99mH7MipHide8IFugb64vHRY3BT\nTRKxlK+DvouFSc1jp9Y7vRa4liZevQ7mC76s3HkbiSvoPFIJaD7uwkjhAoGAeDzF\nyzZ0TeKf2j4NxCooCNj/olZGS1+WtV0G96fZ7g/ZofZAjaadsawuEchLykWqdINX\ncwk64fGIILfwNWi1RuiBMsX3yE1/bXcC+UNRZOpcoM67FWAvMTwjU6vCZyO/w8we\nEAMtvIbAYKczNhhEsjaHvX5Y3EYjUK6T5+330Y0CgYBsDgDMB0TT7+VggQA5FipB\nDpWe17uO8iIzv7HPTIlcX5m8ZB8pWiaSIm7mHyxkh/n27haLvSLvsNJm5lZni7Zf\nR3k8S2doGXfBBwkr/AahG2e52gbrQiSvd6+pROuIwQvNkTdvNi753o5BpAsgdo/V\nM8tnG9QAfWnKCnaT1eH3Yg==\n-----END PRIVATE KEY-----\n",
+      "client_email": "firebase-adminsdk-fbsvc@consagrados-c2d78.iam.gserviceaccount.com"
+    },
+    OFFICIAL_LOGO_ID: '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f'
   };
 }
 
@@ -61,37 +65,94 @@ function sendTelegramNotification(message) {
 }
 
 /**
- * @description Envía una notificación push vía OneSignal.
+ * @description Envía una notificación push vía Firebase Cloud Messaging (FCM v1).
  */
 function sendPushNotification(title, message) {
   const CONFIG = getGlobalConfig();
-  if (!CONFIG.ONESIGNAL_APP_ID || !CONFIG.ONESIGNAL_REST_API_KEY) {
-    Logger.log("Configuración de OneSignal incompleta.");
+  if (!CONFIG.SERVICE_ACCOUNT || !CONFIG.SERVICE_ACCOUNT.private_key) {
+    Logger.log("Service Account no configurada. Saltando envío push.");
     return;
   }
 
   try {
-    const url = "https://onesignal.com/api/v1/notifications";
+    const accessToken = getFcmAccessToken();
+    const url = `https://fcm.googleapis.com/v1/projects/${CONFIG.SERVICE_ACCOUNT.project_id}/messages:send`;
+    
+    // El payload v1 es más estructurado
     const payload = {
-      app_id: CONFIG.ONESIGNAL_APP_ID,
-      headings: { "en": title, "es": title },
-      contents: { "en": message, "es": message },
-      included_segments: ["Subscribed Users"]
+      message: {
+        topic: "all_agents",
+        notification: {
+          title: `📢 ${title.toUpperCase()}`,
+          body: message
+        },
+        webpush: {
+          notification: {
+            icon: "https://lh3.googleusercontent.com/d/" + CONFIG.OFFICIAL_LOGO_ID,
+            click_action: "https://consagrados.vercel.app"
+          }
+        }
+      }
     };
 
     const options = {
       method: "post",
       contentType: "application/json",
       headers: {
-        "Authorization": "Basic " + CONFIG.ONESIGNAL_REST_API_KEY
+        "Authorization": "Bearer " + accessToken
       },
-      payload: JSON.stringify(payload)
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     };
 
-    UrlFetchApp.fetch(url, options);
+    const response = UrlFetchApp.fetch(url, options);
+    Logger.log(`Respuesta FCM v1: ${response.getContentText()}`);
   } catch (error) {
-    Logger.log(`Error al enviar Push Notification: ${error.message}`);
+    Logger.log(`Error al enviar Push via FCM v1: ${error.message}`);
   }
+}
+
+/**
+ * @description Obtiene un Access Token de Google usando la Service Account.
+ */
+function getFcmAccessToken() {
+  const CONFIG = getGlobalConfig();
+  const serviceAccount = CONFIG.SERVICE_ACCOUNT;
+  
+  const header = JSON.stringify({
+    alg: "RS256",
+    typ: "JWT"
+  });
+  
+  const now = Math.floor(Date.now() / 1000);
+  const claim = JSON.stringify({
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now
+  });
+  
+  const base64Encode = (str) => {
+    return Utilities.base64EncodeWebSafe(str).replace(/=+$/, '');
+  };
+  
+  const signatureInput = base64Encode(header) + "." + base64Encode(claim);
+  const signature = Utilities.computeRsaSha256Signature(signatureInput, serviceAccount.private_key);
+  const jwt = signatureInput + "." + base64Encode(signature);
+  
+  const options = {
+    method: "post",
+    contentType: "application/x-www-form-urlencoded",
+    payload: {
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt
+    }
+  };
+  
+  const response = UrlFetchApp.fetch("https://oauth2.googleapis.com/token", options);
+  const data = JSON.parse(response.getContentText());
+  return data.access_token;
 }
 
 /**
@@ -216,6 +277,8 @@ function doPost(e) {
         return sendBroadcastNotification(request.data);
       case 'get_notifications':
         return getNotifications();
+      case 'sync_fcm_token':
+        return syncFcmToken(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -936,6 +999,7 @@ function onOpen() {
     .addItem('🚀 Setup Base de Datos', 'setupDatabase')
     .addItem('🔍 Verificar Sistema', 'checkSystemStatus')
     .addItem('🔧 Reparar IDs/PINs', 'repairMissingData')
+    .addItem('⏰ Activar Versículo Diario', 'setupDailyVerseTrigger')
     .addToUi();
 }
 
@@ -952,6 +1016,10 @@ function uploadGuide(data) {
   
   sheet.appendRow([id, data.name, data.type, data.url, date]);
   
+  const title = "📚 NUEVO RECURSO DISPONIBLE";
+  const msg = `Se ha publicado una nueva guía (${data.type}): ${data.name}.`;
+  sendPushNotification(title, msg);
+
   const telegramMessage = `📚 <b>NUEVA GUÍA DISPONIBLE</b>\n\n<b>• Nombre:</b> ${data.name}\n<b>• Tipo:</b> ${data.type}\n\n<i>El material ha sido cargado al centro de inteligencia.</i>`;
   sendTelegramNotification(telegramMessage);
 
@@ -1682,3 +1750,101 @@ function getNotifications() {
 }
 
 
+/**
+ * @description Sincroniza el token de FCM de un agente y lo suscribe al tema masivo.
+ */
+function syncFcmToken(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  let fcmCol = headers.indexOf('FCM_TOKEN');
+  
+  // Si no existe la columna, la creamos al final
+  if (fcmCol === -1) {
+    fcmCol = headers.length;
+    sheet.getRange(1, fcmCol + 1).setValue('FCM_TOKEN');
+  }
+
+  const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+  if (rowIdx !== -1) {
+    sheet.getRange(rowIdx + 1, fcmCol + 1).setValue(data.token);
+    
+    // Suscribir al Topic "all_agents" usando la API de IID (Instance ID)
+    try {
+      const accessToken = getFcmAccessToken();
+      const url = "https://iid.googleapis.com/iid/v1:batchAdd";
+      const payload = {
+        to: "/topics/all_agents",
+        registration_tokens: [data.token]
+      };
+      
+      const options = {
+        method: "post",
+        contentType: "application/json",
+        headers: {
+          "Authorization": "Bearer " + accessToken,
+          "access_token_auth": "true"
+        },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      };
+      
+      const response = UrlFetchApp.fetch(url, options);
+      Logger.log(`Suscripción a Topic result: ${response.getContentText()}`);
+    } catch (e) {
+      Logger.log("Error al suscribir al topic: " + e.message);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Agente no encontrado" })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Función programada para enviar el versículo diario a una hora clave.
+ * Debe configurarse un disparador (trigger) de tiempo en Apps Script.
+ */
+function scheduledDailyVerseNotification() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.VERSES_SHEET);
+  const data = sheet.getDataRange().getValues();
+  
+  // El versículo de hoy es el último de la lista (o basado en fecha)
+  const todayVerse = data[data.length - 1];
+  const verseText = todayVerse[0];
+  const reference = todayVerse[1];
+
+  const title = "📖 PALABRA DEL DÍA";
+  const message = `"${verseText}" - ${reference}`;
+  
+  sendPushNotification(title, message);
+  Logger.log("Notificación de versículo diario enviada.");
+}
+
+/**
+ * @description Configura un disparador de tiempo para enviar el versículo cada mañana.
+ */
+function setupDailyVerseTrigger() {
+  // Eliminar disparadores previos para evitar duplicados
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => {
+    if (t.getHandlerFunction() === 'scheduledDailyVerseNotification') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  // Crear nuevo disparador (ejemplo: cada día entre las 8 y 9 AM)
+  ScriptApp.newTrigger('scheduledDailyVerseNotification')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+
+  SpreadsheetApp.getUi().alert('✅ Automatización Activada: El versículo se enviará cada mañana a las 8:00 AM.');
+}

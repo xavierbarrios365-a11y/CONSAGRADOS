@@ -257,3 +257,45 @@ export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[
     return "ERROR EN EL SISTEMA DE ANÁLISIS PROFUNDO. REINTENTE MÁS TARDE.";
   }
 };
+
+export const getSpiritualCounseling = async (agent: Agent, userMessage: string) => {
+  const ai = getGenAI();
+  if (!ai) return null;
+
+  try {
+    const prompt = `Actúa como el "Consejero Táctico Espiritual" de CONSAGRADOS 2026.
+    
+    PERFIL DEL PROYECTO:
+    - Misión: Formar líderes de élite con carácter inquebrantable.
+    - Valores: Disciplina, Compromiso, Santidad y Visión Estratégica.
+    - Tono: Firme, inspirador, directo y con terminología militar/táctica.
+
+    DATOS DEL AGENTE QUE SOLICITA GUÍA:
+    - Nombre: ${agent.name}
+    - Rango: ${agent.rank}
+    - Talentos: ${agent.talent}
+    - XP: ${agent.xp}
+
+    MENSAJE DEL AGENTE:
+    "${userMessage}"
+
+    REQUERIMIENTO:
+    Genera una respuesta de consejería que:
+    1. Se dirija al agente por su rango y nombre.
+    2. Use analogías tácticas/militares para dar un consejo espiritual o de vida.
+    3. Esté alineado con la misión de ser "Consagrado".
+    4. Sea breve (máximo 120 palabras).
+    
+    RESPONDE CON UN MENSAJE DIRECTO QUE INSPIRE A LA ACCIÓN.`;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt
+    });
+
+    return result.text || "CENTRO DE COMANDO FUERA DE LÍNEA. MANTÉN LA FE.";
+  } catch (error: any) {
+    console.error("❌ Gemini detailed error (Counseling):", error.message);
+    return "ERROR DE TRANSMISIÓN EN EL CANAL DE ASESORÍA. SIGA EL PROTOCOLO ESTÁNDAR.";
+  }
+};

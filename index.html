@@ -145,6 +145,14 @@
         allowLocalhood: true,
         serviceWorkerParam: { scope: "/" },
         serviceWorkerPath: "sw.js",
+        promptOptions: {
+          slidedown: {
+            enabled: true,
+            autoPrompt: true,
+            timeDelay: 3,
+            pageViews: 1
+          }
+        }
       }).then(() => {
         window.OneSignalReady = true;
         console.log("OneSignal v16 Ready");

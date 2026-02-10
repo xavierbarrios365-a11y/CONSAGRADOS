@@ -435,11 +435,8 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              <div
-                onClick={() => setView(AppView.RANKING)}
-                className="bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col gap-6 overflow-hidden relative shadow-2xl cursor-pointer active:scale-[0.98] transition-all group"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <div className="bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col gap-6 overflow-hidden relative shadow-2xl">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
                   <Flame size={120} className="text-[#ffb700]" />
                 </div>
                 <div className="relative z-10 w-full flex justify-between items-center">
@@ -451,29 +448,27 @@ const App: React.FC = () => {
                     <Flame size={40} className="text-[#001f3f]" />
                   </div>
                 </div>
-
                 <div className="w-full space-y-4 relative z-10">
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <div className="h-full bg-[#ffb700] shadow-[0_0_15px_rgba(255,183,0,0.5)] transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest italic">Objetivo: 365 días</p>
-                    <button className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest flex items-center gap-2">
-                      Ver Ranking <ChevronRight size={10} />
-                    </button>
-                  </div>
+                  <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest italic">Objetivo: 365 días</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setView(AppView.ACADEMIA)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
-                <Database size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Academia</span>
+            <div className="grid grid-cols-3 gap-4">
+              <button onClick={() => setView(AppView.RANKING)} className="p-6 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/30 transition-all active:scale-95 shadow-lg group">
+                <Trophy size={28} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Ranking</span>
               </button>
-              <button onClick={() => setView(AppView.CONTENT)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
-                <BookOpen size={32} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-black uppercase tracking-widest font-bebas">Material</span>
+              <button onClick={() => setView(AppView.ACADEMIA)} className="p-6 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
+                <Database size={28} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Academia</span>
+              </button>
+              <button onClick={() => setView(AppView.CONTENT)} className="p-6 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
+                <BookOpen size={28} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Material</span>
               </button>
             </div>
           </div>
@@ -570,27 +565,58 @@ const App: React.FC = () => {
               <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-white/30" />
             </div>
 
-            <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4 pb-10">
-              {agents
-                .filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch))
-                .map(a => (
-                  <button
-                    key={a.id}
-                    onClick={() => setFoundAgent(a)}
-                    className="group relative aspect-square rounded-3xl overflow-hidden border-2 border-white/5 bg-white/5 hover:border-[#ffb700]/30 transition-all p-1 active:scale-95"
-                  >
-                    <img
-                      src={formatDriveUrl(a.photoUrl)}
-                      className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-500"
-                      onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }}
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center">
-                      <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
-                      <p className="text-[6px] font-bold text-[#ffb700]">{a.xp} XP</p>
+            {/* Clasificación por Rol */}
+            {(() => {
+              const directors = agents.filter(a => a.userRole === UserRole.DIRECTOR).filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch));
+              const leaders = agents.filter(a => a.userRole === UserRole.LEADER).filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch)).sort((a, b) => b.xp - a.xp);
+              const students = agents.filter(a => a.userRole === UserRole.STUDENT || (!a.userRole)).filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch)).sort((a, b) => b.xp - a.xp);
+
+              const AgentGrid = ({ list, borderClass, xpColor }: { list: typeof agents, borderClass: string, xpColor: string }) => (
+                <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
+                  {list.map(a => (
+                    <button key={a.id} onClick={() => setFoundAgent(a)} className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} transition-all p-1 active:scale-95`}>
+                      <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-500" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center">
+                        <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
+                        <p className={`text-[6px] font-bold ${xpColor}`}>{a.xp} XP</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              );
+
+              return (
+                <div className="space-y-6 pb-10">
+                  {directors.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <Crown size={14} className="text-[#ffb700]" />
+                        <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em]">Directores ({directors.length})</span>
+                      </div>
+                      <AgentGrid list={directors} borderClass="border-[#ffb700]/30 bg-[#ffb700]/5 hover:border-[#ffb700]/50" xpColor="text-[#ffb700]" />
                     </div>
-                  </button>
-                ))}
-            </div>
+                  )}
+                  {leaders.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <Shield size={14} className="text-blue-400" />
+                        <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.3em]">Líderes ({leaders.length})</span>
+                      </div>
+                      <AgentGrid list={leaders} borderClass="border-blue-400/20 bg-blue-400/5 hover:border-blue-400/40" xpColor="text-blue-400" />
+                    </div>
+                  )}
+                  {students.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <Users size={14} className="text-white/60" />
+                        <span className="text-[9px] text-white/60 font-black uppercase tracking-[0.3em]">Estudiantes ({students.length})</span>
+                      </div>
+                      <AgentGrid list={students} borderClass="border-white/5 bg-white/5 hover:border-white/20" xpColor="text-[#ffb700]" />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       case AppView.CIU:
@@ -603,9 +629,24 @@ const App: React.FC = () => {
                 <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Visitantes</h2>
                 <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Escaneo de Identidades Externas</p>
               </div>
-              <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
-                <Activity className="text-[#ffb700] animate-pulse" size={18} />
-                <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{visitorRadar.length} Detectados</span>
+              <div className="flex items-center gap-3">
+                <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
+                  <Activity className="text-[#ffb700] animate-pulse" size={18} />
+                  <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{visitorRadar.length} Detectados</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const name = prompt('Nombre del visitante:');
+                    if (name && name.trim()) {
+                      // Registrar visitante usando la misma mecánica de processScan con el nombre
+                      alert(`Visitante "${name.trim()}" registrado. Actualiza la hoja de visitas para persistir.`);
+                      syncData(true);
+                    }
+                  }}
+                  className="bg-[#ffb700] px-5 py-4 rounded-2xl text-[#001f3f] text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2 shadow-lg"
+                >
+                  <Plus size={16} /> Registrar
+                </button>
               </div>
             </div>
 
@@ -661,11 +702,6 @@ const App: React.FC = () => {
             {currentUser && <DigitalIdCard agent={currentUser} />}
 
             <div className="w-full grid grid-cols-1 gap-3 mt-6">
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                <button onClick={() => setViewingAsRole(UserRole.STUDENT)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.STUDENT ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Estudiante</button>
-                <button onClick={() => setViewingAsRole(UserRole.LEADER)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.LEADER ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Líder</button>
-                <button onClick={() => setViewingAsRole(UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.DIRECTOR ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Director</button>
-              </div>
 
               <button onClick={() => alert("MÓDULO DE SEGURIDAD: Cambia tu PIN en la base de datos central.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
                 <div className="flex items-center gap-3">
@@ -728,16 +764,6 @@ const App: React.FC = () => {
       case AppView.RANKING:
         return (
           <div className="space-y-0 min-h-full">
-            <div className="bg-[#ffb700] p-8 pb-12 flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 bg-[#001f3f] rounded-full flex items-center justify-center shadow-xl border-4 border-[#ffb700]">
-                <Flame size={32} className="text-[#ffb700] animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-[#001f3f] font-bebas text-4xl font-black tracking-widest">RACHA DIARIA</h3>
-                <p className="text-[10px] text-[#001f3f]/70 font-black uppercase tracking-widest">Consagrados Force 2026</p>
-              </div>
-            </div>
-
             <div className="p-6">
               <TacticalRanking agents={agents} currentUser={currentUser} />
             </div>
@@ -853,9 +879,15 @@ const App: React.FC = () => {
       )}
 
       {foundAgent && (
-        <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center justify-center p-6 animate-in fade-in">
-          <button onClick={() => setFoundAgent(null)} className="mb-10 text-white/50 hover:text-white uppercase transition-colors text-[10px] font-black tracking-[0.4em]">Cerrar Expediente</button>
-          <DigitalIdCard agent={foundAgent} />
+        <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center p-6 animate-in fade-in overflow-y-auto">
+          <div className="w-full max-w-sm sticky top-0 z-10 flex justify-end py-2">
+            <button onClick={() => setFoundAgent(null)} className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl px-6 py-3 text-white uppercase transition-all text-[10px] font-black tracking-[0.3em] flex items-center gap-2 active:scale-95">
+              <X size={16} /> Cerrar
+            </button>
+          </div>
+          <div className="mt-4">
+            <DigitalIdCard agent={foundAgent} />
+          </div>
         </div>
       )}
 

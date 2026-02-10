@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Guide, UserRole } from '../types';
 import { fetchGuides, uploadFile, uploadGuideMetadata, deleteGuide } from '../services/sheetsService';
+import { compressImage } from '../services/storageUtils';
 import { BookOpen, Download, Upload, Plus, X, FileText, Loader2, Search, Trash2 } from 'lucide-react';
 
 interface ContentModuleProps {
@@ -64,15 +65,19 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
         try {
             const uploadPromises = selectedFiles.map(async (file, index) => {
                 try {
-                    const reader = new FileReader();
-                    const base64Promise = new Promise<string>((resolve, reject) => {
-                        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
+                    let finalBase64 = '';
+                    if (file.type.startsWith('image/')) {
+                        finalBase64 = await compressImage(file, 1200, 0.7);
+                    } else {
+                        const reader = new FileReader();
+                        finalBase64 = await new Promise<string>((resolve, reject) => {
+                            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                    }
 
-                    const base64 = await base64Promise;
-                    const uploadRes = await uploadFile(base64, file);
+                    const uploadRes = await uploadFile(finalBase64, file);
 
                     if (uploadRes.success && uploadRes.url) {
                         // Usar el nombre base + index si hay varios, o solo el nombre si es uno

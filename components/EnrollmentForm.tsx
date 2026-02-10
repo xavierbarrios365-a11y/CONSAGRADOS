@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { uploadImage, enrollAgent } from '../services/sheetsService';
+import { compressImage } from '../services/storageUtils';
 
 import { UserRole } from '../types';
 
@@ -70,8 +71,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
     if (selectedFile) {
       setStatus('UPLOADING');
       try {
-        const base64 = await fileToBase64(selectedFile);
-        const uploadResult = await uploadImage(base64, selectedFile);
+        const compressedBase64 = await compressImage(selectedFile, 800, 0.8);
+        const uploadResult = await uploadImage(compressedBase64, selectedFile);
         if (uploadResult.success && uploadResult.url) {
           photoUrl = uploadResult.url;
         } else {

@@ -21,6 +21,7 @@ import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
 import SpiritualAdvisor from './components/SpiritualAdvisor';
+import { initRemoteConfig } from './services/configService';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
@@ -194,6 +195,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    initRemoteConfig();
     const storedUser = localStorage.getItem('consagrados_agent');
     const storedLastActive = localStorage.getItem('last_active_time');
 

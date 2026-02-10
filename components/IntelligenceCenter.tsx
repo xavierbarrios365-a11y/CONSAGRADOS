@@ -6,10 +6,10 @@ import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
-import { generateTacticalProfile } from '../services/geminiService';
+import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
-import { generateTacticalProfile } from '../services/geminiService';
+import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
 
 interface CIUProps {
   agents: Agent[];
@@ -127,15 +127,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
     setPhotoStatus('UPLOADING');
     try {
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const base64 = await base64Promise;
-      const uploadResult = await uploadImage(base64, file);
+      const compressedBase64 = await compressImage(file, 800, 0.8);
+      const uploadResult = await uploadImage(compressedBase64, file);
 
       if (uploadResult.success && uploadResult.url) {
         setPhotoStatus('SAVING');
@@ -574,6 +567,51 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 </button>
               </div>
             )}
+            {/* AI COMMAND TERMINAL - NUEVA FUNCIONALIDAD GRATUITA */}
+            <div className="bg-[#000c19] border border-indigo-500/30 rounded-[2.5rem] p-6 shadow-2xl space-y-4 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Sparkles size={120} className="text-indigo-500" />
+              </div>
+
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-indigo-500/20 rounded-lg">
+                  <Activity className="text-indigo-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Terminal de Comando IA</h3>
+                  <p className="text-[7px] text-indigo-400/70 font-bold uppercase tracking-widest font-montserrat">Interfase de Inteligencia Táctica Directa</p>
+                </div>
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Escriba un comando táctico (ej: 'Analiza el compromiso actual')..."
+                  className="w-full bg-[#000c19] border border-white/10 rounded-xl py-4 pl-6 pr-14 text-white text-[10px] font-bold uppercase outline-none focus:border-indigo-500 transition-all font-mono tracking-wider"
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      const input = e.currentTarget.value;
+                      if (!input.trim()) return;
+                      e.currentTarget.value = 'PROCESANDO COMANDO...';
+                      try {
+                        const response = await getSpiritualCounseling(agent, `[COMANDO TÁCTICO]: ${input}`);
+                        alert(`CENTRO DE MANDO: ${response}`);
+                        e.currentTarget.value = '';
+                      } catch (err) {
+                        alert("ERROR EN LA FRECUENCIA");
+                        e.currentTarget.value = '';
+                      }
+                    }
+                  }}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Zap size={14} className="text-indigo-500 animate-pulse" />
+                </div>
+              </div>
+              <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest pl-2">
+                ⚡ Presione ENTER para transmitir el comando al Cerebro IA.
+              </p>
+            </div>
           </div>
         </div>
       </div>

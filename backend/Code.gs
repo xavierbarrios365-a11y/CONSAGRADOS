@@ -352,16 +352,22 @@ function enrollAgent(data) {
 function uploadImage(data) {
   const CONFIG = getGlobalConfig();
   const { file, mimeType, filename } = data;
+  
+  if (!file) throw new Error("No se recibió contenido de archivo.");
+  
   const decoded = Utilities.base64Decode(file);
   const blob = Utilities.newBlob(decoded, mimeType, filename);
+  
+  // Loguear tamaño para monitoreo de cuota (Límite sugerido: 10MB para estabilidad en Apps Script)
+  const sizeKb = Math.round(blob.getBytes().length / 1024);
+  console.log(`📤 Subiendo archivo: ${filename} (${sizeKb} KB) - Mime: ${mimeType}`);
+
   const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
-  if (!folder) throw new Error("La carpeta de destino en Drive no fue encontrada.");
+  if (!folder) throw new Error("La carpeta de destino en Drive no fue encontrada. Verifique DRIVE_FOLDER_ID.");
 
   const newFile = folder.createFile(blob);
   newFile.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
   
-  // Para imágenes, usar el proxy de imágenes de Google para mejor visualización.
-  // Para otros archivos (PDF, DOC, etc.), usar el link de descarga directa.
   const isImage = mimeType && mimeType.startsWith('image/');
   const fileUrl = isImage 
     ? `https://lh3.googleusercontent.com/d/${newFile.getId()}`

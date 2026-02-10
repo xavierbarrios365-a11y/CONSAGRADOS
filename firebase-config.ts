@@ -1,12 +1,13 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { getFirestore } from "firebase/firestore";
+import { getRemoteConfig } from "firebase/remote-config";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCLHvs-M0WVnWwYSJ2tYVfhs6un9QzdQiA",
     authDomain: "consagrados-c2d78.firebaseapp.com",
     projectId: "consagrados-c2d78",
-    storageBucket: "consagrados-c2d78.firebasestorage.app",
     messagingSenderId: "18154361983",
     appId: "1:18154361983:web:277d7541346229b9cdb48a",
     measurementId: "G-G4JMGL7HLL"
@@ -14,8 +15,18 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
+
+// Activar App Check (Escudo de Seguridad)
+if (typeof window !== 'undefined') {
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider('6LeUXG8aAAAAAKs_ClbCd338ODEZqpdtzxszLZ'),
+        isTokenAutoRefreshEnabled: true
+    });
+}
+
 const messaging = getMessaging(app);
 const db = getFirestore(app);
+const remoteConfig = getRemoteConfig(app);
 
 const VAPID_KEY = "BAqCHHlwSwZQA-8fvpuYvg-augargWAuRXwahCaF9pO31-PfEUN_Oxf2GumcRMvTmY31ovGuv4kj1FlaoPopwE";
 
@@ -43,4 +54,4 @@ export const onMessageListener = () =>
         });
     });
 
-export { messaging, db };
+export { messaging, db, remoteConfig };

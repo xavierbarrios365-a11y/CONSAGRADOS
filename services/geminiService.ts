@@ -20,7 +20,31 @@ const getGenAI = (): GoogleGenAI | null => {
   return genAIInstance;
 };
 
+// --- AI CACHING SYSTEM (SAVE TOKENS) ---
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Horas
+
+const getCachedResponse = (key: string) => {
+  const cached = localStorage.getItem(`ai_cache_${key}`);
+  if (!cached) return null;
+  try {
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp < CACHE_TTL) return data;
+    localStorage.removeItem(`ai_cache_${key}`);
+  } catch (e) {
+    localStorage.removeItem(`ai_cache_${key}`);
+  }
+  return null;
+};
+
+const saveToCache = (key: string, data: any) => {
+  localStorage.setItem(`ai_cache_${key}`, JSON.stringify({ data, timestamp: Date.now() }));
+};
+
 export const getTacticalAnalysis = async (agents: Agent[]) => {
+  const cacheKey = `analysis_${agents.length}_${agents.reduce((acc, curr) => acc + curr.xp, 0)}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) return cached;
+
   const ai = getGenAI();
   if (!ai) {
     return "TACTICAL ANALYSIS UNAVAILABLE. SISTEMA SIN LLAVE DE ACCESO IA.";
@@ -43,7 +67,9 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
       Use a serious, high-tech tone.`
     });
 
-    return response.text || "ANÁLISIS COMPLETADO SIN TEXTO.";
+    const resultText = response.text || "ANÁLISIS COMPLETADO SIN TEXTO.";
+    saveToCache(cacheKey, resultText);
+    return resultText;
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Analysis):", {
       status: error.status,
@@ -178,6 +204,10 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
 };
 
 export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
+  const cacheKey = `profile_${agent.id}_${agent.xp}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) return cached;
+
   const ai = getGenAI();
   if (!ai) {
     return null;
@@ -216,7 +246,9 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
 
     const text = result.text || "";
     const jsonStr = text.replace(/```(?:json)?/g, '').trim();
-    return JSON.parse(jsonStr);
+    const resultJson = JSON.parse(jsonStr);
+    saveToCache(cacheKey, resultJson);
+    return resultJson;
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Profile):", {
       status: error.status,

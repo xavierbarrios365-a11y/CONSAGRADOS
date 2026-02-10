@@ -377,7 +377,7 @@ export const saveBulkAcademyData = async (data: { courses: any[], lessons: any[]
   }
 };
 
-export const updateTacticalStats = async (agentId: string, stats: any, summary: string) => {
+export const updateAgentAiProfile = async (agentId: string, stats: any, summary: string) => {
   try {
     const response = await postToAction('update_tactical_stats', {
       agentId,

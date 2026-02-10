@@ -247,13 +247,16 @@ const App: React.FC = () => {
   }, [resetSessionTimer]);
 
   useEffect(() => {
-    // Proactive OneSignal Prompt
+    // Proactive OneSignal Prompt - REFORZADO V16
     if (isLoggedIn && (window as any).OneSignal) {
       const OS = (window as any).OneSignal;
       OS.push(() => {
-        if (!OS.Notifications.permission) {
-          console.log("Forzando prompt de OneSignal...");
-          OS.Slidedown.prompt();
+        // En V16 manejamos el permiso de forma asíncrona o vía Slidedown
+        if (OS.Notifications && OS.Notifications.permission !== 'granted') {
+          console.log("OS: Permiso no otorgado. Intentando disparar Slidedown...");
+          setTimeout(() => {
+            OS.Slidedown.prompt({ force: true });
+          }, 5000); // 5 segundos después del login para asegurar visibilidad
         }
       });
     }

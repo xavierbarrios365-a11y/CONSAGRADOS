@@ -250,37 +250,49 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 <div className="md:col-span-3">
                   <button
                     onClick={() => {
-                      alert("PASO 1: Iniciando diagnóstico de Notificaciones...");
+                      alert("INICIANDO DOBLE ATAQUE: Paso 1 (Diagnóstico de Estado)...");
                       if (!(window as any).OneSignal) {
-                        alert("ERROR: El objeto 'OneSignal' no existe en el navegador. ¿Tienes un bloqueador de anuncios?");
+                        alert("ERROR: El objeto 'OneSignal' no existe. Verifica si tienes un bloqueador de anuncios activo.");
                         return;
                       }
 
                       const OS = (window as any).OneSignal;
-                      alert("PASO 2: Intentando disparar Slidedown (Vía Push)...");
 
                       OS.push(async () => {
-                        try {
-                          console.log("OS: Intento Manual - Slidedown");
-                          await OS.Slidedown.prompt({ force: true });
-                          alert("AVISO: Se ha solicitado el Slidedown. Si no aparece, intentando Método Nativo...");
+                        const permStatus = OS.Notifications ? OS.Notifications.permission : 'unknown';
+                        alert(`ESTADO ACTUAL: El permiso está en: ${permStatus.toUpperCase()}`);
 
-                          if (OS.Notifications && OS.Notifications.permission === 'default') {
-                            alert("PASO 3: Intentando Permiso Nativo del Navegador...");
-                            await OS.Notifications.requestPermission();
-                          }
-
-                          alert("DIAGNÓSTICO FINALIZADO: Revisa si apareció la solicitud arriba.");
-                        } catch (err: any) {
-                          alert("FALLO TÁCTICO: " + err.message);
-                          console.error(err);
+                        if (permStatus === 'denied') {
+                          alert("🚨 BLOQUEO DETECTADO: El navegador tiene las notificaciones BLOQUEADAS para este sitio. Debes ir al icono del candado (izquierda de la URL) y darle a 'Restablecer permiso'.");
+                          return;
                         }
+
+                        alert("PASO 2: Disparando Slidedown y Permiso Nativo en paralelo...");
+
+                        // INTENTO 1: Slidedown (sin await para no colgar)
+                        try {
+                          console.log("OS: Ataque 1 - Slidedown");
+                          OS.Slidedown.prompt({ force: true });
+                        } catch (e) { }
+
+                        // INTENTO 2: Permiso Nativo (inmediato)
+                        try {
+                          if (OS.Notifications) {
+                            console.log("OS: Ataque 2 - Nativo");
+                            OS.Notifications.requestPermission().then((res: any) => {
+                              console.log("OS: Resultado Nativo =", res);
+                              if (res === 'granted') alert("✅ ¡ÉXITO! Permiso otorgado nativamente.");
+                            });
+                          }
+                        } catch (e) { }
+
+                        alert("DOBLE ATAQUE LANZADO: Si no ves un aviso arriba en este momento, es posible que el navegador esté ignorando la petición por seguridad. Prueba en modo incógnito.");
                       });
                     }}
                     className="w-full h-full bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-600/30 transition-all py-3 px-6"
                   >
                     <Bell size={16} />
-                    Diagnosticar Notificaciones
+                    Forzar/Diagnosticar Notificaciones
                   </button>
                   <button
                     onClick={handleBroadcast}

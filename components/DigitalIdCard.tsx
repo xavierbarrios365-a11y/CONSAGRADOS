@@ -92,11 +92,12 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* FRENTE */}
         <div
-          className="absolute inset-0 bg-[#0a0a0a] rounded-[2rem] border-2 border-white/10 shadow-2xl flex flex-col overflow-hidden"
+          className={`absolute inset-0 bg-[#0a0a0a] rounded-[2rem] border-2 border-white/10 shadow-2xl flex flex-col overflow-hidden transition-opacity duration-300 ${isFlipped ? 'opacity-0' : 'opacity-100'}`}
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
-            transform: 'translateZ(1px)' // Forzar separación 3D en móviles
+            zIndex: isFlipped ? 0 : 10,
+            transform: 'translateZ(1px)'
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-transparent"></div>
@@ -168,10 +169,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
 
         {/* DORSO */}
         <div
-          className="absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col overflow-hidden"
+          className={`absolute inset-0 bg-[#000000] rounded-[2rem] border-2 border-[#ffb700]/30 shadow-2xl flex flex-col overflow-hidden transition-opacity duration-300 ${isFlipped ? 'opacity-100' : 'opacity-0'}`}
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
+            zIndex: isFlipped ? 10 : 0,
             transform: 'rotateY(180deg) translateZ(1px)'
           }}
           onClick={(e) => e.stopPropagation()} // Evitar volteo al tocar tabs

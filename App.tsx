@@ -435,40 +435,44 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              <div className="bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-[3rem] p-10 flex flex-col gap-6 overflow-hidden relative shadow-2xl">
-                <div className="absolute top-0 right-0 p-8 opacity-10">
+              <div className="relative group overflow-hidden rounded-[3rem] p-10 glass-amber shadow-[0_0_50px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
+                <div className="absolute inset-0 shimmer-bg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                   <Flame size={120} className="text-[#ffb700]" />
                 </div>
                 <div className="relative z-10 w-full flex justify-between items-center">
-                  <div>
+                  <div className="animate-fade">
                     <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
-                    <p className="text-6xl font-bebas font-black text-white">{currentUser?.streakCount || 0} DÍAS</p>
+                    <p className="text-6xl font-bebas font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{currentUser?.streakCount || 0} DÍAS</p>
                   </div>
-                  <div className="bg-[#ffb700] p-6 rounded-3xl shadow-[0_0_30px_rgba(255,183,0,0.3)]">
+                  <div className="bg-[#ffb700] p-6 rounded-3xl shadow-[0_0_30px_rgba(255,183,0,0.4)] animate-scale">
                     <Flame size={40} className="text-[#001f3f]" />
                   </div>
                 </div>
-                <div className="w-full space-y-4 relative z-10">
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#ffb700] shadow-[0_0_15px_rgba(255,183,0,0.5)] transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
+                <div className="w-full space-y-4 relative z-10 mt-6">
+                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                    <div className="h-full bg-gradient-to-r from-[#ffb700] to-amber-300 shadow-[0_0_15px_rgba(255,183,0,0.6)] transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
                   </div>
-                  <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest italic">Objetivo: 365 días</p>
+                  <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest italic">
+                    <p className="text-white/30">Objetivo: 365 días</p>
+                    <p className="text-[#ffb700]">{Math.floor(((currentUser?.streakCount || 0) / 365) * 100)}% Completado</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <button onClick={() => setView(AppView.RANKING)} className="p-6 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/30 transition-all active:scale-95 shadow-lg group">
-                <Trophy size={28} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Ranking</span>
+              <button onClick={() => setView(AppView.RANKING)} className="p-6 glass-card border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
+                <Trophy size={28} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
               </button>
-              <button onClick={() => setView(AppView.ACADEMIA)} className="p-6 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
-                <Database size={28} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Academia</span>
+              <button onClick={() => setView(AppView.ACADEMIA)} className="p-6 glass-card border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                <Database size={28} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Academia</span>
               </button>
-              <button onClick={() => setView(AppView.CONTENT)} className="p-6 bg-white/5 border border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 transition-all active:scale-95 shadow-lg group">
-                <BookOpen size={28} className="text-[#ffb700] group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Material</span>
+              <button onClick={() => setView(AppView.CONTENT)} className="p-6 glass-card border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                <BookOpen size={28} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Material</span>
               </button>
             </div>
           </div>
@@ -575,10 +579,15 @@ const App: React.FC = () => {
 
               const renderGrid = (list: typeof agents, borderClass: string, xpColor: string) => (
                 <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
-                  {list.map(a => (
-                    <div key={a.id} onClick={() => setFoundAgent(a)} className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} transition-all p-1 active:scale-95 cursor-pointer`}>
-                      <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-500" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center pointer-events-none">
+                  {list.map((a, idx) => (
+                    <div
+                      key={a.id}
+                      onClick={() => setFoundAgent(a)}
+                      style={{ animationDelay: `${idx * 50}ms` }}
+                      className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} animate-view transition-all p-1 active:scale-90 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-1`}
+                    >
+                      <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-700" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-2 text-center pointer-events-none">
                         <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
                         <p className={`text-[6px] font-bold ${xpColor}`}>{a.xp} XP</p>
                       </div>
@@ -881,7 +890,9 @@ const App: React.FC = () => {
 
   return (
     <Layout activeView={view} setView={setView} userRole={currentUser?.userRole || UserRole.STUDENT} userName={currentUser?.name || 'Agente'} onLogout={handleLogout} notificationCount={notificationCount}>
-      <div className="relative h-full overflow-y-auto no-scrollbar">{renderContent()}</div>
+      <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
+        {renderContent()}
+      </div>
 
       {scannedAgentForPoints && (
         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 animate-in fade-in">
@@ -903,7 +914,7 @@ const App: React.FC = () => {
               <X size={16} /> Cerrar
             </button>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex-1 flex items-center justify-center w-full animate-scale">
             <DigitalIdCard agent={foundAgent} />
           </div>
         </div>

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown } from 'lucide-react';
+import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 
 interface CIUProps {
@@ -25,6 +25,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -39,6 +41,26 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (xp < 700) return { current: 'CONSAGRADO', next: 'REFERENTE', target: 700, level: 2 };
     if (xp < 1000) return { current: 'REFERENTE', next: 'LÍDER', target: 1000, level: 3 };
     return { current: 'LÍDER', next: 'MAX', target: 1000, level: 4 };
+  };
+
+  const handleBroadcast = async () => {
+    if (!broadcastData.title || !broadcastData.message) return;
+    if (!window.confirm("⚠️ ¿TRANSMITIR COMUNICADO MASIVO?\n\nEsta notificación llegará a todos los agentes vía Push y Telegram.")) return;
+
+    setIsSendingBroadcast(true);
+    try {
+      const res = await broadcastNotification(broadcastData.title, broadcastData.message);
+      if (res.success) {
+        alert("✅ TRANSMISIÓN COMPLETADA");
+        setBroadcastData({ title: '', message: '' });
+      } else {
+        alert("❌ ERROR: " + res.error);
+      }
+    } catch (err) {
+      alert("❌ FALLO DE CONEXIÓN");
+    } finally {
+      setIsSendingBroadcast(false);
+    }
   };
 
   const levelInfo = agent ? getLevelInfo(agent.xp) : null;
@@ -140,41 +162,78 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
         {/* PANEL DE CONTROL DE ALTO MANDO */}
         {userRole === UserRole.DIRECTOR && (
-          <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-4 mb-6 backdrop-blur-md">
+          <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-5 mb-6 backdrop-blur-md space-y-5">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-[#ffb700] rounded-2xl shadow-lg">
                   <Shield className="text-[#001f3f]" size={24} />
                 </div>
                 <div>
-                  <h3 className="text-white font-black text-sm uppercase tracking-widest leading-none mb-1 font-bebas">Mando de Operaciones</h3>
-                  <p className="text-[9px] text-[#ffb700]/80 font-bold uppercase tracking-[0.2em] font-montserrat">Sincronización de Base de Datos</p>
+                  <h3 className="text-white font-black text-sm uppercase tracking-widest leading-none mb-1 font-bebas">Command Center: Alto Mando</h3>
+                  <p className="text-[9px] text-[#ffb700]/80 font-bold uppercase tracking-[0.2em] font-montserrat">Protocolo de Notificaciones y Sincronización</p>
                 </div>
               </div>
-              <div className="flex gap-4 w-full md:w-auto">
+
+              <div className="flex flex-wrap gap-3 w-full md:w-auto">
                 {setView && (
                   <button
                     onClick={() => setView(AppView.CONTENT)}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-5 bg-white/5 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all border border-white/10 active:scale-95 font-bebas"
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/10 active:scale-95 font-bebas"
                   >
-                    <BookOpen size={18} className="text-[#ffb700]" />
-                    Gestionar Material
+                    <BookOpen size={16} className="text-[#ffb700]" />
+                    Material
                   </button>
                 )}
                 <button
                   onClick={handleImportInscriptions}
                   disabled={isReconstructing}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-5 bg-[#ffb700] text-[#001f3f] text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#ffb700]/90 transition-all shadow-xl active:scale-95 disabled:opacity-50 font-bebas"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-[#ffb700] text-[#001f3f] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-xl active:scale-95 disabled:opacity-50 font-bebas"
                 >
-                  <RefreshCw size={18} className={isReconstructing ? "animate-spin" : ""} />
-                  Actualizar Directorio (Auto-Scrape)
+                  <RefreshCw size={16} className={isReconstructing ? "animate-spin" : ""} />
+                  Sincronizar DB
                 </button>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2 px-2">
-              <AlertCircle size={10} className="text-[#ffb700]/50" />
-              <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest italic font-montserrat">
-                Nota: Este botón busca nuevas filas en la pestaña 'INSCRIPCIONES' y las pasa a 'DIRECTORIO_OFICIAL' automáticamente.
+
+            {/* FRECUENCIA DE MANDO: NOTIFICACIONES MASIVAS */}
+            <div className="p-4 bg-[#001f3f]/50 rounded-2xl border border-white/5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Radio className="text-[#ffb700]" size={16} />
+                <h4 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">FRECUENCIA DE MANDO: COMUNICADOS GLOBALES</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div className="md:col-span-3">
+                  <input
+                    type="text"
+                    placeholder="TÍTULO DEL AVISO..."
+                    value={broadcastData.title}
+                    onChange={(e) => setBroadcastData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full bg-[#000c19] border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-bold uppercase outline-none focus:border-[#ffb700] font-bebas tracking-wider"
+                  />
+                </div>
+                <div className="md:col-span-6">
+                  <input
+                    type="text"
+                    placeholder="MENSAJE PARA TODOS LOS AGENTES..."
+                    value={broadcastData.message}
+                    onChange={(e) => setBroadcastData(prev => ({ ...prev, message: e.target.value }))}
+                    className="w-full bg-[#000c19] border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-bold uppercase outline-none focus:border-[#ffb700] font-bebas tracking-wider"
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <button
+                    onClick={handleBroadcast}
+                    disabled={isSendingBroadcast || !broadcastData.title || !broadcastData.message}
+                    className="w-full h-full bg-[#ffb700] text-[#001f3f] rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#ffb700]/90 disabled:opacity-50 transition-all py-3 px-6"
+                  >
+                    {isSendingBroadcast ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    Transmitir Comunicado
+                  </button>
+                </div>
+              </div>
+              <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest pl-2">
+                📢 Esta transmisión se enviará vía OneSignal (Push) y Telegram simultáneamente.
               </p>
             </div>
           </div>
@@ -402,13 +461,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             </div>
 
             {userRole === UserRole.DIRECTOR && (
-              <div className="p-8 bg-blue-950/20 border border-blue-500/20 rounded-3xl space-y-4 mt-8">
-                <h4 className="text-white font-black uppercase tracking-widest text-xs flex items-center gap-2">
-                  <ShieldAlert className="text-blue-500" size={16} /> COMANDO DE OPERACIONES MASIVAS
-                </h4>
-                <p className="text-[10px] text-gray-400 font-bold leading-relaxed">
-                  Utiliza esta función para transmitir las credenciales de toda la base de datos de agentes al Telegram táctico configurado. Este proceso es irreversible.
-                </p>
+              <div className="p-5 bg-blue-950/10 border border-blue-500/10 rounded-2xl space-y-3 mt-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="text-blue-500" size={14} />
+                    <h4 className="text-white font-black uppercase tracking-widest text-[9px] font-bebas">COMANDO DE OPERACIONES</h4>
+                  </div>
+                  <p className="text-[8px] text-blue-400/50 font-bold uppercase tracking-widest">Procedimiento Seguro</p>
+                </div>
                 <button
                   onClick={async () => {
                     const safetyKey = prompt("⚠️ PROTOCOLO DE SEGURIDAD\n\nPara iniciar la transmisión masiva, escribe 'TRANSMITIR':");
@@ -418,9 +478,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                       else alert("❌ FALLO EN TRANSMISIÓN: " + (res.error || "Error desconocido"));
                     }
                   }}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-900/40"
+                  className="w-full bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 py-3 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] transition-all flex items-center justify-center gap-2"
                 >
-                  <Send size={16} /> Iniciar Transmisión Masiva
+                  <Send size={12} /> Iniciar Transmisión Masiva
                 </button>
               </div>
             )}

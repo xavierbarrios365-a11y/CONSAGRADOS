@@ -476,3 +476,13 @@ export const updateAgentStreaks = async (agentId: string, isWeekComplete: boolea
     return { success: false, error: error.message };
   }
 };
+
+export const broadcastNotification = async (title: string, message: string) => {
+  try {
+    const response = await postToAction('send_broadcast_notification', { title, message });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ENVÍO BROADCAST:", error);
+    return { success: false, error: error.message };
+  }
+};

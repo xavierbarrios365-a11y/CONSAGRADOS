@@ -98,6 +98,7 @@ const App: React.FC = () => {
   const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showQuickLogin, setShowQuickLogin] = useState(true);
   const [directorySearch, setDirectorySearch] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -124,6 +125,7 @@ const App: React.FC = () => {
     setIsMustChangeFlow(false);
     setShowForgotPassword(false);
     setViewingAsRole(null);
+    setShowQuickLogin(true);
 
     setTimeout(() => {
       window.location.replace(window.location.origin + window.location.pathname + "?logout=" + Date.now());
@@ -843,7 +845,7 @@ const App: React.FC = () => {
             <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.5em] opacity-80">Command Center Táctico</p>
           </div>
 
-          {rememberedUser && !loginId ? (
+          {rememberedUser && showQuickLogin ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
@@ -900,6 +902,7 @@ const App: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
+                      setShowQuickLogin(false);
                       setRememberedUser(null);
                       localStorage.removeItem('remembered_user');
                       setLoginId('');

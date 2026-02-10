@@ -13,7 +13,7 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState<'ALL' | 'ESTUDIANTE' | 'LIDER'>('ALL');
+    const [activeFilter, setActiveFilter] = useState<'ALL' | 'ESTUDIANTE' | 'LIDER'>(userRole === UserRole.STUDENT ? 'ESTUDIANTE' : 'ALL');
 
     // Form state - SIMPLIFICADO: solo archivo directo
     // Form state - MULTI-UPLOAD: soporta hasta 3 archivos
@@ -132,7 +132,11 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
     const filteredGuides = (guides || []).filter(g => {
         const nameStr = String(g.name || "");
         const matchesSearch = nameStr.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = activeFilter === 'ALL' || g.type === activeFilter;
+
+        // RESTRICCIÓN TÁCTICA: El estudiante solo ve material de estudiante
+        const effectiveFilter = userRole === UserRole.STUDENT ? 'ESTUDIANTE' : activeFilter;
+        const matchesFilter = effectiveFilter === 'ALL' || g.type === effectiveFilter;
+
         return matchesSearch && matchesFilter;
     });
 
@@ -167,20 +171,22 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                         className="w-full bg-[#000c19]/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all font-montserrat"
                     />
                 </div>
-                <div className="flex gap-2">
-                    {['ALL', 'ESTUDIANTE', 'LIDER'].map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setActiveFilter(f as any)}
-                            className={`flex-1 py-3 px-2 rounded-xl text-[7px] font-black uppercase tracking-widest border transition-all font-bebas ${activeFilter === f
-                                ? 'bg-[#ffb700]/20 border-[#ffb700] text-[#ffb700]'
-                                : 'bg-white/5 border-white/10 text-gray-500'
-                                }`}
-                        >
-                            {f === 'ALL' ? 'TODO' : f}
-                        </button>
-                    ))}
-                </div>
+                {userRole !== UserRole.STUDENT && (
+                    <div className="flex gap-2">
+                        {['ALL', 'ESTUDIANTE', 'LIDER'].map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setActiveFilter(f as any)}
+                                className={`flex-1 py-3 px-2 rounded-xl text-[7px] font-black uppercase tracking-widest border transition-all font-bebas ${activeFilter === f
+                                    ? 'bg-[#ffb700]/20 border-[#ffb700] text-[#ffb700]'
+                                    : 'bg-white/5 border-white/10 text-gray-500'
+                                    }`}
+                            >
+                                {f === 'ALL' ? 'TODO' : f}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Lista de Guías - Mobile Optimized */}

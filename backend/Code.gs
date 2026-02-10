@@ -211,6 +211,8 @@ function doPost(e) {
         return getDailyVerse();
       case 'update_streaks':
         return updateStreaks(request.data);
+      case 'send_broadcast_notification':
+        return sendBroadcastNotification(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -1607,6 +1609,26 @@ function updateStreaks(data) {
   }
 
   return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakData.STREAK_COUNT })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Envía una notificación masiva a todos los agentes vía OneSignal y Telegram.
+ */
+function sendBroadcastNotification(data) {
+  const { title, message } = data;
+  if (!title || !message) throw new Error("Título y mensaje son requeridos para el broadcast.");
+
+  // 1. Notificación Push Masiva
+  sendPushNotification(`📢 ${title.toUpperCase()}`, message);
+
+  // 2. Notificación a Telegram del Grupo
+  const telegramMsg = `📢 <b>RECOMUNICADO TÁCTICO: ${title.toUpperCase()}</b>\n\n${message}\n\n<i>Enviado desde el Command Center.</i>`;
+  sendTelegramNotification(telegramMsg);
+
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    message: "Broadcast ejecutado exitosamente." 
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 

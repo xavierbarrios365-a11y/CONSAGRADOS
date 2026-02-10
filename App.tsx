@@ -567,20 +567,22 @@ const App: React.FC = () => {
 
             {/* Clasificación por Rol */}
             {(() => {
-              const directors = agents.filter(a => a.userRole === UserRole.DIRECTOR).filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch));
-              const leaders = agents.filter(a => a.userRole === UserRole.LEADER).filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch)).sort((a, b) => b.xp - a.xp);
-              const students = agents.filter(a => a.userRole === UserRole.STUDENT || (!a.userRole)).filter(a => !directorySearch || a.name.toLowerCase().includes(directorySearch.toLowerCase()) || String(a.id).includes(directorySearch)).sort((a, b) => b.xp - a.xp);
+              const search = directorySearch.toLowerCase();
+              const matchSearch = (a: any) => !directorySearch || a.name.toLowerCase().includes(search) || String(a.id).includes(directorySearch);
+              const directors = agents.filter(a => a.userRole === UserRole.DIRECTOR && matchSearch(a));
+              const leaders = agents.filter(a => a.userRole === UserRole.LEADER && matchSearch(a)).sort((a, b) => b.xp - a.xp);
+              const students = agents.filter(a => (a.userRole === UserRole.STUDENT || !a.userRole) && matchSearch(a)).sort((a, b) => b.xp - a.xp);
 
-              const AgentGrid = ({ list, borderClass, xpColor }: { list: typeof agents, borderClass: string, xpColor: string }) => (
+              const renderGrid = (list: typeof agents, borderClass: string, xpColor: string) => (
                 <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
                   {list.map(a => (
-                    <button key={a.id} onClick={() => setFoundAgent(a)} className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} transition-all p-1 active:scale-95`}>
+                    <div key={a.id} onClick={() => setFoundAgent(a)} className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} transition-all p-1 active:scale-95 cursor-pointer`}>
                       <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-500" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center">
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-2 text-center pointer-events-none">
                         <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
                         <p className={`text-[6px] font-bold ${xpColor}`}>{a.xp} XP</p>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               );
@@ -593,7 +595,7 @@ const App: React.FC = () => {
                         <Crown size={14} className="text-[#ffb700]" />
                         <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em]">Directores ({directors.length})</span>
                       </div>
-                      <AgentGrid list={directors} borderClass="border-[#ffb700]/30 bg-[#ffb700]/5 hover:border-[#ffb700]/50" xpColor="text-[#ffb700]" />
+                      {renderGrid(directors, "border-[#ffb700]/30 bg-[#ffb700]/5 hover:border-[#ffb700]/50", "text-[#ffb700]")}
                     </div>
                   )}
                   {leaders.length > 0 && (
@@ -602,7 +604,7 @@ const App: React.FC = () => {
                         <Shield size={14} className="text-blue-400" />
                         <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.3em]">Líderes ({leaders.length})</span>
                       </div>
-                      <AgentGrid list={leaders} borderClass="border-blue-400/20 bg-blue-400/5 hover:border-blue-400/40" xpColor="text-blue-400" />
+                      {renderGrid(leaders, "border-blue-400/20 bg-blue-400/5 hover:border-blue-400/40", "text-blue-400")}
                     </div>
                   )}
                   {students.length > 0 && (
@@ -611,7 +613,7 @@ const App: React.FC = () => {
                         <Users size={14} className="text-white/60" />
                         <span className="text-[9px] text-white/60 font-black uppercase tracking-[0.3em]">Estudiantes ({students.length})</span>
                       </div>
-                      <AgentGrid list={students} borderClass="border-white/5 bg-white/5 hover:border-white/20" xpColor="text-[#ffb700]" />
+                      {renderGrid(students, "border-white/5 bg-white/5 hover:border-white/20", "text-[#ffb700]")}
                     </div>
                   )}
                 </div>
@@ -700,6 +702,22 @@ const App: React.FC = () => {
             </div>
 
             {currentUser && <DigitalIdCard agent={currentUser} />}
+
+            {currentUser?.userRole === UserRole.DIRECTOR && (
+              <div className="w-full space-y-2 mt-6">
+                <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-center">Vista como rol</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.STUDENT ? null : UserRole.STUDENT)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.STUDENT ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Estudiante</button>
+                  <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.LEADER ? null : UserRole.LEADER)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.LEADER ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Líder</button>
+                  <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.DIRECTOR ? null : UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${(!viewingAsRole || viewingAsRole === UserRole.DIRECTOR) ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Director</button>
+                </div>
+                {viewingAsRole && viewingAsRole !== UserRole.DIRECTOR && (
+                  <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest text-center animate-pulse">
+                    Viendo como: {viewingAsRole} — La navegación y módulos se ajustan a este rol
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="w-full grid grid-cols-1 gap-3 mt-6">
 

@@ -250,20 +250,37 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 <div className="md:col-span-3">
                   <button
                     onClick={() => {
-                      if ((window as any).OneSignal) {
-                        const OS = (window as any).OneSignal;
-                        console.log("OS: Disparando Slidedown Manual...");
-                        OS.push(() => {
-                          OS.Slidedown.prompt({ force: true });
-                        });
-                      } else {
-                        alert("OS: El sistema de notificaciones no ha cargado aún.");
+                      alert("PASO 1: Iniciando diagnóstico de Notificaciones...");
+                      if (!(window as any).OneSignal) {
+                        alert("ERROR: El objeto 'OneSignal' no existe en el navegador. ¿Tienes un bloqueador de anuncios?");
+                        return;
                       }
+
+                      const OS = (window as any).OneSignal;
+                      alert("PASO 2: Intentando disparar Slidedown (Vía Push)...");
+
+                      OS.push(async () => {
+                        try {
+                          console.log("OS: Intento Manual - Slidedown");
+                          await OS.Slidedown.prompt({ force: true });
+                          alert("AVISO: Se ha solicitado el Slidedown. Si no aparece, intentando Método Nativo...");
+
+                          if (OS.Notifications && OS.Notifications.permission === 'default') {
+                            alert("PASO 3: Intentando Permiso Nativo del Navegador...");
+                            await OS.Notifications.requestPermission();
+                          }
+
+                          alert("DIAGNÓSTICO FINALIZADO: Revisa si apareció la solicitud arriba.");
+                        } catch (err: any) {
+                          alert("FALLO TÁCTICO: " + err.message);
+                          console.error(err);
+                        }
+                      });
                     }}
                     className="w-full h-full bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-600/30 transition-all py-3 px-6"
                   >
                     <Bell size={16} />
-                    Forzar Activación Notificaciones
+                    Diagnosticar Notificaciones
                   </button>
                   <button
                     onClick={handleBroadcast}

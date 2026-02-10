@@ -136,39 +136,44 @@
   <script>
     window.OneSignal = window.OneSignal || [];
     OneSignal.push(function () {
+      console.log("OS: Iniciando configuración V16...");
       OneSignal.init({
         appId: "c05267b7-737a-4f55-b692-3c2fe2d20677",
         safari_web_id: "web.onesignal.auto.17b43c6b-967b-402a-9e11-e6c1e345678a",
-        notifyButton: {
-          enable: false,
-        },
+        notifyButton: { enable: false },
         allowLocalhood: true,
-        serviceWorkerParam: { scope: "/" },
         serviceWorkerPath: "sw.js",
         promptOptions: {
           slidedown: {
-            prompts: [
-              {
-                type: "push",
-                autoPrompt: true,
-                text: {
-                  actionMessage: "¿Deseas recibir notificaciones tácticas de la misión?",
-                  acceptButton: "ACTIVAR",
-                  cancelButton: "LUEGO"
-                },
-                delay: {
-                  pageViews: 1,
-                  timeDelay: 3
-                }
-              }
-            ]
+            prompts: [{
+              type: "push",
+              autoPrompt: true,
+              text: {
+                actionMessage: "¿Deseas recibir notificaciones tácticas?",
+                acceptButton: "ACTIVAR",
+                cancelButton: "LUEGO"
+              },
+              delay: { pageViews: 1, timeDelay: 3 }
+            }]
           }
         }
       }).then(() => {
+        console.log("OS: SDK Inicializado con éxito.");
         window.OneSignalReady = true;
-        console.log("OneSignal v16 Ready");
+      }).catch(err => {
+        console.error("OS: Fallo crítico en Init:", err);
+        alert("OS ERROR: No se pudo inicializar el sistema de notificaciones.");
       });
     });
+
+    // Diagnóstico de carga
+    window.onload = () => {
+      setTimeout(() => {
+        if (!window.OneSignalReady) {
+          console.warn("OS: El SDK no ha reportado LISTO tras 10s.");
+        }
+      }, 10000);
+    };
   </script>
 </head>
 

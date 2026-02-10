@@ -247,6 +247,19 @@ const App: React.FC = () => {
   }, [resetSessionTimer]);
 
   useEffect(() => {
+    // Proactive OneSignal Prompt
+    if (isLoggedIn && (window as any).OneSignal) {
+      const OS = (window as any).OneSignal;
+      OS.push(() => {
+        if (!OS.Notifications.permission) {
+          console.log("Forzando prompt de OneSignal...");
+          OS.Slidedown.prompt();
+        }
+      });
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     resetTimerOnActivity();
   }, [resetTimerOnActivity]);
 
@@ -337,9 +350,10 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [syncData]);
 
-  const handleLogin = (e?: React.FormEvent) => {
+  const handleLogin = (e?: React.FormEvent, overrideId?: string) => {
     if (e) e.preventDefault();
-    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === loginId.replace(/[^0-9]/g, ''));
+    const effectiveId = overrideId || loginId;
+    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
     if (user && String(user.pin).trim() === loginPin.trim()) {
       localStorage.setItem('consagrados_agent', JSON.stringify(user));
       localStorage.setItem('last_login_id', user.id);
@@ -359,12 +373,13 @@ const App: React.FC = () => {
     }
   };
 
-  const handleBiometricLogin = async () => {
-    if (!loginId) {
+  const handleBiometricLogin = async (overrideId?: string) => {
+    const effectiveId = overrideId || loginId;
+    if (!effectiveId) {
       alert("INGRESA TU ID PRIMERO");
       return;
     }
-    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === loginId.replace(/[^0-9]/g, ''));
+    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
     if (!user || !user.biometricCredential) {
       alert("BIOMETRÍA NO CONFIGURADA PARA ESTE ID");
       return;
@@ -879,7 +894,7 @@ const App: React.FC = () => {
                   <button
                     onClick={() => {
                       setLoginId(rememberedUser.id);
-                      setTimeout(() => handleLogin(), 50);
+                      setShowQuickLogin(false);
                     }}
                     className="w-full bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
                   >
@@ -890,8 +905,7 @@ const App: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setLoginId(rememberedUser.id);
-                        setTimeout(() => handleBiometricLogin(), 50);
+                        handleBiometricLogin(rememberedUser.id);
                       }}
                       className="w-full bg-blue-600/20 border border-blue-500/30 py-6 rounded-2xl text-blue-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-blue-600/30 active:scale-[0.98] transition-all font-bebas flex items-center justify-center gap-2"
                     >

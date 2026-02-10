@@ -3,6 +3,7 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { getFirestore } from "firebase/firestore";
 import { getRemoteConfig } from "firebase/remote-config";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { getAnalytics, logEvent } from "firebase/analytics";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCLHvs-M0WVnWwYSJ2tYVfhs6un9QzdQiA",
@@ -27,6 +28,13 @@ if (typeof window !== 'undefined') {
 const messaging = getMessaging(app);
 const db = getFirestore(app);
 const remoteConfig = getRemoteConfig(app);
+const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+export const trackEvent = (eventName: string, params?: object) => {
+    if (analytics) {
+        logEvent(analytics, eventName, params);
+    }
+};
 
 const VAPID_KEY = "BAqCHHlwSwZQA-8fvpuYvg-augargWAuRXwahCaF9pO31-PfEUN_Oxf2GumcRMvTmY31ovGuv4kj1FlaoPopwE";
 
@@ -54,4 +62,4 @@ export const onMessageListener = () =>
         });
     });
 
-export { messaging, db, remoteConfig };
+export { messaging, db, remoteConfig, analytics };

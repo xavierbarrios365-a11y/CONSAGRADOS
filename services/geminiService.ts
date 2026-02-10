@@ -20,6 +20,21 @@ const getGenAI = (): GoogleGenAI | null => {
   return genAIInstance;
 };
 
+// --- AI ROBUST JSON EXTRACTION ---
+const extractJSON = (text: string) => {
+  try {
+    // Try to find the block of JSON
+    const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (!jsonMatch) return null;
+    return JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.error("❌ Error parsing extracted JSON:", e);
+    return null;
+  }
+};
+
+const DEFAULT_MODEL = 'gemini-1.5-flash'; // More stable for general use cases
+
 // --- AI CACHING SYSTEM (SAVE TOKENS) ---
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Horas
 
@@ -61,7 +76,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: DEFAULT_MODEL,
       contents: `Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
       Format the response as a short military-style intel report. Keep it under 100 words. 
       Use a serious, high-tech tone.`
@@ -174,24 +189,18 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     }
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: DEFAULT_MODEL,
       contents
     });
 
     const text = result.text || "";
-    // Extracción de JSON mucho más robusta (busca el primer { o [ y el último } o ])
-    const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    const resultJson = extractJSON(text);
 
-    if (!jsonMatch) {
+    if (!resultJson) {
       throw new Error("LA IA NO GENERÓ UN FORMATO JSON VÁLIDO. REINTENTE CON OTRO TEXTO.");
     }
 
-    try {
-      return JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.error("❌ Error parsing extracted JSON:", jsonMatch[0]);
-      throw new Error("EL CONTENIDO GENERADO TIENE ERRORES SINTÁCTICOS. POR FAVOR REFINE SU SOLICITUD.");
-    }
+    return resultJson;
   } catch (error: any) {
     console.error("AI Error:", error);
     let msg = "EL CENTRO DE MANDO NO RESPONDE (ERROR DE IA).";
@@ -240,13 +249,17 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     }`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: DEFAULT_MODEL,
       contents: prompt
     });
 
     const text = result.text || "";
-    const jsonStr = text.replace(/```(?:json)?/g, '').trim();
-    const resultJson = JSON.parse(jsonStr);
+    const resultJson = extractJSON(text);
+
+    if (!resultJson) {
+      throw new Error("ERROR DE FORMATO IA: No se pudo extraer datos tácticos válidos.");
+    }
+
     saveToCache(cacheKey, resultJson);
     return resultJson;
   } catch (error: any) {
@@ -254,7 +267,7 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
       status: error.status,
       message: error.message,
     });
-    return null;
+    throw error;
   }
 };
 export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[], resultProfile?: any) => {
@@ -279,7 +292,7 @@ export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[
     Formato: HTML limpio (usa tags como <b>, <p>, <br>).`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: DEFAULT_MODEL,
       contents: prompt
     });
 
@@ -321,7 +334,7 @@ export const getSpiritualCounseling = async (agent: Agent, userMessage: string) 
     RESPONDE CON UN MENSAJE DIRECTO QUE INSPIRE A LA ACCIÓN.`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: DEFAULT_MODEL,
       contents: prompt
     });
 

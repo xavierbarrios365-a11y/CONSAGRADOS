@@ -13,9 +13,9 @@ import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import NotificationInbox from './components/NotificationInbox';
 import TacticalChat from './components/TacticalChat';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics, fetchNotifications, syncFcmToken } from './services/sheetsService';
-import { requestForToken, onMessageListener, db } from './firebase-config';
+import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -292,37 +292,37 @@ const App: React.FC = () => {
     return () => events.forEach(e => window.removeEventListener(e, resetSessionTimer));
   }, [resetSessionTimer]);
 
-  useEffect(() => {
-    // Firebase Cloud Messaging Integration
-    const initFirebaseMessaging = async () => {
-      try {
-        const token = await requestForToken();
-        if (token) {
-          console.log("FCM Token listo para sincronización:", token);
-          if (currentUser) {
-            syncFcmToken(currentUser.id, token).then(res => {
-              if (res.success) console.log("Token sincronizado con el mando central.");
-            });
-          }
-        }
-
-        onMessageListener().then((payload: any) => {
-          console.log("Notificación recibida:", payload);
-          // Actualizamos contador de inbox para forzar refresco visual
-          fetchNotifications().then(notifs => {
-            const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-            setUnreadNotifications(notifs.filter(n => !readIds.includes(n.id)).length);
+  // Firebase Cloud Messaging Integration
+  const initFirebaseMessaging = useCallback(async () => {
+    try {
+      const token = await requestForToken();
+      if (token) {
+        console.log("FCM Token listo para sincronización:", token);
+        if (currentUser) {
+          syncFcmToken(currentUser.id, token).then(res => {
+            if (res.success) console.log("Token sincronizado con el mando central.");
           });
-        });
-      } catch (e) {
-        console.error("Error inicializando Firebase:", e);
+        }
       }
-    };
 
+      onMessageListener().then((payload: any) => {
+        console.log("Notificación recibida:", payload);
+        // Actualizamos contador de inbox para forzar refresco visual
+        fetchNotifications().then(notifs => {
+          const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+          setUnreadNotifications(notifs.filter(n => !readIds.includes(n.id)).length);
+        });
+      });
+    } catch (e) {
+      console.error("Error inicializando Firebase:", e);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     if (isLoggedIn) {
       initFirebaseMessaging();
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, initFirebaseMessaging]);
 
   useEffect(() => {
     // --- SISTEMA DE PRESENCIA (FIRESTORE) ---
@@ -480,6 +480,7 @@ const App: React.FC = () => {
       setLastActiveTime(now);
       setCurrentUser(user);
       setIsLoggedIn(true);
+      trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'password' });
       setView(AppView.HOME);
     } else {
       setLoginError({ field: 'both', message: 'CREDENCIALES INVÁLIDAS' });
@@ -514,6 +515,7 @@ const App: React.FC = () => {
         setLastActiveTime(now);
         setCurrentUser(user);
         setIsLoggedIn(true);
+        trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'biometric' });
         setView(AppView.HOME);
       }
     } catch (err) {
@@ -569,6 +571,30 @@ const App: React.FC = () => {
 
   const effectiveRole = viewingAsRole || currentUser?.userRole || UserRole.STUDENT;
 
+  const handleVerseQuizComplete = async () => {
+    if (!currentUser) return;
+
+    const updatedTasks = currentUser.weeklyTasks.map(t =>
+      t.id === 'bible' ? { ...t, completed: true } : t
+    );
+
+    try {
+      const res = await updateAgentStreaks(currentUser.id, false, updatedTasks);
+      if (res.success) {
+        const updatedUser = {
+          ...currentUser,
+          streakCount: res.streak,
+          weeklyTasks: updatedTasks
+        };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('consagrados_agent', JSON.stringify(updatedUser));
+        syncData(true);
+      }
+    } catch (e) {
+      console.error("Error actualizando racha:", e);
+    }
+  };
+
   const renderContent = () => {
     switch (view) {
       case AppView.HOME:
@@ -585,7 +611,10 @@ const App: React.FC = () => {
             </div>
 
             <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
-              <DailyVerse verse={dailyVerse || { verse: 'Cargando versículo del día...', reference: '' }} />
+              <DailyVerse
+                verse={dailyVerse || { verse: 'Cargando versículo del día...', reference: '' }}
+                onQuizComplete={handleVerseQuizComplete}
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-4">
@@ -1127,7 +1156,10 @@ const App: React.FC = () => {
   return (
     <Layout
       activeView={view}
-      setView={setView}
+      setView={(newView) => {
+        trackEvent('view_change', { from: view, to: newView, agent_id: currentUser?.id });
+        setView(newView);
+      }}
       userRole={effectiveRole}
       userName={currentUser?.name || 'Agente'}
       onLogout={handleLogout}
@@ -1142,6 +1174,7 @@ const App: React.FC = () => {
         <NotificationInbox
           onClose={() => setShowInbox(false)}
           onTotalReadUpdate={setUnreadNotifications}
+          onRequestPermission={initFirebaseMessaging}
         />
       )}
 

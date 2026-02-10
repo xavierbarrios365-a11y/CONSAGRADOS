@@ -21,7 +21,8 @@ export const INITIAL_AGENTS: Agent[] = [
     notes: 85,
     leadership: 65,
     age: '17 AÑOS',
-    birthday: '20/05'
+    birthday: '20/05',
+    mustChangePassword: false
   },
   {
     id: 'v-20389331',
@@ -42,6 +43,7 @@ export const INITIAL_AGENTS: Agent[] = [
     notes: 100,
     leadership: 100,
     age: '28 AÑOS',
-    birthday: '01/01'
+    birthday: '01/01',
+    mustChangePassword: false
   }
 ];

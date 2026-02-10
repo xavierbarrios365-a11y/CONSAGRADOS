@@ -6,12 +6,16 @@ import { fetchNotifications } from '../services/sheetsService';
 interface NotificationInboxProps {
     onClose: () => void;
     onTotalReadUpdate: (count: number) => void;
+    onRequestPermission?: () => Promise<void>;
 }
 
-const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate }) => {
+const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate, onRequestPermission }) => {
     const [notifications, setNotifications] = useState<InboxNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [readIds, setReadIds] = useState<string[]>([]);
+    const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(
+        typeof window !== 'undefined' ? Notification.permission : 'default'
+    );
 
     useEffect(() => {
         // Cargar IDs leídos de localStorage
@@ -107,8 +111,8 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
                                 key={msg.id}
                                 onMouseEnter={() => markAsRead(msg.id)}
                                 className={`group relative p-5 rounded-xl border transition-all duration-300 ${readIds.includes(msg.id)
-                                        ? 'bg-white/2 border-white/5 opacity-70'
-                                        : 'bg-gradient-to-br from-[#ffb700]/10 to-transparent border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.1)]'
+                                    ? 'bg-white/2 border-white/5 opacity-70'
+                                    : 'bg-gradient-to-br from-[#ffb700]/10 to-transparent border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.1)]'
                                     }`}
                             >
                                 {!readIds.includes(msg.id) && (
@@ -147,6 +151,28 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
                         ))
                     )}
                 </div>
+
+                {/* Notification Permission Banner */}
+                {permissionStatus !== 'granted' && (
+                    <div className="mx-4 mb-4 p-4 bg-indigo-600/20 border border-indigo-500/30 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <ShieldAlert className="text-indigo-400" size={20} />
+                            <div>
+                                <p className="text-[10px] font-black text-white uppercase tracking-wider">Notificaciones Desactivadas</p>
+                                <p className="text-[8px] text-white/60 uppercase font-bold tracking-widest">Activa las alertas en tiempo real para misiones.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={async () => {
+                                if (onRequestPermission) await onRequestPermission();
+                                setPermissionStatus(Notification.permission);
+                            }}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                        >
+                            {permissionStatus === 'denied' ? 'Cómo Activar' : 'Activar'}
+                        </button>
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="p-4 bg-[#000c19] border-t border-white/5 flex justify-center">

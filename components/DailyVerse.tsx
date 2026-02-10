@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Calendar, Download } from 'lucide-react';
 import { DailyVerse as DailyVerseType } from '../types';
+import { generateGoogleCalendarLink, downloadIcsFile } from '../services/calendarService';
 
 interface DailyVerseProps {
     verse: DailyVerseType | null;
@@ -153,9 +154,38 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                 )}
 
                 {quizCompleted && (
-                    <p className="text-green-500 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 mt-2">
-                        <CheckCircle2 size={12} /> Racha Diaria Completada
-                    </p>
+                    <div className="flex flex-col items-center gap-3 mt-2">
+                        <p className="text-green-500 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
+                            <CheckCircle2 size={12} /> Racha Diaria Completada
+                        </p>
+
+                        <div className="flex gap-2">
+                            <a
+                                href={generateGoogleCalendarLink({
+                                    title: `Misión: ${verse.reference}`,
+                                    description: `Versículo del día: ${verse.verse}`,
+                                    startTime: new Date(),
+                                    endTime: new Date(new Date().getTime() + 3600000)
+                                })}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
+                            >
+                                <Calendar size={10} /> Google
+                            </a>
+                            <button
+                                onClick={() => downloadIcsFile({
+                                    title: `Misión: ${verse.reference}`,
+                                    description: `Versículo del día: ${verse.verse}`,
+                                    startTime: new Date(),
+                                    endTime: new Date(new Date().getTime() + 3600000)
+                                })}
+                                className="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
+                            >
+                                <Download size={10} /> .ICS
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

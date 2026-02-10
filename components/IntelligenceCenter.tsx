@@ -97,7 +97,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         }
       }
     } catch (err) {
-      alert("❌ FALLO EN EL CEREBRO IA");
+      alert("❌ FALLO EN EL CEREBRO IA: " + (err.message || "Error desconocido"));
     } finally {
       setIsGeneratingAi(false);
     }
@@ -598,7 +598,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         alert(`CENTRO DE MANDO: ${response}`);
                         e.currentTarget.value = '';
                       } catch (err) {
-                        alert("ERROR EN LA FRECUENCIA");
+                        alert("ERROR EN LA FRECUENCIA: " + (err.message || "Error desconocido"));
                         e.currentTarget.value = '';
                       }
                     }

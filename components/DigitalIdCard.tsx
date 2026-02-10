@@ -4,7 +4,7 @@ import { Agent } from '../types';
 import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
-import { updateTacticalStats, fetchAcademyData } from '../services/sheetsService';
+import { updateAgentAiProfile, fetchAcademyData } from '../services/sheetsService';
 
 interface DigitalIdCardProps {
   agent: Agent;
@@ -60,7 +60,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
       const { progress } = await fetchAcademyData(agent.id);
       const result = await generateTacticalProfile(agent, progress);
       if (result) {
-        await updateTacticalStats(agent.id, result.stats, result.summary);
+        await updateAgentAiProfile(agent.id, result.stats, result.summary);
         window.location.reload();
       }
     } catch (err) {

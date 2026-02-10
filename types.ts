@@ -132,3 +132,12 @@ export interface LessonProgress {
   date: string;
   attempts: number;
 }
+
+export interface InboxNotification {
+  id: string;
+  fecha: string;
+  titulo: string;
+  mensaje: string;
+  categoria: 'ALERTA' | 'INFO' | 'MISION';
+  emisor: string;
+}

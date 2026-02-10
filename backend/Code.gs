@@ -26,6 +26,7 @@ function getGlobalConfig() {
     ACADEMY_PROGRESS_SHEET: 'ACADEMIA_PROGRESO',
     STREAKS_SHEET: 'RACHAS',
     VERSES_SHEET: 'VERSICULO_DIARIO',
+    NOTIFICATIONS_SHEET: 'NOTIFICACIONES',
     ONESIGNAL_APP_ID: 'c05267b7-737a-4f55-b692-3c2fe2d20677',
     ONESIGNAL_REST_API_KEY: '8ccEyat7we65m1kdya83cl6nge' // Actualizado desde captura de pantalla
   };
@@ -213,6 +214,8 @@ function doPost(e) {
         return updateStreaks(request.data);
       case 'send_broadcast_notification':
         return sendBroadcastNotification(request.data);
+      case 'get_notifications':
+        return getNotifications();
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -1612,14 +1615,33 @@ function updateStreaks(data) {
 }
 
 /**
- * @description Envía una notificación masiva a todos los agentes vía OneSignal y Telegram.
+ * @description Envía una notificación masiva a todos los agentes y la guarda en el historial interno.
  */
 function sendBroadcastNotification(data) {
-  const { title, message } = data;
+  const { title, message, category = 'ALERTA', emisor = 'DIRECTOR' } = data;
   if (!title || !message) throw new Error("Título y mensaje son requeridos para el broadcast.");
 
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONFIG.NOTIFICATIONS_SHEET);
+  
+  // Crear hoja de historial si no existe
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.NOTIFICATIONS_SHEET);
+    sheet.appendRow(['ID', 'FECHA', 'TITULO', 'MENSAJE', 'CATEGORIA', 'EMISOR']);
+    sheet.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#ffb700');
+  }
+
+  const id = "MSG-" + Date.now();
+  const date = new Date().toISOString();
+  sheet.appendRow([id, date, title.toUpperCase(), message, category.toUpperCase(), emisor.toUpperCase()]);
+
   // 1. Notificación Push Masiva
-  sendPushNotification(`📢 ${title.toUpperCase()}`, message);
+  try {
+     sendPushNotification(`📢 ${title.toUpperCase()}`, message);
+  } catch(e) {
+     Logger.log("Error Push Broadcast: " + e.message);
+  }
 
   // 2. Notificación a Telegram del Grupo
   const telegramMsg = `📢 <b>RECOMUNICADO TÁCTICO: ${title.toUpperCase()}</b>\n\n${message}\n\n<i>Enviado desde el Command Center.</i>`;
@@ -1627,8 +1649,36 @@ function sendBroadcastNotification(data) {
 
   return ContentService.createTextOutput(JSON.stringify({ 
     success: true, 
-    message: "Broadcast ejecutado exitosamente." 
+    message: "Aviso transmitido y guardado en base de datos táctica." 
   })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Recupera el historial de notificaciones internas.
+ */
+function getNotifications() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.NOTIFICATIONS_SHEET);
+  
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+  
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+  
+  const headers = data[0];
+  const rows = data.slice(1).reverse(); // Más recientes primero
+  
+  const notifications = rows.map(row => {
+    let obj = {};
+    headers.forEach((header, i) => {
+      const key = String(header).toLowerCase();
+      obj[key] = row[i];
+    });
+    return obj;
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, data: notifications.slice(0, 50) })).setMimeType(ContentService.MimeType.JSON);
 }
 
 

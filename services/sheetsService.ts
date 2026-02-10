@@ -1,5 +1,5 @@
 
-import { Agent, UserRole } from "../types";
+import { Agent, UserRole, InboxNotification } from "../types";
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7d1GqCkxSDU1jbLUh2vyxP1jxgQGw_lwP4Z6vlIbc0-ZHmUweWMaLHweAGbJN8WNs/exec";
 
@@ -16,6 +16,11 @@ const postToAction = async (action: string, data: any) => {
     throw new Error(`Error en la solicitud a la API: ${response.statusText}`);
   }
   return response.json();
+};
+
+export const fetchNotifications = async (): Promise<InboxNotification[]> => {
+  const data = await postToAction('get_notifications', {});
+  return data.success ? data.data : [];
 };
 
 export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {

@@ -12,11 +12,12 @@ interface LayoutProps {
   userName: string;
   onLogout: () => void;
   notificationCount: number;
+  onOpenInbox: () => void;
 }
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, notificationCount }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, notificationCount, onOpenInbox }) => {
   const allNavItems = [
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
@@ -42,14 +43,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="relative cursor-pointer group p-2 text-gray-500 hover:text-[#ffb700] transition-colors" title="Notificaciones">
+          <div
+            onClick={onOpenInbox}
+            className="relative cursor-pointer group p-2 text-gray-500 hover:text-[#ffb700] transition-colors"
+            title="Notificaciones"
+          >
             <Bell size={20} className="group-hover:animate-swing" />
             {notificationCount > 0 && (
               <span className="absolute -top-0 -right-0 h-4 min-w-[1rem] flex items-center justify-center bg-red-600 text-[8px] font-black text-white px-1 rounded-full border-2 border-[#001f3f]">
                 {notificationCount > 9 ? '+9' : notificationCount}
               </span>
             )}
-            {/* Indicador sutil de estado activo - sin punto confuso */}
           </div>
 
           <div className="text-right hidden xs:block">

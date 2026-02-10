@@ -8,14 +8,15 @@ import ContentModule from './components/ContentModule';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
-import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
+import DailyVerse from './components/DailyVerse';
+import { DailyVerse as DailyVerseType, InboxNotification } from './types';
+import NotificationInbox from './components/NotificationInbox';
+import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics, fetchNotifications } from './services/sheetsService';
 import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
-import DailyVerse from './components/DailyVerse';
-import { DailyVerse as DailyVerseType } from './types';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
 
@@ -100,6 +101,8 @@ const App: React.FC = () => {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showQuickLogin, setShowQuickLogin] = useState(true);
   const [directorySearch, setDirectorySearch] = useState('');
+  const [showInbox, setShowInbox] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -282,12 +285,10 @@ const App: React.FC = () => {
   }, [resetSessionTimer]);
 
   useEffect(() => {
-    // OneSignal v16 Consolidated Initialization
-    const initOneSignal = async () => {
+    // OneSignal v16 - Silent Production Configuration
+    const initOneSignal = () => {
       const OS = (window as any).OneSignal || [];
-      if (!(window as any).OneSignal) {
-        (window as any).OneSignal = OS;
-      }
+      if (!(window as any).OneSignal) (window as any).OneSignal = OS;
 
       OS.push(() => {
         OS.init({
@@ -297,27 +298,40 @@ const App: React.FC = () => {
           allowLocalhood: true,
           serviceWorkerParam: { scope: "/" },
           serviceWorkerPath: "sw.js"
-        }).then(() => {
-          console.log("OS: SDK Consolidado Listo.");
+        }).catch(() => { });
 
-          if (isLoggedIn) {
-            setTimeout(() => {
-              const perm = OS.Notifications ? OS.Notifications.permission : 'unknown';
-              if (perm !== 'granted') {
-                console.log("OS: Disparando suscripción garantizada...");
-                OS.Slidedown.prompt({ force: true });
-                // Respaldo inmediato si el slidedown falla en abrirse
-                if (OS.Notifications) OS.Notifications.requestPermission();
-              }
-            }, 5000);
-          }
-        }).catch((err: any) => {
-          console.error("OS: Fallo en App Init:", err);
-        });
+        // Soft prompt trigger
+        if (isLoggedIn) {
+          setTimeout(() => {
+            if (OS.Notifications && OS.Notifications.permission === 'default') {
+              OS.Slidedown.prompt();
+            }
+          }, 15000); // Wait 15s of organic usage
+        }
       });
     };
 
     initOneSignal();
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    // Verificación periódica de notificaciones internas
+    const checkNotifications = async () => {
+      try {
+        const notifs = await fetchNotifications();
+        const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
+        const unreadCount = notifs.filter(n => !readIds.includes(n.id)).length;
+        setUnreadNotifications(unreadCount);
+      } catch (e) {
+        console.error("Error en pulso de notificaciones:", e);
+      }
+    };
+
+    if (isLoggedIn) {
+      checkNotifications();
+      const interval = setInterval(checkNotifications, 120000); // Cada 2 minutos
+      return () => clearInterval(interval);
+    }
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -1073,10 +1087,25 @@ const App: React.FC = () => {
   if (isLoggedIn && !currentUser) return <LoadingScreen message="INICIALIZANDO CONEXIÓN..." />;
 
   return (
-    <Layout activeView={view} setView={setView} userRole={effectiveRole} userName={currentUser?.name || 'Agente'} onLogout={handleLogout} notificationCount={notificationCount}>
+    <Layout
+      activeView={view}
+      setView={setView}
+      userRole={effectiveRole}
+      userName={currentUser?.name || 'Agente'}
+      onLogout={handleLogout}
+      notificationCount={unreadNotifications}
+      onOpenInbox={() => setShowInbox(true)}
+    >
       <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
         {renderContent()}
       </div>
+
+      {showInbox && (
+        <NotificationInbox
+          onClose={() => setShowInbox(false)}
+          onTotalReadUpdate={setUnreadNotifications}
+        />
+      )}
 
       {scannedAgentForPoints && (
         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 animate-in fade-in">

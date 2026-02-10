@@ -511,3 +511,20 @@ export const confirmDirectorAttendance = async (agentId: string, agentName: stri
     return { success: false, error: error.message };
   }
 };
+
+export const createEvent = async (eventData: { title: string; date: string; time: string; description: string }) => {
+  return postToAction('create_event', eventData);
+};
+
+export const fetchActiveEvents = async () => {
+  const res = await postToAction('get_active_events', {});
+  return res.success ? res.data : [];
+};
+
+export const confirmEventAttendance = async (data: { agentId: string; agentName: string; eventId: string; eventTitle: string }) => {
+  return postToAction('confirm_event_attendance', data);
+};
+
+export const deleteEvent = async (eventId: string) => {
+  return postToAction('delete_event', { eventId });
+};

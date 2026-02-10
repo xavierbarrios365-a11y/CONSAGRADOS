@@ -25,7 +25,9 @@ import {
   verifyBiometrics,
   fetchNotifications,
   syncFcmToken,
-  confirmDirectorAttendance
+  confirmDirectorAttendance,
+  fetchActiveEvents,
+  confirmEventAttendance as confirmEventAttendanceService
 } from './services/sheetsService';
 import { generateGoogleCalendarLink } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -125,6 +127,8 @@ const App: React.FC = () => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
+  const [activeEvents, setActiveEvents] = useState<any[]>([]);
+  const [isConfirmingEvent, setIsConfirmingEvent] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -467,6 +471,9 @@ const App: React.FC = () => {
       }
       const radar = await fetchVisitorRadar();
       setVisitorRadar(radar || []);
+
+      const events = await fetchActiveEvents();
+      setActiveEvents(events || []);
     } catch (err) { } finally {
       if (!isSilent) setIsSyncing(false);
     }
@@ -599,7 +606,7 @@ const App: React.FC = () => {
       if (res.success) {
         const updatedUser = {
           ...currentUser,
-          streakCount: res.streak || (currentUser.streakCount || 0) + 1,
+          streakCount: res.streak || currentUser.streakCount || 0,
           weeklyTasks: updatedTasks
         };
         setCurrentUser(updatedUser);
@@ -637,6 +644,42 @@ const App: React.FC = () => {
       }
     } catch (e) {
       alert("❌ FALLO EN PROTOCOLO DE ASISTENCIA");
+    }
+  };
+
+  const handleConfirmEventAttendance = async (event: any) => {
+    if (!currentUser) return;
+    setIsConfirmingEvent(event.id);
+    try {
+      const res = await confirmEventAttendanceService({
+        agentId: currentUser.id,
+        agentName: currentUser.name,
+        eventId: event.id,
+        eventTitle: event.titulo
+      });
+
+      if (res.success) {
+        alert(`✅ ASISTENCIA CONFIRMADA PARA: ${event.titulo}`);
+
+        // Ofrecer añadir al calendario
+        if (window.confirm("📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?")) {
+          const calendarEvent = {
+            title: event.titulo,
+            description: `Participación en el evento táctico: ${event.titulo}`,
+            startTime: new Date(`${event.fecha}T${event.hora || '08:00'}:00`),
+            endTime: new Date(`${event.fecha}T${event.hora || '08:00'}:00`)
+          };
+          // Intentar parsear hora, de lo contrario poner 2h después
+          calendarEvent.endTime.setHours(calendarEvent.endTime.getHours() + 2);
+
+          window.open(generateGoogleCalendarLink(calendarEvent), '_blank');
+        }
+        syncData(true);
+      }
+    } catch (e) {
+      alert("❌ FALLO EN PROTOCOLO DE EVENTO");
+    } finally {
+      setIsConfirmingEvent(null);
     }
   };
 
@@ -699,6 +742,37 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* EVENTOS ACTIVOS */}
+            {activeEvents.length > 0 && (
+              <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={14} className="text-[#ffb700] animate-pulse" />
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest font-bebas">Operaciones Próximas</span>
+                </div>
+                {activeEvents.map(evt => (
+                  <div key={evt.id} className="bg-[#001833] border border-white/10 rounded-3xl p-5 space-y-4 shadow-xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                      <Target size={60} className="text-[#ffb700]" />
+                    </div>
+                    <div className="relative z-10">
+                      <h4 className="text-lg font-bebas font-black text-white uppercase tracking-wider">{evt.titulo}</h4>
+                      <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest mb-3 opacity-80">{evt.fecha} @ {evt.hora || 'S/H'}</p>
+                      {evt.descripcion && <p className="text-[9px] text-white/50 mb-4 leading-relaxed font-montserrat">{evt.descripcion}</p>}
+
+                      <button
+                        onClick={() => handleConfirmEventAttendance(evt)}
+                        disabled={isConfirmingEvent === evt.id}
+                        className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas"
+                      >
+                        {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                        Confirmar Mi Asistencia
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-3">
               <button onClick={() => setView(AppView.RANKING)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
@@ -884,19 +958,6 @@ const App: React.FC = () => {
                   <Activity className="text-[#ffb700] animate-pulse" size={18} />
                   <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{visitorRadar.length} Detectados</span>
                 </div>
-                <button
-                  onClick={() => {
-                    const name = prompt('Nombre del visitante:');
-                    if (name && name.trim()) {
-                      // Registrar visitante usando la misma mecánica de processScan con el nombre
-                      alert(`Visitante "${name.trim()}" registrado. Actualiza la hoja de visitas para persistir.`);
-                      syncData(true);
-                    }
-                  }}
-                  className="bg-[#ffb700] px-5 py-4 rounded-2xl text-[#001f3f] text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2 shadow-lg"
-                >
-                  <Plus size={16} /> Registrar
-                </button>
               </div>
             </div>
 
@@ -959,64 +1020,17 @@ const App: React.FC = () => {
                   <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.LEADER ? null : UserRole.LEADER)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.LEADER ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Líder</button>
                   <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.DIRECTOR ? null : UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${(!viewingAsRole || viewingAsRole === UserRole.DIRECTOR) ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Director</button>
                 </div>
-                {viewingAsRole && viewingAsRole !== UserRole.DIRECTOR && (
-                  <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest text-center animate-pulse">
-                    Viendo como: {viewingAsRole} — La navegación y módulos se ajustan a este rol
-                  </p>
-                )}
               </div>
             )}
 
             <div className="w-full grid grid-cols-1 gap-3 mt-6">
-
-              <button onClick={() => alert("MÓDULO DE SEGURIDAD: Cambia tu PIN en la base de datos central.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
+              <button onClick={() => alert("MÓDULO DE SEGURIDAD.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
                 <div className="flex items-center gap-3">
                   <Key size={18} className="text-[#ffb700]" />
                   Cambiar PIN de Acceso
                 </div>
                 <ChevronRight size={14} className="text-gray-500" />
               </button>
-
-              <button
-                className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas"
-                onClick={() => {
-                  if (isBiometricAvailable) {
-                    const confirmed = window.confirm("¿REGISTRAR DATOS BIOMÉTRICOS EN ESTE DISPOSITIVO?");
-                    if (confirmed && currentUser) {
-                      setIsRegisteringBio(true);
-                      registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : [])
-                        .then(async (credId) => {
-                          if (credId) {
-                            const res = await registerBiometrics(currentUser.id, credId);
-                            if (res.success) {
-                              alert("BIOMETRÍA REGISTRADA EXITOSAMENTE");
-                              syncData();
-                            }
-                          }
-                        })
-                        .catch(err => alert(err.message))
-                        .finally(() => setIsRegisteringBio(false));
-                    }
-                  } else {
-                    alert("TU DISPOSITIVO O CONEXIÓN NO SOPORTA BIOMETRÍA SEGURA (WebAuthn). ASEGÚRATE DE USAR HTTPS.");
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <Fingerprint size={18} className="text-[#ffb700]" />
-                  {isRegisteringBio ? 'Registrando...' : 'Configurar Biometría'}
-                </div>
-                <ChevronRight size={14} className="text-gray-500" />
-              </button>
-
-              <button onClick={() => alert("CENTRO DE NOTIFICACIONES: Sin mensajes nuevos.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
-                <div className="flex items-center gap-3">
-                  <Bell size={18} className="text-[#ffb700]" />
-                  Centro de Notificaciones
-                </div>
-                <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold">0</div>
-              </button>
-
               <button
                 onClick={handleLogout}
                 className="flex items-center justify-center gap-3 px-6 py-5 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all font-bebas shadow-lg active:scale-95"

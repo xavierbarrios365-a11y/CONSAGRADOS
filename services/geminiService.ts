@@ -19,20 +19,33 @@ const getGenAI = (): GoogleGenAI | null => {
   }
   if (!genAIInstance) {
     console.log("🤖 Initializing GoogleGenAI instance...");
-    genAIInstance = new GoogleGenAI({ apiKey });
+    // @ts-ignore - Some versions of the SDK might have slightly different constructor signatures
+    genAIInstance = new GoogleGenAI(apiKey);
   }
   return genAIInstance;
 };
 
 // --- AI ROBUST JSON EXTRACTION ---
 const extractJSON = (text: string) => {
+  if (!text) return null;
+
   try {
-    // Try to find the block of JSON
-    const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    if (!jsonMatch) return null;
-    return JSON.parse(jsonMatch[0]);
+    // 1. Clean markdown code blocks
+    let cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    // 2. Try direct parse
+    try {
+      return JSON.parse(cleanText);
+    } catch (e) {
+      // 3. Regex-based extraction if direct parse fails
+      const jsonMatch = cleanText.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    }
+    return null;
   } catch (e) {
-    console.error("❌ Error parsing extracted JSON:", e);
+    console.error("❌ Error parsing extracted JSON:", e, "Raw text:", text);
     return null;
   }
 };
@@ -80,15 +93,14 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
 
   console.log(`📡 getTacticalAnalysis: Requesting for ${agents.length} agents...`);
   try {
-    const response = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: `Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(`Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
       Format the response as a short military-style intel report. Keep it under 100 words. 
-      Use a serious, high-tech tone.`
-    });
+      Use a serious, high-tech tone.`);
 
     console.log("✅ getTacticalAnalysis: Response received.");
-    const resultText = response.text || "ANÁLISIS COMPLETADO SIN TEXTO.";
+    const response = await result.response;
+    const resultText = response.text() || "ANÁLISIS COMPLETADO SIN TEXTO.";
     saveToCache(cacheKey, resultText);
     return resultText;
   } catch (error: any) {
@@ -197,17 +209,16 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     }
 
     console.log(`📡 processAssessmentAI: Sending request (isImage: ${isImage})...`);
-    const result = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents
-    });
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(contents);
 
     console.log("✅ processAssessmentAI: Response received.");
-    const text = result.text || "";
+    const response = await result.response;
+    const text = response.text() || "";
     const resultJson = extractJSON(text);
 
     if (!resultJson) {
-      console.error("❌ processAssessmentAI: Failed to extract JSON from:", text);
+      console.error("❌ processAssessmentAI: Failed to extract JSON from text beginning with:", text.substring(0, 50));
       throw new Error("LA IA NO GENERÓ UN FORMATO JSON VÁLIDO. REINTENTE CON OTRO TEXTO.");
     }
 
@@ -261,17 +272,16 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     }`;
 
     console.log(`📡 generateTacticalProfile: Requesting for agent ${agent.name} (${agent.id})...`);
-    const result = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt
-    });
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(prompt);
 
     console.log("✅ generateTacticalProfile: Response received.");
-    const text = result.text || "";
+    const response = await result.response;
+    const text = response.text() || "";
     const resultJson = extractJSON(text);
 
     if (!resultJson) {
-      console.error("❌ generateTacticalProfile: Failed to extract JSON from:", text);
+      console.error("❌ generateTacticalProfile: Failed to extract JSON from text beginning with:", text.substring(0, 50));
       throw new Error("ERROR DE FORMATO IA: No se pudo extraer datos tácticos válidos.");
     }
 
@@ -307,12 +317,11 @@ export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[
     Mantén un tono de inteligencia militar de élite ("The Analyst"). Máximo 150 palabras.
     Formato: HTML limpio (usa tags como <b>, <p>, <br>).`;
 
-    const result = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt
-    });
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
 
-    return result.text || "NO SE PUDO GENERAR EL ANÁLISIS PROFUNDO.";
+    return response.text() || "NO SE PUDO GENERAR EL ANÁLISIS PROFUNDO.";
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Deep Analysis):", error.message);
     return "ERROR EN EL SISTEMA DE ANÁLISIS PROFUNDO. REINTENTE MÁS TARDE.";
@@ -349,12 +358,11 @@ export const getSpiritualCounseling = async (agent: Agent, userMessage: string) 
     
     RESPONDE CON UN MENSAJE DIRECTO QUE INSPIRE A LA ACCIÓN.`;
 
-    const result = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt
-    });
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
 
-    return result.text || "CENTRO DE COMANDO FUERA DE LÍNEA. MANTÉN LA FE.";
+    return response.text() || "CENTRO DE COMANDO FUERA DE LÍNEA. MANTÉN LA FE.";
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Counseling):", error.message);
     return "ERROR DE TRANSMISIÓN EN EL CANAL DE ASESORÍA. SIGA EL PROTOCOLO ESTÁNDAR.";

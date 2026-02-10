@@ -7,7 +7,7 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
 
@@ -33,6 +33,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [onlineAgencies, setOnlineAgencies] = useState<Record<string, boolean>>({});
+  const [activeEvents, setActiveEvents] = useState<any[]>([]);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', description: '' });
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -47,6 +50,50 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     });
     return () => unsubscribe();
   }, []);
+
+  React.useEffect(() => {
+    if (userRole === UserRole.DIRECTOR) {
+      loadEvents();
+    }
+  }, [userRole]);
+
+  const loadEvents = async () => {
+    try {
+      const events = await fetchActiveEvents();
+      setActiveEvents(events);
+    } catch (e) {
+      console.error("Error loading events:", e);
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!newEvent.title || !newEvent.date) return;
+    setIsCreatingEvent(true);
+    try {
+      const res = await createEvent(newEvent);
+      if (res.success) {
+        alert("✅ EVENTO CREADO EXITOSAMENTE");
+        setNewEvent({ title: '', date: '', time: '', description: '' });
+        loadEvents();
+      }
+    } catch (e) {
+      alert("❌ FALLO AL CREAR EVENTO");
+    } finally {
+      setIsCreatingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este evento?")) return;
+    try {
+      const res = await deleteEvent(id);
+      if (res.success) {
+        loadEvents();
+      }
+    } catch (e) {
+      alert("❌ FALLO AL ELIMINAR");
+    }
+  };
 
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
 
@@ -99,8 +146,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
         }
       }
-    } catch (err) {
-      alert("❌ FALLO EN EL CEREBRO IA: " + (err.message || "Error desconocido"));
+    } catch (err: any) {
+      console.error("AI Error:", err);
+      alert("❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."));
     } finally {
       setIsGeneratingAi(false);
     }
@@ -315,6 +363,65 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* EVENT MANAGER */}
+            <div className="bg-indigo-900/10 rounded-2xl p-4 border border-indigo-500/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Star size={14} className="text-yellow-400" />
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest font-bebas">Gestor de Eventos Tácticos</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input
+                  type="text"
+                  placeholder="NOMBRE DEL EVENTO..."
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value.toUpperCase() })}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/50 font-bebas"
+                />
+                <input
+                  type="date"
+                  value={newEvent.date}
+                  onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/50"
+                />
+                <input
+                  type="time"
+                  value={newEvent.time}
+                  onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-yellow-500/50"
+                />
+                <button
+                  onClick={handleCreateEvent}
+                  disabled={isCreatingEvent || !newEvent.title || !newEvent.date}
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-yellow-600 text-[#001f3f] text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-yellow-500 transition-all disabled:opacity-50 font-bebas"
+                >
+                  {isCreatingEvent ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                  Crear Evento
+                </button>
+              </div>
+
+              {activeEvents.length > 0 && (
+                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                  {activeEvents.map((evt) => (
+                    <div key={evt.id} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-white uppercase font-bebas">{evt.titulo}</span>
+                        <span className="text-[8px] text-white/40 font-bold uppercase">{evt.fecha} @ {evt.hora || 'S/H'}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteEvent(evt.id)}
+                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

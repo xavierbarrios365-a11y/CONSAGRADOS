@@ -27,12 +27,14 @@ function getGlobalConfig() {
     STREAKS_SHEET: 'RACHAS',
     VERSES_SHEET: 'VERSICULO_DIARIO',
     NOTIFICATIONS_SHEET: 'NOTIFICACIONES',
+    EVENTS_SHEET_NAME: 'CALENDARIO_EVENTOS',
     SERVICE_ACCOUNT: {
       "project_id": "consagrados-c2d78",
       "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDNq6kEzfZMRDLP\nDvSGS3cLuUnf5zFbwFZppBtEyvyKTxL8m80E0BV8rQYmAlaSdG1vEd8bCsqiVp1Y\nVrFc/05yPCUdNRBJjj+6fj6hfq4rGKgm1nq4Wy3SaOAkFNPUS6hO6Ucx4q6+zk7q\n32KdJMfiXOv2cj3nHyBspbq1XG2Leg2zJaxY741Tan8bfnHjLsV29Q4NAVHopEsc\nYaqEQLSzAYA6yIwMe2qJqwbYJPny8Hsh9gKbb9QTTggEIeI5QrPT/KH6fE3nXRfh\n3gX4Kg8OgQ9cWoBompqj55PM9rdkhGHQA1HN0ylV2Fjykfj0Jq+dPhn2oM3UKn+W\nvhJLortDAgMBAAECggEAXOHiUe4mBilifMo3OhMIrz29lCWXz+Tb4ZegTQAS7u9p\nFrXR8BN9MLH/LdkuebOk3F1I0bCc9JWDN6rnLKWMKuDorfkR4vYf57wt0scgJwxa\nnDeOcoWS+wwr9X+GbsDAQOrvISNLYZZQY5gAtBExSBRI6CKNvDv9a7Ooz1Dvk+X5\n129n2U7vOm9oOWcWI4ysjID0L3TfO6jEMBIlH4cxBM4jZXf3v1NYH6IMZxPKI86D\nD97OHngSm8DJQdmVApDsI9Bnt70HHQlSSFDkeien4r3au+7rL1dUuo4wpw7+BcxT\nuSlfFpXldDDSjtLXSjoCKkULJ0gBfUUQurMR+9iYqQKBgQD9S8ULmkpvnYtmbI7H\n6EKrfrB7YPPM0bEpGM/ZBOAuUTlQ+Mx23r+pWgHcOCttyT1+bsaFA8s2OwSJGUjw\nKoGSmX8EgzfPJ1K6+OZTvqC1pPDfXjWMV9PaGmsTkGL2SXuP1RSstee5oav8D617\ns+i0k+406ngIqOg0NcJNVyyKHwKBgQDP3bxEZW1QNjmVAS6MzMCygKzYfMzKHe4O\nkjtj/1XdLhLhUf3n6cPAZjY9bYmp/Wzd1csc6gufhAdV4ObhkgL0ieWy6lw/fKpi\nkeiYjXP8DfnEov1w+s+OhJDBncH1mfReRXJxtzNooLNo+QXx1CNEeiJ7JgdTD+MW\n0VV58DWyXQKBgHNUXJO73MiVYzNvmlNLXY/YT2Ld8iQAFjowIfMeVTTBpudHYVF+\neqYRZWdv69ZBGs7GgX1vDMfUd2w1JxCzSewGF99mH7MipHide8IFugb64vHRY3BT\nTRKxlK+DvouFSc1jp9Y7vRa4liZevQ7mC76s3HkbiSvoPFIJaD7uwkjhAoGAeDzF\nyzZ0TeKf2j4NxCooCNj/olZGS1+WtV0G96fZ7g/ZofZAjaadsawuEchLykWqdINX\ncwk64fGIILfwNWi1RuiBMsX3yE1/bXcC+UNRZOpcoM67FWAvMTwjU6vCZyO/w8we\nEAMtvIbAYKczNhhEsjaHvX5Y3EYjUK6T5+330Y0CgYBsDgDMB0TT7+VggQA5FipB\nDpWe17uO8iIzv7HPTIlcX5m8ZB8pWiaSIm7mHyxkh/n27haLvSLvsNJm5lZni7Zf\nR3k8S2doGXfBBwkr/AahG2e52gbrQiSvd6+pROuIwQvNkTdvNi753o5BpAsgdo/V\nM8tnG9QAfWnKCnaT1eH3Yg==\n-----END PRIVATE KEY-----\n",
       "client_email": "firebase-adminsdk-fbsvc@consagrados-c2d78.iam.gserviceaccount.com"
     },
-    OFFICIAL_LOGO_ID: '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f'
+    OFFICIAL_LOGO_ID: '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
+    EVENTS_SHEET_NAME: 'CALENDARIO_EVENTOS'
   };
 }
 
@@ -275,6 +277,14 @@ function doPost(e) {
         return updateStreaks(request.data);
       case 'confirm_director_attendance':
         return confirmDirectorAttendance(request.data);
+      case 'create_event':
+        return createEvent(request.data);
+      case 'get_active_events':
+        return getActiveEvents();
+      case 'confirm_event_attendance':
+        return confirmEventAttendance(request.data);
+      case 'delete_event':
+        return deleteEvent(request.data);
       case 'send_broadcast_notification':
         return sendBroadcastNotification(request.data);
       case 'get_notifications':
@@ -1617,44 +1627,40 @@ function updateStreaks(data) {
   const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE'); 
   const tasksIdx = headers.indexOf('TASKS_JSON');
 
-  const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim() === String(data.agentId).trim());
+  const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
   
   const today = new Date();
   const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
   
-  const streakData = {
-    AGENT_ID: data.agentId,
-    STREAK_COUNT: 0,
-    LAST_COMPLETED_DATE: '',
-    TASKS_JSON: JSON.stringify(data.tasks || [])
-  };
+  let streakCount = 0;
+  let lastDate = "";
 
   if (rowIdx !== -1) {
-    streakData.STREAK_COUNT = parseInt(values[rowIdx][streakIdx]) || 0;
-    streakData.LAST_COMPLETED_DATE = String(values[rowIdx][lastDateIdx]);
+    streakCount = parseInt(values[rowIdx][streakIdx]) || 0;
+    lastDate = String(values[rowIdx][lastDateIdx]);
     
     // Si hoy completó la tarea y no se había registrado hoy
-    if (streakData.LAST_COMPLETED_DATE !== todayStr) {
+    if (lastDate !== todayStr) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
       
       // Si la última vez fue ayer, +1. Si no, racha = 1.
-      if (streakData.LAST_COMPLETED_DATE === yesterdayStr) {
-        streakData.STREAK_COUNT += 1;
+      if (lastDate === yesterdayStr) {
+        streakCount += 1;
       } else {
-        streakData.STREAK_COUNT = 1;
+        streakCount = 1;
       }
-      streakData.LAST_COMPLETED_DATE = todayStr;
+      lastDate = todayStr;
       
-      sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakData.STREAK_COUNT} días!`);
+      sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`);
 
       // --- HITOS DE XP (Cada 5 días) ---
-      if (streakData.STREAK_COUNT % 5 === 0) {
+      if (streakCount % 5 === 0) {
         let bonusXP = 0;
-        if (streakData.STREAK_COUNT === 5) bonusXP = 5;
-        else if (streakData.STREAK_COUNT >= 10 && streakData.STREAK_COUNT < 20) bonusXP = 7.5;
-        else if (streakData.STREAK_COUNT >= 20) bonusXP = 10;
+        if (streakCount === 5) bonusXP = 5;
+        else if (streakCount >= 10 && streakCount < 20) bonusXP = 7.5;
+        else if (streakCount >= 20) bonusXP = 10;
 
         if (bonusXP > 0) {
           try {
@@ -1664,12 +1670,12 @@ function updateStreaks(data) {
             const leadColIdx = (dirHeaders.indexOf('PUNTOS LIDERAZGO') + 1);
             const idColIdx = dirHeaders.indexOf('ID');
 
-            const agentRowIdx = dirData.findIndex(row => String(row[idColIdx]) === String(data.agentId));
+            const agentRowIdx = dirData.findIndex(row => String(row[idColIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
             if (agentRowIdx !== -1 && leadColIdx > 0) {
               const currentLead = parseInt(dirSheet.getRange(agentRowIdx + 1, leadColIdx).getValue()) || 0;
               dirSheet.getRange(agentRowIdx + 1, leadColIdx).setValue(currentLead + bonusXP);
               
-              sendPushNotification("⭐ BONO DE RACHA", `¡Excelente constancia! Has ganado +${bonusXP} XP extra por tu hito de ${streakData.STREAK_COUNT} días.`);
+              sendPushNotification("⭐ BONO DE RACHA", `¡Excelente constancia! Has ganado +${bonusXP} XP extra por tu hito de ${streakCount} días.`);
             }
           } catch (e) {
             console.error("Error acreditando bono de racha:", e);
@@ -1678,16 +1684,16 @@ function updateStreaks(data) {
       }
     }
     
-    const row = [streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_DATE, streakData.TASKS_JSON];
+    const row = [data.agentId, streakCount, lastDate, JSON.stringify(data.tasks || [])];
     sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);
   } else {
     // Nuevo registro: Primera racha
-    streakData.STREAK_COUNT = 1;
-    streakData.LAST_COMPLETED_DATE = todayStr;
-    sheet.appendRow([streakData.AGENT_ID, streakData.STREAK_COUNT, streakData.LAST_COMPLETED_DATE, streakData.TASKS_JSON]);
+    streakCount = 1;
+    lastDate = todayStr;
+    sheet.appendRow([data.agentId, streakCount, lastDate, JSON.stringify(data.tasks || [])]);
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakData.STREAK_COUNT })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakCount })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -1899,4 +1905,131 @@ function setupDailyVerseTrigger() {
     .create();
 
   SpreadsheetApp.getUi().alert('✅ Automatización Activada: El versículo se enviará cada mañana a las 8:00 AM.');
+}
+
+/**
+ * @description Crea un nuevo evento táctico en el calendario.
+ */
+function createEvent(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONFIG.EVENTS_SHEET_NAME);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.EVENTS_SHEET_NAME);
+    sheet.appendRow(['ID', 'TITULO', 'FECHA', 'HORA', 'DESCRIPCION', 'FECHA_CREACION']);
+    sheet.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#001f3f').setFontColor('#ffffff');
+  }
+
+  const eventId = "EVT-" + Utilities.formatDate(new Date(), "GMT-4", "yyyyMMdd-HHmmss");
+  sheet.appendRow([
+    eventId,
+    data.title,
+    data.date,
+    data.time,
+    data.description,
+    new Date().toISOString()
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, eventId: eventId })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene los eventos activos (pendientes o de hoy).
+ */
+function getActiveEvents() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.EVENTS_SHEET_NAME);
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const data = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const event = {};
+    headers.forEach((h, idx) => {
+      const field = String(h).toLowerCase();
+      // Si la fecha viene como objeto Date (Apps Script lo hace a veces), convertir a string
+      let val = row[idx];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, "GMT-4", "yyyy-MM-dd");
+      }
+      event[field] = val;
+    });
+    data.push(event);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, data: data })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Confirma asistencia a un evento específico.
+ */
+function confirmEventAttendance(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  if (!sheet) throw new Error("Hoja de asistencia no encontrada");
+
+  const now = new Date();
+  const fecha = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
+  const hora = Utilities.formatDate(now, "GMT-4", "HH:mm:ss");
+
+  // Registro de asistencia
+  sheet.appendRow([
+    data.agentId,
+    data.agentName,
+    fecha,
+    hora,
+    'EVENT_CONFIRM',
+    `EVENTO: ${data.eventTitle} (ID: ${data.eventId})`
+  ]);
+
+  // Sumar 10 XP por confirmar asistencia al evento
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = directorySheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  const leadCol = headers.indexOf('PUNTOS LIDERAZGO') + 1;
+  const idCol = headers.indexOf('ID');
+
+  if (leadCol > 0) {
+    let agentRowIdx = -1;
+    for (let i = 1; i < directoryData.length; i++) {
+      if (String(directoryData[i][idCol]).trim() === String(data.agentId).trim()) {
+        agentRowIdx = i + 1;
+        break;
+      }
+    }
+    if (agentRowIdx !== -1) {
+      const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
+      directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Elimina un evento.
+ */
+function deleteEvent(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.EVENTS_SHEET_NAME);
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Hoja de eventos no encontrada" })).setMimeType(ContentService.MimeType.JSON);
+
+  const values = sheet.getDataRange().getValues();
+  const idColIdx = values[0].indexOf('ID');
+  
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idColIdx]).trim() === String(data.eventId).trim()) {
+      sheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Evento no encontrado" })).setMimeType(ContentService.MimeType.JSON);
 }

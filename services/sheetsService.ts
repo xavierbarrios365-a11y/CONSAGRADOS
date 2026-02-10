@@ -501,3 +501,13 @@ export const syncFcmToken = async (agentId: string, token: string) => {
     return { success: false, error: error.message };
   }
 };
+
+export const confirmDirectorAttendance = async (agentId: string, agentName: string) => {
+  try {
+    const response = await postToAction('confirm_director_attendance', { agentId, agentName });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO CONFIRMACIÓN ASISTENCIA DIRECTOR:", error);
+    return { success: false, error: error.message };
+  }
+};

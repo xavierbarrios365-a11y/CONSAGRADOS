@@ -12,10 +12,25 @@ import DailyVerse from './components/DailyVerse';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import NotificationInbox from './components/NotificationInbox';
 import TacticalChat from './components/TacticalChat';
-import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics, fetchNotifications, syncFcmToken } from './services/sheetsService';
+import {
+  fetchAgentsFromSheets,
+  updateAgentPoints,
+  submitTransaction,
+  resetPasswordWithAnswer,
+  updateAgentPin,
+  fetchVisitorRadar,
+  fetchDailyVerse,
+  updateAgentStreaks,
+  registerBiometrics,
+  verifyBiometrics,
+  fetchNotifications,
+  syncFcmToken,
+  confirmDirectorAttendance
+} from './services/sheetsService';
+import { generateGoogleCalendarLink } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -574,24 +589,54 @@ const App: React.FC = () => {
   const handleVerseQuizComplete = async () => {
     if (!currentUser) return;
 
-    const updatedTasks = currentUser.weeklyTasks.map(t =>
+    const updatedTasks = currentUser.weeklyTasks?.map(t =>
       t.id === 'bible' ? { ...t, completed: true } : t
-    );
+    ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
 
     try {
+      console.log("🔥 Sincronizando racha...");
       const res = await updateAgentStreaks(currentUser.id, false, updatedTasks);
       if (res.success) {
         const updatedUser = {
           ...currentUser,
-          streakCount: res.streak,
+          streakCount: res.streak || (currentUser.streakCount || 0) + 1,
           weeklyTasks: updatedTasks
         };
         setCurrentUser(updatedUser);
         localStorage.setItem('consagrados_agent', JSON.stringify(updatedUser));
-        syncData(true);
+        // No sincronizamos todo inmediatamente para evitar race conditions, 
+        // el estado local ya es el más reciente ahora.
       }
     } catch (e) {
       console.error("Error actualizando racha:", e);
+    }
+  };
+
+  const handleConfirmDirectorAttendance = async () => {
+    if (!currentUser || currentUser.userRole !== UserRole.DIRECTOR) return;
+
+    try {
+      const res = await confirmDirectorAttendance(currentUser.id, currentUser.name);
+      if (res.alreadyDone) {
+        alert("✅ YA HAS CONFIRMADO TU ASISTENCIA HOY.");
+      } else if (res.success) {
+        alert("✅ ASISTENCIA CONFIRMADA TÁCTICAMENTE.");
+
+        // Ofrecer añadir al calendario
+        if (window.confirm("📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?")) {
+          const event = {
+            title: "REUNIÓN CONSAGRADOS 2026",
+            description: "Confirmación de asistencia táctica como DIRECTOR.",
+            startTime: new Date(),
+            endTime: new Date(new Date().getTime() + 2 * 60 * 60 * 1000) // +2h
+          };
+          window.open(generateGoogleCalendarLink(event), '_blank');
+        }
+      } else {
+        alert("❌ FALLO EN PROTOCOLO DE ASISTENCIA");
+      }
+    } catch (e) {
+      alert("❌ FALLO EN PROTOCOLO DE ASISTENCIA");
     }
   };
 
@@ -617,7 +662,18 @@ const App: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            {/* STREAK & DIRECTOR ACTION */}
+            <div className="flex flex-col gap-4">
+              {currentUser?.userRole === UserRole.DIRECTOR && (
+                <button
+                  onClick={handleConfirmDirectorAttendance}
+                  className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-5 rounded-3xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-[0.2em] border border-blue-400/30"
+                >
+                  <Calendar size={18} className="animate-pulse" />
+                  Confirmar Mi Asistencia
+                </button>
+              )}
+
               <div className="relative group overflow-hidden rounded-3xl p-6 glass-amber shadow-[0_0_40px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
                 <div className="absolute inset-0 shimmer-bg opacity-30 group-hover:opacity-50 transition-opacity"></div>
                 <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-700">

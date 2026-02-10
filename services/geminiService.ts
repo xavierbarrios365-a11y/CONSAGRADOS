@@ -13,8 +13,12 @@ let genAIInstance: GoogleGenAI | null = null;
 
 const getGenAI = (): GoogleGenAI | null => {
   const apiKey = getApiKey();
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.error("❌ getGenAI: No API Key available.");
+    return null;
+  }
   if (!genAIInstance) {
+    console.log("🤖 Initializing GoogleGenAI instance...");
     genAIInstance = new GoogleGenAI({ apiKey });
   }
   return genAIInstance;
@@ -74,6 +78,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     }, {})
   };
 
+  console.log(`📡 getTacticalAnalysis: Requesting for ${agents.length} agents...`);
   try {
     const response = await ai.models.generateContent({
       model: DEFAULT_MODEL,
@@ -82,6 +87,7 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
       Use a serious, high-tech tone.`
     });
 
+    console.log("✅ getTacticalAnalysis: Response received.");
     const resultText = response.text || "ANÁLISIS COMPLETADO SIN TEXTO.";
     saveToCache(cacheKey, resultText);
     return resultText;
@@ -89,7 +95,9 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     console.error("❌ Gemini detailed error (Analysis):", {
       status: error.status,
       message: error.message,
+      stack: error.stack
     });
+    // ... rest same
     if (error.status === 401 || error.message?.includes('API key')) {
       return "ERROR DE SEGURIDAD: LLAVE IA NO VÁLIDA O EXPIRADA.";
     }
@@ -188,21 +196,25 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
       Responde ÚNICAMENTE con el objeto JSON puro.`;
     }
 
+    console.log(`📡 processAssessmentAI: Sending request (isImage: ${isImage})...`);
     const result = await ai.models.generateContent({
       model: DEFAULT_MODEL,
       contents
     });
 
+    console.log("✅ processAssessmentAI: Response received.");
     const text = result.text || "";
     const resultJson = extractJSON(text);
 
     if (!resultJson) {
+      console.error("❌ processAssessmentAI: Failed to extract JSON from:", text);
       throw new Error("LA IA NO GENERÓ UN FORMATO JSON VÁLIDO. REINTENTE CON OTRO TEXTO.");
     }
 
     return resultJson;
   } catch (error: any) {
-    console.error("AI Error:", error);
+    console.error("AI Error (processAssessmentAI):", error);
+    // ...
     let msg = "EL CENTRO DE MANDO NO RESPONDE (ERROR DE IA).";
     if (error.message?.includes('401') || error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
     if (error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
@@ -248,15 +260,18 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
       "summary": "Resumen aquí..."
     }`;
 
+    console.log(`📡 generateTacticalProfile: Requesting for agent ${agent.name} (${agent.id})...`);
     const result = await ai.models.generateContent({
       model: DEFAULT_MODEL,
       contents: prompt
     });
 
+    console.log("✅ generateTacticalProfile: Response received.");
     const text = result.text || "";
     const resultJson = extractJSON(text);
 
     if (!resultJson) {
+      console.error("❌ generateTacticalProfile: Failed to extract JSON from:", text);
       throw new Error("ERROR DE FORMATO IA: No se pudo extraer datos tácticos válidos.");
     }
 
@@ -266,6 +281,7 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     console.error("❌ Gemini detailed error (Profile):", {
       status: error.status,
       message: error.message,
+      stack: error.stack
     });
     throw error;
   }

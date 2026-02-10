@@ -61,6 +61,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     return { current: 'LÍDER', next: 'MAX', target: 1000, level: 4 };
   };
 
+  const levelInfo = getLevelInfo(agent.xp);
+  const isProspectoAscender = agent.xp >= levelInfo.target - 50 && agent.xp < levelInfo.target;
+
   const handleBroadcast = async () => {
     if (!broadcastData.title || !broadcastData.message) return;
     if (!window.confirm("⚠️ ¿TRANSMITIR COMUNICADO MASIVO?\n\nEsta notificación llegará a todos los agentes vía Push y Telegram.")) return;
@@ -103,21 +106,21 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     }
   };
 
-  const levelInfo = agent ? getLevelInfo(agent.xp) : null;
-  const isProspectoAscender = levelInfo && agent.xp >= (levelInfo.target - 50) && agent.xp < levelInfo.target;
-
-  if (!agent) return <div className="p-10 text-center font-bebas text-[#ffb700] animate-pulse uppercase tracking-widest">Inicializando Nodo de Inteligencia...</div>;
-
   const handleImportInscriptions = async () => {
-    if (!window.confirm("¿IMPORTAR NUEVAS INSCRIPCIONES? El sistema buscará en la hoja de 'Inscripciones' y añadirá nuevos agentes al Directorio oficial.")) return;
+    if (!window.confirm("⚠️ ¿RECONSTRUIR BASE DE DATOS?\n\nEsto sincronizará la hoja de cálculo con la base local.")) return;
     setIsReconstructing(true);
-    const res = await reconstructDatabase();
-    setIsReconstructing(false);
-    if (res.success) {
-      alert(`PROCESO COMPLETADO: Se han importado ${res.newAgents || 0} nuevos agentes. El Directorio ha sido actualizado.`);
-      if (onUpdateNeeded) onUpdateNeeded();
-    } else {
-      alert(`ERROR: No se pudo completar la operación. ${res.error || ''}`);
+    try {
+      const res = await reconstructDatabase();
+      if (res.success) {
+        alert("✅ SINCRONIZACIÓN EXITOSA");
+        if (onUpdateNeeded) onUpdateNeeded();
+      } else {
+        alert("❌ ERROR: " + (res.error || "Fallo desconocido"));
+      }
+    } catch (err) {
+      alert("❌ FALLO DE COMUNICACIÓN CON EL NÚCLEO");
+    } finally {
+      setIsReconstructing(false);
     }
   };
 
@@ -127,16 +130,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
     setPhotoStatus('UPLOADING');
     try {
-      const compressedBase64 = await compressImage(file, 800, 0.8);
-      const uploadResult = await uploadImage(compressedBase64, file);
-
+      const compressed = await compressImage(file);
+      const uploadResult = await uploadImage(compressed, file);
       if (uploadResult.success && uploadResult.url) {
         setPhotoStatus('SAVING');
         const updateResult = await updateAgentPhoto(agent.id, uploadResult.url);
         if (updateResult.success) {
           setPhotoStatus('SUCCESS');
           if (onUpdateNeeded) onUpdateNeeded();
-          setTimeout(() => setPhotoStatus('IDLE'), 3000);
+          setTimeout(() => setPhotoStatus('IDLE'), 2000);
         } else {
           throw new Error(updateResult.error || "Error al actualizar registro");
         }
@@ -189,6 +191,21 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     }
   };
 
+  const handleTestNotification = async () => {
+    if (!currentUser) return;
+    setIsSendingBroadcast(true);
+    try {
+      const res = await broadcastNotification("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
+      if (res.success) {
+        alert("✅ PRUEBA ENVIADA. Verifica tu bandeja de notificaciones.");
+      }
+    } catch (err) {
+      alert("❌ FALLO EN EL TEST");
+    } finally {
+      setIsSendingBroadcast(false);
+    }
+  };
+
   return (
     <div className="min-h-full bg-[#001f3f] p-4 md:p-6 animate-in fade-in duration-700">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -207,19 +224,35 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 w-full md:w-auto">
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                <button
+                  onClick={handleImportInscriptions}
+                  disabled={isReconstructing}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-[#ffb700] text-[#001f3f] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-xl active:scale-95 disabled:opacity-50 font-bebas"
+                >
+                  <RefreshCw size={16} className={isReconstructing ? 'animate-spin' : ''} />
+                  Sincronizar Base
+                </button>
+                <button
+                  onClick={handleTestNotification}
+                  disabled={isSendingBroadcast}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/10 active:scale-95 font-bebas"
+                >
+                  <Bell size={16} className="text-indigo-400" />
+                  Probar Push
+                </button>
                 {setView && (
                   <button
                     onClick={() => setView(AppView.CONTENT)}
                     className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/10 active:scale-95 font-bebas"
                   >
-                    <BookOpen size={16} className="text-[#ffb700]" />
+                    <BookOpen size={16} className="text-indigo-400" />
                     Material
                   </button>
                 )}
                 <button
                   onClick={async () => {
-                    if (window.confirm("🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿Estás seguro de realizar una PURGA TOTAL?\nEsto cerrará tu sesión, borrará el caché del navegador y forzará la descarga de la última versión del sistema.\n\nUsa esto solo si detectas errores persistentes.")) {
+                    if (window.confirm("🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿Estás seguro de realizar una PURGA TOTAL?")) {
                       try {
                         if ('caches' in window) {
                           const cacheNames = await caches.keys();
@@ -241,76 +274,64 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all shadow-xl active:scale-95 font-bebas"
                 >
                   <Trash2 size={16} />
-                  Purga de Emergencia
-                </button>
-                <button
-                  onClick={handleImportInscriptions}
-                  disabled={isReconstructing}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-[#ffb700] text-[#001f3f] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-xl active:scale-95 disabled:opacity-50 font-bebas"
-                >
-                  <RefreshCw size={16} className={isReconstructing ? "animate-spin" : ""} />
-                  Sincronizar DB
+                  Purga
                 </button>
               </div>
             </div>
 
-            {/* FRECUENCIA DE MANDO: NOTIFICACIONES MASIVAS */}
-            <div className="p-4 bg-[#001f3f]/50 rounded-2xl border border-white/5 space-y-4">
-              <div className="flex items-center gap-2">
-                <Radio className="text-[#ffb700]" size={16} />
-                <h4 className="text-white font-black uppercase tracking-widest text-[10px] font-bebas">FRECUENCIA DE MANDO: COMUNICADOS GLOBALES</h4>
+            {/* AVISO TÁCTICO (BROADCAST) */}
+            <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Radio size={14} className="text-[#ffb700] animate-pulse" />
+                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest font-bebas">Nueva Transmisión Masiva</span>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                 <div className="md:col-span-3">
                   <input
                     type="text"
-                    placeholder="TÍTULO DEL AVISO..."
+                    placeholder="TÍTULO..."
                     value={broadcastData.title}
-                    onChange={(e) => setBroadcastData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full bg-[#000c19] border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-bold uppercase outline-none focus:border-[#ffb700] font-bebas tracking-wider"
+                    onChange={(e) => setBroadcastData({ ...broadcastData, title: e.target.value.toUpperCase() })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-[#ffb700]/50 font-bebas"
                   />
                 </div>
                 <div className="md:col-span-6">
                   <input
                     type="text"
-                    placeholder="MENSAJE PARA TODOS LOS AGENTES..."
+                    placeholder="MENSAJE TÁCTICO..."
                     value={broadcastData.message}
-                    onChange={(e) => setBroadcastData(prev => ({ ...prev, message: e.target.value }))}
-                    className="w-full bg-[#000c19] border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-bold uppercase outline-none focus:border-[#ffb700] font-bebas tracking-wider"
+                    onChange={(e) => setBroadcastData({ ...broadcastData, message: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-[#ffb700]/50 font-montserrat"
                   />
                 </div>
                 <div className="md:col-span-3">
                   <button
                     onClick={handleBroadcast}
                     disabled={isSendingBroadcast || !broadcastData.title || !broadcastData.message}
-                    className="w-full h-full bg-[#ffb700] text-[#001f3f] rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#ffb700]/90 disabled:opacity-50 transition-all py-3 px-6"
+                    className="w-full h-full flex items-center justify-center gap-2 px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-indigo-500 transition-all disabled:opacity-50 font-bebas"
                   >
-                    {isSendingBroadcast ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    Transmitir Comunicado
+                    {isSendingBroadcast ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    Transmitir
                   </button>
                 </div>
               </div>
-              <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest pl-2">
-                📢 Esta transmisión se enviará vía OneSignal (Push) y Telegram simultáneamente.
-              </p>
             </div>
           </div>
         )}
 
         {/* Global Stats Summary */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="bg-[#001833] border border-white/5 p-3 rounded-xl text-center">
-            <p className="text-[6px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL AGENTES</p>
-            <p className="text-lg font-bebas font-black text-white">{totalAgents}</p>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg">
+            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">AGENTES OPERATIVOS</p>
+            <p className="text-2xl font-bebas font-black text-white leading-none">{totalAgents}</p>
           </div>
-          <div className="bg-[#001833] border border-white/5 p-3 rounded-xl text-center">
-            <p className="text-[6px] text-gray-500 font-black uppercase mb-1 font-bebas">TOTAL LÍDERES</p>
-            <p className="text-lg font-bebas font-black text-[#ffb700]">{totalLeaders}</p>
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg border-b-[#ffb700]/30">
+            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">PERSONAL DE MANDO</p>
+            <p className="text-2xl font-bebas font-black text-[#ffb700] leading-none">{totalLeaders}</p>
           </div>
-          <div className="bg-[#001833] border border-white/5 p-3 rounded-xl text-center">
-            <p className="text-[6px] text-gray-500 font-black uppercase mb-1 font-bebas">RADAR (VISITAS)</p>
-            <p className="text-lg font-bebas font-black text-orange-500">{visitorCount || 0}</p>
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg">
+            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">RADAR (VISITAS)</p>
+            <p className="text-2xl font-bebas font-black text-blue-400 leading-none">{visitorCount || 0}</p>
           </div>
         </div>
 
@@ -614,8 +635,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

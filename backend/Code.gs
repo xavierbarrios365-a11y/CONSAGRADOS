@@ -273,6 +273,8 @@ function doPost(e) {
         return getDailyVerse();
       case 'update_streaks':
         return updateStreaks(request.data);
+      case 'confirm_director_attendance':
+        return confirmDirectorAttendance(request.data);
       case 'send_broadcast_notification':
         return sendBroadcastNotification(request.data);
       case 'get_notifications':
@@ -1615,7 +1617,7 @@ function updateStreaks(data) {
   const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE'); 
   const tasksIdx = headers.indexOf('TASKS_JSON');
 
-  const rowIdx = values.findIndex(row => String(row[agentIdIdx]) === String(data.agentId));
+  const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim() === String(data.agentId).trim());
   
   const today = new Date();
   const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
@@ -1775,11 +1777,12 @@ function syncFcmToken(data) {
     sheet.getRange(1, fcmCol + 1).setValue('FCM_TOKEN');
   }
 
-  const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+  const rowIdx = directoryData.findIndex(row => String(row[idCol]).trim() === String(data.agentId).trim());
   if (rowIdx !== -1) {
     sheet.getRange(rowIdx + 1, fcmCol + 1).setValue(data.token);
     
     // Suscribir al Topic "all_agents" usando la API de IID (Instance ID)
+    let subscriptionStatus = "pending";
     try {
       const accessToken = getFcmAccessToken();
       const url = "https://iid.googleapis.com/iid/v1:batchAdd";
@@ -1801,14 +1804,57 @@ function syncFcmToken(data) {
       
       const response = UrlFetchApp.fetch(url, options);
       Logger.log(`Suscripción a Topic result: ${response.getContentText()}`);
+      subscriptionStatus = "success";
     } catch (e) {
       Logger.log("Error al suscribir al topic: " + e.message);
+      subscriptionStatus = "error: " + e.message;
     }
     
-    return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ success: true, subscription: subscriptionStatus })).setMimeType(ContentService.MimeType.JSON);
   }
   
   return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Agente no encontrado" })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Confirma asistencia manual para Directores.
+ */
+function confirmDirectorAttendance(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  if (!sheet) throw new Error("Hoja de asistencia no encontrada");
+
+  const now = new Date();
+  const fecha = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
+  const hora = Utilities.formatDate(now, "GMT-4", "HH:mm:ss");
+
+  // Verificar si ya confirmó hoy
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const idColIdx = headers.indexOf('ID');
+  const fechaColIdx = headers.indexOf('FECHA');
+  
+  const alreadyConfirmed = values.some(row => 
+    String(row[idColIdx]).trim() === String(data.agentId).trim() && 
+    String(row[fechaColIdx]).split('T')[0] === fecha
+  );
+
+  if (alreadyConfirmed) {
+    return ContentService.createTextOutput(JSON.stringify({ success: true, alreadyDone: true })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Registrar asistencia
+  sheet.appendRow([
+    data.agentId,
+    data.agentName,
+    fecha,
+    hora,
+    'DIRECTOR_CONFIRM',
+    'CONFIRMADO MANUALMENTE'
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

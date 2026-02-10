@@ -1,3 +1,5 @@
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 const CACHE_NAME = 'consagrados-v5';
 
 // No cacheamos nada por ahora para evitar problemas de actualización, 

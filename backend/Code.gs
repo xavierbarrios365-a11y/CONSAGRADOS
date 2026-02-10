@@ -75,7 +75,7 @@ function sendPushNotification(title, message) {
       app_id: CONFIG.ONESIGNAL_APP_ID,
       headings: { "en": title, "es": title },
       contents: { "en": message, "es": message },
-      included_segments: ["All"]
+      included_segments: ["Subscribed Users"]
     };
 
     const options = {

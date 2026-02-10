@@ -104,11 +104,15 @@ const App: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   const handleLogout = useCallback(() => {
-    localStorage.clear();
     const remembered = localStorage.getItem('remembered_user');
     const version = localStorage.getItem('app_version');
+    const dismissedBanner = localStorage.getItem('pwa_banner_dismissed');
+
+    localStorage.clear();
+
     if (remembered) localStorage.setItem('remembered_user', remembered);
     if (version) localStorage.setItem('app_version', version);
+    if (dismissedBanner) localStorage.setItem('pwa_banner_dismissed', dismissedBanner);
 
     setIsLoggedIn(false);
     setCurrentUser(null);
@@ -180,6 +184,15 @@ const App: React.FC = () => {
 
     const storedLastId = localStorage.getItem('last_login_id');
     if (storedLastId) setLoginId(storedLastId);
+
+    const storedRemembered = localStorage.getItem('remembered_user');
+    if (storedRemembered) {
+      try {
+        setRememberedUser(JSON.parse(storedRemembered));
+      } catch (e) {
+        localStorage.removeItem('remembered_user');
+      }
+    }
 
     fetchDailyVerse().then(res => {
       if (res.success && res.data) {
@@ -330,10 +343,15 @@ const App: React.FC = () => {
       localStorage.setItem('last_login_id', user.id);
       const now = Date.now();
       localStorage.setItem('last_active_time', String(now));
+
+      const summary = { id: user.id, name: user.name, photoUrl: user.photoUrl };
+      localStorage.setItem('remembered_user', JSON.stringify(summary));
+      setRememberedUser(summary);
+
       setLastActiveTime(now);
       setCurrentUser(user);
       setIsLoggedIn(true);
-      setView(AppView.HOME); // Landing page: Nodo Central
+      setView(AppView.HOME);
     } else {
       setLoginError({ field: 'both', message: 'CREDENCIALES INVÁLIDAS' });
     }
@@ -358,6 +376,11 @@ const App: React.FC = () => {
         localStorage.setItem('last_login_id', user.id);
         const now = Date.now();
         localStorage.setItem('last_active_time', String(now));
+
+        const summary = { id: user.id, name: user.name, photoUrl: user.photoUrl };
+        localStorage.setItem('remembered_user', JSON.stringify(summary));
+        setRememberedUser(summary);
+
         setLastActiveTime(now);
         setCurrentUser(user);
         setIsLoggedIn(true);
@@ -419,13 +442,13 @@ const App: React.FC = () => {
     switch (view) {
       case AppView.HOME:
         return (
-          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            <div className="flex flex-col items-center text-center space-y-4 mb-4">
-              <div className="p-4 bg-[#ffb700]/10 rounded-full border border-[#ffb700]/20 animate-pulse">
-                <Shield size={32} className="text-[#ffb700]" />
+          <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
+            <div className="flex flex-col items-center text-center space-y-3 mb-2">
+              <div className="p-3 bg-[#ffb700]/10 rounded-full border border-[#ffb700]/20 animate-pulse">
+                <Shield size={24} className="text-[#ffb700]" />
               </div>
               <div>
-                <h2 className="text-4xl font-bebas font-black text-white tracking-widest leading-none">NODO CENTRAL</h2>
+                <h2 className="text-2xl font-bebas font-black text-white tracking-widest leading-none">NODO CENTRAL</h2>
                 <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mt-1">{currentUser?.name}</p>
               </div>
             </div>
@@ -434,26 +457,26 @@ const App: React.FC = () => {
               <DailyVerse verse={dailyVerse || { verse: 'Cargando versículo del día...', reference: '' }} />
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-              <div className="relative group overflow-hidden rounded-[3rem] p-10 glass-amber shadow-[0_0_50px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="relative group overflow-hidden rounded-3xl p-6 glass-amber shadow-[0_0_40px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
                 <div className="absolute inset-0 shimmer-bg opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                  <Flame size={120} className="text-[#ffb700]" />
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                  <Flame size={100} className="text-[#ffb700]" />
                 </div>
                 <div className="relative z-10 w-full flex justify-between items-center">
                   <div className="animate-fade">
-                    <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
-                    <p className="text-6xl font-bebas font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{currentUser?.streakCount || 0} DÍAS</p>
+                    <p className="text-[8px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
+                    <p className="text-4xl font-bebas font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{currentUser?.streakCount || 0} DÍAS</p>
                   </div>
-                  <div className="bg-[#ffb700] p-6 rounded-3xl shadow-[0_0_30px_rgba(255,183,0,0.4)] animate-scale">
-                    <Flame size={40} className="text-[#001f3f]" />
+                  <div className="bg-[#ffb700] p-4 rounded-2xl shadow-[0_0_20px_rgba(255,183,0,0.4)] animate-scale">
+                    <Flame size={32} className="text-[#001f3f]" />
                   </div>
                 </div>
-                <div className="w-full space-y-4 relative z-10 mt-6">
-                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                <div className="w-full space-y-3 relative z-10 mt-4">
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
                     <div className="h-full bg-gradient-to-r from-[#ffb700] to-amber-300 shadow-[0_0_15px_rgba(255,183,0,0.6)] transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
                   </div>
-                  <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest italic">
+                  <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest italic">
                     <p className="text-white/30">Objetivo: 365 días</p>
                     <p className="text-[#ffb700]">{Math.floor(((currentUser?.streakCount || 0) / 365) * 100)}% Completado</p>
                   </div>
@@ -461,17 +484,17 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <button onClick={() => setView(AppView.RANKING)} className="p-6 glass-card border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
-                <Trophy size={28} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+            <div className="grid grid-cols-3 gap-3">
+              <button onClick={() => setView(AppView.RANKING)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
+                <Trophy size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
               </button>
-              <button onClick={() => setView(AppView.ACADEMIA)} className="p-6 glass-card border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                <Database size={28} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+              <button onClick={() => setView(AppView.ACADEMIA)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                <Database size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Academia</span>
               </button>
-              <button onClick={() => setView(AppView.CONTENT)} className="p-6 glass-card border-white/10 rounded-[2.5rem] flex flex-col items-center gap-3 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                <BookOpen size={28} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+              <button onClick={() => setView(AppView.CONTENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                <BookOpen size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Material</span>
               </button>
             </div>
@@ -819,62 +842,133 @@ const App: React.FC = () => {
             <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.5em] opacity-80">Command Center Táctico</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-4">
-              <div className="relative group">
-                <input
-                  type="text"
-                  placeholder="ID DE AGENTE"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20 uppercase"
-                />
-                <Shield size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+          {rememberedUser && !loginId ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <img
+                    src={formatDriveUrl(rememberedUser.photoUrl)}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)] animate-pulse"
+                    onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }}
+                  />
+                  <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-[#001f3f]"></div>
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-black text-lg uppercase tracking-widest leading-none mb-1">{rememberedUser.name}</p>
+                  <p className="text-[#ffb700] text-[8px] font-black uppercase tracking-[0.4em] opacity-80">Sesión Detectada</p>
+                </div>
               </div>
 
-              <div className="relative group">
-                <input
-                  type="password"
-                  placeholder="PIN DE SEGURIDAD"
-                  value={loginPin}
-                  onChange={(e) => setLoginPin(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
-                />
-                <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+              <div className="space-y-4">
+                <div className="relative group">
+                  <input
+                    type="password"
+                    placeholder="INTRODUCE TU PIN"
+                    value={loginPin}
+                    onChange={(e) => setLoginPin(e.target.value)}
+                    autoFocus
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center"
+                  />
+                  <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30" />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    onClick={() => {
+                      setLoginId(rememberedUser.id);
+                      setTimeout(() => handleLogin(), 50);
+                    }}
+                    className="w-full bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
+                  >
+                    Acceder ahora
+                  </button>
+
+                  {biometricAvailable && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginId(rememberedUser.id);
+                        setTimeout(() => handleBiometricLogin(), 50);
+                      }}
+                      className="w-full bg-blue-600/20 border border-blue-500/30 py-6 rounded-2xl text-blue-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-blue-600/30 active:scale-[0.98] transition-all font-bebas flex items-center justify-center gap-2"
+                    >
+                      <Fingerprint size={18} /> Acceso Biométrico
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRememberedUser(null);
+                      localStorage.removeItem('remembered_user');
+                      setLoginId('');
+                      setLoginPin('');
+                    }}
+                    className="w-full py-4 text-white/30 hover:text-white/60 text-[8px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Ingresar con otra credencial
+                  </button>
+                </div>
               </div>
             </div>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-4">
+                <div className="relative group">
+                  <input
+                    type="text"
+                    placeholder="ID DE AGENTE"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20 uppercase"
+                  />
+                  <Shield size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+                </div>
 
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="flex-1 bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
-              >
-                Acceder al Nodo
-              </button>
+                <div className="relative group">
+                  <input
+                    type="password"
+                    placeholder="PIN DE SEGURIDAD"
+                    value={loginPin}
+                    onChange={(e) => setLoginPin(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
+                  />
+                  <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+                </div>
+              </div>
 
-              {biometricAvailable && (
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
+                >
+                  Acceder al Nodo
+                </button>
+
+                {biometricAvailable && (
+                  <button
+                    type="button"
+                    onClick={handleBiometricLogin}
+                    disabled={isAuthenticatingBio}
+                    className="w-20 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#ffb700] hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50"
+                    title="Acceso Biométrico"
+                  >
+                    {isAuthenticatingBio ? <Loader2 size={24} className="animate-spin" /> : <Fingerprint size={24} />}
+                  </button>
+                )}
+              </div>
+
+              <div className="pt-4 text-center">
                 <button
                   type="button"
-                  onClick={handleBiometricLogin}
-                  disabled={isAuthenticatingBio}
-                  className="w-20 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#ffb700] hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50"
-                  title="Acceso Biométrico"
+                  className="text-[8px] text-white/30 font-black uppercase tracking-widest hover:text-[#ffb700] transition-colors"
+                  onClick={() => setShowForgotPassword(true)}
                 >
-                  {isAuthenticatingBio ? <Loader2 size={24} className="animate-spin" /> : <Fingerprint size={24} />}
+                  ¿Olvidaste tu PIN de Seguridad?
                 </button>
-              )}
-            </div>
-
-            <div className="pt-4 text-center">
-              <button
-                type="button"
-                className="text-[8px] text-white/30 font-black uppercase tracking-widest hover:text-[#ffb700] transition-colors"
-                onClick={() => setShowForgotPassword(true)}
-              >
-                ¿Olvidaste tu PIN de Seguridad?
-              </button>
-            </div>
-          </form>
+              </div>
+            </form>
+          )}
 
           <div className="text-center">
             <p className="text-[6px] text-white/20 font-black uppercase tracking-widest">

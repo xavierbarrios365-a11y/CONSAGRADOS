@@ -88,7 +88,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-2xl px-6 py-4 flex justify-around items-center z-40 pb-[max(1.2rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-2xl px-6 py-3 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         {filteredNavItems.map((item) => (
           <button
             key={item.id}
@@ -97,7 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
               }`}
             title={item.label}
           >
-            <div className={`p-2.5 rounded-2xl transition-all duration-300 ${activeView === item.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/20 shadow-[0_0_20px_rgba(255,183,0,0.1)]' : ''}`}>
+            <div className={`p-2 rounded-2xl transition-all duration-300 ${activeView === item.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/20 shadow-[0_0_20px_rgba(255,183,0,0.1)]' : ''}`}>
               {item.icon}
             </div>
             {activeView === item.id && (

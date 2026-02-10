@@ -9,7 +9,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import { fetchAgentsFromSheets, submitTransaction, updateAgentPoints, resetPasswordWithAnswer, updateAgentPin, fetchVisitorRadar, fetchDailyVerse, updateAgentStreaks, registerBiometrics, verifyBiometrics } from './services/sheetsService';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -51,7 +51,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.6.7"; // Total Restoration & Fixes
+  const APP_VERSION = "1.6.8"; // Official Restoration Release
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -188,9 +188,9 @@ const App: React.FC = () => {
       const interval = setInterval(() => {
         const now = Date.now();
         const diff = now - lastActiveTime;
-        if (diff >= 3600000) {
+        if (diff >= 14400000) { // 4 Horas
           handleLogout();
-        } else if (diff >= 3000000) {
+        } else if (diff >= 13800000) { // Aviso a los 3h 50m
           setShowSessionWarning(true);
         }
       }, 10000);
@@ -403,6 +403,12 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            {dailyVerse && (
+              <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
+                <DailyVerse verse={dailyVerse} />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-6">
               <div
                 onClick={() => setView(AppView.RANKING)}
@@ -428,7 +434,7 @@ const App: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest italic">Objetivo: 365 días</p>
                     <button className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest flex items-center gap-2">
-                      Ver Racha <ChevronRight size={10} />
+                      Ver Racha <Sparkles size={10} />
                     </button>
                   </div>
                 </div>
@@ -527,7 +533,7 @@ const App: React.FC = () => {
         );
       case AppView.DIRECTORY:
       case AppView.CIU:
-        return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} dailyVerse={dailyVerse} /> : null;
+        return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} onAgentClick={(a) => setFoundAgent(a)} /> : null;
       case AppView.VISITOR:
         return (
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
@@ -600,70 +606,60 @@ const App: React.FC = () => {
                 <button onClick={() => setViewingAsRole(UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.DIRECTOR ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Director</button>
               </div>
 
-              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
+              <button onClick={() => alert("MÓDULO DE SEGURIDAD: Cambia tu PIN en la base de datos central.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
                 <div className="flex items-center gap-3">
                   <Key size={18} className="text-[#ffb700]" />
                   Cambiar PIN de Acceso
                 </div>
                 <ChevronRight size={14} className="text-gray-500" />
               </button>
-              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas" onClick={() => {
-                if (isBiometricAvailable) {
-                  const confirmed = window.confirm("¿REGISTRAR DATOS BIOMÉTRICOS EN ESTE DISPOSITIVO?");
-                  if (confirmed && currentUser) {
-                    setIsRegisteringBio(true);
-                    registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredentialId ? [currentUser.biometricCredentialId] : [])
-                      .then(async (credId) => {
-                        if (credId) {
-                          const res = await registerBiometrics(currentUser.id, credId);
-                          if (res.success) {
-                            alert("BIOMETRÍA REGISTRADA EXITOSAMENTE");
-                            syncData();
+
+              <button
+                className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas"
+                onClick={() => {
+                  if (isBiometricAvailable) {
+                    const confirmed = window.confirm("¿REGISTRAR DATOS BIOMÉTRICOS EN ESTE DISPOSITIVO?");
+                    if (confirmed && currentUser) {
+                      setIsRegisteringBio(true);
+                      registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : [])
+                        .then(async (credId) => {
+                          if (credId) {
+                            const res = await registerBiometrics(currentUser.id, credId);
+                            if (res.success) {
+                              alert("BIOMETRÍA REGISTRADA EXITOSAMENTE");
+                              syncData();
+                            }
                           }
-                        }
-                      })
-                      .catch(err => alert(err.message))
-                      .finally(() => setIsRegisteringBio(false));
+                        })
+                        .catch(err => alert(err.message))
+                        .finally(() => setIsRegisteringBio(false));
+                    }
+                  } else {
+                    alert("TU DISPOSITIVO O CONEXIÓN NO SOPORTA BIOMETRÍA SEGURA (WebAuthn). ASEGÚRATE DE USAR HTTPS.");
                   }
-                }
-              }}>
+                }}
+              >
                 <div className="flex items-center gap-3">
                   <Fingerprint size={18} className="text-[#ffb700]" />
                   {isRegisteringBio ? 'Registrando...' : 'Configurar Biometría'}
                 </div>
                 <ChevronRight size={14} className="text-gray-500" />
               </button>
-              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas" onClick={() => {
-                if (isBiometricAvailable) {
-                  const confirmed = window.confirm("¿REGISTRAR DATOS BIOMÉTRICOS EN ESTE DISPOSITIVO?");
-                  if (confirmed && currentUser) {
-                    setIsRegisteringBio(true);
-                    registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : [])
-                      .then(async (credId) => {
-                        if (credId) {
-                          const res = await registerBiometrics(currentUser.id, credId);
-                          if (res.success) {
-                            alert("BIOMETRÍA REGISTRADA EXITOSAMENTE");
-                            syncData();
-                          }
-                        }
-                      })
-                      .catch(err => alert(err.message))
-                      .finally(() => setIsRegisteringBio(false));
-                  }
-                }
-              }}>
+
+              <button onClick={() => alert("CENTRO DE NOTIFICACIONES: Sin mensajes nuevos.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
                 <div className="flex items-center gap-3">
-                  <Fingerprint size={18} className="text-[#ffb700]" />
-                  {isRegisteringBio ? 'Registrando...' : 'Configurar Biometría'}
+                  <Bell size={18} className="text-[#ffb700]" />
+                  Centro de Notificaciones
                 </div>
-                <ChevronRight size={14} className="text-gray-500" />
+                <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-bold">0</div>
               </button>
+
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center gap-3 px-6 py-5 bg-red-600/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-600 hover:text-white transition-all font-bebas mt-4 shadow-lg active:scale-95"
+                className="flex items-center justify-center gap-3 px-6 py-5 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all font-bebas shadow-lg active:scale-95"
               >
-                <LogOut size={18} /> Cerrar Conexión Segura
+                <LogOut size={18} />
+                Cerrar Conexión
               </button>
             </div>
           </div>

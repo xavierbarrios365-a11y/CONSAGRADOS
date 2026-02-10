@@ -17,10 +17,10 @@ interface CIUProps {
   visitorCount?: number;
   onRefreshIntel?: () => void;
   isRefreshingIntel?: boolean;
-  dailyVerse?: DailyVerseType | null;
+  onAgentClick?: (agent: Agent) => void;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, dailyVerse }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
@@ -208,7 +208,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
 
           <div className="w-full lg:w-96">
-            <DailyVerse verse={dailyVerse || null} />
+            {/* Versículo movido al HOME según requerimiento táctico */}
           </div>
 
 
@@ -444,7 +444,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 key={a.id}
                 onClick={() => {
                   setSelectedAgentId(a.id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  if (onAgentClick) onAgentClick(a);
+                  // window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className={`group relative aspect-square rounded-3xl overflow-hidden border-2 transition-all p-1 active:scale-95 ${String(selectedAgentId) === String(a.id)
                   ? 'border-[#ffb700] bg-[#ffb700]/10 shadow-[0_0_20px_rgba(255,183,0,0.2)]'

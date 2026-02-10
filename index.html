@@ -131,6 +131,12 @@
     .scroll-hide::-webkit-scrollbar {
       display: none;
     }
+
+    .tactical-blackout {
+      filter: blur(20px) brightness(0.1);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
   </style>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>

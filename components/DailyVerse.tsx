@@ -17,11 +17,11 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
     const [missingWord, setMissingWord] = useState('');
     const [displayVerse, setDisplayVerse] = useState('');
 
-    // Verificar si ya completó el quiz hoy
+    // Verificar si ya completó el quiz hoy (usando fecha local para evitar desfases UTC)
     useEffect(() => {
-        const today = new Date().toISOString().split('T')[0];
+        const localToday = new Date().toLocaleDateString('en-CA'); // format: YYYY-MM-DD
         const completed = localStorage.getItem('verse_quiz_completed');
-        if (completed === today) {
+        if (completed === localToday) {
             setQuizCompleted(true);
         }
     }, []);
@@ -56,8 +56,8 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
             if (navigator.vibrate) navigator.vibrate(100);
             setIsCorrect(true);
 
-            const today = new Date().toISOString().split('T')[0];
-            localStorage.setItem('verse_quiz_completed', today);
+            const localToday = new Date().toLocaleDateString('en-CA');
+            localStorage.setItem('verse_quiz_completed', localToday);
             setQuizCompleted(true);
 
             setTimeout(() => {

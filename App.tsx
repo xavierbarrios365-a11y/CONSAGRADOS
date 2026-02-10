@@ -455,6 +455,33 @@ const App: React.FC = () => {
     }
   }, [view, scanStatus]);
 
+  // --- SECURITY: ANTI-SCREENSHOT FOR STUDENTS ---
+  useEffect(() => {
+    if (isLoggedIn && currentUser?.userRole === UserRole.STUDENT) {
+      const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+      const handleBlur = () => {
+        document.body.classList.add('tactical-blackout');
+      };
+      const handleFocus = () => {
+        document.body.classList.remove('tactical-blackout');
+      };
+
+      document.addEventListener('contextmenu', handleContextMenu);
+      window.addEventListener('blur', handleBlur);
+      window.addEventListener('focus', handleFocus);
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+
+      return () => {
+        document.removeEventListener('contextmenu', handleContextMenu);
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('focus', handleFocus);
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+      };
+    }
+  }, [isLoggedIn, currentUser]);
+
   const syncData = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsSyncing(true);
     try {
@@ -705,17 +732,7 @@ const App: React.FC = () => {
               />
             </div>
 
-            {/* STREAK & DIRECTOR ACTION */}
             <div className="flex flex-col gap-4">
-              {currentUser?.userRole === UserRole.DIRECTOR && (
-                <button
-                  onClick={handleConfirmDirectorAttendance}
-                  className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black py-5 rounded-3xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-[0.2em] border border-blue-400/30"
-                >
-                  <Calendar size={18} className="animate-pulse" />
-                  Confirmar Mi Asistencia
-                </button>
-              )}
 
               <div className="relative group overflow-hidden rounded-3xl p-6 glass-amber shadow-[0_0_40px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
                 <div className="absolute inset-0 shimmer-bg opacity-30 group-hover:opacity-50 transition-opacity"></div>
@@ -1249,7 +1266,7 @@ const App: React.FC = () => {
       )}
 
       {isChatOpen && currentUser && (
-        <TacticalChat currentUser={currentUser} onClose={() => setIsChatOpen(false)} />
+        <TacticalChat currentUser={currentUser} agents={agents} onClose={() => setIsChatOpen(false)} />
       )}
 
       {isAdvisorOpen && currentUser && (

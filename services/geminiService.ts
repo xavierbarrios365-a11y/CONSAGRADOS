@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Agent } from "../types";
 
 const getApiKey = () => {
@@ -9,43 +9,64 @@ const getApiKey = () => {
   return key;
 };
 
-let genAIInstance: GoogleGenAI | null = null;
+let genAIInstance: GoogleGenerativeAI | null = null;
 
-const getGenAI = (): GoogleGenAI | null => {
+const getGenAI = (): GoogleGenerativeAI | null => {
   const apiKey = getApiKey();
   if (!apiKey) {
     console.error("❌ getGenAI: No API Key available.");
     return null;
   }
   if (!genAIInstance) {
-    console.log("🤖 Initializing GoogleGenAI instance...");
-    // @ts-ignore - Some versions of the SDK might have slightly different constructor signatures
-    genAIInstance = new GoogleGenAI(apiKey);
+    console.log("🤖 Initializing GoogleGenerativeAI instance...");
+    genAIInstance = new GoogleGenerativeAI(apiKey);
   }
   return genAIInstance;
 };
 
 // --- AI ROBUST JSON EXTRACTION ---
 const extractJSON = (text: string) => {
-  if (!text) return null;
+  if (!text) {
+    console.warn("⚠️ extractJSON: Recibido texto vacío.");
+    return null;
+  }
 
   try {
-    // 1. Clean markdown code blocks
+    // 1. Limpiar bloques de código markdown
     let cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    // 2. Try direct parse
+    // 2. Intentar parse directo
     try {
       return JSON.parse(cleanText);
     } catch (e) {
-      // 3. Regex-based extraction if direct parse fails
-      const jsonMatch = cleanText.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+      // 3. Extracción robusta por Regex
+      // Buscamos el primer '{' y el último '}' para capturar el objeto
+      const firstBrace = text.indexOf('{');
+      const lastBrace = text.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        const potentialJson = text.substring(firstBrace, lastBrace + 1);
+        try {
+          return JSON.parse(potentialJson);
+        } catch (innerError) {
+          console.error("❌ extractJSON: Falló parse de fragmento extraído.", potentialJson);
+        }
+      }
+
+      // 4. Intento con corchetes para arreglos
+      const firstBracket = text.indexOf('[');
+      const lastBracket = text.lastIndexOf(']');
+      if (firstBracket !== -1 && lastBracket !== -1) {
+        const potentialArray = text.substring(firstBracket, lastBracket + 1);
+        try {
+          return JSON.parse(potentialArray);
+        } catch (innerError) {
+          console.error("❌ extractJSON: Falló parse de arreglo extraído.");
+        }
       }
     }
     return null;
   } catch (e) {
-    console.error("❌ Error parsing extracted JSON:", e, "Raw text:", text);
+    console.error("❌ Error FATAL en extractJSON:", e, "Texto original:", text.substring(0, 100));
     return null;
   }
 };

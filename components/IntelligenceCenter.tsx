@@ -471,9 +471,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         </div>
       </div>
     </div>
-      </div >
-  <div className="h-32 md:hidden" /> {/* Spacer for mobile nav */ }
-    </div >
   );
 };
 

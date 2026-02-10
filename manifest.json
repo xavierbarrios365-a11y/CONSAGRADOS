@@ -3,9 +3,9 @@
     "short_name": "Consagrados",
     "description": "Command Center Táctico - Consagrados 2026",
     "start_url": "./index.html",
-    "display": "standalone",
+    "display": "fullscreen",
     "background_color": "#001f3f",
-    "theme_color": "#ffb700",
+    "theme_color": "#001f3f",
     "icons": [
         {
             "src": "https://drive.google.com/uc?export=view&id=1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f",

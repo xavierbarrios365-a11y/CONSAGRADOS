@@ -54,7 +54,7 @@ const App: React.FC = () => {
   const APP_VERSION = "1.6.7"; // Total Restoration & Fixes
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
-  const [loginId, setLoginId] = useState('');
+  const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
   const [loginPin, setLoginPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [loginError, setLoginError] = useState<{ field: 'id' | 'pin' | 'both' | null, message: string | null }>({ field: null, message: null });
@@ -150,7 +150,8 @@ const App: React.FC = () => {
         const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
         const now = Date.now();
 
-        if (now - lastActive > 2700000 && lastActive !== 0) {
+        // Aumentamos el tiempo de expiración a 4 horas para estabilidad
+        if (now - lastActive > 14400000 && lastActive !== 0) {
           handleLogout();
         } else {
           setIsLoggedIn(true);
@@ -174,14 +175,8 @@ const App: React.FC = () => {
 
     isBiometricAvailable().then(setBiometricAvailable);
 
-    const storedRememberedUser = localStorage.getItem('remembered_user');
-    if (storedRememberedUser) {
-      try {
-        const parsed = JSON.parse(storedRememberedUser);
-        setRememberedUser(parsed);
-        setLoginId(parsed.id);
-      } catch { }
-    }
+    const storedLastId = localStorage.getItem('last_login_id');
+    if (storedLastId) setLoginId(storedLastId);
 
     fetchDailyVerse().then(res => {
       if (res.success) setDailyVerse(res.data);
@@ -300,17 +295,51 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [syncData]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === loginId.replace(/[^0-9]/g, ''));
     if (user && String(user.pin).trim() === loginPin.trim()) {
       localStorage.setItem('consagrados_agent', JSON.stringify(user));
-      localStorage.setItem('remembered_user', JSON.stringify({ id: user.id, name: user.name, photoUrl: user.photoUrl }));
+      localStorage.setItem('last_login_id', user.id);
+      const now = Date.now();
+      localStorage.setItem('last_active_time', String(now));
+      setLastActiveTime(now);
       setCurrentUser(user);
       setIsLoggedIn(true);
-      setView(user.userRole === UserRole.DIRECTOR ? AppView.CIU : AppView.HOME);
+      setView(AppView.HOME); // Landing page: Nodo Central
     } else {
       setLoginError({ field: 'both', message: 'CREDENCIALES INVÁLIDAS' });
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    if (!loginId) {
+      alert("INGRESA TU ID PRIMERO");
+      return;
+    }
+    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === loginId.replace(/[^0-9]/g, ''));
+    if (!user || !user.biometricCredential) {
+      alert("BIOMETRÍA NO CONFIGURADA PARA ESTE ID");
+      return;
+    }
+
+    setIsAuthenticatingBio(true);
+    try {
+      const success = await authenticateBiometric(user.biometricCredential);
+      if (success) {
+        localStorage.setItem('consagrados_agent', JSON.stringify(user));
+        localStorage.setItem('last_login_id', user.id);
+        const now = Date.now();
+        localStorage.setItem('last_active_time', String(now));
+        setLastActiveTime(now);
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+        setView(AppView.HOME);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAuthenticatingBio(false);
     }
   };
 
@@ -501,20 +530,57 @@ const App: React.FC = () => {
         return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} dailyVerse={dailyVerse} /> : null;
       case AppView.VISITOR:
         return (
-          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24">
-            <h2 className="text-3xl font-bebas text-white tracking-widest">Radar de Visitantes</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {visitorRadar.map(v => (
-                <div key={v.id} onClick={() => { setScannedId(v.id); setView(AppView.SCANNER); }} className="p-6 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer">
-                  <p className="text-sm font-black text-white uppercase font-bebas tracking-wider">{v.name}</p>
-                  <p className="text-[8px] text-[#ffb700] font-black uppercase mt-1">{v.visits} Visitas</p>
+          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+              <div>
+                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Visitantes</h2>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Escaneo de Identidades Externas</p>
+              </div>
+              <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
+                <Activity className="text-[#ffb700] animate-pulse" size={18} />
+                <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{visitorRadar.length} Detectados</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visitorRadar.length > 0 ? (
+                visitorRadar.map(v => (
+                  <div key={v.id} onClick={() => { setScannedId(v.id); setView(AppView.SCANNER); }} className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] p-8 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1">
+                    <div className="absolute top-4 right-6">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="p-3 bg-white/5 rounded-2xl w-fit group-hover:bg-[#ffb700]/10 transition-colors">
+                        <Users className="text-[#ffb700]" size={24} />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bebas text-white uppercase tracking-wider group-hover:text-[#ffb700] transition-colors">{v.name}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <div className="flex flex-col">
+                            <span className="text-[7px] text-gray-500 font-black uppercase">Frecuencia</span>
+                            <span className="text-[10px] text-white font-black uppercase">{v.visits || 0} Visitas</span>
+                          </div>
+                          <div className="w-px h-6 bg-white/10" />
+                          <div className="flex flex-col">
+                            <span className="text-[7px] text-gray-500 font-black uppercase">ID</span>
+                            <span className="text-[10px] text-gray-400 font-mono">{v.id}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                  <Activity className="mx-auto text-gray-800 mb-4 opacity-20" size={48} />
+                  <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">Buscando señales tácticas...</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         );
-      case AppView.ACADEMIA: return <AcademyModule agents={agents} currentUser={currentUser} setView={setView} onUpdateNeeded={() => syncData(true)} />;
-      case AppView.CONTENT: return <ContentModule agents={agents} currentUser={currentUser} setView={setView} onUpdateNeeded={() => syncData(true)} />;
+      case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;
+      case AppView.CONTENT: return <ContentModule userRole={effectiveRole} />;
       case AppView.PROFILE:
         return (
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-32 max-w-2xl mx-auto font-montserrat flex flex-col items-center">
@@ -528,25 +594,76 @@ const App: React.FC = () => {
             {currentUser && <DigitalIdCard agent={currentUser} />}
 
             <div className="w-full grid grid-cols-1 gap-3 mt-6">
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <button onClick={() => setViewingAsRole(UserRole.STUDENT)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.STUDENT ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Estudiante</button>
+                <button onClick={() => setViewingAsRole(UserRole.LEADER)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.LEADER ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Líder</button>
+                <button onClick={() => setViewingAsRole(UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${viewingAsRole === UserRole.DIRECTOR ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10'}`}>Director</button>
+              </div>
+
               <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
                 <div className="flex items-center gap-3">
                   <Key size={18} className="text-[#ffb700]" />
-                  Gestionar Seguridad
+                  Cambiar PIN de Acceso
                 </div>
                 <ChevronRight size={14} className="text-gray-500" />
               </button>
-              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
+              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas" onClick={() => {
+                if (isBiometricAvailable) {
+                  const confirmed = window.confirm("¿REGISTRAR DATOS BIOMÉTRICOS EN ESTE DISPOSITIVO?");
+                  if (confirmed && currentUser) {
+                    setIsRegisteringBio(true);
+                    registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredentialId ? [currentUser.biometricCredentialId] : [])
+                      .then(async (credId) => {
+                        if (credId) {
+                          const res = await registerBiometrics(currentUser.id, credId);
+                          if (res.success) {
+                            alert("BIOMETRÍA REGISTRADA EXITOSAMENTE");
+                            syncData();
+                          }
+                        }
+                      })
+                      .catch(err => alert(err.message))
+                      .finally(() => setIsRegisteringBio(false));
+                  }
+                }
+              }}>
                 <div className="flex items-center gap-3">
-                  <Bell size={18} className="text-[#ffb700]" />
-                  Centro de Notificaciones
+                  <Fingerprint size={18} className="text-[#ffb700]" />
+                  {isRegisteringBio ? 'Registrando...' : 'Configurar Biometría'}
                 </div>
-                <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-bold">3</div>
+                <ChevronRight size={14} className="text-gray-500" />
+              </button>
+              <button className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas" onClick={() => {
+                if (isBiometricAvailable) {
+                  const confirmed = window.confirm("¿REGISTRAR DATOS BIOMÉTRICOS EN ESTE DISPOSITIVO?");
+                  if (confirmed && currentUser) {
+                    setIsRegisteringBio(true);
+                    registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : [])
+                      .then(async (credId) => {
+                        if (credId) {
+                          const res = await registerBiometrics(currentUser.id, credId);
+                          if (res.success) {
+                            alert("BIOMETRÍA REGISTRADA EXITOSAMENTE");
+                            syncData();
+                          }
+                        }
+                      })
+                      .catch(err => alert(err.message))
+                      .finally(() => setIsRegisteringBio(false));
+                  }
+                }
+              }}>
+                <div className="flex items-center gap-3">
+                  <Fingerprint size={18} className="text-[#ffb700]" />
+                  {isRegisteringBio ? 'Registrando...' : 'Configurar Biometría'}
+                </div>
+                <ChevronRight size={14} className="text-gray-500" />
               </button>
               <button
                 onClick={handleLogout}
                 className="flex items-center justify-center gap-3 px-6 py-5 bg-red-600/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-600 hover:text-white transition-all font-bebas mt-4 shadow-lg active:scale-95"
               >
-                <LogOut size={18} /> Cerrar Conexión
+                <LogOut size={18} /> Cerrar Conexión Segura
               </button>
             </div>
           </div>
@@ -564,10 +681,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="px-6 -mt-8">
-              <DailyVerse verse={dailyVerse || null} />
-            </div>
-
             <div className="p-6">
               <TacticalRanking agents={agents} currentUser={currentUser} />
             </div>
@@ -581,17 +694,83 @@ const App: React.FC = () => {
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#001f3f] relative overflow-hidden font-montserrat">
-        <div className="w-full max-w-sm space-y-10 z-10 animate-in fade-in">
-          <div className="text-center">
-            <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-28 mx-auto mb-6" />
-            <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] mb-1">CONSAGRADOS</h1>
-            <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] opacity-60">Force Command Center 2026</p>
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#ffb700]/10 blur-[120px] rounded-full"></div>
+        </div>
+
+        <div className="w-full max-w-sm space-y-10 z-10 animate-in fade-in zoom-in-95 duration-700">
+          <div className="text-center space-y-2">
+            <div className="relative inline-block mb-4">
+              <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-24 mx-auto relative z-10" />
+              <div className="absolute inset-0 bg-[#ffb700] blur-2xl opacity-20 scale-150"></div>
+            </div>
+            <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] leading-none">CONSAGRADOS 2026</h1>
+            <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.5em] opacity-80">Command Center Táctico</p>
           </div>
+
           <form onSubmit={handleLogin} className="space-y-4">
-            <input type="text" placeholder="ID O CÉDULA" value={loginId} onChange={(e) => setLoginId(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] transition-all" />
-            <input type="password" placeholder="PIN DE SEGURIDAD" value={loginPin} onChange={(e) => setLoginPin(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] transition-all" />
-            <button type="submit" className="w-full bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-[#ffb700]/90 transition-all font-bebas">Entrar al Command Center</button>
+            <div className="space-y-4">
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="ID DE AGENTE"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20 uppercase"
+                />
+                <Shield size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+              </div>
+
+              <div className="relative group">
+                <input
+                  type="password"
+                  placeholder="PIN DE SEGURIDAD"
+                  value={loginPin}
+                  onChange={(e) => setLoginPin(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
+                />
+                <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                className="flex-1 bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
+              >
+                Acceder al Nodo
+              </button>
+
+              {biometricAvailable && (
+                <button
+                  type="button"
+                  onClick={handleBiometricLogin}
+                  disabled={isAuthenticatingBio}
+                  className="w-20 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#ffb700] hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50"
+                  title="Acceso Biométrico"
+                >
+                  {isAuthenticatingBio ? <Loader2 size={24} className="animate-spin" /> : <Fingerprint size={24} />}
+                </button>
+              )}
+            </div>
+
+            <div className="pt-4 text-center">
+              <button
+                type="button"
+                className="text-[8px] text-white/30 font-black uppercase tracking-widest hover:text-[#ffb700] transition-colors"
+                onClick={() => setShowForgotPassword(true)}
+              >
+                ¿Olvidaste tu PIN de Seguridad?
+              </button>
+            </div>
           </form>
+
+          <div className="text-center">
+            <p className="text-[6px] text-white/20 font-black uppercase tracking-widest">
+              V{APP_VERSION} // ENCRYPTED CONNECTION: {sessionIp}
+            </p>
+          </div>
         </div>
       </div>
     );

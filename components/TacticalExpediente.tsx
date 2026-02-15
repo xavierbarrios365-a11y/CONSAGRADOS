@@ -27,14 +27,27 @@ interface TacticalExpedienteProps {
 
 const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose }) => {
     const isAtRisk = (() => {
-        if (!agent.lastAttendance || agent.lastAttendance === 'N/A') return true;
-        const parts = agent.lastAttendance.split('/');
-        const lastDate = parts.length === 3
-            ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
-            : new Date(agent.lastAttendance);
-        if (isNaN(lastDate.getTime())) return false;
-        const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-        return diffDays >= 14;
+        try {
+            if (!agent.lastAttendance || agent.lastAttendance === 'N/A') return true;
+            // Handle Date objects directly
+            let lastDate: Date;
+            const raw = agent.lastAttendance as any;
+            if (raw && typeof raw === 'object' && typeof raw.getTime === 'function') {
+                lastDate = raw;
+            } else {
+                const val = String(agent.lastAttendance).trim();
+                if (!val || val === 'N/A' || val === '') return true;
+                const parts = val.split('/');
+                lastDate = parts.length === 3
+                    ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
+                    : new Date(val);
+            }
+            if (isNaN(lastDate.getTime())) return false;
+            const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays >= 14;
+        } catch {
+            return false;
+        }
     })();
 
     const whatsappLink = agent.whatsapp

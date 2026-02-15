@@ -38,7 +38,6 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Search, QrCode, X, ChevronRight, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
-import TacticalRanking from './components/TacticalRanking';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
 // SpiritualAdvisor removed per user request
 import { initRemoteConfig } from './services/configService';
@@ -288,6 +287,7 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showQuickLogin, setShowQuickLogin] = useState(true);
+  const [showPin, setShowPin] = useState(false);
   const [directorySearch, setDirectorySearch] = useState('');
   const [showInbox, setShowInbox] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -934,11 +934,13 @@ const App: React.FC = () => {
     try {
       console.log("🔥 Sincronizando racha...");
       const res = await updateAgentStreaks(currentUser.id, false, updatedTasks);
-      if (res.success && res.streak !== undefined) {
-        // Sincronizar con el valor del servidor si está disponible
+      if (res.success && res.streak !== undefined && res.streak > 0) {
+        // Solo sincronizar si el servidor da un valor mayor que 0
+        // Esto evita que un bug del servidor resetee la racha local
+        const serverStreak = Math.max(res.streak, newStreak);
         const serverUser = {
           ...updatedUser,
-          streakCount: res.streak
+          streakCount: serverStreak
         };
         setCurrentUser(serverUser);
         sessionStorage.setItem('consagrados_session', JSON.stringify(serverUser));
@@ -1675,7 +1677,7 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <div className="relative group">
                   <input
-                    type="password"
+                    type={showPin ? 'text' : 'password'}
                     placeholder="INTRODUCE TU PIN"
                     value={loginPin}
                     onChange={(e) => {
@@ -1683,9 +1685,11 @@ const App: React.FC = () => {
                       if (loginError.message) setLoginError({ field: null, message: null });
                     }}
                     autoFocus
-                    className={`w-full bg-white/5 border ${loginError.message ? 'border-red-500' : 'border-white/10'} rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center`}
+                    className={`w-full bg-white/5 border ${loginError.message ? 'border-red-500' : 'border-white/10'} rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center`}
                   />
-                  <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30" />
+                  <button type="button" onClick={() => setShowPin(!showPin)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors">
+                    {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
 
                 {loginError.message && (
@@ -1748,13 +1752,15 @@ const App: React.FC = () => {
 
                 <div className="relative group">
                   <input
-                    type="password"
+                    type={showPin ? 'text' : 'password'}
                     placeholder="PIN DE SEGURIDAD"
                     value={loginPin}
                     onChange={(e) => setLoginPin(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
                   />
-                  <Key size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+                  <button type="button" onClick={() => setShowPin(!showPin)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors">
+                    {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 

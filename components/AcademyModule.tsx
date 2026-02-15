@@ -609,7 +609,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 </p>
                                             </div>
                                         </div>
-                                    ) : hasAnyProgress(activeLesson.id) && quizState !== 'RESULT' ? (
+                                    ) : getLessonAttempts(activeLesson.id) >= 2 && quizState !== 'RESULT' ? (
                                         <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
                                             <div className="w-20 h-20 bg-red-500/20 border-red-500/30 rounded-full flex items-center justify-center mx-auto border">
                                                 <AlertCircle className="text-red-500" size={40} />

@@ -87,6 +87,11 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 const parseAttendanceDate = (value: any): Date | null => {
   if (!value || value === 'N/A' || value === '') return null;
 
+  // 0. Handle native Date object (if passed directly)
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
   // 1. Google Sheets serial number (e.g., 46067 = days since 1899-12-30)
   const numVal = typeof value === 'number' ? value : parseFloat(String(value));
   if (!isNaN(numVal) && numVal > 1000 && numVal < 100000 && !String(value).includes('/') && !String(value).includes('-')) {
@@ -98,10 +103,10 @@ const parseAttendanceDate = (value: any): Date | null => {
 
   const strVal = String(value).trim();
 
-  // 2. DD/MM/YYYY format
-  const slashParts = strVal.split('/');
-  if (slashParts.length === 3) {
-    const [p1, p2, p3] = slashParts.map(p => parseInt(p, 10));
+  // 2. DD/MM/YYYY or DD-MM-YYYY format
+  const parts = strVal.split(/[\/\-]/);
+  if (parts.length === 3) {
+    const [p1, p2, p3] = parts.map(p => parseInt(p, 10));
     // Determine if DD/MM/YYYY or MM/DD/YYYY (assume DD/MM/YYYY if day > 12)
     let d: Date;
     if (p1 > 12) {
@@ -114,7 +119,28 @@ const parseAttendanceDate = (value: any): Date | null => {
     if (!isNaN(d.getTime()) && d.getFullYear() >= 2020) return d;
   }
 
-  // 3. ISO string or other parseable format
+  // 3. Robust parsing for strings with potential extra text (regex extraction)
+  // Extracts YYYY-MM-DD or DD/MM/YYYY even if there's trash around it
+  const dateMatch = strVal.match(/(\d{4}-\d{1,2}-\d{1,2})|(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
+  if (dateMatch) {
+    const rawMatch = dateMatch[0];
+    const fallback = new Date(rawMatch);
+    if (!isNaN(fallback.getTime()) && fallback.getFullYear() >= 2020 && fallback.getFullYear() <= 2030) return fallback;
+
+    // If simple new Date fails, try our custom slash parser on the match
+    const parts = rawMatch.split(/[\/\-]/);
+    if (parts.length === 3) {
+      const [p1, p2, p3] = parts.map(p => parseInt(p, 10));
+      let d: Date;
+      if (p1 > 2000) d = new Date(p1, p2 - 1, p3); // YYYY-MM-DD
+      else if (p3 > 2000) d = new Date(p3, p2 - 1, p1); // DD/MM/YYYY
+      else d = new Date(rawMatch);
+
+      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020) return d;
+    }
+  }
+
+  // 4. ISO string or other parseable format (original fallback)
   const fallback = new Date(strVal);
   if (!isNaN(fallback.getTime()) && fallback.getFullYear() >= 2020 && fallback.getFullYear() <= 2030) return fallback;
 

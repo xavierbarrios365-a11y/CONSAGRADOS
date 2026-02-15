@@ -223,6 +223,34 @@ function verifyAndFixSchema() {
   if (addedColumns.length > 0) {
     Logger.log('AUTO-CURACIÓN: Se añadieron las columnas faltantes: ' + addedColumns.join(', '));
   }
+
+  // --- NUEVA LIMPIEZA TÁCTICA: Normalizar IDs (Trim) ---
+  var idColIdx = normalizedHeaders.indexOf('ID');
+  if (idColIdx !== -1) {
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      var idRange = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1);
+      var idValues = idRange.getValues();
+      var cleanedValues = idValues.map(function(row) {
+        return [String(row[0]).trim()];
+      });
+      idRange.setValues(cleanedValues);
+    }
+  }
+
+  // Limpiar también en Asistencia
+  var attenSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  if (attenSheet) {
+    var aLastRow = attenSheet.getLastRow();
+    if (aLastRow > 1) {
+      var aIdRange = attenSheet.getRange(2, 1, aLastRow - 1, 1);
+      var aIdValues = aIdRange.getValues();
+      var aCleanedValues = aIdValues.map(function(row) {
+        return [String(row[0]).trim()];
+      });
+      aIdRange.setValues(aCleanedValues);
+    }
+  }
 }
 
 /**
@@ -290,15 +318,26 @@ function doGet(e) {
     if (attendanceSheet) {
       const attenData = attendanceSheet.getDataRange().getValues();
       const lastAttenMap = new Map();
+      
       for (let i = 1; i < attenData.length; i++) {
-        const aId = String(attenData[i][0]);
-        const aDate = attenData[i][3];
-        lastAttenMap.set(aId, aDate); // Se sobreescribe con el último encontrado
+        const row = attenData[i];
+        const aId = String(row[0]).trim().toUpperCase();
+        if (!aId) continue;
+
+        // Ahora que el esquema es uniforme [ID, TIPO, UBICACION, FECHA]
+        // Siempre buscamos en la columna 4 (índice 3)
+        const candidateDate = row[3];
+        if (candidateDate instanceof Date && !isNaN(candidateDate.getTime())) {
+          const existingDate = lastAttenMap.get(aId);
+          if (!existingDate || candidateDate > existingDate) {
+            lastAttenMap.set(aId, candidateDate);
+          }
+        }
       }
       
       directoryData[0].push('LAST_ATTENDANCE');
       for (let i = 1; i < directoryData.length; i++) {
-        const agentId = String(directoryData[i][0]);
+        const agentId = String(directoryData[i][0]).trim().toUpperCase();
         const lastDate = lastAttenMap.get(agentId) || '';
         directoryData[i].push(lastDate);
       }
@@ -1362,6 +1401,7 @@ function onOpen() {
     .addItem('🚀 Setup Base de Datos', 'setupDatabase')
     .addItem('🔍 Verificar Sistema', 'checkSystemStatus')
     .addItem('🔧 Reparar IDs/PINs', 'repairMissingData')
+    .addItem('🛡️ RESCATAR Y NORMALIZAR ASISTENCIA (v1.8.5)', 'setupAttendanceSheet')
     .addItem('⏰ Activar Versículo Diario', 'setupDailyVerseTrigger')
     .addToUi();
 }
@@ -1387,6 +1427,81 @@ function uploadGuide(data) {
   sendTelegramNotification(telegramMessage);
 
   return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Rescata y normaliza la hoja de asistencia sin borrar datos.
+ * Crea un backup previo por seguridad.
+ */
+function setupAttendanceSheet() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.ATTENDANCE_SHEET_NAME);
+    const headers = ['ID', 'TRAMO/TIPO', 'UBICACION', 'FECHA'];
+    sheet.getRange(1, 1, 1, 4).setValues([headers]).setFontWeight('bold').setBackground('#001f3f').setFontColor('#ffffff');
+    return;
+  }
+
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert('🛡️ MIGRACIÓN DE RESCATE', '¿Deseas NORMALIZAR y RESCATAR los datos de asistencia? Se creará un BACKUP automático y se estandarizarán todos los registros al formato de 4 columnas de la v1.8.5.', ui.ButtonSet.YES_NO);
+  if (response !== ui.Button.YES) return;
+
+  // 1. Crear Backup
+  const backupName = `ASISTENCIA_BACKUP_${Utilities.formatDate(new Date(), "GMT-4", "yyyyMMdd_HHmm")}`;
+  const backupSheet = sheet.copyTo(ss).setName(backupName);
+  
+  // 2. Procesar Datos para Rescate
+  const oldData = sheet.getDataRange().getValues();
+  const standardizedRows = [];
+  const headers = ['ID', 'TRAMO/TIPO', 'UBICACION', 'FECHA'];
+  
+  for (let i = 1; i < oldData.length; i++) {
+    const row = oldData[i];
+    let id = String(row[0]).trim().toUpperCase();
+    if (!id || id === 'ID' || id === 'UNDEFINED') continue;
+
+    let type = 'ASISTENCIA';
+    let location = String(row[2] || 'CENTRO DE OPERACIÓN').trim();
+    let dateVal = row[3];
+
+    // --- LÓGICA DE INTELIGENCIA DE RESCATE ---
+    const rowStr = row.join(' ');
+    
+    if (rowStr.includes('EVENT_CONFIR')) {
+      type = 'EVENTO';
+      location = row[3] || row[2] || 'EVENTO DESCONOCIDO';
+    } else if (rowStr.includes('DIRECTOR_CONFIRM')) {
+      type = 'MANUAL';
+      location = 'CENTRO DE OPERACIÓN';
+    }
+
+    // Si la fecha en D no es válida, buscar en C
+    if (!(dateVal instanceof Date) || isNaN(dateVal.getTime())) {
+      if (row[2] instanceof Date && !isNaN(row[2].getTime())) {
+        dateVal = row[2];
+      } else {
+        // Intentar extraer fecha de strings (Regex)
+        const dateMatch = rowStr.match(/(\d{4}-\d{1,2}-\d{1,2})|(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
+        if (dateMatch) dateVal = new Date(dateMatch[0]);
+        else dateVal = new Date(); // Fallback hoy
+      }
+    }
+
+    standardizedRows.push([id, type, location, dateVal]);
+  }
+
+  // 3. Escribir datos normalizados
+  sheet.clear();
+  sheet.getRange(1, 1, 1, 4).setValues([headers]).setFontWeight('bold').setBackground('#001f3f').setFontColor('#ffffff');
+  if (standardizedRows.length > 0) {
+    sheet.getRange(2, 1, standardizedRows.length, 4).setValues(standardizedRows);
+  }
+  sheet.setFrozenRows(1);
+
+  ui.alert(`✅ RESCATE COMPLETADO\n\n• Registros normalizados: ${standardizedRows.length}\n• Backup creado: ${backupName}\n\nEl sistema ahora es 100% estándar.`);
 }
 
 /**
@@ -2201,14 +2316,12 @@ function confirmDirectorAttendance(data) {
     return ContentService.createTextOutput(JSON.stringify({ success: true, alreadyDone: true })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Registrar asistencia
+  // Registrar asistencia unificada [ID, TIPO, UBICACION, FECHA]
   sheet.appendRow([
     data.agentId,
-    data.agentName,
-    fecha,
-    hora,
-    'DIRECTOR_CONFIRM',
-    'CONFIRMADO MANUALMENTE'
+    'MANUAL',
+    'CENTRO DE OPERACIÓN',
+    new Date()
   ]);
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
@@ -2329,14 +2442,12 @@ function confirmEventAttendance(data) {
   const fecha = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
   const hora = Utilities.formatDate(now, "GMT-4", "HH:mm:ss");
 
-  // Registro de asistencia
+  // Registro de asistencia unificada [ID, TIPO, UBICACION, FECHA]
   sheet.appendRow([
     data.agentId,
-    data.agentName,
-    fecha,
-    hora,
-    'EVENT_CONFIRM',
-    `EVENTO: ${data.eventTitle} (ID: ${data.eventId})`
+    'EVENTO',
+    `EVT: ${data.eventTitle}`,
+    new Date()
   ]);
 
   // Sumar 10 XP por confirmar asistencia al evento

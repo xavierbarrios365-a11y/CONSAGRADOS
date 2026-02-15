@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Shield, Award, Target, Star, CheckCircle } from 'lucide-react';
+import { Shield, CheckCircle } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 
 interface TacticalCertificateProps {
@@ -12,155 +12,284 @@ interface TacticalCertificateProps {
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 
 const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, courseTitle, date, onClose }) => {
+
+    const formattedDate = (() => {
+        try {
+            const d = new Date(date);
+            const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+            return `${d.getDate()} / ${months[d.getMonth()]} / ${d.getFullYear()}`;
+        } catch {
+            return date;
+        }
+    })();
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in overflow-y-auto">
             {/* Controls */}
-            <div className="fixed top-8 right-8 flex gap-4 z-[110] print:hidden">
+            <div className="fixed top-6 right-6 flex gap-3 z-[110] print:hidden">
                 <button
                     onClick={() => window.print()}
-                    className="px-6 py-3 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[10px] rounded-xl hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,183,0,0.3)]"
+                    className="px-6 py-3 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[10px] tracking-widest rounded hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,183,0,0.3)]"
                 >
                     Guardar / Imprimir
                 </button>
                 <button
                     onClick={onClose}
-                    className="px-6 py-3 bg-white/10 text-white font-black uppercase text-[10px] rounded-xl border border-white/10 hover:bg-white/20 transition-all"
+                    className="px-6 py-3 bg-white/10 text-white font-black uppercase text-[10px] tracking-widest rounded border border-white/10 hover:bg-white/20 transition-all"
                 >
                     Cerrar
                 </button>
             </div>
 
-            {/* The Certificate Canvas - Horizontal A4 format */}
-            <div id="certificate-content" className="relative bg-[#F4F4F4] w-full max-w-[297mm] aspect-[297/210] overflow-hidden border-[15px] border-double border-[#001f3f]/20 shadow-2xl flex flex-col p-12 md:p-16 print:m-0 print:border-[10px] print:shadow-none">
+            {/* Certificate Canvas */}
+            <div
+                id="certificate-content"
+                style={{
+                    width: '842px',
+                    height: '595px',
+                    backgroundColor: '#001F3F',
+                    border: '10px solid #FFB700',
+                    position: 'relative',
+                    boxSizing: 'border-box',
+                    color: '#ffffff',
+                    overflow: 'hidden',
+                    boxShadow: '0 0 60px rgba(255, 183, 0, 0.15)',
+                    backgroundImage: `linear-gradient(rgba(0, 31, 63, 0.95), rgba(0, 31, 63, 0.95)), url('https://www.transparenttextures.com/patterns/carbon-fibre.png')`,
+                    fontFamily: "'Roboto', sans-serif",
+                }}
+            >
+                {/* Inner Border */}
+                <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '20px',
+                    right: '20px',
+                    bottom: '20px',
+                    border: '1px solid rgba(255, 183, 0, 0.3)',
+                    pointerEvents: 'none',
+                }} />
 
-                {/* Formal Border Frame (Inner) */}
-                <div className="absolute inset-4 border border-[#3A3A3A]/10 pointer-events-none" />
+                {/* Watermark Shield */}
+                <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    opacity: 0.03,
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                }}>
+                    <Shield size={400} color="#FFB700" strokeWidth={0.5} />
+                </div>
 
-                {/* Decorative Corners */}
-                <div className="absolute top-8 left-8 w-12 h-12 border-t-2 border-l-2 border-[#FFB700]" />
-                <div className="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-[#FFB700]" />
-                <div className="absolute bottom-8 left-8 w-12 h-12 border-b-2 border-l-2 border-[#FFB700]" />
-                <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-[#FFB700]" />
-
-                {/* Header Section */}
-                <div className="relative flex justify-between items-start mb-12">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Shield className="text-[#001f3f]" size={32} />
-                            <div className="h-px w-24 bg-gradient-to-r from-[#FFB700] to-transparent" />
-                        </div>
-                        <h1 className="font-bebas text-[#001f3f] text-5xl md:text-7xl leading-none tracking-tight">
-                            DIPLOMA DE<br />
-                            <span className="text-[#FFB700]">EXCELENCIA TÁCTICA</span>
-                        </h1>
-                    </div>
-
-                    {/* Brand Logo */}
-                    <div className="flex flex-col items-end gap-2">
+                {/* Main Content */}
+                <div style={{
+                    textAlign: 'center',
+                    padding: '40px 50px',
+                    position: 'relative',
+                    zIndex: 2,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}>
+                    {/* Logo Area */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        marginBottom: '8px',
+                    }}>
                         <img
                             src={formatDriveUrl(OFFICIAL_LOGO)}
-                            className="w-24 md:w-32 object-contain"
                             alt="Logo Consagrados"
+                            style={{ width: '40px', height: '40px', objectFit: 'contain' }}
                         />
-                        <p className="font-bebas text-[10px] text-[#3A3A3A]/40 tracking-[0.4em] mr-2">SISTEMA CORE V.37</p>
-                    </div>
-                </div>
-
-                {/* Body Content */}
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 relative">
-                    {/* Watermark Logo */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none">
-                        <img src={formatDriveUrl(OFFICIAL_LOGO)} className="w-[400px] h-[400px] object-contain grayscale" alt="" />
-                    </div>
-
-                    <div className="space-y-2">
-                        <p className="font-montserrat text-[#3A3A3A] uppercase tracking-[0.3em] text-[10px] md:text-xs font-bold">Este reconocimiento se otorga formalmente al Agente:</p>
-                        <h2 className="font-bebas text-[#001f3f] text-6xl md:text-8xl tracking-widest scale-y-110">
-                            {agentName}
-                        </h2>
-                        <div className="h-px w-full max-w-2xl bg-gradient-to-r from-transparent via-[#FFB700] to-transparent mx-auto mt-4" />
+                        <span style={{
+                            fontFamily: "'Oswald', sans-serif",
+                            color: '#FFB700',
+                            fontSize: '1.2rem',
+                            letterSpacing: '5px',
+                            textTransform: 'uppercase',
+                        }}>
+                            Consagrados 2026
+                        </span>
                     </div>
 
-                    <div className="max-w-3xl space-y-4">
-                        <p className="font-montserrat text-[#3A3A3A] text-sm md:text-lg font-medium leading-relaxed uppercase tracking-wide">
-                            Por haber demostrado resiliencia excepcional, disciplina inquebrantable y superioridad técnica durante la compleción exitosa de la unidad de entrenamiento táctico:
+                    {/* Title */}
+                    <p style={{
+                        fontWeight: 300,
+                        textTransform: 'uppercase',
+                        letterSpacing: '8px',
+                        margin: '0 0 4px 0',
+                        fontSize: '0.8rem',
+                        color: 'rgba(255,255,255,0.6)',
+                    }}>
+                        Acreditación de Aptitud
+                    </p>
+                    <h1 style={{
+                        fontFamily: "'Oswald', sans-serif",
+                        fontSize: '3rem',
+                        color: '#FFB700',
+                        margin: '0 0 20px 0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '2px',
+                        lineHeight: 1,
+                    }}>
+                        Certificado de Grado
+                    </h1>
+
+                    {/* Body — Flex grow to center vertically */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <p style={{
+                            fontWeight: 300,
+                            marginBottom: '4px',
+                            fontSize: '0.85rem',
+                            color: 'rgba(255,255,255,0.7)',
+                        }}>
+                            Se hace constar que el Agente:
                         </p>
-                        <div className="inline-block px-8 py-3 bg-[#001f3f]/5 border border-[#001f3f]/10 rounded-lg relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-r from-[#FFB700]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <h3 className="font-bebas text-2xl md:text-3xl text-[#001f3f] uppercase tracking-wider relative z-10">{courseTitle}</h3>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Footer / Signatures Section */}
-                <div className="mt-12 flex justify-between items-end">
-                    {/* Left: Metadata */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 text-[#001f3f]/60">
-                            <Award size={20} className="text-[#FFB700]" />
-                            <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Validación Académica de Élite</span>
+                        {/* Recipient Name */}
+                        <div style={{
+                            fontFamily: "'Oswald', sans-serif",
+                            fontSize: '2.6rem',
+                            color: '#ffffff',
+                            borderBottom: '2px solid #FFB700',
+                            display: 'inline-block',
+                            padding: '0 40px 6px 40px',
+                            marginBottom: '16px',
+                            letterSpacing: '2px',
+                            lineHeight: 1.1,
+                            textTransform: 'uppercase',
+                        }}>
+                            {agentName}
                         </div>
-                        <div className="space-y-1">
-                            <p className="font-montserrat text-[8px] text-[#3A3A3A] font-bold uppercase tracking-widest">FECHA DE EMISIÓN: {date}</p>
-                            <p className="font-montserrat text-[8px] text-[#3A3A3A] font-bold uppercase tracking-widest">ID DE REGISTRO: CSA-{(Math.random() * 10000).toFixed(0)}</p>
-                            <p className="font-bebas text-[8px] text-[#001f3f] font-black uppercase tracking-widest mt-2 flex items-center gap-2">
-                                <CheckCircle size={10} className="text-[#FFB700]" /> AUTENTICIDAD VERIFICADA POR OMNI AI
+
+                        {/* Mission Detail */}
+                        <p style={{
+                            fontSize: '0.95rem',
+                            maxWidth: '520px',
+                            color: 'rgba(255,255,255,0.8)',
+                            lineHeight: 1.6,
+                            margin: 0,
+                        }}>
+                            Ha completado satisfactoriamente los protocolos de formación en la{' '}
+                            <span style={{
+                                color: '#FFB700',
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                            }}>
+                                {courseTitle}
+                            </span>,{' '}
+                            demostrando compromiso con la Doctrina de la Excelencia y la Pureza Táctica.
+                        </p>
+                    </div>
+
+                    {/* Footer — Signatures & Seal */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-around',
+                        alignItems: 'flex-end',
+                        paddingBottom: '10px',
+                    }}>
+                        {/* Director Signature */}
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{
+                                fontFamily: "'Oswald', sans-serif",
+                                fontSize: '1rem',
+                                color: '#FFB700',
+                                margin: '0 0 4px 0',
+                                letterSpacing: '1px',
+                            }}>
+                                Sahel Xavier Barrios M.
                             </p>
-                        </div>
-                    </div>
-
-                    {/* Center: Signatures */}
-                    <div className="flex gap-20 items-end pb-4 hidden md:flex">
-                        <div className="text-center space-y-2">
-                            <div className="w-48 h-px bg-[#001f3f]/20 mx-auto" />
-                            <p className="font-bebas text-[8px] text-[#001f3f]/50 font-black uppercase tracking-widest">Director de Academia</p>
-                        </div>
-                        <div className="text-center space-y-2">
-                            <div className="w-48 h-px bg-[#001f3f]/20 mx-auto" />
-                            <p className="font-bebas text-[8px] text-[#001f3f]/50 font-black uppercase tracking-widest">Comandante General</p>
-                        </div>
-                    </div>
-
-                    {/* Right: Slogan & Location */}
-                    <div className="text-right">
-                        <div className="flex flex-col items-end">
-                            <div className="flex gap-1 mb-2">
-                                <Star size={12} className="text-[#FFB700]" />
-                                <Star size={12} className="text-[#FFB700]" />
-                                <Star size={12} className="text-[#FFB700]" />
-                                <Star size={12} className="text-[#FFB700]" />
-                                <Star size={12} className="text-[#FFB700]" />
+                            <div style={{
+                                borderTop: '1px solid #FFB700',
+                                width: '200px',
+                                paddingTop: '8px',
+                                fontSize: '0.7rem',
+                                color: 'rgba(255,255,255,0.5)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '2px',
+                            }}>
+                                Comandante en Jefe<br />
+                                <strong style={{ color: 'rgba(255,255,255,0.7)' }}>Consagrados 2026</strong>
                             </div>
-                            <p className="font-bebas text-[#001f3f] text-3xl font-black italic tracking-[0.2em] mb-1">#NOESPORVISTA</p>
-                            <p className="font-montserrat text-[#3A3A3A]/60 text-[8px] font-black uppercase tracking-[0.3em]">
-                                TUREN, ESTADO PORTUGUESA // 2026
+                        </div>
+
+                        {/* Seal */}
+                        <div style={{
+                            width: '90px',
+                            height: '90px',
+                            border: '2px solid #FFB700',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            background: 'rgba(255, 183, 0, 0.08)',
+                            color: '#FFB700',
+                            fontSize: '0.6rem',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            transform: 'rotate(-15deg)',
+                            letterSpacing: '1px',
+                            lineHeight: 1.4,
+                            flexShrink: 0,
+                        }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                <CheckCircle size={16} />
+                                <span>PROYECTO<br />APROBADO<br />2026</span>
+                            </div>
+                        </div>
+
+                        {/* Date Signature */}
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{
+                                fontFamily: "'Oswald', sans-serif",
+                                fontSize: '1rem',
+                                color: '#FFB700',
+                                margin: '0 0 4px 0',
+                                letterSpacing: '1px',
+                            }}>
+                                {formattedDate}
                             </p>
+                            <div style={{
+                                borderTop: '1px solid #FFB700',
+                                width: '200px',
+                                paddingTop: '8px',
+                                fontSize: '0.7rem',
+                                color: 'rgba(255,255,255,0.5)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '2px',
+                            }}>
+                                Fecha de Emisión<br />
+                                <strong style={{ color: 'rgba(255,255,255,0.7)' }}>#NOESPORVISTA</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                {/* Technical Overlay */}
-                <div className="absolute top-1/2 left-0 h-32 w-1 bg-gradient-to-b from-transparent via-[#FFB700]/40 to-transparent" />
-                <div className="absolute top-1/2 right-0 h-32 w-1 bg-gradient-to-b from-transparent via-[#FFB700]/40 to-transparent" />
             </div>
 
+            {/* Print Styles */}
             <style dangerouslySetInnerHTML={{
                 __html: `
+                @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto:wght@300;700&display=swap');
                 @media print {
                     @page {
                         size: A4 landscape;
                         margin: 0;
                     }
                     body {
-                        background: white !important;
+                        background: #001F3F !important;
                         -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
+                    .print\\:hidden { display: none !important; }
                     #certificate-content {
                         width: 100vw !important;
                         height: 100vh !important;
-                        max-width: none !important;
-                        background: white !important;
-                        border-width: 20px !important;
+                        box-shadow: none !important;
                     }
                 }
             `}} />

@@ -288,12 +288,24 @@ function doGet(e) {
             streak: strikeData[i][streakCountIdx] || 0,
             tasks: strikeData[i][tasksJsonIdx] || '[]',
             lastDate: (() => {
-              let idx = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
-              if (idx === -1) idx = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
-              if (idx === -1) return '';
-              let val = strikeData[i][idx];
+              // Intentar AMBAS columnas y usar la que tenga datos reales
+              let idx1 = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
+              let idx2 = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
+              
+              let val = '';
+              // Probar la primera columna
+              if (idx1 !== -1 && strikeData[i][idx1]) {
+                val = strikeData[i][idx1];
+              }
+              // Si está vacía, probar la segunda
+              if (!val && idx2 !== -1 && strikeData[i][idx2]) {
+                val = strikeData[i][idx2];
+              }
+              
+              if (!val) return '';
               if (val instanceof Date) return Utilities.formatDate(val, "GMT-4", "yyyy-MM-dd");
               let s = String(val).trim();
+              if (!s || s === 'undefined' || s === 'null') return '';
               if (s.includes('T')) return s.split('T')[0];
               if (s.includes(' ')) return s.split(' ')[0];
               return s;
@@ -2111,9 +2123,9 @@ function updateStreaks(data) {
   const headers = values[0];
   const agentIdIdx = headers.indexOf('AGENT_ID');
   const streakIdx = headers.indexOf('STREAK_COUNT');
-  const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE') !== -1 
-    ? headers.indexOf('LAST_COMPLETED_DATE') 
-    : headers.indexOf('LAST_COMPLETED_WEEK');
+  // Buscar la columna de fecha: usar la que tenga datos (preferir LAST_COMPLETED_WEEK que es donde se escribe)
+  let lastDateIdx = headers.indexOf('LAST_COMPLETED_WEEK');
+  if (lastDateIdx === -1) lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE');
   const tasksIdx = headers.indexOf('TASKS_JSON');
 
   const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
@@ -2126,10 +2138,17 @@ function updateStreaks(data) {
 
   if (rowIdx !== -1) {
     streakCount = parseInt(values[rowIdx][streakIdx]) || 0;
-    let rawLastDate = values[rowIdx][lastDateIdx];
+    
+    // Leer de AMBAS columnas de fecha, usar la que tenga datos
+    let rawLastDate = null;
+    let idx1 = headers.indexOf('LAST_COMPLETED_WEEK');
+    let idx2 = headers.indexOf('LAST_COMPLETED_DATE');
+    if (idx1 !== -1 && values[rowIdx][idx1]) rawLastDate = values[rowIdx][idx1];
+    if (!rawLastDate && idx2 !== -1 && values[rowIdx][idx2]) rawLastDate = values[rowIdx][idx2];
+    
     if (rawLastDate instanceof Date) {
       lastDate = Utilities.formatDate(rawLastDate, "GMT-4", "yyyy-MM-dd");
-    } else {
+    } else if (rawLastDate) {
       let s = String(rawLastDate).trim();
       if (s.includes('T')) lastDate = s.split('T')[0];
       else if (s.includes(' ')) lastDate = s.split(' ')[0];
@@ -2183,6 +2202,12 @@ function updateStreaks(data) {
     
     const row = [data.agentId, streakCount, lastDate, JSON.stringify(data.tasks || [])];
     sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);
+    
+    // Sincronizar también LAST_COMPLETED_DATE (columna E) si existe
+    const lastDateColE = headers.indexOf('LAST_COMPLETED_DATE');
+    if (lastDateColE !== -1) {
+      sheet.getRange(rowIdx + 1, lastDateColE + 1).setValue(lastDate);
+    }
   } else {
     // Nuevo registro: Primera racha
     streakCount = 1;

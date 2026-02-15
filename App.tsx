@@ -27,7 +27,8 @@ import {
   syncFcmToken,
   confirmDirectorAttendance,
   fetchActiveEvents,
-  confirmEventAttendance as confirmEventAttendanceService
+  confirmEventAttendance as confirmEventAttendanceService,
+  deleteAgent as deleteAgentService
 } from './services/sheetsService';
 import { generateGoogleCalendarLink } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -77,6 +78,48 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
     <div className="w-5 h-5 rounded-full bg-[#ffb700]/10 border border-[#ffb700]/30 flex items-center justify-center text-[10px] text-[#ffb700]">+</div>
   </button>
 );
+
+/**
+ * Robust date parser for Google Sheets data.
+ * Handles: serial numbers (46067), DD/MM/YYYY strings, ISO strings, Date objects.
+ * Returns a valid Date or null.
+ */
+const parseAttendanceDate = (value: any): Date | null => {
+  if (!value || value === 'N/A' || value === '') return null;
+
+  // 1. Google Sheets serial number (e.g., 46067 = days since 1899-12-30)
+  const numVal = typeof value === 'number' ? value : parseFloat(String(value));
+  if (!isNaN(numVal) && numVal > 1000 && numVal < 100000 && !String(value).includes('/') && !String(value).includes('-')) {
+    // Google Sheets epoch: Dec 30, 1899
+    const sheetsEpoch = new Date(1899, 11, 30);
+    const result = new Date(sheetsEpoch.getTime() + numVal * 86400000);
+    if (!isNaN(result.getTime()) && result.getFullYear() >= 2020 && result.getFullYear() <= 2030) return result;
+  }
+
+  const strVal = String(value).trim();
+
+  // 2. DD/MM/YYYY format
+  const slashParts = strVal.split('/');
+  if (slashParts.length === 3) {
+    const [p1, p2, p3] = slashParts.map(p => parseInt(p, 10));
+    // Determine if DD/MM/YYYY or MM/DD/YYYY (assume DD/MM/YYYY if day > 12)
+    let d: Date;
+    if (p1 > 12) {
+      d = new Date(p3, p2 - 1, p1); // DD/MM/YYYY
+    } else if (p2 > 12) {
+      d = new Date(p3, p1 - 1, p2); // MM/DD/YYYY
+    } else {
+      d = new Date(p3, p2 - 1, p1); // Default DD/MM/YYYY
+    }
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 2020) return d;
+  }
+
+  // 3. ISO string or other parseable format
+  const fallback = new Date(strVal);
+  if (!isNaN(fallback.getTime()) && fallback.getFullYear() >= 2020 && fallback.getFullYear() <= 2030) return fallback;
+
+  return null;
+};
 
 const App: React.FC = () => {
   const APP_VERSION = "1.7.5"; // Force Cache Purge & Logic Fixes
@@ -959,31 +1002,55 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* RADAR DE DESERCIÓN RÁPIDO - HOME */}
+              {/* RADAR DE DESERCIÓN RÁPIDO - HOME (PERSONALIZADO POR ROL) */}
               {(() => {
-                const dangerCount = agents.filter(a => {
-                  if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
-                  const parts = a.lastAttendance.split('/');
-                  const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
-                  if (isNaN(lastDate.getTime())) return false;
-                  const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                  return diffDays >= 21;
-                }).length;
+                const isCommandRole = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER;
 
-                if (dangerCount === 0) return null;
+                if (isCommandRole) {
+                  // DIRECTOR/LÍDER: Ver alerta general de deserción con conteo
+                  const dangerCount = agents.filter(a => {
+                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                    const lastDate = parseAttendanceDate(a.lastAttendance);
+                    if (!lastDate) return false;
+                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays >= 21;
+                  }).length;
 
-                return (
-                  <div onClick={() => setView(AppView.SCANNER)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="text-red-500" size={20} />
-                      <div>
-                        <p className="text-[10px] text-white font-black uppercase tracking-widest">ALERTA DE DESERCIÓN</p>
-                        <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
+                  if (dangerCount === 0) return null;
+
+                  return (
+                    <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="text-red-500" size={20} />
+                        <div>
+                          <p className="text-[10px] text-white font-black uppercase tracking-widest">COMANDO: ALERTA DE DESERCIÓN</p>
+                          <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-red-500" />
+                    </div>
+                  );
+                } else {
+                  // ESTUDIANTE: Solo ver alerta personal si ELLOS están en riesgo
+                  if (!currentUser?.lastAttendance || currentUser.lastAttendance === 'N/A') return null;
+                  const myLastDate = parseAttendanceDate(currentUser.lastAttendance);
+                  if (!myLastDate) return null;
+                  const myDiffDays = Math.floor((new Date().getTime() - myLastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                  if (myDiffDays < 14) return null; // No están en riesgo
+
+                  return (
+                    <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="text-amber-500" size={20} />
+                        <div>
+                          <p className="text-[10px] text-white font-black uppercase tracking-widest">⚠️ ALERTA PERSONAL</p>
+                          <p className="text-[8px] text-amber-500/80 font-bold uppercase">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
+                        </div>
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-red-500" />
-                  </div>
-                );
+                  );
+                }
               })()}
             </div>
 
@@ -1264,40 +1331,23 @@ const App: React.FC = () => {
                 </div>
                 {(() => {
                   const riskAgents = agents.filter(a => {
-                    // Solo estudiantes con bajo XP que realmente no han asistido
-                    const isCandidate = (a.userRole === UserRole.STUDENT || !a.userRole) && (a.xp < 300);
-                    if (!isCandidate) return false;
+                    // Solo estudiantes que realmente no han asistido
+                    const isStudent = (a.userRole === UserRole.STUDENT || !a.userRole);
+                    if (!isStudent) return false;
 
                     if (!a.lastAttendance || a.lastAttendance === 'N/A') return true; // Nunca han asistido
 
-                    try {
-                      const parts = a.lastAttendance.split('/');
-                      const lastDate = parts.length === 3
-                        ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
-                        : new Date(a.lastAttendance);
+                    const lastDate = parseAttendanceDate(a.lastAttendance);
+                    if (!lastDate) return true; // Fecha no parseable = riesgo
 
-                      if (isNaN(lastDate.getTime())) return true;
-
-                      const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                      return diffDays >= 14;
-                    } catch (e) {
-                      return true;
-                    }
+                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays >= 14;
                   }).sort((a, b) => {
-                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return -1;
-                    if (!b.lastAttendance || b.lastAttendance === 'N/A') return 1;
-
-                    const partsA = a.lastAttendance.split('/');
-                    const dateA = partsA.length === 3
-                      ? new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0])).getTime()
-                      : new Date(a.lastAttendance).getTime();
-
-                    const partsB = b.lastAttendance.split('/');
-                    const dateB = partsB.length === 3
-                      ? new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0])).getTime()
-                      : new Date(b.lastAttendance).getTime();
-
-                    return dateA - dateB;
+                    const dateA = parseAttendanceDate(a.lastAttendance);
+                    const dateB = parseAttendanceDate(b.lastAttendance);
+                    if (!dateA) return -1;
+                    if (!dateB) return 1;
+                    return dateA.getTime() - dateB.getTime();
                   });
 
                   if (riskAgents.length === 0) return (
@@ -1309,9 +1359,8 @@ const App: React.FC = () => {
                   return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {riskAgents.map(a => {
-                        const parts = a.lastAttendance!.split('/');
-                        const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance!);
-                        const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                        const lastDate = parseAttendanceDate(a.lastAttendance);
+                        const diffDays = lastDate ? Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
                         const isDanger = diffDays >= 21;
                         return (
                           <div key={a.id} onClick={() => { setFoundAgent(a); }} className={`group relative bg-[#001833] border rounded-[2.5rem] p-6 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1 ${isDanger ? 'border-red-500/30' : 'border-amber-500/20'}`}>
@@ -1324,10 +1373,35 @@ const App: React.FC = () => {
                                 <p className="text-lg font-bebas text-white uppercase tracking-wider truncate">{a.name}</p>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${isDanger ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                    {diffDays} DÍAS AUSENTE
+                                    {diffDays >= 999 ? 'SIN REGISTRO' : `${diffDays} DÍAS AUSENTE`}
                                   </span>
                                 </div>
                               </div>
+                              {/* Delete button - Director only */}
+                              {currentUser?.userRole === UserRole.DIRECTOR && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!window.confirm(`⚠️ ¿ELIMINAR AL AGENTE ${a.name}?`)) return;
+                                    if (!window.confirm(`🚨 CONFIRMACIÓN FINAL: Esta acción es IRREVERSIBLE. ¿Dar de baja a ${a.name} (${a.id})?`)) return;
+                                    try {
+                                      const res = await deleteAgentService(a.id);
+                                      if (res.success) {
+                                        alert(`✅ AGENTE ${a.name} ELIMINADO DEL SISTEMA.`);
+                                        setAgents(prev => prev.filter(ag => ag.id !== a.id));
+                                      } else {
+                                        alert(`❌ ERROR: ${res.error}`);
+                                      }
+                                    } catch (err) {
+                                      alert('❌ FALLO EN PROTOCOLO DE ELIMINACIÓN');
+                                    }
+                                  }}
+                                  className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-all active:scale-90 z-10"
+                                  title="Eliminar Agente"
+                                >
+                                  <Trash2 size={16} className="text-red-500" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

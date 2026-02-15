@@ -402,6 +402,8 @@ function doPost(e) {
         return activateVisitorAsAgent(request.data);
       case 'update_notif_prefs':
         return updateNotifPrefs(request.data);
+      case 'delete_agent':
+        return deleteAgent(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -783,6 +785,63 @@ function activateVisitorAsAgent(data) {
   }
 
   return enrollResponse;
+}
+
+/**
+ * @description Elimina un agente del directorio y opcionalmente de las hojas de asistencia/rachas.
+ */
+function deleteAgent(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const agentId = String(data.agentId).trim();
+  
+  if (!agentId) throw new Error("ID de agente requerido.");
+
+  // 1. Eliminar del Directorio Oficial
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  if (!directorySheet) throw new Error("Hoja de directorio no encontrada.");
+  
+  const directoryData = directorySheet.getDataRange().getValues();
+  let agentName = "Desconocido";
+  let deletedFromDirectory = false;
+  
+  for (let i = directoryData.length - 1; i >= 1; i--) {
+    if (String(directoryData[i][0]).trim() === agentId) {
+      agentName = directoryData[i][1] || "Desconocido";
+      directorySheet.deleteRow(i + 1);
+      deletedFromDirectory = true;
+      break;
+    }
+  }
+  
+  if (!deletedFromDirectory) throw new Error("Agente no encontrado en el directorio.");
+
+  // 2. Limpiar registros de asistencia
+  const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  if (attendanceSheet) {
+    const attenData = attendanceSheet.getDataRange().getValues();
+    for (let i = attenData.length - 1; i >= 1; i--) {
+      if (String(attenData[i][0]).trim() === agentId) {
+        attendanceSheet.deleteRow(i + 1);
+      }
+    }
+  }
+
+  // 3. Limpiar registros de rachas
+  const strikesSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+  if (strikesSheet) {
+    const strikeData = strikesSheet.getDataRange().getValues();
+    for (let i = strikeData.length - 1; i >= 1; i--) {
+      if (String(strikeData[i][0]).trim() === agentId) {
+        strikesSheet.deleteRow(i + 1);
+      }
+    }
+  }
+
+  // 4. Notificación Telegram
+  sendTelegramNotification(`🗑️ <b>AGENTE ELIMINADO</b>\n\n<b>• Nombre:</b> ${agentName}\n<b>• ID:</b> <code>${agentId}</code>\n<b>• Acción:</b> Dado de baja del sistema por un Director.`);
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, deletedAgent: agentName })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

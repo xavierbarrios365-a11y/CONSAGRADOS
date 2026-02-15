@@ -569,3 +569,14 @@ export const activateVisitorAsAgent = async (visitorId: string, formData: any) =
     return { success: false, error: error.message };
   }
 };
+
+export const deleteAgent = async (agentId: string) => {
+  try {
+    const response = await postToAction('delete_agent', { agentId });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ELIMINACIÓN AGENTE:", error);
+    return { success: false, error: error.message };
+  }
+};
+

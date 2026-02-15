@@ -39,7 +39,7 @@ export const trackEvent = (eventName: string, params?: object) => {
     }
 };
 
-const VAPID_KEY = "BAqCHHlwSwZQA-8fvpuYvg-augargWAuRXwahCaF9pO31-PfEUN_Oxf2GumcRMvTmY31ovGuv4kj1FlaoPopwE";
+const VAPID_KEY = "BAqOH8w5wQ2AJ8fVpLVrg-ougvrgWAuoRVwahCsE9pO31-PfEUN_0xr2GumoRMyTmY31ccv3Uv4k2jP1aePppwE";
 
 export const requestForToken = async () => {
     try {

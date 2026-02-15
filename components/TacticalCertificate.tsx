@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Shield, CheckCircle, Download, X, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from './DigitalIdCard';
@@ -15,6 +15,30 @@ const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, courseTitle, date, onClose }) => {
     const certRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+    // Pre-fetch logo as base64 to avoid CORS issues during capture
+    useEffect(() => {
+        const loadLogo = async () => {
+            try {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        setLogoBase64(canvas.toDataURL('image/png'));
+                    }
+                };
+                img.onerror = () => setLogoBase64(null);
+                img.src = formatDriveUrl(OFFICIAL_LOGO);
+            } catch { setLogoBase64(null); }
+        };
+        loadLogo();
+    }, []);
 
     const formattedDate = (() => {
         const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
@@ -51,8 +75,15 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
         try {
             const dataUrl = await toPng(certRef.current, {
                 cacheBust: true,
-                pixelRatio: 3, // Alta resolución
+                pixelRatio: 3,
                 backgroundColor: '#001F3F',
+                filter: (node: HTMLElement) => {
+                    // Skip images that aren't base64 (external URLs cause CORS errors)
+                    if (node instanceof HTMLImageElement && node.src && !node.src.startsWith('data:')) {
+                        return false;
+                    }
+                    return true;
+                },
             });
 
             const link = document.createElement('a');
@@ -61,7 +92,22 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
             link.click();
         } catch (err) {
             console.error('Error generating certificate image:', err);
-            alert('Error al generar la imagen. Intenta de nuevo.');
+            // Retry without images as absolute fallback
+            try {
+                const fallbackUrl = await toPng(certRef.current!, {
+                    cacheBust: true,
+                    pixelRatio: 3,
+                    backgroundColor: '#001F3F',
+                    filter: (node: HTMLElement) => node.tagName !== 'IMG',
+                });
+                const link = document.createElement('a');
+                link.download = `Certificado_${agentName.replace(/\s+/g, '_')}.png`;
+                link.href = fallbackUrl;
+                link.click();
+            } catch (retryErr) {
+                console.error('Retry also failed:', retryErr);
+                alert('Error al generar la imagen. Intenta de nuevo.');
+            }
         } finally {
             setIsDownloading(false);
         }
@@ -147,12 +193,15 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                         gap: '12px',
                         marginBottom: '8px',
                     }}>
-                        <img
-                            src={formatDriveUrl(OFFICIAL_LOGO)}
-                            alt="Logo Consagrados"
-                            crossOrigin="anonymous"
-                            style={{ width: '40px', height: '40px', objectFit: 'contain' }}
-                        />
+                        {logoBase64 ? (
+                            <img
+                                src={logoBase64}
+                                alt="Logo Consagrados"
+                                style={{ width: '40px', height: '40px', objectFit: 'contain' }}
+                            />
+                        ) : (
+                            <Shield size={32} color="#FFB700" />
+                        )}
                         <span style={{
                             fontFamily: "'Oswald', sans-serif",
                             color: '#FFB700',

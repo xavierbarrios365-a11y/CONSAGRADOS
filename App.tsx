@@ -287,7 +287,6 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showQuickLogin, setShowQuickLogin] = useState(true);
-  const [showPin, setShowPin] = useState(false);
   const [directorySearch, setDirectorySearch] = useState('');
   const [showInbox, setShowInbox] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);

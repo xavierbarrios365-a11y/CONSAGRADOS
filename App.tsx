@@ -128,6 +128,10 @@ const App: React.FC = () => {
   // Consejero táctico eliminado
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [isConfirmingEvent, setIsConfirmingEvent] = useState<string | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
+  const [headlines, setHeadlines] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -339,12 +343,19 @@ const App: React.FC = () => {
 
       onMessageListener().then((payload: any) => {
         console.log("Notificación recibida:", payload);
+        setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
         // Actualizamos contador de inbox para forzar refresco visual
         fetchNotifications().then(notifs => {
-          const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-          const delIds = JSON.parse(localStorage.getItem('deleted_notifications') || '[]');
-          const unreadCount = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id)).length;
-          setUnreadNotifications(unreadCount);
+          const agentId = currentUser?.id;
+          const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
+          const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
+
+          const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+          const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+
+          const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
+          setUnreadNotifications(unreadNotifs.length);
+          setHeadlines(unreadNotifs.slice(0, 5).map(n => n.titulo));
         });
       });
     } catch (e) {
@@ -391,10 +402,17 @@ const App: React.FC = () => {
     const checkNotifications = async () => {
       try {
         const notifs = await fetchNotifications();
-        const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-        const delIds = JSON.parse(localStorage.getItem('deleted_notifications') || '[]');
-        const unreadCount = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id)).length;
-        setUnreadNotifications(unreadCount);
+        const agentId = currentUser?.id;
+        const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
+        const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
+
+        const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+        const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+
+        const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
+        setUnreadNotifications(unreadNotifs.length);
+        setHeadlines(unreadNotifs.slice(0, 5).map(n => n.titulo));
+        setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
       } catch (e) {
         console.error("Error en pulso de notificaciones:", e);
       }
@@ -764,15 +782,78 @@ const App: React.FC = () => {
       case AppView.HOME:
         return (
           <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            <div className="flex flex-col items-center text-center space-y-3 mb-2">
-              <div className="p-3 bg-[#ffb700]/10 rounded-full border border-[#ffb700]/20 animate-pulse">
-                <Shield size={24} className="text-[#ffb700]" />
+            {/* ENCABEZADO PREMIUM NODO CENTRAL */}
+            <div className="flex flex-col items-center space-y-4 mb-6">
+              <div className="relative">
+                {/* Aura giratoria de estado */}
+                <div className={`absolute -inset-4 rounded-full blur-xl opacity-20 animate-pulse transition-colors ${notificationPermission === 'granted' ? 'bg-indigo-500' : 'bg-red-500'}`}></div>
+
+                <div className={`relative p-4 rounded-full border-2 transition-all duration-700 shadow-2xl ${notificationPermission === 'granted' ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-red-500/10 border-red-500/40'}`}>
+                  {notificationPermission === 'granted' ? (
+                    <Zap size={28} className="text-indigo-400 animate-pulse" />
+                  ) : (
+                    <Shield size={28} className="text-red-500 animate-bounce" />
+                  )}
+                </div>
+
+                {/* Tag de estado conectado/desconectado */}
+                <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest border shadow-lg backdrop-blur-md whitespace-nowrap ${notificationPermission === 'granted' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-red-600 text-white border-red-400'}`}>
+                  {notificationPermission === 'granted' ? 'SISTEMA DE ALERTAS: CONECTADO' : 'CANAL TÁCTICO: OFFLINE'}
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bebas font-black text-white tracking-widest leading-none">NODO CENTRAL</h2>
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mt-1">{currentUser?.name}</p>
+
+              <div className="text-center pt-2">
+                <h2 className="text-3xl font-bebas font-black text-white tracking-[0.2em] leading-none mb-1">NODO CENTRAL</h2>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mb-3">{currentUser?.name}</p>
+
+                {/* News Ticker de Titulares */}
+                {headlines.length > 0 && (
+                  <div className="w-full max-w-[300px] overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-lg py-1 px-4 mb-2 shadow-inner">
+                    <div className="animate-[ticker_20s_linear_infinite] whitespace-nowrap flex items-center gap-8">
+                      {headlines.map((h, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Radio size={10} className="text-[#ffb700] animate-pulse" />
+                          <span className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
+                        </div>
+                      ))}
+                      {/* Repetir para el loop infinito */}
+                      {headlines.map((h, i) => (
+                        <div key={`dup-${i}`} className="flex items-center gap-2">
+                          <Radio size={10} className="text-[#ffb700] animate-pulse" />
+                          <span className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Botón de Activación Directa si está desconectado */}
+                {notificationPermission !== 'granted' && (
+                  <button
+                    onClick={initFirebaseMessaging}
+                    className="mt-2 px-8 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-900/40 active:scale-95 font-bebas flex items-center gap-3 border border-white/20"
+                  >
+                    <Bell size={14} className="animate-swing" />
+                    ACTIVAR CANAL TÁCTICO
+                  </button>
+                )}
               </div>
             </div>
+
+            <style>{`
+              @keyframes ticker {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              .animate-swing { animation: swing 2s infinite ease-in-out; }
+              @keyframes swing {
+                0%, 100% { transform: rotate(0deg); }
+                20% { transform: rotate(15deg); }
+                40% { transform: rotate(-10deg); }
+                60% { transform: rotate(5deg); }
+                80% { transform: rotate(-5deg); }
+              }
+            `}</style>
 
             <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
               <DailyVerse

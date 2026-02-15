@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell } from 'lucide-react';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from './DigitalIdCard';
 
@@ -11,13 +11,14 @@ interface LayoutProps {
   userRole: UserRole;
   userName: string;
   onLogout: () => void;
+  onHardReset?: () => void;
   notificationCount: number;
   onOpenInbox: () => void;
 }
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, notificationCount, onOpenInbox }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, onHardReset, notificationCount, onOpenInbox }) => {
   const allNavItems = [
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
@@ -60,9 +61,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
             <p className="text-[10px] font-black text-white uppercase leading-none tracking-wider">{userName.split(' ')[0]}</p>
             <p className="text-[7px] text-[#ffb700] font-bold uppercase tracking-widest opacity-80">{userRole}</p>
           </div>
-          <button onClick={onLogout} className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group" title="Cerrar Sesión">
-            <LogOut size={18} className="group-hover:-translate-x-0.5 transition-transform" />
-          </button>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <button
+              onClick={onHardReset}
+              className="p-2.5 text-gray-500 hover:text-[#ffb700] hover:bg-[#ffb700]/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group"
+              title="Reinicio Maestro (Limpiar Caché)"
+            >
+              <RotateCcw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+            </button>
+            <button
+              onClick={onLogout}
+              className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group"
+              title="Cerrar Sesión"
+            >
+              <LogOut size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+          </div>
         </div>
       </header>
 

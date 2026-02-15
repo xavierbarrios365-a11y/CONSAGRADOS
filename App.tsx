@@ -74,7 +74,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.7.1"; // Tactical Persistence Booster
+  const APP_VERSION = "1.7.2"; // Session Hardening & Master Reset
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -205,17 +205,15 @@ const App: React.FC = () => {
   }, [isLoggedIn, currentUser]);
 
   const handleLogout = useCallback(() => {
-    // Preservar llaves importantes antes de limpiar
+    // Preserve important keys for quick re-entry
     const backupKeys = ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id'];
     const backup: Record<string, string> = {};
 
-    // Backup de backups nominativas
     backupKeys.forEach(k => {
       const v = localStorage.getItem(k);
       if (v) backup[k] = v;
     });
 
-    // Backup dinámico de notificaciones para todos los IDs de agentes guardados
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (key.startsWith('read_notifications_') || key.startsWith('deleted_notifications_'))) {
@@ -225,8 +223,9 @@ const App: React.FC = () => {
     }
 
     localStorage.clear();
+    sessionStorage.clear();
 
-    // Restaurar backups
+    // Restore backups (Legacy behavior, for standard logout)
     Object.entries(backup).forEach(([k, v]) => localStorage.setItem(k, v));
 
     setIsLoggedIn(false);
@@ -246,6 +245,34 @@ const App: React.FC = () => {
     }, 50);
   }, []);
 
+  const handleHardReset = useCallback(async () => {
+    if (!window.confirm("⚠️ ¿EJECUTAR REINICIO MAESTRO TÁCTICO?\n\nEsto borrará TODA la memoria local, cachés y cerrará la sesión por completo. Úsalo si no ves las actualizaciones o tienes errores persistentes.")) return;
+
+    try {
+      // 1. Clear Storage
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 2. Clear Caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      // 3. Unregister SWs
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(reg => reg.unregister()));
+      }
+
+      // 4. Force Reload
+      window.location.href = window.location.origin + window.location.pathname + "?reset=" + Date.now();
+    } catch (e) {
+      console.error("Fallo en hard reset:", e);
+      window.location.reload();
+    }
+  }, []);
+
   const resetSessionTimer = useCallback(() => {
     if (isLoggedIn) {
       const now = Date.now();
@@ -257,7 +284,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     initRemoteConfig();
-    const storedUser = localStorage.getItem('consagrados_agent');
+    const storedUser = sessionStorage.getItem('consagrados_session');
     const storedLastActive = localStorage.getItem('last_active_time');
 
     if (storedUser) {
@@ -266,8 +293,8 @@ const App: React.FC = () => {
         const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
         const now = Date.now();
 
-        // Aumentamos el tiempo de expiración a 4 horas para estabilidad
-        if (now - lastActive > 14400000 && lastActive !== 0) {
+        // Timeout reducido a 30 minutos (1800000 ms)
+        if (now - lastActive > 1800000 && lastActive !== 0) {
           handleLogout();
         } else {
           setIsLoggedIn(true);
@@ -275,7 +302,7 @@ const App: React.FC = () => {
           setLastActiveTime(now);
         }
       } catch (e) {
-        localStorage.removeItem('consagrados_agent');
+        sessionStorage.removeItem('consagrados_session');
       }
     }
 
@@ -337,10 +364,23 @@ const App: React.FC = () => {
       const interval = setInterval(() => {
         const now = Date.now();
         const diff = now - lastActiveTime;
-        if (diff >= 14400000) { // 4 Horas
+        // 30 Minutos (1800000 ms)
+        if (diff >= 1800000) {
           handleLogout();
-        } else if (diff >= 13800000) { // Aviso a los 3h 50m
+        } else if (diff >= 1500000) { // Aviso a los 25 min
           setShowSessionWarning(true);
+        }
+
+        // Detección de offline prolongado
+        if (!navigator.onLine) {
+          const offlineStart = parseInt(localStorage.getItem('offline_start_time') || '0');
+          if (offlineStart === 0) {
+            localStorage.setItem('offline_start_time', String(now));
+          } else if (now - offlineStart > 300000) { // 5 minutos offline
+            handleLogout();
+          }
+        } else {
+          localStorage.removeItem('offline_start_time');
         }
       }, 10000);
       return () => clearInterval(interval);
@@ -576,7 +616,7 @@ const App: React.FC = () => {
     const effectiveId = overrideId || loginId;
     const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
     if (user && String(user.pin).trim() === loginPin.trim()) {
-      localStorage.setItem('consagrados_agent', JSON.stringify(user));
+      sessionStorage.setItem('consagrados_session', JSON.stringify(user));
       localStorage.setItem('last_login_id', user.id);
       const now = Date.now();
       localStorage.setItem('last_active_time', String(now));
@@ -611,7 +651,7 @@ const App: React.FC = () => {
     try {
       const success = await authenticateBiometric(user.biometricCredential);
       if (success) {
-        localStorage.setItem('consagrados_agent', JSON.stringify(user));
+        sessionStorage.setItem('consagrados_session', JSON.stringify(user));
         localStorage.setItem('last_login_id', user.id);
         const now = Date.now();
         localStorage.setItem('last_active_time', String(now));
@@ -1611,6 +1651,7 @@ const App: React.FC = () => {
       userRole={effectiveRole}
       userName={currentUser?.name || 'Agente'}
       onLogout={handleLogout}
+      onHardReset={handleHardReset}
       notificationCount={unreadNotifications}
       onOpenInbox={() => setShowInbox(true)}
     >

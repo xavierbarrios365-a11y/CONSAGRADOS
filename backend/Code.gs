@@ -290,7 +290,13 @@ function doGet(e) {
             lastDate: (() => {
               let idx = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
               if (idx === -1) idx = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
-              return idx !== -1 ? String(strikeData[i][idx]) : '';
+              if (idx === -1) return '';
+              let val = strikeData[i][idx];
+              if (val instanceof Date) return Utilities.formatDate(val, "GMT-4", "yyyy-MM-dd");
+              let s = String(val).trim();
+              if (s.includes('T')) return s.split('T')[0];
+              if (s.includes(' ')) return s.split(' ')[0];
+              return s;
             })()
           });
         }
@@ -2121,18 +2127,18 @@ function updateStreaks(data) {
   if (rowIdx !== -1) {
     streakCount = parseInt(values[rowIdx][streakIdx]) || 0;
     let rawLastDate = values[rowIdx][lastDateIdx];
-    lastDate = String(rawLastDate);
     if (rawLastDate instanceof Date) {
       lastDate = Utilities.formatDate(rawLastDate, "GMT-4", "yyyy-MM-dd");
-    } else if (lastDate && lastDate.includes(' ')) {
-      // Intento de parsear si viene como string largo
-      try { lastDate = Utilities.formatDate(new Date(lastDate), "GMT-4", "yyyy-MM-dd"); } catch(e) {}
+    } else {
+      let s = String(rawLastDate).trim();
+      if (s.includes('T')) lastDate = s.split('T')[0];
+      else if (s.includes(' ')) lastDate = s.split(' ')[0];
+      else lastDate = s;
     }
     
     // Si hoy completó la tarea y no se había registrado hoy
     if (lastDate !== todayStr) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
       const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
       
       // Si la última vez fue ayer, +1. Si no, racha = 1.

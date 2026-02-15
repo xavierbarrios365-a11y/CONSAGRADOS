@@ -186,7 +186,14 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         let newDiscScores = { ...discScores };
 
         if (currentQuestion.type === 'MULTIPLE') {
-            const isAnswerCorrect = selectedAnswer?.trim().toUpperCase() === currentQuestion.correctAnswer?.trim().toUpperCase();
+            // Comparación Resiliente: Coincidencia exacta o misma letra inicial (ej: 'B' coincide con 'B. Fuego Amigo')
+            const sel = (selectedAnswer || "").trim().toUpperCase();
+            const correct = (currentQuestion.correctAnswer || "").trim().toUpperCase();
+
+            const isAnswerCorrect = sel === correct ||
+                (sel.length > 1 && sel.startsWith(correct + ".")) ||
+                (correct.length > 1 && correct.startsWith(sel + "."));
+
             if (isAnswerCorrect) newCorrectCount++;
             setCorrectAnswersCount(newCorrectCount);
         } else if (currentQuestion.type === 'DISC' || currentQuestion.optionCategories) {
@@ -264,6 +271,20 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     if (mapping) {
                         resultTitle = mapping.title;
                         resultContent = mapping.content;
+                    }
+                }
+
+                // --- FALLBACK TÁCTICO: RANGOS OFICIALES PDF ---
+                if (!resultTitle) {
+                    if (score >= 81) {
+                        resultTitle = "RANGO: FUERZA ESPECIAL";
+                        resultContent = "<strong>AMOR DE COMBATE.</strong> Entiende que la lealtad es sacrificio y verdad. Está listo para liderar a otros.";
+                    } else if (score >= 51) {
+                        resultTitle = "RANGO: SOLDADO";
+                        resultContent = "<strong>AMOR EN PROCESO.</strong> Entiende los conceptos pero le cuesta el sacrificio. Es buen material, solo necesita práctica bajo presión.";
+                    } else {
+                        resultTitle = "RANGO: CIVIL";
+                        resultContent = "<strong>AMOR EMOCIONAL.</strong> Tu lealtad depende de cómo te sientes ese día. Necesitas fundamentar tu identidad en Cristo urgentemente.";
                     }
                 }
             }
@@ -642,8 +663,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                                     key={idx}
                                                                     onClick={() => handleAnswerSelect(option)}
                                                                     className={`group flex items-center gap-4 p-5 rounded-sm border-2 text-left transition-all ${selectedAnswer === option
-                                                                            ? 'bg-black text-white border-black'
-                                                                            : 'bg-white text-black border-black/10 hover:border-black/30'
+                                                                        ? 'bg-black text-white border-black'
+                                                                        : 'bg-white text-black border-black/10 hover:border-black/30'
                                                                         }`}
                                                                 >
                                                                     <span className={`w-8 h-8 flex items-center justify-center font-black text-xs border-2 ${selectedAnswer === option ? 'border-white/40' : 'border-black/20'}`}>

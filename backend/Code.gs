@@ -287,7 +287,11 @@ function doGet(e) {
           streakMap.set(String(strikeData[i][strikeAgentIdIdx]), {
             streak: strikeData[i][streakCountIdx] || 0,
             tasks: strikeData[i][tasksJsonIdx] || '[]',
-            lastDate: strikeHeaders.indexOf('LAST_DATE') !== -1 ? String(strikeData[i][strikeHeaders.indexOf('LAST_DATE')]) : ''
+            lastDate: (() => {
+              let idx = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
+              if (idx === -1) idx = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
+              return idx !== -1 ? String(strikeData[i][idx]) : '';
+            })()
           });
         }
       }
@@ -1220,7 +1224,7 @@ function setupDatabase() {
 
   // 8. RACHAS
   const streakHeaders = [
-    'AGENT_ID', 'STREAK_COUNT', 'LAST_COMPLETED_WEEK', 'TASKS_JSON'
+    'AGENT_ID', 'STREAK_COUNT', 'LAST_COMPLETED_DATE', 'TASKS_JSON'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.STREAKS_SHEET, streakHeaders));
 
@@ -2092,7 +2096,9 @@ function updateStreaks(data) {
   const headers = values[0];
   const agentIdIdx = headers.indexOf('AGENT_ID');
   const streakIdx = headers.indexOf('STREAK_COUNT');
-  const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE'); 
+  const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE') !== -1 
+    ? headers.indexOf('LAST_COMPLETED_DATE') 
+    : headers.indexOf('LAST_COMPLETED_WEEK');
   const tasksIdx = headers.indexOf('TASKS_JSON');
 
   const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
@@ -2124,11 +2130,12 @@ function updateStreaks(data) {
       sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`);
 
       // --- HITOS DE XP (Cada 5 días) ---
-      if (streakCount % 5 === 0) {
+      if (streakCount >= 5 && streakCount % 5 === 0) {
         let bonusXP = 0;
-        if (streakCount === 5) bonusXP = 5;
-        else if (streakCount >= 10 && streakCount < 20) bonusXP = 7.5;
-        else if (streakCount >= 20) bonusXP = 10;
+        if (streakCount >= 30) bonusXP = 5 * 2;        // 30+ días: potenciador x2 = 10 XP
+        else if (streakCount >= 15) bonusXP = 5 * 1.50; // 15+ días: potenciador x1.50 = 7.5 XP
+        else if (streakCount >= 10) bonusXP = 5 * 1.25; // 10+ días: potenciador x1.25 = 6.25 XP
+        else if (streakCount === 5) bonusXP = 5;        // 5 días: 5 XP base
 
         if (bonusXP > 0) {
           try {

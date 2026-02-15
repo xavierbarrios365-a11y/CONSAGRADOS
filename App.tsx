@@ -920,10 +920,10 @@ const App: React.FC = () => {
     ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
 
     // Incrementar racha inmediatamente en local (optimistic update)
-    const newStreak = (currentUser.streakCount || 0) + 1;
+    const optimisticStreak = (currentUser.streakCount || 0) + 1;
     const updatedUser = {
       ...currentUser,
-      streakCount: newStreak,
+      streakCount: optimisticStreak,
       weeklyTasks: updatedTasks
     };
     setCurrentUser(updatedUser);
@@ -933,13 +933,11 @@ const App: React.FC = () => {
     try {
       console.log("🔥 Sincronizando racha...");
       const res = await updateAgentStreaks(currentUser.id, false, updatedTasks);
-      if (res.success && res.streak !== undefined && res.streak > 0) {
-        // Solo sincronizar si el servidor da un valor mayor que 0
-        // Esto evita que un bug del servidor resetee la racha local
-        const serverStreak = Math.max(res.streak, newStreak);
+      if (res.success && res.streak !== undefined) {
+        // Siempre confiar en el valor del servidor (es la fuente de verdad)
         const serverUser = {
           ...updatedUser,
-          streakCount: serverStreak
+          streakCount: res.streak
         };
         setCurrentUser(serverUser);
         sessionStorage.setItem('consagrados_session', JSON.stringify(serverUser));

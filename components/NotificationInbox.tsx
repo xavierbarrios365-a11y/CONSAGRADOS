@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, Clock, Info, ShieldAlert, Target, X, Trash2, CheckCheck } from 'lucide-react';
+import { Bell, Check, Clock, Info, ShieldAlert, Target, X, Trash2, CheckCheck, Loader2 } from 'lucide-react';
 import { InboxNotification, Agent } from '../types';
 import { fetchNotifications, updateNotifPrefs, fetchAgentsFromSheets } from '../services/sheetsService';
 
@@ -36,6 +36,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
     const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(
         typeof window !== 'undefined' && typeof Notification !== 'undefined' ? Notification.permission : 'default'
     );
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const updateBadge = useCallback((allNotifs: InboxNotification[], readNotifs: string[], delNotifs: string[]) => {
         const visibleNotifs = allNotifs.filter(n => !delNotifs.includes(n.id));
@@ -47,6 +48,23 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         loadNotifications();
     }, []);
 
+    // Redundancia: Si LocalStorage está vacío pero el usuario tiene prefs en el backend, sincronizar
+    useEffect(() => {
+        if (currentUser?.notifPrefs && agentId) {
+            const localRead = localStorage.getItem(READ_KEY);
+            const localDeleted = localStorage.getItem(DELETED_KEY);
+
+            if (!localRead && currentUser.notifPrefs.read?.length > 0) {
+                setReadIds(currentUser.notifPrefs.read);
+                localStorage.setItem(READ_KEY, JSON.stringify(currentUser.notifPrefs.read));
+            }
+            if (!localDeleted && currentUser.notifPrefs.deleted?.length > 0) {
+                setDeletedIds(currentUser.notifPrefs.deleted);
+                localStorage.setItem(DELETED_KEY, JSON.stringify(currentUser.notifPrefs.deleted));
+            }
+        }
+    }, [currentUser, agentId, READ_KEY, DELETED_KEY]);
+
     const loadNotifications = async () => {
         setLoading(true);
         setError(null);
@@ -56,9 +74,10 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
                 throw new Error('Formato de respuesta inválido');
             }
             setNotifications(data);
-            // Use the latest deletedIds and readIds from state initializers
-            const currentDeleted = (() => { try { const s = localStorage.getItem(DELETED_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
-            const currentRead = (() => { try { const s = localStorage.getItem(READ_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
+
+            // Sincronizar inmediatamente el contador con lo que hay en LS
+            const currentDeleted = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+            const currentRead = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
             updateBadge(data, currentRead, currentDeleted);
         } catch (err) {
             console.error("Error cargando inbox:", err);
@@ -77,7 +96,9 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         updateBadge(notifications, newRead, deletedIds);
 
         if (agentId) {
+            setIsSyncing(true);
             await updateNotifPrefs(agentId, { read: newRead, deleted: deletedIds });
+            setIsSyncing(false);
         }
     };
 
@@ -89,7 +110,9 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         updateBadge(notifications, readIds, newDeleted);
 
         if (agentId) {
+            setIsSyncing(true);
             await updateNotifPrefs(agentId, { read: readIds, deleted: newDeleted });
+            setIsSyncing(false);
         }
     };
 
@@ -102,7 +125,9 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
             updateBadge(notifications, readIds, newDeleted);
 
             if (agentId) {
+                setIsSyncing(true);
                 await updateNotifPrefs(agentId, { read: readIds, deleted: newDeleted });
+                setIsSyncing(false);
             }
         }
     };
@@ -141,7 +166,14 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
                         </div>
                         <div>
                             <h2 className="text-xl font-black text-white uppercase tracking-tighter">Inbox Táctico</h2>
-                            <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Comunicados Oficiales</p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Comunicados Oficiales</p>
+                                {isSyncing && (
+                                    <span className="flex items-center gap-1 text-[8px] text-blue-400 font-black animate-pulse">
+                                        <Loader2 size={10} className="animate-spin" /> SINCRONIZANDO...
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">

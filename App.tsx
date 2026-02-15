@@ -74,7 +74,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.6.9"; // UI Corrections Release
+  const APP_VERSION = "1.7.0"; // Tactical Reset & Intelligence Consolidation
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -135,6 +135,53 @@ const App: React.FC = () => {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // --- SISTEMA DE PURGA AUTOMÁTICA (FORCE REFRESH ON UPDATE) ---
+  useEffect(() => {
+    const currentVersion = APP_VERSION;
+    const storedVersion = localStorage.getItem('consagrados_version');
+
+    if (storedVersion && storedVersion !== currentVersion) {
+      console.warn(`🚀 NUEVA VERSIÓN DETECTADA (${currentVersion}). EJECUTANDO PURGA TÁCTICA...`);
+
+      const performPurge = async () => {
+        try {
+          if ('caches' in window) {
+            const names = await caches.keys();
+            await Promise.all(names.map(n => caches.delete(n)));
+          }
+          if (navigator.serviceWorker) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (let reg of regs) await reg.unregister();
+          }
+
+          const lastId = localStorage.getItem('last_login_id');
+          const remembered = localStorage.getItem('remembered_user');
+          const notifBackup: Record<string, string> = {};
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('read_notifications_') || k.startsWith('deleted_notifications_'))) {
+              notifBackup[k] = localStorage.getItem(k)!;
+            }
+          }
+
+          localStorage.clear();
+          if (lastId) localStorage.setItem('last_login_id', lastId);
+          if (remembered) localStorage.setItem('remembered_user', remembered);
+          Object.entries(notifBackup).forEach(([k, v]) => localStorage.setItem(k, v));
+          localStorage.setItem('consagrados_version', currentVersion);
+
+          window.location.reload();
+        } catch (e) {
+          console.error("Fallo en purga:", e);
+          localStorage.setItem('consagrados_version', currentVersion);
+        }
+      };
+      performPurge();
+    } else if (!storedVersion) {
+      localStorage.setItem('consagrados_version', currentVersion);
+    }
+  }, []);
 
   const handleLogout = useCallback(() => {
     // Preservar llaves importantes antes de limpiar
@@ -1209,8 +1256,8 @@ const App: React.FC = () => {
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
               <div>
-                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar Táctico</h2>
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Mapeo de Señales Tácticas e Inteligencia</p>
+                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Inteligencia</h2>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">SISTEMA DE ANÁLISIS DE SEÑALES TÁCTICAS</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -1218,10 +1265,10 @@ const App: React.FC = () => {
                     setIsSyncing(true);
                     syncData().finally(() => setIsSyncing(false));
                   }}
-                  className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20"
+                  className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/40 border border-white/10"
                 >
                   <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                  Analizar Señales
+                  ESCANEAR DESERCIONES
                 </button>
                 <button
                   onClick={() => {
@@ -1230,9 +1277,9 @@ const App: React.FC = () => {
                       processScan(name.trim().toUpperCase());
                     }
                   }}
-                  className="bg-[#ffb700] text-[#001f3f] px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#ffb700]/20"
+                  className="bg-[#ffb700] text-[#001f3f] px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#ffb700]/20 border border-white/20"
                 >
-                  <Plus size={16} /> Registro Externo
+                  <Plus size={16} /> REGISTRO DE VISITA
                 </button>
               </div>
             </div>
@@ -1242,7 +1289,7 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 border-b border-white/10 pb-2">
                   <Activity size={18} className="text-red-500 animate-pulse" />
-                  <h3 className="text-xl font-bebas text-white tracking-widest uppercase">Inteligencia de Deserción</h3>
+                  <h3 className="text-xl font-bebas text-white tracking-widest uppercase">RADAR DE DESERCIÓN</h3>
                 </div>
                 {(() => {
                   const riskAgents = agents.filter(a => {

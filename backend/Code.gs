@@ -200,12 +200,12 @@ function verifyAndFixSchema() {
   if (!sheet) return;
 
   var REQUIRED_COLUMNS = [
-    'ID', 'NOMBRE', 'PIN', 'RANGO', 'ESTADO', 'NIVEL_ACCESO', 'FOTO_URL',
-    'WHATSAPP', 'FECHA_NACIMIENTO', 'FECHA_INGRESO', 'TALENTO', 'BAUTIZADO',
-    'RELACION_CON_DIOS', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO',
-    'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN',
-    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE', 'BIOMETRIC_CREDENTIAL',
-    'NOTIF_PREFS', 'FCM_TOKEN'
+    'ID', 'NOMBRE', 'PIN', 'XP', 'RANGO', 'CARGO', 'ESTADO', 'WHATSAPP', 
+    'FECHA_NACIMIENTO', 'FECHA_INGRESO', 'TALENTO', 'BAUTIZADO', 
+    'RELACION_CON_DIOS', 'PUNTOS_BIBLIA', 'PUNTOS_APUNTES', 'PUNTOS_LIDERAZGO', 
+    'FOTO_URL', 'NIVEL_ACCESO', 'NOTIF_PREFS', 'FCM_TOKEN', 
+    'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN', 
+    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE', 'BIOMETRIC_CREDENTIAL'
   ];
 
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -1078,35 +1078,28 @@ function reconstructDb() {
 
     const newRow = directoryHeaders.map(header => {
       switch (header) {
-        case 'ID CÉDULA':
         case 'ID': return newId;
         case 'NOMBRE': return name;
+        case 'XP': return 0;
         case 'RANGO': {
            const cargo = (getE('CARGO') || getE('NIVEL_ACCESO') || '').toUpperCase();
            return (cargo.includes('LIDER') || cargo.includes('DIRECTOR')) ? 'ACTIVO' : 'RECLUTA';
         }
         case 'STATUS':
         case 'ESTADO': return 'ACTIVO';
-        case 'CARGO':
-        case 'NIVEL_ACCESO': return getE('CARGO') || getE('NIVEL_ACCESO') || 'Estudiante';
-        case 'CONTRASEÑA/PIN':
+        case 'CARGO': return getE('CARGO') || getE('NIVEL_ACCESO') || 'Estudiante';
         case 'PIN': return newPin;
-        case 'FOTO URL':
-        case 'FOTO_URL': return getE('FOTO URL') || getE('FOTO') || '';
-        case 'TELEFONO':
-        case 'WHATSAPP': return getE('WHATSAPP') || getE('TELÉFONO') || '';
-        case 'FECHA DE NACIMIENTO':
+        case 'FOTO_URL': return getE('FOTO URL') || getE('FOTO') || getE('FOTO_URL') || '';
+        case 'WHATSAPP': return getE('WHATSAPP') || getE('TELÉFONO') || getE('TELEFONO') || '';
         case 'FECHA_NACIMIENTO': return getE('FECHA DE NACIMIENTO') || getE('FECHA_NACIMIENTO') || '';
+        case 'FECHA_INGRESO': return new Date();
         case 'TALENTO': return getE('TALENTO') || '';
         case 'BAUTIZADO': return getE('BAUTIZADO') || 'NO';
-        case 'RELACION CON DIOS':
-        case 'RELACION_CON_DIOS': return getE('RELACION CON DIOS') || '';
-        case 'PUNTOS XP':
-        case 'XP': return 0;
-        case 'PUNTOS BIBLIA': return 0;
-        case 'PUNTOS APUNTES': return 0;
-        case 'PUNTOS LIDERAZGO': return 0;
-        case 'FECHA_INGRESO': return new Date();
+        case 'RELACION_CON_DIOS': return getE('RELACION CON DIOS') || getE('RELACION_CON_DIOS') || '';
+        case 'PUNTOS_BIBLIA': return 0;
+        case 'PUNTOS_APUNTES': return 0;
+        case 'PUNTOS_LIDERAZGO': return 0;
+        case 'NIVEL_ACCESO': return (getE('CARGO') || '').toUpperCase().includes('LIDER') ? 1 : 0;
         default: return '';
       }
     });
@@ -1402,7 +1395,9 @@ function onOpen() {
     .addItem('🚀 Setup Base de Datos', 'setupDatabase')
     .addItem('🔍 Verificar Sistema', 'checkSystemStatus')
     .addItem('🔧 Reparar IDs/PINs', 'repairMissingData')
-    .addItem('🛡️ RESCATAR Y NORMALIZAR ASISTENCIA (v1.8.5)', 'setupAttendanceSheet')
+    .addItem('🛡️ NORMALIZAR DIRECTORIO v1.8.8', 'standardizeDirectory')
+    .addItem('⚠️ DESHACER: Restaurar Directorio', 'emergencyRollbackDirectory')
+    .addItem('🛡️ NORMALIZAR ASISTENCIA v1.8.6', 'setupAttendanceSheet')
     .addItem('⏰ Activar Versículo Diario', 'setupDailyVerseTrigger')
     .addToUi();
 }
@@ -2518,4 +2513,132 @@ function deleteEvent(data) {
 function testPush() {
   const result = sendPushNotification("PRUEBA TÁCTICA", "Si recibes esto, la configuración de FCM v1 es correcta y el sistema está listo.");
   return "Ejecución completada. Revisa los logs para confirmar el éxito del envío.";
+}
+
+/**
+ * @description Estandariza el Directorio Oficial al esquema maestro v1.8.8.
+ * Realiza backup, mapeo de alias y reordenamiento táctico.
+ */
+function standardizeDirectory() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  if (!sheet) return;
+
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert('🛡️ NORMALIZACIÓN DE DIRECTORIO', '¿Deseas UNIFICAR y REORDENAR el Directorio Oficial? Se creará un BACKUP y se fusionarán columnas duplicadas (ej: ID CÉDULA + ID) al estándar v1.8.8.', ui.ButtonSet.YES_NO);
+  if (response !== ui.Button.YES) return;
+
+  // 1. Crear Backup
+  const backupName = `DIRECTORIO_BACKUP_${Utilities.formatDate(new Date(), "GMT-4", "yyyyMMdd_HHmm")}`;
+  sheet.copyTo(ss).setName(backupName);
+
+  const data = sheet.getDataRange().getValues();
+  const oldHeaders = data[0].map(h => String(h).trim().toUpperCase());
+  
+  const MASTER_SCHEMA = [
+    { name: 'ID', aliases: ['ID', 'CEDULA', 'CÉDULA', 'ID CÉDULA', 'ID CEDULA'] },
+    { name: 'NOMBRE', aliases: ['NOMBRE', 'NOMBRE COMPLETO', 'NOMBRE Y APELLIDO'] },
+    { name: 'PIN', aliases: ['PIN', 'CONTRASEÑA', 'CONTRASENA', 'PASS', 'PASSWORD'] },
+    { name: 'XP', aliases: ['XP', 'PUNTOS XP', 'PUNTOS_XP'] },
+    { name: 'RANGO', aliases: ['RANGO', 'JERARQUIA', 'JERARQUÍA'] },
+    { name: 'CARGO', aliases: ['CARGO', 'PUESTO'] },
+    { name: 'ESTADO', aliases: ['ESTADO', 'STATUS', 'ESTATUS', 'SITUACION'] },
+    { name: 'WHATSAPP', aliases: ['WHATSAPP', 'TELEFONO', 'TELÉFONO', 'CELULAR', 'PHONE'] },
+    { name: 'FECHA_NACIMIENTO', aliases: ['FECHA_NACIMIENTO', 'FECHA DE NACIMIENTO', 'NACIMIENTO'] },
+    { name: 'FECHA_INGRESO', aliases: ['FECHA_INGRESO', 'INGRESO', 'FECHA DE INGRESO'] },
+    { name: 'TALENTO', aliases: ['TALENTO', 'HABILIDAD', 'MINISTERIO'] },
+    { name: 'BAUTIZADO', aliases: ['BAUTIZADO', 'ES BAUTIZADO'] },
+    { name: 'RELACION_CON_DIOS', aliases: ['RELACION_CON_DIOS', 'RELACION CON DIOS', 'ESPIRITUALIDAD'] },
+    { name: 'PUNTOS_BIBLIA', aliases: ['PUNTOS_BIBLIA', 'PUNTOS BIBLIA', 'BIBLIA'] },
+    { name: 'PUNTOS_APUNTES', aliases: ['PUNTOS_APUNTES', 'PUNTOS APUNTES', 'APUNTES'] },
+    { name: 'PUNTOS_LIDERAZGO', aliases: ['PUNTOS_LIDERAZGO', 'PUNTOS LIDERAZGO', 'LIDERAZGO'] },
+    { name: 'FOTO_URL', aliases: ['FOTO_URL', 'FOTO URL', 'FOTO', 'AVATAR'] },
+    { name: 'NIVEL_ACCESO', aliases: ['NIVEL_ACCESO', 'NIVEL DE ACCESO'] },
+    { name: 'NOTIF_PREFS', aliases: ['NOTIF_PREFS', 'NOTIFICACIONES_PREFS'] },
+    { name: 'FCM_TOKEN', aliases: ['FCM_TOKEN', 'TOKEN_PUSH'] },
+    { name: 'PREGUNTA_SEGURIDAD', aliases: ['PREGUNTA_SEGURIDAD', 'PREGUNTA'] },
+    { name: 'RESPUESTA_SEGURIDAD', aliases: ['RESPUESTA_SEGURIDAD', 'RESPUESTA'] },
+    { name: 'CAMBIO_OBLIGATORIO_PIN', aliases: ['CAMBIO_OBLIGATORIO_PIN', 'CAMBIO_OBLIGATORIO_P'] },
+    { name: 'STATS_JSON', aliases: ['STATS_JSON'] },
+    { name: 'TACTOR_SUMMARY', aliases: ['TACTOR_SUMMARY'] },
+    { name: 'LAST_AI_UPDATE', aliases: ['LAST_AI_UPDATE'] },
+    { name: 'BIOMETRIC_CREDENTIAL', aliases: ['BIOMETRIC_CREDENTIAL'] }
+  ];
+
+  const standardizedRows = [];
+  const newHeaders = MASTER_SCHEMA.map(s => s.name);
+
+  for (let i = 1; i < data.length; i++) {
+    const oldRow = data[i];
+    const newRow = [];
+    
+    MASTER_SCHEMA.forEach(field => {
+      let value = '';
+      for (const alias of field.aliases) {
+        const idx = oldHeaders.indexOf(alias);
+        if (idx !== -1 && oldRow[idx] !== undefined && oldRow[idx] !== '') {
+          value = oldRow[idx];
+          break;
+        }
+      }
+      
+      if (field.name === 'ID') value = String(value).trim().toUpperCase();
+      if (field.name === 'ESTADO' && !value) value = 'ACTIVO';
+      if ((field.name === 'XP' || field.name.includes('PUNTOS')) && !value) value = 0;
+      
+      newRow.push(value);
+    });
+    
+    if (newRow[0]) standardizedRows.push(newRow);
+  }
+
+  sheet.clear();
+  sheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]).setFontWeight('bold').setBackground('#001f3f').setFontColor('#ffffff');
+  if (standardizedRows.length > 0) {
+    sheet.getRange(2, 1, standardizedRows.length, newHeaders.length).setValues(standardizedRows);
+  }
+  sheet.setFrozenRows(1);
+  formatHeaders(sheet, newHeaders.length);
+
+  ui.alert(`✅ DIRECTORIO NORMALIZADO\n\n• Perfiles estandarizados: ${standardizedRows.length}\n• Backup creado: ${backupName}\n\nTodo el sistema está ahora bajo el esquema maestro v1.8.8.`);
+}
+
+/**
+ * @description Restauración de emergencia del Directorio Oficial.
+ */
+function emergencyRollbackDirectory() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const mainSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  
+  const sheets = ss.getSheets();
+  const backups = sheets
+    .filter(s => s.getName().startsWith("DIRECTORIO_BACKUP_"))
+    .sort((a, b) => b.getName().localeCompare(a.getName())); // Más reciente primero
+
+  if (backups.length === 0) {
+    SpreadsheetApp.getUi().alert("❌ No se encontraron respaldos de Directorio.");
+    return;
+  }
+
+  const latestBackup = backups[0];
+  const response = SpreadsheetApp.getUi().alert(
+    "⚠️ RESTAURAR DIRECTORIO",
+    `¿Deseas restaurar la información desde el respaldo "${latestBackup.getName()}"? Esto borrará la versión actual y recuperará fotos, puntos y niveles perdidos.`,
+    SpreadsheetApp.getUi().ButtonSet.YES_NO
+  );
+
+  if (response !== SpreadsheetApp.getUi().Button.YES) return;
+
+  // Restaurar
+  const backupData = latestBackup.getDataRange().getValues();
+  mainSheet.clear();
+  mainSheet.getRange(1, 1, backupData.length, backupData[0].length).setValues(backupData);
+  
+  // Re-formatear cabeceras básicas
+  mainSheet.getRange(1, 1, 1, backupData[0].length).setFontWeight('bold').setBackground('#001f3f').setFontColor('#ffffff');
+  mainSheet.setFrozenRows(1);
+
+  SpreadsheetApp.getUi().alert(`✅ RESTAURACIÓN COMPLETADA\n\nSe ha recuperado la información de: ${latestBackup.getName()}.\nRevisa que las fotos y el XP hayan vuelto.`);
 }

@@ -156,110 +156,89 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
   const color = isOnline ? '#ffb700' : '#ef4444';
 
   return (
-    <div className="relative w-44 h-44 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3">
       {/* 
-        DISEÑO DE AUTOR: RÉPLICA EXACTA DEL LOGO CONSAGRADOS
-        Este SVG calca la geometría del archivo logo_white.png proporcionado por el Director.
+        DISEÑO DE AUTOR v1.8.9: IMAGEN REAL + BARRIDO TÁCTICO
+        Se utiliza logo_white.png como máscara para asegurar fidelidad total.
       */}
-      <svg
-        viewBox="0 0 100 100"
-        className="w-full h-full drop-shadow-[0_0_15px_rgba(255,183,0,0.3)]"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-          <radialGradient id="centerGlow" cx="50%" cy="45%" r="40%">
-            <stop offset="0%" stopColor={color} stopOpacity="0.8" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
-        {/* --- LUZ 1: Resplandor del Medio (Glow Central) --- */}
-        {isOnline && (
-          <circle
-            cx="50" cy="45" r="30"
-            fill="url(#centerGlow)"
-            className="animate-pulse opacity-50"
-          />
-        )}
-
-        {/* --- ESCUDO ESTARCIDO (HEXAGONAL STENCIL) --- */}
-        <path
-          d="M50 8 L85 22 V55 L50 85 L15 55 V22 L50 8Z"
-          stroke={color}
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeDasharray="18 4"
-          className={isOnline ? "animate-[pulse_3s_ease-in-out_infinite]" : "opacity-60"}
+      <div className="relative w-36 h-36 flex items-center justify-center">
+        {/* Capa de Fondo (Silueta Blanca Original) */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            maskImage: 'url(/logo_white.png)',
+            WebkitMaskImage: 'url(/logo_white.png)',
+            maskSize: 'contain',
+            WebkitMaskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center'
+          }}
         />
 
-        {/* --- EL FARO (SILUETA OFICIAL) --- */}
-        <g className={isOnline ? "" : "opacity-40"}>
-          {/* Cuerpo y Base */}
-          <path
-            d="M50 85 L38 85 L44 42 L56 42 L62 85 Z"
-            fill={color}
-            className="opacity-20"
+        {/* Capa de Animación (Barrido de Color Táctico) */}
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            maskImage: 'url(/logo_white.png)',
+            WebkitMaskImage: 'url(/logo_white.png)',
+            maskSize: 'contain',
+            WebkitMaskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            WebkitMaskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskPosition: 'center'
+          }}
+        >
+          <div
+            className="absolute inset-y-0 w-32 -skew-x-12 opacity-90 blur-sm"
+            style={{
+              background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+              animation: 'tactical-sweep 4s ease-in-out infinite',
+              filter: 'brightness(1.5)'
+            }}
           />
-          {/* Franjas Diagonales de Autor */}
-          <path d="M41.5 70 L58.5 70 L60.5 85 L39.5 85 Z" fill={color} />
-          <path d="M45.5 50 L54.5 50 L56.5 62 L43.5 62 Z" fill={color} />
-
-          {/* Cúpula y Linterna */}
-          <path d="M44 42 L56 42 L53 38 L47 38 Z" fill={color} />
-          <path d="M47 38 L53 38 L53 30 L47 30 Z" fill={color} />
-          <path d="M42 30 L58 30 L50 20 Z" fill={color} />
-          <circle cx="50" cy="18" r="1.5" fill={color} />
-        </g>
-
-        {/* --- LUZ 2: Haz del Faro (Triángulos de Protección) --- */}
-        {isOnline && (
-          <g className="animate-[pulse_1.5s_ease-in-out_infinite]">
-            {/* Haz Principal a la Derecha (Como el Logo) */}
-            <path
-              d="M53 32 L85 24 V40 L53 32 Z"
-              fill={color}
-              className="opacity-60"
-              filter="url(#glow)"
-            />
-            {/* Haz Sutil a la Izquierda (Balance Táctico) */}
-            <path
-              d="M47 32 L15 24 V40 L47 32 Z"
-              fill={color}
-              className="opacity-20"
-            />
-          </g>
-        )}
-      </svg>
-
-      {/* Partículas de Datos (Aura Digital) */}
-      {isOnline && (
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full animate-ping"
-              style={{
-                backgroundColor: color,
-                left: `${Math.random() * 60 + 20}%`,
-                top: `${Math.random() * 60 + 20}%`,
-                animationDelay: `${i * 0.5}s`,
-                opacity: 0.3
-              }}
-            />
-          ))}
         </div>
-      )}
+
+        {/* Resplandor Maestro (Solo Online) */}
+        {isOnline && (
+          <div
+            className="absolute inset-0 blur-2xl opacity-20 animate-pulse pointer-events-none"
+            style={{ backgroundColor: color }}
+          />
+        )}
+      </div>
+
+      {/* Etiquetas de Estado */}
+      <div className="flex flex-col items-center">
+        <span className="text-white font-bebas text-3xl tracking-[0.4em] font-black leading-none drop-shadow-lg">
+          CONSAGRADOS
+        </span>
+        <div className="flex items-center gap-2 mt-2 py-1 px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm">
+          <div className={`w-2 h-2 rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
+          <span className="text-[10px] uppercase font-montserrat font-black tracking-[0.2em]" style={{ color }}>
+            {isOnline ? 'CONECTADO' : 'DESCONECTADO'}
+          </span>
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes tactical-sweep {
+          0% { left: -150%; }
+          30% { left: -150%; }
+          70% { left: 150%; }
+          100% { left: 150%; }
+        }
+      ` }} />
     </div>
   );
 };
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.8.7"; // Logo-accurate Faro & Operation Center v2.1
+  const APP_VERSION = "1.8.9"; // Real Logo & Tactical Sweep v1.8.9
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');

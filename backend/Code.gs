@@ -297,9 +297,9 @@ function doGet(e) {
       }
       
       // Inyectar columnas virtuales en la respuesta
-      const todayStr = Utilities.formatDate(new Date(), "GMT-4", "yyyy-MM-dd");
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      const now = new Date();
+      const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
+      const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
       const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
 
       directoryData[0].push('STREAK_COUNT', 'TASKS_JSON');
@@ -307,9 +307,18 @@ function doGet(e) {
         const agentId = String(directoryData[i][0]);
         const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
         
-        // --- AUTO-RESET VIRTUAL: Si la racha es vieja, mostrar 0 ---
+        // Formatear lastDate por si es un objeto Date
+        let lastDateFormatted = streakInfo.lastDate;
+        if (lastDateFormatted && typeof lastDateFormatted !== 'string') {
+          try {
+            lastDateFormatted = Utilities.formatDate(new Date(lastDateFormatted), "GMT-4", "yyyy-MM-dd");
+          } catch(e) { lastDateFormatted = String(lastDateFormatted); }
+        }
+        
+        // --- AUTO-RESET VIRTUAL: Si la racha es vieja (ni hoy ni ayer), mostrar 0 ---
         let displayStreak = parseInt(streakInfo.streak);
-        if (displayStreak > 0 && streakInfo.lastDate !== todayStr && streakInfo.lastDate !== yesterdayStr) {
+        if (displayStreak > 0 && lastDateFormatted !== todayStr && lastDateFormatted !== yesterdayStr) {
+          // Si la fecha es de hace más de 1 día, la racha se rompió virtualmente
           displayStreak = 0;
         }
 
@@ -2111,7 +2120,14 @@ function updateStreaks(data) {
 
   if (rowIdx !== -1) {
     streakCount = parseInt(values[rowIdx][streakIdx]) || 0;
-    lastDate = String(values[rowIdx][lastDateIdx]);
+    let rawLastDate = values[rowIdx][lastDateIdx];
+    lastDate = String(rawLastDate);
+    if (rawLastDate instanceof Date) {
+      lastDate = Utilities.formatDate(rawLastDate, "GMT-4", "yyyy-MM-dd");
+    } else if (lastDate && lastDate.includes(' ')) {
+      // Intento de parsear si viene como string largo
+      try { lastDate = Utilities.formatDate(new Date(lastDate), "GMT-4", "yyyy-MM-dd"); } catch(e) {}
+    }
     
     // Si hoy completó la tarea y no se había registrado hoy
     if (lastDate !== todayStr) {

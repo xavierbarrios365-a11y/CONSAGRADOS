@@ -6,6 +6,7 @@ import { processAssessmentAI, getDeepTestAnalysis } from '../services/geminiServ
 import { fetchAgentsFromSheets } from '../services/sheetsService';
 import AcademyStudio from './AcademyStudio';
 import TacticalCertificate from './TacticalCertificate';
+import TacticalDocument from './TacticalDocument';
 import { formatDriveUrl } from './DigitalIdCard';
 
 interface AcademyModuleProps {
@@ -541,8 +542,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             <div className="max-w-5xl mx-auto p-6 md:p-10 flex flex-col lg:flex-row gap-10">
                 <div className="flex-1 space-y-8">
                     {activeLesson ? (
-                        <div className="space-y-8 animate-in slide-in-from-bottom-4">
-                            <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl">
+                        <div className="animate-in slide-in-from-bottom-4">
+                            <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl mb-10">
                                 {activeLesson.videoUrl ? (
                                     <>
                                         <iframe
@@ -582,141 +583,153 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                 )}
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <h3 className="text-2xl font-bebas text-white uppercase tracking-wider">{activeLesson.title}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-[#ffb700] font-black uppercase font-bebas">+{activeLesson.xpReward} XP</span>
-                                        {isLessonCompleted(activeLesson.id) && (
-                                            <span className="bg-green-500/10 text-green-500 text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-green-500/20">Completado</span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="text-[11px] md:text-xs text-gray-400 font-bold uppercase leading-relaxed font-montserrat whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
-                            </div>
+                            <TacticalDocument
+                                title={activeLesson.title}
+                                content={activeLesson.content}
+                                xpReward={activeLesson.xpReward}
+                                agentName={allAgents.find(a => a.id === agentId)?.name}
+                                status={isLessonCompleted(activeLesson.id) ? 'COMPLETADO' : (getLessonAttempts(activeLesson.id) >= 2 ? 'FALLIDO' : 'PENDIENTE')}
+                            >
+                                {activeLesson.questions && activeLesson.questions.length > 0 && (
+                                    <div className="space-y-10 py-6">
+                                        {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
+                                            <div className="py-10 text-center space-y-6">
+                                                <div className="w-20 h-20 bg-green-700/10 border-green-700/30 rounded-full flex items-center justify-center mx-auto border-2">
+                                                    <CheckCircle className="text-green-700" size={40} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h4 className="text-xl font-bold text-black uppercase tracking-widest">REGISTRO APROBADO</h4>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                        LOS DATOS DE ESTA EVALUACIÓN YA HAN SIDO ASENTADOS EN EL REGISTRO CENTRAL.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : getLessonAttempts(activeLesson.id) >= 2 && quizState !== 'RESULT' ? (
+                                            <div className="py-10 text-center space-y-6">
+                                                <div className="w-20 h-20 bg-red-700/10 border-red-700/30 rounded-full flex items-center justify-center mx-auto border-2">
+                                                    <AlertCircle className="text-red-700" size={40} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h4 className="text-xl font-bold text-black uppercase tracking-widest">ACCESO DENEGADO</h4>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                        EXCESO DE INTENTOS FALLIDOS. EVALUACIÓN CERRADA POR SEGURIDAD.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : quizState !== 'RESULT' ? (
+                                            <div className="space-y-8">
+                                                <div className="flex items-center justify-between border-b-2 border-black/5 pb-2">
+                                                    <span className="text-[14px] font-black text-black uppercase tracking-widest italic">PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}</span>
+                                                    <div className="text-[9px] font-bold text-gray-400">INTENTOS: {getLessonAttempts(activeLesson.id)}/2</div>
+                                                </div>
 
-                            {activeLesson.questions && activeLesson.questions.length > 0 && (
-                                <div className="bg-[#3A3A3A]/10 border border-[#FFB700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-                                    {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
-                                        <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
-                                            <div className="w-20 h-20 bg-green-500/20 border-green-500/30 rounded-full flex items-center justify-center mx-auto border">
-                                                <CheckCircle className="text-green-500" size={40} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">Aprobado ✅</h4>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
-                                                    Esta unidad ya fue aprobada exitosamente. No es posible repetirla.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : getLessonAttempts(activeLesson.id) >= 2 && quizState !== 'RESULT' ? (
-                                        <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
-                                            <div className="w-20 h-20 bg-red-500/20 border-red-500/30 rounded-full flex items-center justify-center mx-auto border">
-                                                <AlertCircle className="text-red-500" size={40} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">Evaluación Finalizada</h4>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
-                                                    Has agotado tus intentos para esta unidad.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <GraduationCap className="text-[#ffb700]" size={20} />
-                                                    <h4 className="text-sm font-bebas text-white uppercase tracking-widest">Desafío Táctico</h4>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-[8px] text-gray-500 font-bold uppercase">Intentos: {getLessonAttempts(activeLesson.id)}/2</div>
-                                                    {quizState !== 'RESULT' && <span className="text-[10px] text-gray-500 font-bebas">Q {currentQuestionIndex + 1} / {activeLesson.questions.length}</span>}
-                                                </div>
-                                            </div>
+                                                <div className="space-y-6">
+                                                    <p className="text-[16px] font-black leading-tight text-black border-l-4 border-black pl-4">
+                                                        {activeLesson.questions[currentQuestionIndex].question}
+                                                    </p>
 
-                                            {(!isVideoWatched && activeLesson.videoUrl) && quizState !== 'RESULT' ? (
-                                                <div className="py-10 text-center space-y-4">
-                                                    <PlayCircle size={40} className="mx-auto text-[#ffb700] animate-pulse" />
-                                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest font-bebas">Ve el video antes del test</p>
-                                                </div>
-                                            ) : quizState !== 'RESULT' ? (
-                                                <>
-                                                    <p className="text-sm font-bold text-white font-montserrat uppercase leading-relaxed">{activeLesson.questions[currentQuestionIndex].question}</p>
                                                     {activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? (
-                                                        <textarea value={textAnswer} onChange={(e) => setTextAnswer(e.target.value)} placeholder="Tu reporte..." className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-5 text-white text-[11px] font-bold uppercase focus:border-[#ffb700]/50 outline-none transition-all" />
+                                                        <textarea
+                                                            value={textAnswer}
+                                                            onChange={(e) => setTextAnswer(e.target.value)}
+                                                            placeholder="Escriba su reporte aquí..."
+                                                            className="w-full h-48 bg-black/5 border-2 border-black/10 rounded-sm p-5 text-black text-[12px] font-bold uppercase outline-none focus:border-black transition-all"
+                                                        />
                                                     ) : (
-                                                        <div className="grid grid-cols-1 gap-3">
+                                                        <div className="grid grid-cols-1 gap-4">
                                                             {activeLesson.questions[currentQuestionIndex].options.map((option, idx) => (
-                                                                <button key={idx} onClick={() => handleAnswerSelect(option)} className={`p-5 rounded-2xl text-left text-[10px] font-black uppercase tracking-widest transition-all border ${selectedAnswer === option ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-gray-400 border-white/5 hover:border-white/20'} font-bebas`}>{option}</button>
+                                                                <button
+                                                                    key={idx}
+                                                                    onClick={() => handleAnswerSelect(option)}
+                                                                    className={`group flex items-center gap-4 p-5 rounded-sm border-2 text-left transition-all ${selectedAnswer === option
+                                                                            ? 'bg-black text-white border-black'
+                                                                            : 'bg-white text-black border-black/10 hover:border-black/30'
+                                                                        }`}
+                                                                >
+                                                                    <span className={`w-8 h-8 flex items-center justify-center font-black text-xs border-2 ${selectedAnswer === option ? 'border-white/40' : 'border-black/20'}`}>
+                                                                        {String.fromCharCode(65 + idx)}
+                                                                    </span>
+                                                                    <span className="text-[11px] font-bold uppercase tracking-wide">{option}</span>
+                                                                </button>
                                                             ))}
                                                         </div>
                                                     )}
-                                                    <button onClick={handleNextQuestion} disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'} className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 font-bebas">
-                                                        {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : <span>{currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente' : 'Finalizar'}</span>}
+
+                                                    <button
+                                                        onClick={handleNextQuestion}
+                                                        disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'}
+                                                        className="w-full bg-black py-5 shadow-[5px_5px_0px_rgba(0,0,0,0.2)] text-white font-black uppercase text-[12px] tracking-[0.3em] active:translate-y-1 active:shadow-none transition-all disabled:opacity-30 disabled:pointer-events-none"
+                                                    >
+                                                        {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : (currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Reporte')}
                                                     </button>
-                                                </>
-                                            ) : quizResult && (
-                                                <div className="space-y-6 animate-in zoom-in-95">
-                                                    <div className={`p-6 rounded-2xl border flex items-center gap-4 ${quizResult.isCorrect ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-red-500/20 border-red-500/30 text-red-400'}`}>
-                                                        {quizResult.isCorrect ? <Trophy size={48} /> : <AlertCircle size={48} />}
+                                                </div>
+                                            </div>
+                                        ) : quizResult && (
+                                            <div className="space-y-8">
+                                                <div className={`p-8 border-4 border-dashed rounded-sm ${quizResult.isCorrect ? 'border-green-700/50 bg-green-700/5' : 'border-red-700/50 bg-red-700/5'}`}>
+                                                    <div className="flex items-center gap-6 mb-6">
+                                                        {quizResult.isCorrect ? <CheckCircle className="text-green-700" size={60} /> : <AlertCircle className="text-red-700" size={60} />}
                                                         <div>
-                                                            <p className="font-bebas text-2xl uppercase leading-none">{quizResult.title || (quizResult.isCorrect ? '¡Misión Cumplida!' : 'Evaluación Fallida')}</p>
-                                                            <div className="text-[10px] font-bold uppercase mt-1 space-y-2 text-white">
-                                                                {quizResult.content ? (
-                                                                    <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
-                                                                ) : quizResult.profile ? (
-                                                                    <div className="space-y-4">
-                                                                        <p>Perfil: <span className="text-[#ffb700]">{quizResult.profile}</span></p>
-                                                                        <div className="grid grid-cols-4 gap-2">
-                                                                            {Object.entries(discScores).map(([k, v]) => (
-                                                                                <div key={k} className="bg-black/40 p-2 rounded-xl text-center border border-white/5">
-                                                                                    <p className="text-[#ffb700] font-bebas">{k}</p>
-                                                                                    <p className="text-[10px]">{v}</p>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <p>{quizResult.isCorrect ? `Aprobado (${Math.round(quizResult.score)}%)` : `Puntaje: ${Math.round(quizResult.score)}%`}</p>
-                                                                )}
+                                                            <h4 className="text-3xl font-black text-black uppercase tracking-tighter leading-none mb-1">
+                                                                {quizResult.title || (quizResult.isCorrect ? 'APROBADO' : 'FALLIDO')}
+                                                            </h4>
+                                                            <div className="text-[12px] font-bold uppercase text-gray-500">
+                                                                PUNTAJE: {Math.round(quizResult.score)}% | RECOMPENSA: +{quizResult.xpAwarded} XP
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="mt-8 space-y-4 pt-6 border-t border-white/5">
-                                                        <h5 className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.2em] font-bebas">Resumen Táctico:</h5>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                            {userAnswers.map((ua, i) => (
-                                                                <div key={i} className="bg-black/20 border border-white/5 p-4 rounded-xl space-y-1">
-                                                                    <p className="text-[8px] text-gray-500 font-bold uppercase truncate">{i + 1}. {ua.question}</p>
-                                                                    <p className="text-[9px] text-white font-black uppercase font-bebas tracking-wide">R: {ua.answer}</p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                    <div className="text-[12px] font-bold uppercase leading-relaxed text-gray-800 bg-white/50 p-4 border border-black/5 rounded-sm">
+                                                        {quizResult.content ? (
+                                                            <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
+                                                        ) : (
+                                                            <p>{quizResult.isCorrect ? 'SE HAN VALIDADOS SUS APTITUDES PARA ESTA UNIDAD.' : 'SE REQUIERE REVISIÓN ADICIONAL DE LOS CONCEPTOS OPERATIVOS.'}</p>
+                                                        )}
                                                     </div>
-
-                                                    {userRole === UserRole.DIRECTOR && (
-                                                        <div className="space-y-4">
-                                                            {!deepAnalysis ? (
-                                                                <button onClick={handleDeepAnalysis} disabled={isAnalyzingDeeply} className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-[#ffb700]/10 to-transparent border border-[#ffb700]/30 text-[#ffb700] font-black uppercase text-[10px] tracking-widest">
-                                                                    {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} />}
-                                                                    Analizar con IA
-                                                                </button>
-                                                            ) : (
-                                                                <div className="p-6 bg-[#001f3f] border border-[#ffb700]/30 rounded-3xl space-y-4">
-                                                                    <div className="flex items-center gap-2 text-[#ffb700] text-[10px] font-black uppercase tracking-widest"><Sparkles size={16} /> Reporte IA</div>
-                                                                    <div className="text-[11px] text-gray-300 font-bold uppercase leading-relaxed font-montserrat prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
                                                 </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
+
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center gap-2 border-b-2 border-black/10 pb-1">
+                                                        <Info size={14} />
+                                                        <span className="text-[10px] font-black uppercase">DESGLOSE DE RESPUESTAS</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {userAnswers.map((ua, i) => (
+                                                            <div key={i} className="bg-black/5 border border-black/10 p-4 rounded-sm space-y-1">
+                                                                <p className="text-[10px] text-gray-500 font-bold uppercase leading-tight line-clamp-1">{i + 1}. {ua.question}</p>
+                                                                <p className="text-[11px] text-black font-black uppercase">R: {ua.answer}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {userRole === UserRole.DIRECTOR && (
+                                                    <div className="space-y-4 pt-6">
+                                                        {!deepAnalysis ? (
+                                                            <button
+                                                                onClick={handleDeepAnalysis}
+                                                                disabled={isAnalyzingDeeply}
+                                                                className="w-full flex items-center justify-center gap-3 py-4 bg-white border-2 border-black text-black font-black uppercase text-[11px] tracking-widest hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"
+                                                            >
+                                                                {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} />}
+                                                                AUDITORÍA DE INTELIGENCIA (IA)
+                                                            </button>
+                                                        ) : (
+                                                            <div className="p-8 bg-black text-white rounded-sm space-y-6 animate-in slide-in-from-bottom-2">
+                                                                <div className="flex items-center gap-3 text-[#ffb700] border-b border-white/20 pb-2">
+                                                                    <Sparkles size={20} />
+                                                                    <h5 className="text-xl font-black uppercase italic tracking-tighter">ANÁLISIS PROFUNDO IA</h5>
+                                                                </div>
+                                                                <div className="text-[12px] font-bold uppercase leading-relaxed prose prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </TacticalDocument>
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20 bg-white/5 rounded-[3rem] border border-white/5">

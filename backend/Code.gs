@@ -68,8 +68,9 @@ function sendTelegramNotification(message) {
 
 /**
  * @description Envía una notificación push vía Firebase Cloud Messaging (FCM v1).
+ * Puede enviarse a un tema global o a un token específico (privado).
  */
-function sendPushNotification(title, message) {
+function sendPushNotification(title, message, targetToken) {
   const CONFIG = getGlobalConfig();
   if (!CONFIG.SERVICE_ACCOUNT || !CONFIG.SERVICE_ACCOUNT.private_key) {
     Logger.log("Service Account no configurada. Saltando envío push.");
@@ -83,7 +84,6 @@ function sendPushNotification(title, message) {
     // El payload v1 es más estructurado
     const payload = {
       message: {
-        topic: "all_agents",
         notification: {
           title: `📢 ${title.toUpperCase()}`,
           body: message
@@ -96,6 +96,13 @@ function sendPushNotification(title, message) {
         }
       }
     };
+
+    // Si hay token, enviamos directo al agente. Si no, al topic global.
+    if (targetToken) {
+      payload.message.token = targetToken;
+    } else {
+      payload.message.topic = "all_agents";
+    }
 
     const options = {
       method: "post",
@@ -112,6 +119,30 @@ function sendPushNotification(title, message) {
   } catch (error) {
     Logger.log(`Error al enviar Push via FCM v1: ${error.message}`);
   }
+}
+
+/**
+ * @description Recupera el token FCM de un agente desde el directorio.
+ */
+function getAgentFcmToken(agentId) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toUpperCase());
+  const idColIdx = headers.indexOf('ID');
+  const tokenColIdx = headers.indexOf('FCM_TOKEN');
+
+  if (idColIdx === -1 || tokenColIdx === -1) return null;
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idColIdx]).trim() === String(agentId).trim()) {
+      return data[i][tokenColIdx] || null;
+    }
+  }
+  return null;
 }
 
 /**
@@ -487,8 +518,14 @@ function registerIdScan(payload) {
      if (leadCol > 0) {
        const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
        directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
-     }
-   }
+        
+        // Notificación de XP por asistencia
+        const fcmToken = getAgentFcmToken(payload.scannedId);
+        if (fcmToken) {
+          sendPushNotification("🛡️ ASISTENCIA REGISTRADA", `¡Buen despliegue, Agente! Has ganado +10 XP por tu asistencia de hoy.`, fcmToken);
+        }
+      }
+    }
    
    const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}`;
    sendTelegramNotification(telegramMessage);
@@ -609,6 +646,12 @@ function applyAbsencePenalties() {
         directorySheet.getRange(i + 1, xpColIdx + 1).setValue(newXp);
         if (leadColIdx !== -1) directorySheet.getRange(i + 1, leadColIdx + 1).setValue(newLead);
         
+        // Notificación de penalización
+        const fcmToken = getAgentFcmToken(agentId);
+        if (fcmToken) {
+          sendPushNotification("⚠️ PENALIZACIÓN TÁCTICA", `Inasistencia detectada. Se han deducido -${penalty} XP por falta de despliegue semanal.`, fcmToken);
+        }
+
         totalDeductions++;
       }
     }
@@ -721,17 +764,21 @@ function updateAgentPoints(data) {
     const currentXp = parseInt(sheet.getRange(rowIdx, xpColIdx).getValue()) || 0;
     sheet.getRange(rowIdx, xpColIdx).setValue(currentXp + data.points);
 
-    // Notificación de XP si es un cambio positivo
-    if (data.points > 0) {
-      // Evitar notificaciones duplicadas en un corto periodo (opcional, pero buena práctica)
-      const messages = [
-        "¡Excelente trabajo, Agente! Has ganado méritos.",
-        "Tu fe y disciplina están rindiendo frutos. +XP",
-        "Sigue así, el Command Center reconoce tu esfuerzo.",
-        "Has subido en el rango de influencia. ¡Felicidades!"
-      ];
-      const randomMsg = messages[Math.floor(Math.random() * messages.length)];
-      sendPushNotification("⭐ MÉRITOS OBTENIDOS", `${randomMsg} (+${data.points} XP)`);
+    // Notificación de XP si es un cambio positivo o negativo
+    const fcmToken = getAgentFcmToken(data.agentId);
+    if (fcmToken) {
+      if (data.points > 0) {
+        const messages = [
+          "¡Excelente trabajo, Agente! Has ganado méritos.",
+          "Tu fe y disciplina están rindiendo frutos. +XP",
+          "Sigue así, el Command Center reconoce tu esfuerzo.",
+          "Has subido en el rango de influencia. ¡Felicidades!"
+        ];
+        const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+        sendPushNotification("⭐ MÉRITOS OBTENIDOS", `${randomMsg} (+${data.points} XP)`, fcmToken);
+      } else if (data.points < 0) {
+        sendPushNotification("🔻 AJUSTE DE XP", `Se han deducido ${Math.abs(data.points)} XP por orden de mando superior.`, fcmToken);
+      }
     }
   }
 
@@ -768,6 +815,11 @@ function deductPercentagePoints(data) {
       sheet.getRange(rowIdx, col).setValue(newValue);
     }
   });
+
+  const fcmToken = getAgentFcmToken(data.agentId);
+  if (fcmToken) {
+    sendPushNotification("🚨 PENALIZACIÓN EXTRAORDINARIA", `Se ha aplicado una reducción del ${data.percentage}% en todos tus méritos por infracción de protocolo.`, fcmToken);
+  }
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
@@ -1465,6 +1517,12 @@ function submitQuizResult(data) {
       if (leadershipColIdx > 0) {
         const currentLead = parseInt(directorySheet.getRange(rowIdx + 1, leadershipColIdx).getValue()) || 0;
         directorySheet.getRange(rowIdx + 1, leadershipColIdx).setValue(currentLead + xpReward);
+      }
+
+      // Notificación Push
+      const fcmToken = getAgentFcmToken(data.agentId);
+      if (fcmToken) {
+        sendPushNotification("🎓 LECCIÓN SUPERADA", `Has aprobado "${lesson[3]}" con éxito. Recompensa: +${xpReward} XP.`, fcmToken);
       }
     }
   }
@@ -2179,6 +2237,12 @@ function confirmEventAttendance(data) {
     if (agentRowIdx !== -1) {
       const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
       directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
+
+      // Notificación de XP por evento
+      const fcmToken = getAgentFcmToken(data.agentId);
+      if (fcmToken) {
+        sendPushNotification("📅 MISIÓN CUMPLIDA", `Asistencia al evento "${data.eventTitle}" registrada. Recompensa: +10 XP.`, fcmToken);
+      }
     }
   }
 

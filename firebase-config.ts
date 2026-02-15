@@ -8,12 +8,13 @@ import { getRemoteConfig } from "firebase/remote-config";
 import { getAnalytics, logEvent } from "firebase/analytics";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyCLHvs-M0WVnWwYSJ2tYVfhs6un9QzdQiA",
+    apiKey: "AIzaSyCEHve-MQVlm3wyESB2tYVfhbf6n9Q6dQA",
     authDomain: "consagrados-c2d78.firebaseapp.com",
     projectId: "consagrados-c2d78",
+    storageBucket: "consagrados-c2d78.firebasestorage.app",
     messagingSenderId: "18154361983",
-    appId: "1:18154361983:web:277d7541346229b9cdb48a",
-    measurementId: "G-G4JMGL7HLL"
+    appId: "1:18154361983:web:227d7541346229096cdb4a",
+    measurementId: "G-S4JW8LTFLE"
 };
 
 // Inicializar Firebase

@@ -79,7 +79,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.7.4"; // Session Hardening & Atomic Purge
+  const APP_VERSION = "1.7.5"; // Force Cache Purge & Logic Fixes
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -1116,59 +1116,7 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              <div className="absolute inset-x-0 bottom-[160px] max-h-48 overflow-y-auto px-6 space-y-2 no-scrollbar">
-                {(() => {
-                  const riskAgents = agents.filter(a => {
-                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
-                    const parts = a.lastAttendance.split('/');
-                    const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
-                    if (isNaN(lastDate.getTime())) return false;
-                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                    return diffDays >= 14;
-                  }).sort((a, b) => {
-                    const dateA = new Date(a.lastAttendance || 0).getTime();
-                    const dateB = new Date(b.lastAttendance || 0).getTime();
-                    return dateA - dateB;
-                  });
 
-                  if (riskAgents.length === 0) return null;
-
-                  return (
-                    <div className="bg-[#001833]/90 backdrop-blur-md border border-[#ffb700]/20 rounded-3xl p-4 shadow-2xl space-y-3">
-                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <div className="flex items-center gap-2">
-                          <Activity size={14} className="text-[#ffb700]" />
-                          <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-widest">Radar de Inteligencia (En Riesgo)</span>
-                        </div>
-                        <span className="text-[8px] text-white/40 font-bold">{riskAgents.length} Objetivos</span>
-                      </div>
-                      <div className="space-y-2">
-                        {riskAgents.map(a => {
-                          const parts = a.lastAttendance!.split('/');
-                          const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance!);
-                          const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                          const isDanger = diffDays >= 21;
-
-                          return (
-                            <div key={a.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5">
-                              <div className="flex items-center gap-3">
-                                <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-lg object-cover grayscale" />
-                                <div>
-                                  <p className="text-[9px] font-black text-white uppercase leading-none">{a.name}</p>
-                                  <p className="text-[7px] text-white/30 font-bold mt-1">HACE {diffDays} DÍAS</p>
-                                </div>
-                              </div>
-                              <div className={`px-2 py-1 rounded-md border ${isDanger ? 'bg-red-500/20 border-red-500/50 text-red-500 animate-pulse' : 'bg-orange-500/20 border-orange-500/50 text-orange-500'} text-[7px] font-black uppercase`}>
-                                {isDanger ? '⚠️ PELIGRO' : '🛡️ ALERTA'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
             </div>
           </div>
         );
@@ -1316,17 +1264,39 @@ const App: React.FC = () => {
                 </div>
                 {(() => {
                   const riskAgents = agents.filter(a => {
-                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
-                    const parts = a.lastAttendance.split('/');
-                    const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
-                    if (isNaN(lastDate.getTime())) return false;
-                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                    return diffDays >= 14;
+                    // Solo estudiantes con bajo XP que realmente no han asistido
+                    const isCandidate = (a.userRole === UserRole.STUDENT || !a.userRole) && (a.xp < 300);
+                    if (!isCandidate) return false;
+
+                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return true; // Nunca han asistido
+
+                    try {
+                      const parts = a.lastAttendance.split('/');
+                      const lastDate = parts.length === 3
+                        ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
+                        : new Date(a.lastAttendance);
+
+                      if (isNaN(lastDate.getTime())) return true;
+
+                      const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                      return diffDays >= 14;
+                    } catch (e) {
+                      return true;
+                    }
                   }).sort((a, b) => {
-                    const partsA = a.lastAttendance!.split('/');
-                    const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0])).getTime();
-                    const partsB = b.lastAttendance!.split('/');
-                    const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0])).getTime();
+                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return -1;
+                    if (!b.lastAttendance || b.lastAttendance === 'N/A') return 1;
+
+                    const partsA = a.lastAttendance.split('/');
+                    const dateA = partsA.length === 3
+                      ? new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0])).getTime()
+                      : new Date(a.lastAttendance).getTime();
+
+                    const partsB = b.lastAttendance.split('/');
+                    const dateB = partsB.length === 3
+                      ? new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0])).getTime()
+                      : new Date(b.lastAttendance).getTime();
+
                     return dateA - dateB;
                   });
 
@@ -1411,14 +1381,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* BOTÓN FLOTANTE PARA ESCANEAR */}
-            <button
-              onClick={() => setView(AppView.SCANNER)}
-              className="fixed bottom-24 right-6 p-5 bg-blue-600 text-white rounded-[2rem] shadow-[0_15px_30px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition-all active:scale-95 z-[45] flex items-center gap-3 border border-white/20 animate-in slide-in-from-bottom-6 group"
-            >
-              <QrCode size={24} className="group-hover:rotate-12 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Activar Escáner</span>
-            </button>
+
           </div>
         );
       case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;

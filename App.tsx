@@ -79,7 +79,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.7.3"; // Emergency Audit & Schema Fix
+  const APP_VERSION = "1.7.4"; // Session Hardening & Atomic Purge
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -596,7 +596,7 @@ const App: React.FC = () => {
           const updatedSelf = sheetAgents.find(a => String(a.id).toUpperCase() === String(currentUser.id).toUpperCase());
           if (updatedSelf) {
             setCurrentUser(updatedSelf);
-            if (localStorage.getItem('consagrados_agent')) localStorage.setItem('consagrados_agent', JSON.stringify(updatedSelf));
+            sessionStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
           }
         }
       }
@@ -752,7 +752,7 @@ const App: React.FC = () => {
       weeklyTasks: updatedTasks
     };
     setCurrentUser(updatedUser);
-    localStorage.setItem('consagrados_agent', JSON.stringify(updatedUser));
+    sessionStorage.setItem('consagrados_session', JSON.stringify(updatedUser));
     localStorage.setItem('verse_completed_date', today);
 
     try {
@@ -765,7 +765,7 @@ const App: React.FC = () => {
           streakCount: res.streak
         };
         setCurrentUser(serverUser);
-        localStorage.setItem('consagrados_agent', JSON.stringify(serverUser));
+        sessionStorage.setItem('consagrados_session', JSON.stringify(serverUser));
       }
     } catch (e) {
       console.error("Error sincronizando racha con servidor:", e);

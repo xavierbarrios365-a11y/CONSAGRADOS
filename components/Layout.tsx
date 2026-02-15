@@ -28,6 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.ENROLLMENT, icon: <UserPlus size={20} />, label: 'RECLUTAR', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.CONTENT, icon: <BookOpen size={20} />, label: 'RECURSOS', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Cuadro de Honor', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Mi Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];
 

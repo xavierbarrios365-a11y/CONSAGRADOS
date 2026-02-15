@@ -1664,11 +1664,12 @@ function getAcademyData(data) {
     } else {
       // Retornar todo para auditoría (solo accesible por directores en el frontend)
       progress = progressRaw.map(row => ({
-        agentId: row[0],
+        agentId: String(row[0]).trim(),
         lessonId: row[1],
         status: row[2],
         score: row[3],
-        date: row[4]
+        date: row[4],
+        attempts: row[5] || 0
       }));
     }
   }
@@ -1706,7 +1707,7 @@ function submitQuizResult(data) {
     if (progressData[existingProgressIdx][2] === 'COMPLETADO') {
       throw new Error("Esta lección ya ha sido superada.");
     }
-    if (attempts >= 1) { // Límite de 1 intento
+    if (attempts >= 2) { // Límite de 2 intentos
       throw new Error("Has finalizado esta evaluación. Contacta a un Director si necesitas un re-intento.");
     }
   }
@@ -1898,7 +1899,7 @@ function resetStudentAttempts(data) {
   
   // Eliminamos de abajo hacia arriba para evitar problemas con los índices al borrar filas
   for (let i = values.length - 1; i >= 1; i--) {
-    if (String(values[i][0]) === String(data.agentId)) {
+    if (String(values[i][0]).trim() === String(data.agentId).trim()) {
       progressSheet.deleteRow(i + 1);
       deletedCount++;
     }

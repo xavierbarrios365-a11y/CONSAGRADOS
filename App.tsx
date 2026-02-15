@@ -13,6 +13,7 @@ import DailyVerse from './components/DailyVerse';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import NotificationInbox from './components/NotificationInbox';
 import TacticalChat from './components/TacticalChat';
+import TacticalRanking from './components/TacticalRanking';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -239,7 +240,7 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
 };
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.9.0"; // Tactical Dossier & Radar Expediente v1.9.0
+  const APP_VERSION = "1.9.1"; // Academia & Ranking Correction v1.9.1
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -1577,6 +1578,7 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;
+      case AppView.RANKING: return <TacticalRanking agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT: return <ContentModule userRole={effectiveRole} />;
       case AppView.PROFILE:
         return (

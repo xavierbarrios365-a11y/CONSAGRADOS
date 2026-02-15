@@ -144,13 +144,13 @@
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
   <script>
-    console.log("🚀 SISTEMA CONSAGRADOS V1.8.0 LOADED");
+    console.log("🚀 SISTEMA CONSAGRADOS V1.9.4 LOADED");
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         // Registro Unificado de Service Worker (Firebase + PWA)
-        navigator.serviceWorker.register('./firebase-messaging-sw.js?v=1.8.0')
+        navigator.serviceWorker.register('./firebase-messaging-sw.js?v=1.9.4')
           .then(reg => {
-            console.log('Operational SW Registered v1.8.0', reg);
+            console.log('Operational SW Registered v1.9.4', reg);
             if (reg.waiting) {
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }

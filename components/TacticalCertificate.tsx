@@ -1,5 +1,6 @@
-import React from 'react';
-import { Shield, CheckCircle } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Shield, CheckCircle, Download, X, Loader2 } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { formatDriveUrl } from './DigitalIdCard';
 
 interface TacticalCertificateProps {
@@ -12,64 +13,83 @@ interface TacticalCertificateProps {
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 
 const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, courseTitle, date, onClose }) => {
+    const certRef = useRef<HTMLDivElement>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const formattedDate = (() => {
         const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
         const now = new Date();
+        const getToday = () => `${now.getDate()} / ${months[now.getMonth()]} / ${now.getFullYear()}`;
 
         try {
-            if (!date) return `${now.getDate()} / ${months[now.getMonth()]} / ${now.getFullYear()}`;
+            if (!date || typeof date !== 'string' || date.includes('NaN') || date.includes('undefined')) return getToday();
 
-            // Normalize separators and try splitting
             const cleanDate = date.replace(/[^0-9]/g, '/');
             const parts = cleanDate.split('/').filter(p => p.length > 0);
 
             if (parts.length >= 3) {
-                // Try D/M/Y (Spanish/Venezuelan format)
-                let d = parseInt(parts[0]);
-                let m = parseInt(parts[1]) - 1;
-                let y = parseInt(parts[2]);
-
-                // Basic validation
+                const d = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1;
+                const y = parseInt(parts[2]);
                 if (!isNaN(d) && !isNaN(m) && !isNaN(y) && m >= 0 && m < 12) {
                     return `${d} / ${months[m]} / ${y}`;
                 }
             }
 
-            // Try standard Date parsing as second option
             const dObj = new Date(date);
             if (!isNaN(dObj.getTime())) {
                 return `${dObj.getDate()} / ${months[dObj.getMonth()]} / ${dObj.getFullYear()}`;
             }
-        } catch (e) {
-            console.error("Error parsing date:", e);
-        }
+        } catch { /* fallback */ }
 
-        // Final fallback
-        return `${now.getDate()} / ${months[now.getMonth()]} / ${now.getFullYear()}`;
+        return getToday();
     })();
+
+    const handleDownload = async () => {
+        if (!certRef.current) return;
+        setIsDownloading(true);
+        try {
+            const dataUrl = await toPng(certRef.current, {
+                cacheBust: true,
+                pixelRatio: 3, // Alta resolución
+                backgroundColor: '#001F3F',
+            });
+
+            const link = document.createElement('a');
+            link.download = `Certificado_${agentName.replace(/\s+/g, '_')}.png`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error('Error generating certificate image:', err);
+            alert('Error al generar la imagen. Intenta de nuevo.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in overflow-y-auto">
             {/* Controls */}
-            <div className="fixed top-6 right-6 flex gap-3 z-[110] print:hidden">
+            <div className="fixed top-6 right-6 flex gap-3 z-[110]">
                 <button
-                    onClick={() => window.print()}
-                    className="px-6 py-3 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[10px] tracking-widest rounded hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,183,0,0.3)]"
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="flex items-center gap-2 px-6 py-3 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[10px] tracking-widest rounded hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,183,0,0.3)] disabled:opacity-50"
                 >
-                    Guardar / Imprimir
+                    {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                    {isDownloading ? 'Generando...' : 'Descargar Certificado'}
                 </button>
                 <button
                     onClick={onClose}
-                    className="px-6 py-3 bg-white/10 text-white font-black uppercase text-[10px] tracking-widest rounded border border-white/10 hover:bg-white/20 transition-all"
+                    className="flex items-center gap-2 px-6 py-3 bg-white/10 text-white font-black uppercase text-[10px] tracking-widest rounded border border-white/10 hover:bg-white/20 transition-all"
                 >
-                    Cerrar
+                    <X size={14} /> Cerrar
                 </button>
             </div>
 
-            {/* Certificate Canvas */}
+            {/* Certificate Canvas — This is what gets captured */}
             <div
-                id="certificate-content"
+                ref={certRef}
                 style={{
                     width: '842px',
                     height: '595px',
@@ -117,6 +137,7 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
+                    boxSizing: 'border-box',
                 }}>
                     {/* Logo Area */}
                     <div style={{
@@ -129,6 +150,7 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                         <img
                             src={formatDriveUrl(OFFICIAL_LOGO)}
                             alt="Logo Consagrados"
+                            crossOrigin="anonymous"
                             style={{ width: '40px', height: '40px', objectFit: 'contain' }}
                         />
                         <span style={{
@@ -165,7 +187,7 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                         Certificado de Grado
                     </h1>
 
-                    {/* Body — Flex grow to center vertically */}
+                    {/* Body */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                         <p style={{
                             fontWeight: 300,
@@ -297,40 +319,10 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                 </div>
             </div>
 
-            {/* Print Styles */}
+            {/* Font import */}
             <style dangerouslySetInnerHTML={{
-                __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto:wght@300;700&display=swap');
-                @media print {
-                    @page {
-                        size: A4 landscape;
-                        margin: 0;
-                    }
-                    /* Ocultar TODO menos el certificado */
-                    body * {
-                        visibility: hidden !important;
-                    }
-                    #certificate-content, #certificate-content * {
-                        visibility: visible !important;
-                    }
-                    #certificate-content {
-                        position: fixed !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        margin: 0 !important;
-                        padding: 40px !important;
-                        border-width: 15px !important;
-                        box-shadow: none !important;
-                        background-color: #001F3F !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                        z-index: 9999 !important;
-                    }
-                    .print\\:hidden { display: none !important; }
-                }
-            `}} />
+                __html: `@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto:wght@300;700&display=swap');`
+            }} />
         </div>
     );
 };

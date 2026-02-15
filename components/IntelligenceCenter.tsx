@@ -346,26 +346,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
             </div>
 
-            {/* ACTIVACIÓN DE NOTIFICACIONES PARA TODOS LOS ROLES (Si no tiene permiso) */}
-            {typeof Notification !== 'undefined' && Notification.permission !== 'granted' && (
-              <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-500/20 rounded-lg">
-                    <Bell className="text-indigo-400" size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-white font-black uppercase tracking-widest font-bebas">SISTEMA DE ALERTAS TÁCTICAS</p>
-                    <p className="text-[8px] text-indigo-400 font-bold uppercase tracking-widest">Las notificaciones push están desactivadas en este dispositivo.</p>
-                  </div>
-                </div>
-                <button
-                  onClick={onActivateNotifications}
-                  className="w-full md:w-auto px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-indigo-500 transition-all shadow-lg active:scale-95 font-bebas"
-                >
-                  🔔 ACTIVAR ALERTAS PUSH
-                </button>
-              </div>
-            )}
 
             {/* AVISO TÁCTICO (BROADCAST) */}
             <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
@@ -463,6 +443,28 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ACTIVACIÓN DE NOTIFICACIONES PARA TODOS LOS ROLES (Si no tiene permiso) - GLOBAL */}
+        {typeof Notification !== 'undefined' && Notification.permission !== 'granted' && (
+          <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 animate-pulse backdrop-blur-sm mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-indigo-500/20 rounded-2xl shadow-lg border border-indigo-500/30">
+                <Bell className="text-indigo-400" size={24} />
+              </div>
+              <div className="text-left">
+                <h3 className="text-white font-black text-sm uppercase tracking-widest leading-none mb-1 font-bebas">Canal de Transmisión Desconectado</h3>
+                <p className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest font-montserrat">Activa las alertas push para recibir órdenes y notificaciones críticas.</p>
+              </div>
+            </div>
+            <button
+              onClick={onActivateNotifications}
+              className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-900/50 active:scale-95 font-bebas flex items-center justify-center gap-3"
+            >
+              <Bell size={18} />
+              Activar Alertas Push
+            </button>
           </div>
         )}
 

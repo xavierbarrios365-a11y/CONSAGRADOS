@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { Agent, UserRole } from '../types';
-import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, Check, CheckCheck, Loader2, Download, MoreVertical, Trash2 } from 'lucide-react';
+import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, Check, CheckCheck, Loader2, Download, MoreVertical, Trash2, Pencil, Smile } from 'lucide-react';
 import { uploadFile, uploadImage } from '../services/sheetsService';
 import { compressImage } from '../services/storageUtils';
+
+// Emoji database for reactions
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '💯'];
+const EMOJI_CATEGORIES: { [key: string]: string[] } = {
+    'Frecuentes': ['😀', '😂', '❤️', '👍', '🙏', '🔥', '💯', '👏', '😍', '🥳', '😎', '🤩'],
+    'Caras': ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥'],
+    'Gestos': ['👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '👌', '🤌', '🤏', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤙', '💪'],
+    'Corazones': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💖', '💗', '💓', '💞', '💕', '💟'],
+    'Objetos': ['🔥', '💯', '⭐', '🌟', '✨', '💫', '🎉', '🎊', '🏆', '🥇', '🎯', '📖', '📚', '✝️', '⛪', '🕊️', '🙌', '👑', '💎', '🛡️']
+};
 
 interface Message {
     id: string;
@@ -15,6 +25,8 @@ interface Message {
     type?: 'text' | 'image' | 'video' | 'document';
     fileUrl?: string;
     fileName?: string;
+    reactions?: { [emoji: string]: string[] }; // emoji -> array of user IDs
+    editedAt?: Timestamp;
 }
 
 interface Props {
@@ -27,8 +39,17 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isUploading, setIsUploading] = useState(false);
+    const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [editingMsg, setEditingMsg] = useState<string | null>(null);
+    const [editText, setEditText] = useState('');
+    const [showReactions, setShowReactions] = useState<string | null>(null);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [emojiCategory, setEmojiCategory] = useState('Frecuentes');
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const editInputRef = useRef<HTMLInputElement>(null);
+
+    const canModerate = currentUser.userRole === UserRole.DIRECTOR || currentUser.userRole === UserRole.LEADER;
 
     useEffect(() => {
         const q = query(
@@ -39,8 +60,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const msgs: Message[] = [];
-            snapshot.forEach((doc) => {
-                msgs.push({ id: doc.id, ...doc.data() } as Message);
+            snapshot.forEach((d) => {
+                msgs.push({ id: d.id, ...d.data() } as Message);
             });
             setMessages(msgs);
             setTimeout(scrollToBottom, 100);
@@ -48,6 +69,12 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
         return () => unsubscribe();
     }, []);
+
+    useEffect(() => {
+        if (editingMsg && editInputRef.current) {
+            editInputRef.current.focus();
+        }
+    }, [editingMsg]);
 
     const scrollToBottom = useCallback(() => {
         if (scrollRef.current) {
@@ -79,10 +106,60 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             }
 
             setNewMessage('');
+            setShowEmojiPicker(false);
             await addDoc(collection(db, 'messages'), msgData);
         } catch (e) {
             console.error("❌ ERROR EN TRANSMISIÓN:", e);
             alert("FALLO EN ENCRIPTACIÓN DE MENSAJE");
+        }
+    };
+
+    const handleEditMessage = async (msgId: string) => {
+        if (!editText.trim()) return;
+        try {
+            await updateDoc(doc(db, 'messages', msgId), {
+                text: editText.trim(),
+                editedAt: serverTimestamp()
+            });
+            setEditingMsg(null);
+            setEditText('');
+        } catch (err) {
+            console.error("Error editando mensaje:", err);
+            alert("Error al editar mensaje");
+        }
+    };
+
+    const handleDeleteMessage = async (msgId: string) => {
+        if (!window.confirm("¿Eliminar este mensaje?")) return;
+        try {
+            await deleteDoc(doc(db, 'messages', msgId));
+        } catch (err) {
+            console.error("Error eliminando mensaje:", err);
+            alert("Error al eliminar mensaje");
+        }
+    };
+
+    const handleReaction = async (msgId: string, emoji: string) => {
+        const msg = messages.find(m => m.id === msgId);
+        if (!msg) return;
+
+        try {
+            const reactions = { ...(msg.reactions || {}) };
+            const userList = reactions[emoji] || [];
+
+            if (userList.includes(currentUser.id)) {
+                // Remove reaction
+                reactions[emoji] = userList.filter(id => id !== currentUser.id);
+                if (reactions[emoji].length === 0) delete reactions[emoji];
+            } else {
+                // Add reaction
+                reactions[emoji] = [...userList, currentUser.id];
+            }
+
+            await updateDoc(doc(db, 'messages', msgId), { reactions });
+            setShowReactions(null);
+        } catch (err) {
+            console.error("Error con reacción:", err);
         }
     };
 
@@ -102,7 +179,6 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                     await handleSendMessage(undefined, { url: res.url, type: 'image', name: file.name });
                 }
             } else if (fileType.startsWith('video/')) {
-                // Para videos simplemente subimos sin comprimir (o el backend maneja límites)
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const base64 = (event.target?.result as string).split(',')[1];
@@ -149,9 +225,14 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         return agent?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent?.name || 'A')}&background=001f3f&color=ffb700&bold=true`;
     };
 
+    const insertEmoji = (emoji: string) => {
+        setNewMessage(prev => prev + emoji);
+        setShowEmojiPicker(false);
+    };
+
     return (
         <div className="fixed bottom-0 right-0 w-full md:bottom-4 md:right-4 md:w-[400px] h-[100dvh] md:h-[600px] bg-[#000c19] border-l md:border border-white/10 md:rounded-[2.5rem] shadow-2xl flex flex-col z-[60] overflow-hidden animate-in slide-in-from-bottom-10 duration-500 ease-out">
-            {/* Header: WhatsApp Style with Avatars */}
+            {/* Header: WhatsApp Style with Official Logo */}
             <div className="p-4 bg-[#001f3f] flex items-center justify-between text-white border-b border-white/5 relative z-10 shadow-lg">
                 <div className="flex items-center gap-3">
                     <div className="relative">
@@ -180,11 +261,13 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                     backgroundImage: 'radial-gradient(#ffffff05 1px, transparent 1px)',
                     backgroundSize: '20px 20px'
                 }}
+                onClick={() => { setActiveMenu(null); setShowReactions(null); }}
             >
                 {messages.map((msg, idx) => {
                     const isMe = msg.senderId === currentUser.id;
                     const showDate = idx === 0 || formatMessageDate(msg.timestamp) !== formatMessageDate(messages[idx - 1].timestamp);
                     const showAvatar = !isMe && (idx === messages.length - 1 || messages[idx + 1].senderId !== msg.senderId);
+                    const isOwnerOrMod = isMe || canModerate;
 
                     return (
                         <React.Fragment key={msg.id}>
@@ -204,9 +287,14 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                 )}
 
                                 <div className={`max-w-[80%] flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
-                                    <div className={`relative p-3 rounded-2xl shadow-sm transition-all duration-300 ${isMe
-                                        ? 'bg-blue-600 text-white rounded-tr-none hover:bg-blue-500'
-                                        : 'bg-white/5 text-slate-200 border border-white/10 rounded-tl-none hover:bg-white/10'}`}>
+                                    {/* Message Bubble */}
+                                    <div
+                                        className={`relative p-3 rounded-2xl shadow-sm transition-all duration-300 ${isMe
+                                            ? 'bg-blue-600 text-white rounded-tr-none hover:bg-blue-500'
+                                            : 'bg-white/5 text-slate-200 border border-white/10 rounded-tl-none hover:bg-white/10'}`}
+                                        onDoubleClick={(e) => { e.stopPropagation(); setShowReactions(showReactions === msg.id ? null : msg.id); }}
+                                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); if (isOwnerOrMod) setActiveMenu(activeMenu === msg.id ? null : msg.id); }}
+                                    >
 
                                         {!isMe && (
                                             <p className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter mb-1.5 truncate max-w-full">
@@ -241,15 +329,105 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                             </div>
                                         )}
 
-                                        <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap break-words">{msg.text}</p>
+                                        {/* Edit Mode or Normal Text */}
+                                        {editingMsg === msg.id ? (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    ref={editInputRef}
+                                                    type="text"
+                                                    value={editText}
+                                                    onChange={(e) => setEditText(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleEditMessage(msg.id);
+                                                        if (e.key === 'Escape') { setEditingMsg(null); setEditText(''); }
+                                                    }}
+                                                    className="flex-1 bg-black/30 border border-white/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-[#ffb700]"
+                                                />
+                                                <button onClick={() => handleEditMessage(msg.id)} className="text-[#ffb700] text-[10px] font-black uppercase">OK</button>
+                                                <button onClick={() => { setEditingMsg(null); setEditText(''); }} className="text-white/40 text-[10px] font-black uppercase">X</button>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs leading-relaxed font-medium whitespace-pre-wrap break-words">{msg.text}</p>
+                                        )}
 
                                         <div className={`flex items-center gap-1.5 mt-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
                                             <span className="text-[8px] opacity-40 uppercase font-black tracking-widest">
                                                 {msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
                                             </span>
+                                            {msg.editedAt && <span className="text-[7px] opacity-30 italic">editado</span>}
                                             {isMe && <CheckCheck size={10} className="text-blue-200" />}
                                         </div>
+
+                                        {/* Context Menu (Edit/Delete for owners and moderators) */}
+                                        {activeMenu === msg.id && isOwnerOrMod && (
+                                            <div className={`absolute top-0 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} ml-2 mr-2 bg-[#001833] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+                                                onClick={(e) => e.stopPropagation()}>
+                                                {(isMe || canModerate) && (
+                                                    <>
+                                                        {isMe && (
+                                                            <button
+                                                                onClick={() => { setEditingMsg(msg.id); setEditText(msg.text); setActiveMenu(null); }}
+                                                                className="w-full flex items-center gap-3 px-5 py-3 text-white/80 hover:bg-white/5 transition-all text-left"
+                                                            >
+                                                                <Pencil size={14} className="text-blue-400" />
+                                                                <span className="text-[10px] font-black uppercase tracking-widest">Editar</span>
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => { handleDeleteMessage(msg.id); setActiveMenu(null); }}
+                                                            className="w-full flex items-center gap-3 px-5 py-3 text-red-400 hover:bg-red-500/10 transition-all text-left"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Eliminar</span>
+                                                        </button>
+                                                    </>
+                                                )}
+                                                <button
+                                                    onClick={() => { setShowReactions(msg.id); setActiveMenu(null); }}
+                                                    className="w-full flex items-center gap-3 px-5 py-3 text-white/80 hover:bg-white/5 transition-all text-left"
+                                                >
+                                                    <Smile size={14} className="text-[#ffb700]" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Reaccionar</span>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Reaction Quick Picker */}
+                                        {showReactions === msg.id && (
+                                            <div className={`absolute -top-12 ${isMe ? 'right-0' : 'left-0'} bg-[#001833] border border-white/10 rounded-full px-3 py-2 flex items-center gap-1 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200`}
+                                                onClick={(e) => e.stopPropagation()}>
+                                                {REACTION_EMOJIS.map(emoji => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => handleReaction(msg.id, emoji)}
+                                                        className={`text-lg hover:scale-125 transition-transform p-1 rounded-full ${msg.reactions?.[emoji]?.includes(currentUser.id) ? 'bg-[#ffb700]/20' : 'hover:bg-white/10'}`}
+                                                    >
+                                                        {emoji}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* Reactions Display */}
+                                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                        <div className={`flex flex-wrap gap-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                            {Object.entries(msg.reactions).map(([emoji, users]) => (
+                                                users.length > 0 && (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => handleReaction(msg.id, emoji)}
+                                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all ${users.includes(currentUser.id)
+                                                            ? 'bg-[#ffb700]/20 border-[#ffb700]/30 text-[#ffb700]'
+                                                            : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
+                                                    >
+                                                        <span>{emoji}</span>
+                                                        <span className="text-[9px] font-black">{users.length}</span>
+                                                    </button>
+                                                )
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </React.Fragment>
@@ -276,6 +454,36 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                 )}
             </div>
 
+            {/* Emoji Picker Overlay */}
+            {showEmojiPicker && (
+                <div className="absolute bottom-[72px] left-0 right-0 bg-[#001224] border-t border-white/10 z-20 animate-in slide-in-from-bottom-4 duration-300">
+                    {/* Category tabs */}
+                    <div className="flex gap-1 p-2 border-b border-white/5 overflow-x-auto no-scrollbar">
+                        {Object.keys(EMOJI_CATEGORIES).map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setEmojiCategory(cat)}
+                                className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${emojiCategory === cat ? 'bg-[#ffb700] text-[#001f3f]' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Emoji grid */}
+                    <div className="grid grid-cols-8 gap-1 p-3 max-h-[200px] overflow-y-auto scroll-hide">
+                        {EMOJI_CATEGORIES[emojiCategory].map((emoji, i) => (
+                            <button
+                                key={`${emoji}-${i}`}
+                                onClick={() => insertEmoji(emoji)}
+                                className="text-xl p-2 rounded-lg hover:bg-white/10 transition-all active:scale-90"
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Input: Premium Design */}
             <div className="p-4 md:p-6 bg-[#001f3f] border-t border-white/5 relative z-10">
                 <form
@@ -293,6 +501,14 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                         <Paperclip size={20} />
                     </button>
 
+                    <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className={`p-3 transition-colors hover:bg-white/5 rounded-full ${showEmojiPicker ? 'text-[#ffb700]' : 'text-white/60 hover:text-[#ffb700]'}`}
+                    >
+                        <Smile size={20} />
+                    </button>
+
                     <div className="flex-1 relative group">
                         <input
                             type="text"
@@ -300,6 +516,7 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Mensaje seguro..."
                             disabled={isUploading}
+                            onFocus={() => setShowEmojiPicker(false)}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 px-5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#ffb700]/50 focus:bg-white/10 transition-all font-medium"
                         />
                     </div>

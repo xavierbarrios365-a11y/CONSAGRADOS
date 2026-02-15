@@ -8,45 +8,67 @@ export interface CalendarEvent {
 
 /**
  * Service to manage calendar exports for free.
+ * Fixed: proper URL encoding and ICS CRLF line endings to avoid protocol failures.
  */
+
+const formatICSTime = (date: Date): string => {
+    return date.toISOString().replace(/-|:|\.\d{3}/g, "");
+};
+
+const sanitizeText = (text: string): string => {
+    // Escape special chars for ICS format (backslashes, semicolons, commas, newlines)
+    return text
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+};
 
 export const generateGoogleCalendarLink = (event: CalendarEvent): string => {
     const baseUrl = "https://www.google.com/calendar/render?action=TEMPLATE";
-    const formatTime = (date: Date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
 
-    const dates = `${formatTime(event.startTime)}/${formatTime(event.endTime)}`;
-    const params = new URLSearchParams({
-        text: event.title,
-        details: event.description,
-        location: event.location || "",
-        dates: dates
-    });
+    const dates = `${formatICSTime(event.startTime)}/${formatICSTime(event.endTime)}`;
 
-    return `${baseUrl}&${params.toString()}`;
+    // Use manual encoding for maximum compatibility across browsers & mobile
+    const params = [
+        `text=${encodeURIComponent(event.title)}`,
+        `details=${encodeURIComponent(event.description)}`,
+        `location=${encodeURIComponent(event.location || "")}`,
+        `dates=${encodeURIComponent(dates)}`
+    ].join("&");
+
+    return `${baseUrl}&${params}`;
 };
 
 export const downloadIcsFile = (event: CalendarEvent) => {
-    const formatTime = (date: Date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+    // RFC 5545 requires CRLF line endings
+    const CRLF = "\r\n";
 
     const icsContent = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
+        "PRODID:-//Consagrados2026//ES",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
         "BEGIN:VEVENT",
-        `DTSTART:${formatTime(event.startTime)}`,
-        `DTEND:${formatTime(event.endTime)}`,
-        `SUMMARY:${event.title}`,
-        `DESCRIPTION:${event.description}`,
-        `LOCATION:${event.location || ""}`,
+        `DTSTART:${formatICSTime(event.startTime)}`,
+        `DTEND:${formatICSTime(event.endTime)}`,
+        `SUMMARY:${sanitizeText(event.title)}`,
+        `DESCRIPTION:${sanitizeText(event.description)}`,
+        `LOCATION:${sanitizeText(event.location || "")}`,
+        `UID:${Date.now()}@consagrados2026`,
+        "STATUS:CONFIRMED",
         "END:VEVENT",
         "END:VCALENDAR"
-    ].join("\n");
+    ].join(CRLF);
 
     const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `${event.title.replace(/\s+/g, "_")}.ics`);
+    link.setAttribute("download", `${event.title.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s]/g, "").replace(/\s+/g, "_")}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 };

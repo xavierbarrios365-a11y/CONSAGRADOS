@@ -37,7 +37,7 @@ import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
-import SpiritualAdvisor from './components/SpiritualAdvisor';
+// SpiritualAdvisor removed per user request
 import { initRemoteConfig } from './services/configService';
 
 const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
@@ -126,7 +126,7 @@ const App: React.FC = () => {
   const [showInbox, setShowInbox] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
+  // Consejero táctico eliminado
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [isConfirmingEvent, setIsConfirmingEvent] = useState<string | null>(null);
 
@@ -623,26 +623,41 @@ const App: React.FC = () => {
   const handleVerseQuizComplete = async () => {
     if (!currentUser) return;
 
+    // Marcar la tarea de lectura como completada HOY
+    const today = new Date().toISOString().split('T')[0];
+    const alreadyDone = localStorage.getItem('verse_completed_date') === today;
+    if (alreadyDone) return; // Ya se completó hoy, no duplicar
+
     const updatedTasks = currentUser.weeklyTasks?.map(t =>
       t.id === 'bible' ? { ...t, completed: true } : t
     ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
 
+    // Incrementar racha inmediatamente en local (optimistic update)
+    const newStreak = (currentUser.streakCount || 0) + 1;
+    const updatedUser = {
+      ...currentUser,
+      streakCount: newStreak,
+      weeklyTasks: updatedTasks
+    };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('consagrados_agent', JSON.stringify(updatedUser));
+    localStorage.setItem('verse_completed_date', today);
+
     try {
       console.log("🔥 Sincronizando racha...");
       const res = await updateAgentStreaks(currentUser.id, false, updatedTasks);
-      if (res.success) {
-        const updatedUser = {
-          ...currentUser,
-          streakCount: res.streak || currentUser.streakCount || 0,
-          weeklyTasks: updatedTasks
+      if (res.success && res.streak !== undefined) {
+        // Sincronizar con el valor del servidor si está disponible
+        const serverUser = {
+          ...updatedUser,
+          streakCount: res.streak
         };
-        setCurrentUser(updatedUser);
-        localStorage.setItem('consagrados_agent', JSON.stringify(updatedUser));
-        // No sincronizamos todo inmediatamente para evitar race conditions, 
-        // el estado local ya es el más reciente ahora.
+        setCurrentUser(serverUser);
+        localStorage.setItem('consagrados_agent', JSON.stringify(serverUser));
       }
     } catch (e) {
-      console.error("Error actualizando racha:", e);
+      console.error("Error sincronizando racha con servidor:", e);
+      // El optimistic update ya se aplicó, así que el usuario ve su racha correctamente
     }
   };
 
@@ -690,16 +705,26 @@ const App: React.FC = () => {
 
         // Ofrecer añadir al calendario
         if (window.confirm("📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?")) {
-          const calendarEvent = {
-            title: event.titulo,
-            description: `Participación en el evento táctico: ${event.titulo}`,
-            startTime: new Date(`${event.fecha}T${event.hora || '08:00'}:00`),
-            endTime: new Date(`${event.fecha}T${event.hora || '08:00'}:00`)
-          };
-          // Intentar parsear hora, de lo contrario poner 2h después
-          calendarEvent.endTime.setHours(calendarEvent.endTime.getHours() + 2);
+          try {
+            const hora = (event.hora || '08:00').replace(/[^0-9:]/g, '');
+            const startStr = `${event.fecha}T${hora.length >= 5 ? hora : '08:00'}:00`;
+            let startDate = new Date(startStr);
+            if (isNaN(startDate.getTime())) startDate = new Date(); // fallback a hoy
+            const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
-          window.open(generateGoogleCalendarLink(calendarEvent), '_blank');
+            const calendarEvent = {
+              title: event.titulo || 'Evento Consagrados',
+              description: `Participación en el evento táctico: ${event.titulo}`,
+              startTime: startDate,
+              endTime: endDate
+            };
+
+            const calLink = generateGoogleCalendarLink(calendarEvent);
+            window.open(calLink, '_blank', 'noopener,noreferrer');
+          } catch (calError) {
+            console.error('Error creando enlace de calendario:', calError);
+            alert('No se pudo crear el enlace al calendario. Intenta de nuevo.');
+          }
         }
         syncData(true);
       }
@@ -1269,19 +1294,8 @@ const App: React.FC = () => {
         <TacticalChat currentUser={currentUser} agents={agents} onClose={() => setIsChatOpen(false)} />
       )}
 
-      {isAdvisorOpen && currentUser && (
-        <SpiritualAdvisor currentUser={currentUser} onClose={() => setIsAdvisorOpen(false)} />
-      )}
-
       {isLoggedIn && !isChatOpen && (
         <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-[45]">
-          <button
-            onClick={() => setIsAdvisorOpen(true)}
-            className="p-4 bg-indigo-900/80 text-white rounded-full shadow-2xl hover:bg-indigo-700 transition-all active:scale-95 animate-in fade-in border border-indigo-500/30 backdrop-blur-md"
-            title="Consejero Táctico"
-          >
-            <Shield size={24} className="text-indigo-300" />
-          </button>
           <button
             onClick={() => setIsChatOpen(true)}
             className="p-4 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-500 transition-all active:scale-95 animate-in fade-in"

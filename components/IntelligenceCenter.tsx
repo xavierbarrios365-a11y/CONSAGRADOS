@@ -436,9 +436,17 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">PERSONAL DE MANDO</p>
             <p className="text-2xl font-bebas font-black text-[#ffb700] leading-none">{totalLeaders}</p>
           </div>
-          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg">
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg cursor-pointer hover:border-blue-400/30 transition-all" onClick={() => setView?.(AppView.VISITOR as any)}>
             <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">RADAR (VISITAS)</p>
             <p className="text-2xl font-bebas font-black text-blue-400 leading-none">{visitorCount || 0}</p>
+            {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setView?.(AppView.VISITOR as any); }}
+                className="mt-2 flex items-center justify-center gap-1 mx-auto px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 text-[7px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all active:scale-95"
+              >
+                <Plus size={10} /> Agregar
+              </button>
+            )}
           </div>
         </div>
 

@@ -144,22 +144,18 @@
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
   <script>
-    console.log("🚀 SISTEMA CONSAGRADOS V1.7.5 LOADED");
+    console.log("🚀 SISTEMA CONSAGRADOS V1.8.0 LOADED");
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // Registramos el worker con nueva versión para forzar actualización total
-        navigator.serviceWorker.register('./sw_v174.js?v=1.7.5')
+        // Registro Unificado de Service Worker (Firebase + PWA)
+        navigator.serviceWorker.register('./firebase-messaging-sw.js?v=1.8.0')
           .then(reg => {
-            console.log('SW Registered v1.7.4', reg);
+            console.log('Operational SW Registered v1.8.0', reg);
             if (reg.waiting) {
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
           })
-          .catch(err => console.log('SW Error', err));
-
-        // También registramos el de Firebase
-        navigator.serviceWorker.register('./firebase-messaging-sw.js?v=1.7.4')
-          .then(reg => console.log('Firebase Messaging SW Registered', reg));
+          .catch(err => console.log('SW Registration Error:', err));
       });
     }
   </script>

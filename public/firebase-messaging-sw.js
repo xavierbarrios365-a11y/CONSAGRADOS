@@ -15,13 +15,40 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
+// Handle background messages
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Mensaje recibido en segundo plano:', payload);
-    const notificationTitle = payload.notification.title;
+
+    // Extract data even if notification object is missing (data-only messages)
+    const notificationTitle = payload.notification?.title || payload.data?.title || '📢 ALERTA TÁCTICA';
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/favicon.ico'
+        body: payload.notification?.body || payload.data?.body || 'Nuevo despliegue en el Centro de Operación.',
+        icon: 'https://lh3.googleusercontent.com/d/1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
+        badge: 'https://lh3.googleusercontent.com/d/1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
+        tag: 'tactical-alert',
+        data: {
+            url: '/'
+        }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            if (clientList.length > 0) {
+                let client = clientList[0];
+                for (let i = 0; i < clientList.length; i++) {
+                    if (clientList[i].focused) {
+                        client = clientList[i];
+                    }
+                }
+                return client.focus();
+            }
+            return clients.openWindow('/');
+        })
+    );
 });

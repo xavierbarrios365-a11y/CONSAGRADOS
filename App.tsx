@@ -121,6 +121,63 @@ const parseAttendanceDate = (value: any): Date | null => {
   return null;
 };
 
+/**
+ * Indicador de Conexión "Faro de Consagrados"
+ * Estética Premium con animaciones de haz de luz rotativo.
+ */
+const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ status }) => {
+  const isOnline = status === 'online';
+  const color = isOnline ? '#ffb700' : '#ef4444';
+
+  return (
+    <div className="relative w-32 h-32 flex items-center justify-center">
+      {/* Luz Giratoria (Solo si está Online) */}
+      {isOnline && (
+        <div className="absolute inset-0 animate-[spin_4s_linear_infinite] pointer-events-none opacity-40">
+          <div
+            className="absolute top-1/2 left-1/2 w-[150%] h-12 -translate-y-1/2 origin-left"
+            style={{
+              background: `linear-gradient(90deg, ${color}cc, transparent)`,
+              clipPath: 'polygon(0 40%, 100% 0, 100% 100%, 0 60%)'
+            }}
+          ></div>
+        </div>
+      )}
+
+      {/* Brillo central (Aura) */}
+      <div
+        className={`absolute inset-4 rounded-full blur-2xl opacity-30 transition-colors duration-1000 ${isOnline ? 'bg-[#ffb700] animate-pulse' : 'bg-red-600'}`}
+      ></div>
+
+      {/* Estructura del Faro (SVG) */}
+      <svg viewBox="0 0 100 120" className="relative w-20 h-24 z-10 drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+        {/* Base */}
+        <path d="M30 110 L70 110 L65 100 L35 100 Z" fill="#1e293b" />
+        {/* Cuerpo */}
+        <path d="M38 100 L42 40 L58 40 L62 100 Z" fill="white" />
+        <path d="M39 85 L61 85 L61 75 L39 75 Z" fill="#1e293b" />
+        <path d="M41 60 L59 60 L59 50 L41 50 Z" fill="#1e293b" />
+        {/* Linterna */}
+        <rect x="42" y="30" width="16" height="12" rx="2" fill="#334155" />
+        <rect x="45" y="32" width="10" height="8" rx="1" fill={isOnline ? '#fffbeb' : '#450a0a'} />
+        {/* Cúpula */}
+        <path d="M40 30 Q50 15 60 30 Z" fill="#0f172a" />
+
+        {/* Foco de luz central */}
+        <circle cx="50" cy="36" r="4" fill={color} className={isOnline ? 'animate-pulse' : ''} />
+      </svg>
+
+      {/* Destellos de partículas (Solo Online) */}
+      {isOnline && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-1 h-1 bg-white rounded-full absolute animate-ping [animation-delay:-1s]" style={{ top: '30%', left: '30%' }}></div>
+          <div className="w-1 h-1 bg-white rounded-full absolute animate-ping [animation-delay:-2s]" style={{ top: '70%', left: '70%' }}></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const APP_VERSION = "1.7.5"; // Force Cache Purge & Logic Fixes
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -455,7 +512,21 @@ const App: React.FC = () => {
       }
 
       onMessageListener().then((payload: any) => {
-        console.log("Notificación recibida:", payload);
+        console.log("Notificación recibida en primer plano:", payload);
+
+        // --- DISPARADOR DE ALERTA DE SISTEMA (SUEÑA Y MUESTRA BANNER) ---
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          const title = payload.notification?.title || '📢 CENTRO DE OPERACIÓN';
+          const options = {
+            body: payload.notification?.body || 'Nuevo despliegue táctico disponible.',
+            icon: 'https://lh3.googleusercontent.com/d/1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
+            badge: 'https://lh3.googleusercontent.com/d/1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
+            silent: false, // Asegurar sonoridad
+            tag: 'foreground-push'
+          };
+          new Notification(title, options);
+        }
+
         setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
         // Actualizamos contador de inbox para forzar refresco visual
         fetchNotifications().then(notifs => {
@@ -895,28 +966,14 @@ const App: React.FC = () => {
       case AppView.HOME:
         return (
           <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            {/* ENCABEZADO PREMIUM NODO CENTRAL */}
+            {/* ENCABEZADO PREMIUM CENTRO DE OPERACIÓN */}
             <div className="flex flex-col items-center space-y-4 mb-6">
-              <div className="relative">
-                {/* Aura giratoria de estado */}
-                <div className={`absolute -inset-4 rounded-full blur-xl opacity-20 animate-pulse transition-colors ${notificationPermission === 'granted' ? 'bg-indigo-500' : 'bg-red-500'}`}></div>
 
-                <div className={`relative p-4 rounded-full border-2 transition-all duration-700 shadow-2xl ${notificationPermission === 'granted' ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-red-500/10 border-red-500/40'}`}>
-                  {notificationPermission === 'granted' ? (
-                    <Zap size={28} className="text-indigo-400 animate-pulse" />
-                  ) : (
-                    <Zap size={28} className="text-red-500 animate-bounce" />
-                  )}
-                </div>
+              {/* Indicador de Faro Táctico */}
+              <LighthouseIndicator status={notificationPermission === 'granted' ? 'online' : 'offline'} />
 
-                {/* Tag de estado conectado/desconectado */}
-                <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest border shadow-lg backdrop-blur-md whitespace-nowrap ${notificationPermission === 'granted' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-red-600 text-white border-red-400'}`}>
-                  {notificationPermission === 'granted' ? 'SISTEMA DE ALERTAS: CONECTADO' : 'CANAL TÁCTICO: OFFLINE'}
-                </div>
-              </div>
-
-              <div className="text-center pt-2">
-                <h2 className="text-3xl font-bebas font-black text-white tracking-[0.2em] leading-none mb-1">NODO CENTRAL</h2>
+              <div className="text-center">
+                <h2 className="text-3xl font-bebas font-black text-white tracking-[0.2em] leading-none mb-1">CENTRO DE OPERACIÓN</h2>
                 <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mb-3">{currentUser?.name}</p>
 
                 {/* News Ticker de Titulares */}

@@ -49,6 +49,7 @@ export interface Agent {
   lastAiUpdate?: string;
   biometricCredential?: string;
   streakCount?: number;
+  lastAttendance?: string;
   weeklyTasks?: { id: string; title: string; completed: boolean }[];
 }
 

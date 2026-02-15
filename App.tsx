@@ -113,7 +113,6 @@ const App: React.FC = () => {
   const [isUpdatingPin, setIsUpdatingPin] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [isAuthenticatingBio, setIsAuthenticatingBio] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isRegisteringBio, setIsRegisteringBio] = useState(false);
@@ -329,7 +328,9 @@ const App: React.FC = () => {
         // Actualizamos contador de inbox para forzar refresco visual
         fetchNotifications().then(notifs => {
           const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-          setUnreadNotifications(notifs.filter(n => !readIds.includes(n.id)).length);
+          const delIds = JSON.parse(localStorage.getItem('deleted_notifications') || '[]');
+          const unreadCount = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id)).length;
+          setUnreadNotifications(unreadCount);
         });
       });
     } catch (e) {
@@ -377,7 +378,8 @@ const App: React.FC = () => {
       try {
         const notifs = await fetchNotifications();
         const readIds = JSON.parse(localStorage.getItem('read_notifications') || '[]');
-        const unreadCount = notifs.filter(n => !readIds.includes(n.id)).length;
+        const delIds = JSON.parse(localStorage.getItem('deleted_notifications') || '[]');
+        const unreadCount = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id)).length;
         setUnreadNotifications(unreadCount);
       } catch (e) {
         console.error("Error en pulso de notificaciones:", e);
@@ -855,23 +857,29 @@ const App: React.FC = () => {
               <div className="absolute inset-0 z-0">
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-40" />
               </div>
-              <div className="relative z-10 w-64 h-64 border-2 border-white/10 rounded-[2rem] flex flex-col items-center justify-center p-8 bg-black/20 backdrop-blur-sm scanner-frame">
+              <div className="relative z-10 w-48 h-48 sm:w-64 sm:h-64 border-2 border-[#ffb700]/30 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md scanner-frame shadow-[0_0_30px_rgba(255,183,0,0.1)]">
                 {scanStatus === 'SCANNING' ? (
                   <>
-                    <QrCode size={48} className="text-[#ffb700] animate-pulse mb-3" />
-                    <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">Aguarda Identidad...</p>
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#ffb700]/20 to-transparent animate-pulse rounded-[2rem]"></div>
+                    <QrCode size={40} className="text-[#ffb700] animate-bounce mb-3" />
+                    <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.2em] font-bebas">Buscando Agente...</p>
                   </>
                 ) : scanStatus === 'SUCCESS' ? (
-                  <div className="flex flex-col items-center gap-2">
+                  <div className="flex flex-col items-center gap-2 animate-in zoom-in-50 duration-300">
                     <CheckCircle2 size={48} className="text-green-500" />
-                    <p className="text-[10px] text-green-500 font-black uppercase">Verificado</p>
+                    <p className="text-[12px] text-green-500 font-black uppercase tracking-widest font-bebas">Verificado</p>
                   </div>
                 ) : (
-                  <button onClick={() => setScanStatus('SCANNING')} className="px-6 py-3 bg-blue-600 rounded-xl text-[10px] font-black text-white hover:bg-blue-500">Reiniciar</button>
+                  <button
+                    onClick={() => { setScanStatus('SCANNING'); }}
+                    className="px-8 py-4 bg-[#ffb700] text-[#001f3f] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all font-bebas"
+                  >
+                    Reactivar Lente
+                  </button>
                 )}
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#001f3f] to-transparent p-10 pt-20">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#001f3f] via-[#001f3f]/95 to-transparent p-6 sm:p-10 pb-[env(safe-area-inset-bottom,20px)]">
                 <div className="max-w-sm mx-auto space-y-4">
                   <div className="relative">
                     <input
@@ -1008,6 +1016,18 @@ const App: React.FC = () => {
                   <Activity className="text-[#ffb700] animate-pulse" size={18} />
                   <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{visitorRadar.length} Detectados</span>
                 </div>
+                <button
+                  onClick={() => {
+                    const name = prompt("INGRESAR NOMBRE DEL VISITANTE:");
+                    if (name) {
+                      // Registrar visita manual usando el nombre como ID temporal
+                      processScan(name.trim().toUpperCase());
+                    }
+                  }}
+                  className="bg-[#ffb700] text-[#001f3f] px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#ffb700]/20"
+                >
+                  <Plus size={16} /> Agregar
+                </button>
               </div>
             </div>
 

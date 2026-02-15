@@ -74,7 +74,8 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'LAST_UPDATE': ['lastaiupdate', 'last_ai_update', 'update'],
       'BIOMETRIC': ['biometric_credential', 'biometric'],
       'STREAK': ['streak_count', 'streak'],
-      'TASKS': ['tasks_json', 'tasks']
+      'TASKS': ['tasks_json', 'tasks'],
+      'LAST_ATTENDANCE': ['last_attendance', 'última asistencia']
     };
 
     const isMatrix = Array.isArray(rawContent[0]);
@@ -179,6 +180,7 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
     lastAiUpdate: getV('LAST_UPDATE') || "",
     biometricCredential: getV('BIOMETRIC') || "",
     streakCount: parseInt(getV('STREAK')) || 0,
+    lastAttendance: getV('LAST_ATTENDANCE') || "",
     weeklyTasks: getV('TASKS') ? JSON.parse(getV('TASKS')) : [
       { id: 'attendance', title: 'Asistoria Semanal', completed: false },
       { id: 'academy', title: 'Completar 1 Lección', completed: false },
@@ -527,4 +529,24 @@ export const confirmEventAttendance = async (data: { agentId: string; agentName:
 
 export const deleteEvent = async (eventId: string) => {
   return postToAction('delete_event', { eventId });
+};
+
+export const applyAbsencePenalties = async () => {
+  try {
+    const response = await postToAction('apply_absence_penalties', {});
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO PENALIZACIONES:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const activateVisitorAsAgent = async (visitorId: string, formData: any) => {
+  try {
+    const response = await postToAction('activate_visitor_as_agent', { visitorId, formData });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ACTIVACIÓN VISITANTE:", error);
+    return { success: false, error: error.message };
+  }
 };

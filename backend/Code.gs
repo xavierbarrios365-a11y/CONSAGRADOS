@@ -169,6 +169,7 @@ function doGet(e) {
     const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
     const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
     const strikesSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+    const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
     
     if (!directorySheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
     
@@ -199,6 +200,50 @@ function doGet(e) {
         const agentId = String(directoryData[i][0]);
         const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]' };
         directoryData[i].push(streakInfo.streak, streakInfo.tasks);
+      }
+    }
+    
+    // Virtual Join de Rachas
+    if (strikesSheet) {
+      const strikeData = strikesSheet.getDataRange().getValues();
+      const strikeHeaders = strikeData[0].map(h => String(h).trim().toUpperCase());
+      const strikeAgentIdIdx = strikeHeaders.indexOf('AGENT_ID');
+      const streakCountIdx = strikeHeaders.indexOf('STREAK_COUNT');
+      const tasksJsonIdx = strikeHeaders.indexOf('TASKS_JSON');
+      
+      const streakMap = new Map();
+      if (strikeAgentIdIdx !== -1) {
+        for (let i = 1; i < strikeData.length; i++) {
+          streakMap.set(String(strikeData[i][strikeAgentIdIdx]), {
+            streak: strikeData[i][streakCountIdx] || 0,
+            tasks: strikeData[i][tasksJsonIdx] || '[]'
+          });
+        }
+      }
+      
+      directoryData[0].push('STREAK_COUNT', 'TASKS_JSON');
+      for (let i = 1; i < directoryData.length; i++) {
+        const agentId = String(directoryData[i][0]);
+        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]' };
+        directoryData[i].push(streakInfo.streak, streakInfo.tasks);
+      }
+    }
+
+    // Virtual Join de Asistencia (Última Fecha)
+    if (attendanceSheet) {
+      const attenData = attendanceSheet.getDataRange().getValues();
+      const lastAttenMap = new Map();
+      for (let i = 1; i < attenData.length; i++) {
+        const aId = String(attenData[i][0]);
+        const aDate = attenData[i][3];
+        lastAttenMap.set(aId, aDate); // Se sobreescribe con el último encontrado
+      }
+      
+      directoryData[0].push('LAST_ATTENDANCE');
+      for (let i = 1; i < directoryData.length; i++) {
+        const agentId = String(directoryData[i][0]);
+        const lastDate = lastAttenMap.get(agentId) || '';
+        directoryData[i].push(lastDate);
       }
     }
     
@@ -291,6 +336,10 @@ function doPost(e) {
         return getNotifications();
       case 'sync_fcm_token':
         return syncFcmToken(request.data);
+      case 'apply_absence_penalties':
+        return applyAbsencePenalties();
+      case 'activate_visitor_as_agent':
+        return activateVisitorAsAgent(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -506,6 +555,130 @@ function getVisitorRadar() {
   radar.sort((a, b) => b.visits - a.visits);
   
   return ContentService.createTextOutput(JSON.stringify({ success: true, data: radar })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Aplica penalizaciones de -5 XP por semanas de inasistencia (Prioriza Domingos).
+ */
+function applyAbsencePenalties() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  
+  if (!directorySheet || !attendanceSheet) throw new Error("Hojas no encontradas.");
+  
+  const directoryData = directorySheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  const attendanceData = attendanceSheet.getDataRange().getValues();
+  
+  const idColIdx = headers.indexOf('ID');
+  const xpColIdx = headers.indexOf('XP') !== -1 ? headers.indexOf('XP') : headers.indexOf('PUNTOS XP');
+  const leadColIdx = headers.indexOf('PUNTOS LIDERAZGO');
+
+  if (idColIdx === -1 || xpColIdx === -1) throw new Error("Estructura de Directorio inválida.");
+
+  const now = new Date();
+  let totalDeductions = 0;
+
+  for (let i = 1; i < directoryData.length; i++) {
+    const agentId = String(directoryData[i][idColIdx]);
+    if (!agentId || agentId === "undefined") continue;
+
+    // Buscar última asistencia
+    let lastAttendanceDate = null;
+    for (let j = attendanceData.length - 1; j > 0; j--) {
+      if (String(attendanceData[j][0]) === agentId) {
+        lastAttendanceDate = new Date(attendanceData[j][3]);
+        break;
+      }
+    }
+
+    if (lastAttendanceDate) {
+      const diffDays = Math.floor((now - lastAttendanceDate) / (1000 * 60 * 60 * 24));
+      const weeksAbsent = Math.floor(diffDays / 7);
+
+      if (weeksAbsent >= 1) {
+        const penalty = weeksAbsent * 5;
+        const currentXp = parseInt(directoryData[i][xpColIdx]) || 0;
+        const currentLead = leadColIdx !== -1 ? (parseInt(directoryData[i][leadColIdx]) || 0) : 0;
+
+        const newXp = Math.max(0, currentXp - penalty);
+        const newLead = Math.max(0, currentLead - penalty);
+
+        directorySheet.getRange(i + 1, xpColIdx + 1).setValue(newXp);
+        if (leadColIdx !== -1) directorySheet.getRange(i + 1, leadColIdx + 1).setValue(newLead);
+        
+        totalDeductions++;
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true, agentsPenalized: totalDeductions })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Convierte un visitante en agente, rescatando su XP acumulado.
+ */
+function activateVisitorAsAgent(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  
+  if (!attendanceSheet) throw new Error("Hoja de asistencia no encontrada.");
+
+  // 1. Calcular XP acumulado como visitante (10 XP por cada visita)
+  const attendanceData = attendanceSheet.getDataRange().getValues();
+  let accumulatedXp = 0;
+  for (let i = 1; i < attendanceData.length; i++) {
+    if (String(attendanceData[i][0]).toUpperCase() === String(data.visitorId).toUpperCase()) {
+      accumulatedXp += 10;
+    }
+  }
+
+  // 2. Inscribir al agente con el XP rescatado
+  const enrollResponse = enrollAgent({
+    ...data.formData,
+    xpReward: accumulatedXp, // Pasar XP acumulado si enrollAgent lo soporta o sumarlo después
+    nivel: data.formData.nivel || 'Estudiante'
+  });
+
+  const enrollResult = JSON.parse(enrollResponse.getContentText());
+
+  if (enrollResult.success) {
+    // 3. Si se inscribió con éxito, sumar el XP rescatado si no se hizo en enrollAgent
+    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    const directoryData = directorySheet.getDataRange().getValues();
+    const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+    const xpColIdx = headers.indexOf('XP') !== -1 ? headers.indexOf('XP') : headers.indexOf('PUNTOS XP');
+    const leadColIdx = headers.indexOf('PUNTOS LIDERAZGO');
+
+    let agentRow = -1;
+    for (let i = 1; i < directoryData.length; i++) {
+      if (String(directoryData[i][0]) === enrollResult.newId) {
+        agentRow = i + 1;
+        break;
+      }
+    }
+
+    if (agentRow !== -1 && accumulatedXp > 0) {
+      const currentXp = parseInt(directorySheet.getRange(agentRow, xpColIdx + 1).getValue()) || 0;
+      directorySheet.getRange(agentRow, xpColIdx + 1).setValue(currentXp + accumulatedXp);
+      if (leadColIdx !== -1) {
+        const currentLead = parseInt(directorySheet.getRange(agentRow, leadColIdx + 1).getValue()) || 0;
+        directorySheet.getRange(agentRow, leadColIdx + 1).setValue(currentLead + accumulatedXp);
+      }
+    }
+
+    // 4. Actualizar historial de asistencia: cambiar ID de visitante por nuevo ID de agente
+    for (let i = 1; i < attendanceData.length; i++) {
+      if (String(attendanceData[i][0]).toUpperCase() === String(data.visitorId).toUpperCase()) {
+        attendanceSheet.getRange(i + 1, 1).setValue(enrollResult.newId);
+      }
+    }
+  }
+
+  return enrollResponse;
 }
 
 /**

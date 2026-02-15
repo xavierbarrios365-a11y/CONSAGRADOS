@@ -10,6 +10,7 @@ import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
+import { applyAbsencePenalties } from '../services/sheetsService';
 
 interface CIUProps {
   agents: Agent[];
@@ -300,6 +301,23 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 )}
                 <button
                   onClick={async () => {
+                    if (window.confirm("🚨 ¿APLICAR PENALIZACIONES POR INASISTENCIA?\n\nEsto restará -5 XP a todos los agentes con más de 1 semana sin asistir.")) {
+                      const res = await applyAbsencePenalties();
+                      if (res.success) {
+                        alert(`✅ PROCESO COMPLETADO\n\nSe penalizaron ${res.agentsPenalized} agentes.`);
+                        if (onUpdateNeeded) onUpdateNeeded();
+                      } else {
+                        alert("❌ FALLO EN PENALIZACIÓN: " + res.error);
+                      }
+                    }
+                  }}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-orange-500/20 transition-all shadow-xl active:scale-95 font-bebas"
+                >
+                  <AlertTriangle size={16} />
+                  Sanción Ausencia
+                </button>
+                <button
+                  onClick={async () => {
                     if (window.confirm("🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿Estás seguro de realizar una PURGA TOTAL?")) {
                       try {
                         if ('caches' in window) {
@@ -566,6 +584,21 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   {isProspectoAscender && (
                     <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
                   )}
+                  {(() => {
+                    const lastDate = agent.lastAttendance ? new Date(agent.lastAttendance) : null;
+                    if (lastDate) {
+                      const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                      if (diffDays >= 21) {
+                        return (
+                          <div className="flex items-center gap-1.5 bg-red-600/20 border border-red-500/30 px-4 py-1.5 rounded-full mt-1 animate-pulse">
+                            <AlertCircle size={10} className="text-red-500" />
+                            <span className="text-red-500 font-black text-[7px] uppercase tracking-widest">PELIGRO DE DESERCIÓN</span>
+                          </div>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div className="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-4 mt-2">
@@ -750,8 +783,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             </div>
           </div>
         </div>
-      </div >
-    </div >
+      </div>
+    </div>
   );
 };
 

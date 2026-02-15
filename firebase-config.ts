@@ -2,7 +2,9 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { getFirestore } from "firebase/firestore";
 import { getRemoteConfig } from "firebase/remote-config";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+// App Check DESACTIVADO temporalmente — reCAPTCHA no tiene el dominio consagrados.vercel.app
+// Para reactivar: agregar consagrados.vercel.app en https://www.google.com/recaptcha/admin
+// import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 import { getAnalytics, logEvent } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -17,13 +19,13 @@ const firebaseConfig = {
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 
-// Activar App Check (Escudo de Seguridad)
-if (typeof window !== 'undefined') {
-    initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LeUXG8aAAAAAKs_ClbCd338ODEZqpdtzxszLZ'),
-        isTokenAutoRefreshEnabled: true
-    });
-}
+// App Check desactivado hasta configurar reCAPTCHA con dominio correcto
+// if (typeof window !== 'undefined') {
+//     initializeAppCheck(app, {
+//         provider: new ReCaptchaV3Provider('6LeUXG8aAAAAAKs_ClbCd338ODEZqpdtzxszLZ'),
+//         isTokenAutoRefreshEnabled: true
+//     });
+// }
 
 const messaging = getMessaging(app);
 const db = getFirestore(app);

@@ -1908,7 +1908,7 @@ function updateTacticalStats(data) {
  */
 function resetStudentAttempts(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
   if (!progressSheet) throw new Error("Hoja de progreso no encontrada.");
   

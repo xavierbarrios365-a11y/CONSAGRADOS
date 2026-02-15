@@ -142,7 +142,14 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             const res = await resetStudentAttempts(aId);
             if (res.success) {
                 alert("Reseteo exitoso. El agente puede re-intentar las evaluaciones.");
-                loadAcademy(true);
+                // Refrescar tanto la auditoría como el progreso actual (si es el mismo usuario)
+                await loadAcademy(true);
+                if (aId === agentId) {
+                    await loadAcademy(false);
+                    setQuizState('IDLE');
+                    setCurrentQuestionIndex(0);
+                    setQuizResult(null);
+                }
             } else {
                 alert("Error al resetear: " + res.error);
             }
@@ -185,14 +192,33 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         let newCorrectCount = correctAnswersCount;
         let newDiscScores = { ...discScores };
 
-        if (currentQuestion.type === 'MULTIPLE') {
-            // Comparación Resiliente: Coincidencia exacta o misma letra inicial (ej: 'B' coincide con 'B. Fuego Amigo')
-            const sel = (selectedAnswer || "").trim().toUpperCase();
-            const correct = (currentQuestion.correctAnswer || "").trim().toUpperCase();
+        if (currentQuestion.type === 'MULTIPLE' || (!currentQuestion.type && currentQuestion.correctAnswer)) {
+            // --- COMPARACIÓN DEFINITIVA ---
+            // selectedAnswer = texto completo de la opción elegida (ej: "Dejarlo ir sin confrontarlo")
+            // correctAnswer = puede ser: "B", "B.", "B. Texto", o el texto completo
+            const sel = (selectedAnswer || "").trim();
+            const correct = (currentQuestion.correctAnswer || "").trim();
+            const correctUpper = correct.toUpperCase();
 
-            const isAnswerCorrect = sel === correct ||
-                (sel.length > 1 && sel.startsWith(correct + ".")) ||
-                (correct.length > 1 && correct.startsWith(sel + "."));
+            // Obtener el índice de la opción seleccionada en el array de opciones
+            const selIdx = currentQuestion.options.findIndex((o: string) => o.trim() === sel);
+            const selLetter = selIdx >= 0 ? String.fromCharCode(65 + selIdx) : ""; // A, B, C, D
+
+            // Determinar si la respuesta es correcta
+            let isAnswerCorrect = false;
+
+            // Caso 1: correctAnswer es solo una letra (A, B, C, D)
+            if (/^[A-D]\.?$/i.test(correctUpper)) {
+                isAnswerCorrect = selLetter === correctUpper.charAt(0);
+            }
+            // Caso 2: correctAnswer empieza con letra + punto (ej: "B. Texto...")
+            else if (/^[A-D]\.\s/i.test(correctUpper)) {
+                isAnswerCorrect = selLetter === correctUpper.charAt(0);
+            }
+            // Caso 3: correctAnswer es el texto completo de la opción
+            else {
+                isAnswerCorrect = sel.toUpperCase() === correctUpper || selLetter === correctUpper;
+            }
 
             if (isAnswerCorrect) newCorrectCount++;
             setCorrectAnswersCount(newCorrectCount);
@@ -255,9 +281,10 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 }
             } else {
                 // Default to SCORE_PERCENTAGE logic
-                const multipleQuestions = activeLesson.questions.filter(q => q.type === 'MULTIPLE');
-                if (multipleQuestions.length > 0) {
-                    score = (newCorrectCount / multipleQuestions.length) * 100;
+                // Contar todas las preguntas que tienen respuesta correcta (MULTIPLE o sin tipo)
+                const gradableQuestions = activeLesson.questions.filter(q => q.type === 'MULTIPLE' || (!q.type && q.correctAnswer) || (q.correctAnswer && q.type !== 'TEXT' && q.type !== 'DISC'));
+                if (gradableQuestions.length > 0) {
+                    score = (newCorrectCount / gradableQuestions.length) * 100;
                 } else {
                     score = 100; // Text-only or other types default to completion
                 }
@@ -453,7 +480,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                     <div key={cs.courseId} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase ${cs.isComplete ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
                                                         {cs.isComplete ? <CheckCircle size={10} className="text-green-500 shrink-0" /> : <AlertCircle size={10} className="text-gray-600 shrink-0" />}
                                                         <span className="truncate flex-1">{cs.title}</span>
-                                                        <span className="shrink-0">{cs.completedInCourse}/{cs.total}</span>
+                                                        <span className="shrink-0">{cs.completedInCourse} de {cs.total}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -630,11 +657,21 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 <div className="w-20 h-20 bg-red-700/10 border-red-700/30 rounded-full flex items-center justify-center mx-auto border-2">
                                                     <AlertCircle className="text-red-700" size={40} />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <h4 className="text-xl font-bold text-black uppercase tracking-widest">ACCESO DENEGADO</h4>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                        EXCESO DE INTENTOS FALLIDOS. EVALUACIÓN CERRADA POR SEGURIDAD.
-                                                    </p>
+                                                <div className="space-y-4">
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-xl font-bold text-black uppercase tracking-widest">ACCESO DENEGADO</h4>
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                            EXCESO DE INTENTOS FALLIDOS. EVALUACIÓN CERRADA POR SEGURIDAD.
+                                                        </p>
+                                                    </div>
+                                                    {userRole === UserRole.DIRECTOR && (
+                                                        <button
+                                                            onClick={() => handleResetAttempts(agentId)}
+                                                            className="px-6 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-gray-800 transition-all"
+                                                        >
+                                                            Resetear mis intentos (Modo Director)
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ) : quizState !== 'RESULT' ? (

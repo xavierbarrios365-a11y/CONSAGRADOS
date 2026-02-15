@@ -14,13 +14,39 @@ const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
 const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, courseTitle, date, onClose }) => {
 
     const formattedDate = (() => {
+        const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+        const now = new Date();
+
         try {
-            const d = new Date(date);
-            const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-            return `${d.getDate()} / ${months[d.getMonth()]} / ${d.getFullYear()}`;
-        } catch {
-            return date;
+            if (!date) return `${now.getDate()} / ${months[now.getMonth()]} / ${now.getFullYear()}`;
+
+            // Normalize separators and try splitting
+            const cleanDate = date.replace(/[^0-9]/g, '/');
+            const parts = cleanDate.split('/').filter(p => p.length > 0);
+
+            if (parts.length >= 3) {
+                // Try D/M/Y (Spanish/Venezuelan format)
+                let d = parseInt(parts[0]);
+                let m = parseInt(parts[1]) - 1;
+                let y = parseInt(parts[2]);
+
+                // Basic validation
+                if (!isNaN(d) && !isNaN(m) && !isNaN(y) && m >= 0 && m < 12) {
+                    return `${d} / ${months[m]} / ${y}`;
+                }
+            }
+
+            // Try standard Date parsing as second option
+            const dObj = new Date(date);
+            if (!isNaN(dObj.getTime())) {
+                return `${dObj.getDate()} / ${months[dObj.getMonth()]} / ${dObj.getFullYear()}`;
+            }
+        } catch (e) {
+            console.error("Error parsing date:", e);
         }
+
+        // Final fallback
+        return `${now.getDate()} / ${months[now.getMonth()]} / ${now.getFullYear()}`;
     })();
 
     return (
@@ -280,17 +306,29 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                         size: A4 landscape;
                         margin: 0;
                     }
-                    body {
-                        background: #001F3F !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                    /* Ocultar TODO menos el certificado */
+                    body * {
+                        visibility: hidden !important;
                     }
-                    .print\\:hidden { display: none !important; }
+                    #certificate-content, #certificate-content * {
+                        visibility: visible !important;
+                    }
                     #certificate-content {
+                        position: fixed !important;
+                        left: 0 !important;
+                        top: 0 !important;
                         width: 100vw !important;
                         height: 100vh !important;
+                        margin: 0 !important;
+                        padding: 40px !important;
+                        border-width: 15px !important;
                         box-shadow: none !important;
+                        background-color: #001F3F !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        z-index: 9999 !important;
                     }
+                    .print\\:hidden { display: none !important; }
                 }
             `}} />
         </div>

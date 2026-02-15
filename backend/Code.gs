@@ -371,6 +371,8 @@ function doPost(e) {
         return applyAbsencePenalties();
       case 'activate_visitor_as_agent':
         return activateVisitorAsAgent(request.data);
+      case 'update_notif_prefs':
+        return updateNotifPrefs(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -466,6 +468,31 @@ function uploadImage(data) {
     : `https://drive.google.com/uc?export=download&id=${newFile.getId()}`;
   
   return ContentService.createTextOutput(JSON.stringify({ success: true, url: fileUrl })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Actualiza las preferencias de notificaciones (leídas/borradas) de un agente.
+ */
+function updateNotifPrefs(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const directoryData = sheet.getDataRange().getValues();
+  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+  
+  const idCol = headers.indexOf('ID');
+  let prefsCol = headers.indexOf('NOTIF_PREFS');
+  
+  if (prefsCol === -1) {
+    prefsCol = headers.length;
+    sheet.getRange(1, prefsCol + 1).setValue('NOTIF_PREFS');
+  }
+
+  const rowIdx = directoryData.findIndex(row => String(row[idCol]).trim() === String(data.agentId).trim());
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  sheet.getRange(rowIdx + 1, prefsCol + 1).setValue(JSON.stringify(data.prefs));
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -621,6 +648,11 @@ function applyAbsencePenalties() {
   for (let i = 1; i < directoryData.length; i++) {
     const agentId = String(directoryData[i][idColIdx]);
     if (!agentId || agentId === "undefined") continue;
+
+    // --- NUEVA REGLA: LIDERES Y DIRECTORES EXENTOS ---
+    const roleColIdx = headers.indexOf('CARGO') !== -1 ? headers.indexOf('CARGO') : headers.indexOf('NIVEL_ACCESO');
+    const role = roleColIdx !== -1 ? String(directoryData[i][roleColIdx]).toUpperCase() : "";
+    if (role === 'LIDER' || role === 'DIRECTOR') continue;
 
     // Buscar última asistencia
     let lastAttendanceDate = null;

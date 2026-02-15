@@ -23,9 +23,10 @@ interface CIUProps {
   isRefreshingIntel?: boolean;
   onAgentClick?: (agent: Agent) => void;
   userRole?: UserRole;
+  onActivateNotifications?: () => Promise<void>;
 }
 
-const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick, userRole }) => {
+const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick, userRole, onActivateNotifications }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
@@ -344,6 +345,27 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 </button>
               </div>
             </div>
+
+            {/* ACTIVACIÓN DE NOTIFICACIONES PARA TODOS LOS ROLES (Si no tiene permiso) */}
+            {typeof Notification !== 'undefined' && Notification.permission !== 'granted' && (
+              <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <Bell className="text-indigo-400" size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white font-black uppercase tracking-widest font-bebas">SISTEMA DE ALERTAS TÁCTICAS</p>
+                    <p className="text-[8px] text-indigo-400 font-bold uppercase tracking-widest">Las notificaciones push están desactivadas en este dispositivo.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={onActivateNotifications}
+                  className="w-full md:w-auto px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-indigo-500 transition-all shadow-lg active:scale-95 font-bebas"
+                >
+                  🔔 ACTIVAR ALERTAS PUSH
+                </button>
+              </div>
+            )}
 
             {/* AVISO TÁCTICO (BROADCAST) */}
             <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">

@@ -75,7 +75,8 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'BIOMETRIC': ['biometric_credential', 'biometric'],
       'STREAK': ['streak_count', 'streak'],
       'TASKS': ['tasks_json', 'tasks'],
-      'LAST_ATTENDANCE': ['last_attendance', 'última asistencia']
+      'LAST_ATTENDANCE': ['last_attendance', 'última asistencia'],
+      'NOTIF_PREFS': ['notif_prefs', 'notif_prefs_json', 'preferencias_notif', 'notif_prefs']
     };
 
     const isMatrix = Array.isArray(rawContent[0]);
@@ -185,7 +186,15 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
       { id: 'attendance', title: 'Asistoria Semanal', completed: false },
       { id: 'academy', title: 'Completar 1 Lección', completed: false },
       { id: 'bible', title: 'Lectura Diaria', completed: false }
-    ]
+    ],
+    notifPrefs: (() => {
+      try {
+        const prefs = getV('NOTIF_PREFS');
+        return prefs ? JSON.parse(prefs) : { read: [], deleted: [] };
+      } catch (e) {
+        return { read: [], deleted: [] };
+      }
+    })()
   };
 };
 
@@ -490,6 +499,16 @@ export const broadcastNotification = async (title: string, message: string) => {
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO ENVÍO BROADCAST:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateNotifPrefs = async (agentId: string, prefs: { read: string[]; deleted: string[] }) => {
+  try {
+    const response = await postToAction('update_notif_prefs', { agentId, prefs });
+    return response;
+  } catch (error: any) {
+    console.error("⚠️ FALLO ACTUALIZAR PREFS NOTIF:", error);
     return { success: false, error: error.message };
   }
 };

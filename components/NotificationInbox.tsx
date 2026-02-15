@@ -1,29 +1,37 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Clock, Info, ShieldAlert, Target, X, Trash2, CheckCheck } from 'lucide-react';
-import { InboxNotification } from '../types';
-import { fetchNotifications } from '../services/sheetsService';
+import { InboxNotification, Agent } from '../types';
+import { fetchNotifications, updateNotifPrefs, fetchAgentsFromSheets } from '../services/sheetsService';
 
 interface NotificationInboxProps {
     onClose: () => void;
     onTotalReadUpdate: (count: number) => void;
     onRequestPermission?: () => Promise<void>;
+    agentId?: string;
+    currentUser?: Agent | null;
 }
 
-const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate, onRequestPermission }) => {
+const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate, onRequestPermission, agentId, currentUser }) => {
+    const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
+    const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
+
     const [notifications, setNotifications] = useState<InboxNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [readIds, setReadIds] = useState<string[]>(() => {
         try {
-            const saved = localStorage.getItem('read_notifications');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
+            // Prioridad: LocalStorage (más rápido) o datos del Agente
+            const saved = localStorage.getItem(READ_KEY);
+            if (saved) return JSON.parse(saved);
+            return currentUser?.notifPrefs?.read || [];
+        } catch { return currentUser?.notifPrefs?.read || []; }
     });
     const [deletedIds, setDeletedIds] = useState<string[]>(() => {
         try {
-            const saved = localStorage.getItem('deleted_notifications');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
+            const saved = localStorage.getItem(DELETED_KEY);
+            if (saved) return JSON.parse(saved);
+            return currentUser?.notifPrefs?.deleted || [];
+        } catch { return currentUser?.notifPrefs?.deleted || []; }
     });
     const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(
         typeof window !== 'undefined' && typeof Notification !== 'undefined' ? Notification.permission : 'default'
@@ -49,8 +57,8 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
             }
             setNotifications(data);
             // Use the latest deletedIds and readIds from state initializers
-            const currentDeleted = (() => { try { const s = localStorage.getItem('deleted_notifications'); return s ? JSON.parse(s) : []; } catch { return []; } })();
-            const currentRead = (() => { try { const s = localStorage.getItem('read_notifications'); return s ? JSON.parse(s) : []; } catch { return []; } })();
+            const currentDeleted = (() => { try { const s = localStorage.getItem(DELETED_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
+            const currentRead = (() => { try { const s = localStorage.getItem(READ_KEY); return s ? JSON.parse(s) : []; } catch { return []; } })();
             updateBadge(data, currentRead, currentDeleted);
         } catch (err) {
             console.error("Error cargando inbox:", err);
@@ -61,29 +69,41 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         }
     };
 
-    const markAsRead = (id: string) => {
+    const markAsRead = async (id: string) => {
         if (readIds.includes(id)) return;
         const newRead = [...readIds, id];
         setReadIds(newRead);
-        localStorage.setItem('read_notifications', JSON.stringify(newRead));
+        localStorage.setItem(READ_KEY, JSON.stringify(newRead));
         updateBadge(notifications, newRead, deletedIds);
+
+        if (agentId) {
+            await updateNotifPrefs(agentId, { read: newRead, deleted: deletedIds });
+        }
     };
 
-    const deleteNotification = (e: React.MouseEvent, id: string) => {
+    const deleteNotification = async (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
         const newDeleted = [...deletedIds, id];
         setDeletedIds(newDeleted);
-        localStorage.setItem('deleted_notifications', JSON.stringify(newDeleted));
+        localStorage.setItem(DELETED_KEY, JSON.stringify(newDeleted));
         updateBadge(notifications, readIds, newDeleted);
+
+        if (agentId) {
+            await updateNotifPrefs(agentId, { read: readIds, deleted: newDeleted });
+        }
     };
 
-    const clearAll = () => {
+    const clearAll = async () => {
         if (window.confirm("⚠️ ¿ESTÁS SEGURO DE ELIMINAR TODAS LAS TRANSMISIONES? ESTA ACCIÓN NO SE PUEDE DESHACER.")) {
             const allIds = notifications.map(n => n.id);
             const newDeleted = Array.from(new Set([...deletedIds, ...allIds]));
             setDeletedIds(newDeleted);
-            localStorage.setItem('deleted_notifications', JSON.stringify(newDeleted));
+            localStorage.setItem(DELETED_KEY, JSON.stringify(newDeleted));
             updateBadge(notifications, readIds, newDeleted);
+
+            if (agentId) {
+                await updateNotifPrefs(agentId, { read: readIds, deleted: newDeleted });
+            }
         }
     };
 

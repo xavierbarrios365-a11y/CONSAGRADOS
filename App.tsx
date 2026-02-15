@@ -133,15 +133,29 @@ const App: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   const handleLogout = useCallback(() => {
-    const remembered = localStorage.getItem('remembered_user');
-    const version = localStorage.getItem('app_version');
-    const dismissedBanner = localStorage.getItem('pwa_banner_dismissed');
+    // Preservar llaves importantes antes de limpiar
+    const backupKeys = ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id'];
+    const backup: Record<string, string> = {};
+
+    // Backup de backups nominativas
+    backupKeys.forEach(k => {
+      const v = localStorage.getItem(k);
+      if (v) backup[k] = v;
+    });
+
+    // Backup dinámico de notificaciones para todos los IDs de agentes guardados
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('read_notifications_') || key.startsWith('deleted_notifications_'))) {
+        const v = localStorage.getItem(key);
+        if (v) backup[key] = v;
+      }
+    }
 
     localStorage.clear();
 
-    if (remembered) localStorage.setItem('remembered_user', remembered);
-    if (version) localStorage.setItem('app_version', version);
-    if (dismissedBanner) localStorage.setItem('pwa_banner_dismissed', dismissedBanner);
+    // Restaurar backups
+    Object.entries(backup).forEach(([k, v]) => localStorage.setItem(k, v));
 
     setIsLoggedIn(false);
     setCurrentUser(null);
@@ -793,6 +807,33 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* RADAR DE DESERCIÓN RÁPIDO - HOME */}
+              {(() => {
+                const dangerCount = agents.filter(a => {
+                  if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                  const parts = a.lastAttendance.split('/');
+                  const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
+                  if (isNaN(lastDate.getTime())) return false;
+                  const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                  return diffDays >= 21;
+                }).length;
+
+                if (dangerCount === 0) return null;
+
+                return (
+                  <div onClick={() => setView(AppView.SCANNER)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="text-red-500" size={20} />
+                      <div>
+                        <p className="text-[10px] text-white font-black uppercase tracking-widest">ALERTA DE DESERCIÓN</p>
+                        <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="text-red-500" />
+                  </div>
+                );
+              })()}
             </div>
 
             {/* EVENTOS ACTIVOS */}
@@ -912,6 +953,71 @@ const App: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* RADAR DE DESERCIÓN (AGENTES EN RIESGO) */}
+              <div className="absolute top-6 right-6 z-20 hidden md:block">
+                <button
+                  onClick={() => syncData()}
+                  className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl"
+                  title="Actualizar Radar"
+                >
+                  <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
+                </button>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-[160px] max-h-48 overflow-y-auto px-6 space-y-2 no-scrollbar">
+                {(() => {
+                  const riskAgents = agents.filter(a => {
+                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                    const parts = a.lastAttendance.split('/');
+                    const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
+                    if (isNaN(lastDate.getTime())) return false;
+                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays >= 14;
+                  }).sort((a, b) => {
+                    const dateA = new Date(a.lastAttendance || 0).getTime();
+                    const dateB = new Date(b.lastAttendance || 0).getTime();
+                    return dateA - dateB;
+                  });
+
+                  if (riskAgents.length === 0) return null;
+
+                  return (
+                    <div className="bg-[#001833]/90 backdrop-blur-md border border-[#ffb700]/20 rounded-3xl p-4 shadow-2xl space-y-3">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Activity size={14} className="text-[#ffb700]" />
+                          <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-widest">Radar de Inteligencia (En Riesgo)</span>
+                        </div>
+                        <span className="text-[8px] text-white/40 font-bold">{riskAgents.length} Objetivos</span>
+                      </div>
+                      <div className="space-y-2">
+                        {riskAgents.map(a => {
+                          const parts = a.lastAttendance!.split('/');
+                          const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance!);
+                          const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                          const isDanger = diffDays >= 21;
+
+                          return (
+                            <div key={a.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5">
+                              <div className="flex items-center gap-3">
+                                <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-lg object-cover grayscale" />
+                                <div>
+                                  <p className="text-[9px] font-black text-white uppercase leading-none">{a.name}</p>
+                                  <p className="text-[7px] text-white/30 font-bold mt-1">HACE {diffDays} DÍAS</p>
+                                </div>
+                              </div>
+                              <div className={`px-2 py-1 rounded-md border ${isDanger ? 'bg-red-500/20 border-red-500/50 text-red-500 animate-pulse' : 'bg-orange-500/20 border-orange-500/50 text-orange-500'} text-[7px] font-black uppercase`}>
+                                {isDanger ? '⚠️ PELIGRO' : '🛡️ ALERTA'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         );
@@ -1002,7 +1108,21 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.CIU:
-        return currentUser ? <CIUModule key={`ciu-${currentUser.id}`} agents={agents} currentUser={currentUser} onUpdateNeeded={() => syncData(true)} intelReport={intelReport} setView={setView} visitorCount={visitorRadar.length} onRefreshIntel={handleRefreshIntel} isRefreshingIntel={isRefreshingIntel} onAgentClick={(a) => setFoundAgent(a)} userRole={effectiveRole} /> : null;
+        return currentUser ? (
+          <CIUModule
+            agents={agents}
+            currentUser={currentUser}
+            onUpdateNeeded={() => syncData()}
+            intelReport={intelReport}
+            setView={setView}
+            visitorCount={visitorRadar.length}
+            onRefreshIntel={handleRefreshIntel}
+            isRefreshingIntel={isRefreshingIntel}
+            onAgentClick={(agent) => { setScannedAgentForPoints(agent); setView(AppView.HOME); }}
+            userRole={effectiveRole}
+            onActivateNotifications={initFirebaseMessaging}
+          />
+        ) : null;
       case AppView.VISITOR:
         return (
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
@@ -1315,6 +1435,8 @@ const App: React.FC = () => {
           onClose={() => setShowInbox(false)}
           onTotalReadUpdate={setUnreadNotifications}
           onRequestPermission={initFirebaseMessaging}
+          agentId={currentUser?.id}
+          currentUser={currentUser}
         />
       )}
 

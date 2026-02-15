@@ -51,6 +51,7 @@ export interface Agent {
   streakCount?: number;
   lastAttendance?: string;
   weeklyTasks?: { id: string; title: string; completed: boolean }[];
+  notifPrefs?: { read: string[]; deleted: string[] };
 }
 
 export interface DailyVerse {

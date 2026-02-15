@@ -583,7 +583,15 @@ const App: React.FC = () => {
       if (result.success) {
         setScanStatus('SUCCESS');
         const agent = agents.find(a => String(a.id) === String(id));
-        if (agent) setScannedAgentForPoints(agent);
+        if (agent) {
+          setScannedAgentForPoints(agent);
+          // Auto-award +10 XP for attendance
+          try {
+            await updateAgentPoints(agent.id, 'LIDERAZGO', 10);
+          } catch (e) {
+            console.error('Error auto-awarding attendance XP:', e);
+          }
+        }
         setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); syncData(true); }, 3000);
       } else {
         alert(result.error || "Fallo en registro.");
@@ -1309,10 +1317,16 @@ const App: React.FC = () => {
       {scannedAgentForPoints && (
         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 animate-in fade-in">
           <div className="w-full max-w-sm bg-[#0a0a0a] border border-blue-500/30 rounded-[3rem] p-8 space-y-8 shadow-2xl">
-            <p className="text-white font-black text-center uppercase tracking-widest">{scannedAgentForPoints.name}</p>
+            <div className="text-center space-y-2">
+              <p className="text-white font-black uppercase tracking-widest">{scannedAgentForPoints.name}</p>
+              <p className="text-[8px] text-green-400 font-black uppercase tracking-widest flex items-center justify-center gap-1"><CheckCircle2 size={10} /> +10 XP Asistencia Registrada</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest text-center">Registro Manual del Instructor</p>
+            </div>
             <div className="grid grid-cols-1 gap-3">
-              <PointButton label="Compromiso (+10)" onClick={() => handleIncrementPoints('BIBLIA')} disabled={isUpdatingPoints} icon={<Zap size={16} />} />
-              <PointButton label="Servicio (+10)" onClick={() => handleIncrementPoints('APUNTES')} disabled={isUpdatingPoints} icon={<Star size={16} />} />
+              <PointButton label="Biblia (+10)" onClick={() => handleIncrementPoints('BIBLIA')} disabled={isUpdatingPoints} icon={<Book size={16} />} />
+              <PointButton label="Participación (+10)" onClick={() => handleIncrementPoints('APUNTES')} disabled={isUpdatingPoints} icon={<Star size={16} />} />
             </div>
             <button onClick={() => setScannedAgentForPoints(null)} className="w-full py-4 text-[9px] font-black text-gray-500 uppercase tracking-widest">Cerrar</button>
           </div>

@@ -386,42 +386,62 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {allAgents.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.includes(searchQuery)).map(agent => {
-                                const stats = (() => {
-                                    const studentProgress = auditProgress.filter(p => String(p.agentId) === String(agent.id));
-                                    const completedCount = studentProgress.filter(p => p.status === 'COMPLETADO').length;
-                                    const percent = lessons.length > 0 ? (completedCount / lessons.length) * 100 : 0;
-                                    return { completedCount, percent };
-                                })();
+                                const studentProgress = auditProgress.filter(p => String(p.agentId) === String(agent.id));
+                                const completedLessonIds = studentProgress.filter(p => p.status === 'COMPLETADO').map((p: any) => p.lessonId);
+                                const completedCount = completedLessonIds.length;
+                                const percent = lessons.length > 0 ? (completedCount / lessons.length) * 100 : 0;
+
+                                // Per-course completion
+                                const courseStats = courses.map(course => {
+                                    const courseLessons = lessons.filter(l => l.courseId === course.id);
+                                    const completedInCourse = courseLessons.filter(l => completedLessonIds.includes(l.id)).length;
+                                    const isComplete = courseLessons.length > 0 && completedInCourse === courseLessons.length;
+                                    return { courseId: course.id, title: course.title, isComplete, completedInCourse, total: courseLessons.length };
+                                });
 
                                 return (
-                                    <div key={agent.id} className="bg-[#3A3A3A]/10 border border-white/5 rounded-3xl p-6 flex items-center gap-4 hover:border-[#FFB700]/30 transition-all group">
-                                        <img
-                                            src={formatDriveUrl(agent.photoUrl)}
-                                            className="w-12 h-12 rounded-2xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
-                                            onError={(e) => {
-                                                e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                                                e.currentTarget.className = "w-12 h-12 rounded-2xl object-cover border border-white/10 opacity-20";
-                                            }}
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[10px] font-black text-white uppercase truncate">{agent.name}</p>
-                                            <p className="text-[8px] text-gray-500 font-bold uppercase">{agent.id} • {agent.rank}</p>
-                                            <div className="mt-2 space-y-1">
-                                                <div className="flex justify-between text-[7px] font-black uppercase text-[#ffb700]">
-                                                    <span>Progreso Académico</span>
-                                                    <span>{Math.round(stats.percent)}%</span>
-                                                </div>
-                                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-[#ffb700]" style={{ width: `${stats.percent}%` }} />
-                                                </div>
+                                    <div key={agent.id} className="bg-[#3A3A3A]/10 border border-white/5 rounded-3xl p-6 hover:border-[#FFB700]/30 transition-all group">
+                                        <div className="flex items-center gap-4 mb-3">
+                                            <img
+                                                src={formatDriveUrl(agent.photoUrl)}
+                                                className="w-12 h-12 rounded-2xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                                                    e.currentTarget.className = "w-12 h-12 rounded-2xl object-cover border border-white/10 opacity-20";
+                                                }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10px] font-black text-white uppercase truncate">{agent.name}</p>
+                                                <p className="text-[8px] text-gray-500 font-bold uppercase">{agent.id} • {agent.rank}</p>
                                             </div>
-                                            <button
-                                                onClick={() => handleResetAttempts(agent.id)}
-                                                className="mt-3 w-full py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[8px] font-black uppercase hover:bg-red-500/20 transition-all"
-                                            >
-                                                Resetear Intentos
-                                            </button>
                                         </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-[7px] font-black uppercase text-[#ffb700]">
+                                                <span>Progreso General</span>
+                                                <span>{Math.round(percent)}%</span>
+                                            </div>
+                                            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-[#ffb700]" style={{ width: `${percent}%` }} />
+                                            </div>
+                                        </div>
+                                        {/* Per-course detail */}
+                                        {courseStats.length > 0 && (
+                                            <div className="mt-3 space-y-1.5 border-t border-white/5 pt-3">
+                                                {courseStats.map(cs => (
+                                                    <div key={cs.courseId} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase ${cs.isComplete ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
+                                                        {cs.isComplete ? <CheckCircle size={10} className="text-green-500 shrink-0" /> : <AlertCircle size={10} className="text-gray-600 shrink-0" />}
+                                                        <span className="truncate flex-1">{cs.title}</span>
+                                                        <span className="shrink-0">{cs.completedInCourse}/{cs.total}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => handleResetAttempts(agent.id)}
+                                            className="mt-3 w-full py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[8px] font-black uppercase hover:bg-red-500/20 transition-all"
+                                        >
+                                            Resetear Intentos
+                                        </button>
                                     </div>
                                 );
                             })}
@@ -577,21 +597,27 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
                             {activeLesson.questions && activeLesson.questions.length > 0 && (
                                 <div className="bg-[#3A3A3A]/10 border border-[#FFB700]/20 rounded-[2.5rem] p-8 space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-                                    {hasAnyProgress(activeLesson.id) && quizState !== 'RESULT' ? (
+                                    {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
                                         <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
-                                            <div className={`w-20 h-20 ${isLessonCompleted(activeLesson.id) ? 'bg-green-500/20 border-green-500/30' : 'bg-red-500/20 border-red-500/30'} rounded-full flex items-center justify-center mx-auto border`}>
-                                                {isLessonCompleted(activeLesson.id) ? (
-                                                    <CheckCircle className="text-green-500" size={40} />
-                                                ) : (
-                                                    <AlertCircle className="text-red-500" size={40} />
-                                                )}
+                                            <div className="w-20 h-20 bg-green-500/20 border-green-500/30 rounded-full flex items-center justify-center mx-auto border">
+                                                <CheckCircle className="text-green-500" size={40} />
                                             </div>
                                             <div className="space-y-2">
-                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">
-                                                    {isLessonCompleted(activeLesson.id) ? 'Lección Completada' : 'Evaluación Finalizada'}
-                                                </h4>
+                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">Aprobado ✅</h4>
                                                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
-                                                    {isLessonCompleted(activeLesson.id) ? 'Unidad superada con éxito.' : 'Has agotado tus intentos para esta unidad.'}
+                                                    Esta unidad ya fue aprobada exitosamente. No es posible repetirla.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : hasAnyProgress(activeLesson.id) && quizState !== 'RESULT' ? (
+                                        <div className="py-10 text-center space-y-6 animate-in zoom-in-95">
+                                            <div className="w-20 h-20 bg-red-500/20 border-red-500/30 rounded-full flex items-center justify-center mx-auto border">
+                                                <AlertCircle className="text-red-500" size={40} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h4 className="text-2xl font-bebas text-white uppercase tracking-widest">Evaluación Finalizada</h4>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-xs mx-auto">
+                                                    Has agotado tus intentos para esta unidad.
                                                 </p>
                                             </div>
                                         </div>

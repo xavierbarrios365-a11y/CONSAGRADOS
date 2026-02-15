@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Agent } from '../types';
-import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2, RefreshCw, Award } from 'lucide-react';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
 import { updateAgentAiProfile, fetchAcademyData } from '../services/sheetsService';
@@ -50,7 +50,29 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
   const [imgError, setImgError] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [backTab, setBackTab] = useState<'QR' | 'INTEL'>('QR');
+  const [completedCourses, setCompletedCourses] = useState<string[]>([]);
 
+  // Load course badges
+  React.useEffect(() => {
+    const loadBadges = async () => {
+      try {
+        const data = await fetchAcademyData(agent.id);
+        if (data.courses && data.lessons && data.progress) {
+          const approved = data.courses.filter((course: any) => {
+            const courseLessons = data.lessons.filter((l: any) => l.courseId === course.id);
+            if (courseLessons.length === 0) return false;
+            return courseLessons.every((l: any) =>
+              data.progress.some((p: any) => p.lessonId === l.id && p.status === 'COMPLETADO')
+            );
+          }).map((c: any) => c.title);
+          setCompletedCourses(approved);
+        }
+      } catch (e) {
+        console.error('Error loading badges:', e);
+      }
+    };
+    loadBadges();
+  }, [agent.id]);
   const handleAIUpdate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isUpdating) return;
@@ -159,6 +181,22 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent }) => {
               </div>
             </div>
           </div>
+
+          {/* Course Badges */}
+          {completedCourses.length > 0 && (
+            <div className="px-5 py-1.5 z-10 w-full">
+              <p className="text-[6px] text-[#ffb700] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+                <Award size={8} /> Logros Académicos
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {completedCourses.map((title, i) => (
+                  <span key={i} className="text-[6px] font-black uppercase bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 tracking-wider">
+                    ✅ {title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="bg-[#ffb700]/5 p-3 border-t border-white/5 flex flex-col items-center mt-auto">
             <p className="text-[5px] text-[#ffb700] font-bold uppercase tracking-widest leading-tight text-center font-bebas">

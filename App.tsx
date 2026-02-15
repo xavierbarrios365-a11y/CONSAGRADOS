@@ -954,11 +954,11 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* RADAR DE DESERCIÓN (AGENTES EN RIESGO) */}
-              <div className="absolute top-6 right-6 z-20 hidden md:block">
+              {/* BOTÓN DE REFRESCO - ACCESIBLE EN MÓVIL */}
+              <div className="absolute top-6 right-6 z-20">
                 <button
                   onClick={() => syncData()}
-                  className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl"
+                  className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl active:scale-95"
                   title="Actualizar Radar"
                 >
                   <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
@@ -1186,6 +1186,15 @@ const App: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* BOTÓN FLOTANTE PARA ESCANEAR VISITA */}
+            <button
+              onClick={() => setView(AppView.SCANNER)}
+              className="fixed bottom-24 right-6 p-5 bg-blue-600 text-white rounded-[2rem] shadow-[0_15px_30px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition-all active:scale-95 z-[45] flex items-center gap-3 border border-white/20 animate-in slide-in-from-bottom-6 group"
+            >
+              <QrCode size={24} className="group-hover:rotate-12 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Escanear Visita</span>
+            </button>
           </div>
         );
       case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;

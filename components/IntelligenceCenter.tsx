@@ -469,7 +469,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         )}
 
         {/* Global Stats Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg">
             <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">AGENTES OPERATIVOS</p>
             <p className="text-2xl font-bebas font-black text-white leading-none">{totalAgents}</p>
@@ -489,6 +489,31 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 <Plus size={10} /> Agregar
               </button>
             )}
+          </div>
+          {/* RADAR DE DESERCIÓN - RESUMEN */}
+          <div
+            className="bg-[#001833] border border-red-500/20 p-4 rounded-3xl text-center shadow-lg cursor-pointer hover:border-red-500/40 transition-all group"
+            onClick={() => setView?.(AppView.SCANNER as any)}
+          >
+            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas group-hover:text-red-400 transition-colors">RADAR (DESERCIÓN)</p>
+            {(() => {
+              const riskCount = agents.filter(a => {
+                if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                const parts = a.lastAttendance.split('/');
+                const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
+                if (isNaN(lastDate.getTime())) return false;
+                const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                return diffDays >= 14;
+              }).length;
+              return (
+                <div className="flex flex-col items-center">
+                  <p className={`text-2xl font-bebas font-black leading-none ${riskCount > 0 ? 'text-red-500 animate-pulse' : 'text-gray-600'}`}>
+                    {riskCount}
+                  </p>
+                  <p className="text-[6px] text-white/20 font-bold uppercase mt-1">En Riesgo</p>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

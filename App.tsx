@@ -32,7 +32,7 @@ import {
 import { generateGoogleCalendarLink } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -1209,72 +1209,145 @@ const App: React.FC = () => {
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
               <div>
-                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Visitantes</h2>
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Escaneo de Identidades Externas</p>
+                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar Táctico</h2>
+                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Mapeo de Señales Tácticas e Inteligencia</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
-                  <Activity className="text-[#ffb700] animate-pulse" size={18} />
-                  <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{visitorRadar.length} Detectados</span>
-                </div>
+                <button
+                  onClick={() => {
+                    setIsSyncing(true);
+                    syncData().finally(() => setIsSyncing(false));
+                  }}
+                  className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/20"
+                >
+                  <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                  Analizar Señales
+                </button>
                 <button
                   onClick={() => {
                     const name = prompt("INGRESAR NOMBRE DEL VISITANTE:");
                     if (name) {
-                      // Registrar visita manual usando el nombre como ID temporal
                       processScan(name.trim().toUpperCase());
                     }
                   }}
                   className="bg-[#ffb700] text-[#001f3f] px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#ffb700]/20"
                 >
-                  <Plus size={16} /> Agregar
+                  <Plus size={16} /> Registro Externo
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visitorRadar.length > 0 ? (
-                visitorRadar.map(v => (
-                  <div key={v.id} onClick={() => { setScannedId(v.id); setView(AppView.SCANNER); }} className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] p-8 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1">
-                    <div className="absolute top-4 right-6">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+            <div className="space-y-12">
+              {/* SECCIÓN 1: AGENTES EN RIESGO (INTELIGENCIA INTERNA) */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                  <Activity size={18} className="text-red-500 animate-pulse" />
+                  <h3 className="text-xl font-bebas text-white tracking-widest uppercase">Inteligencia de Deserción</h3>
+                </div>
+                {(() => {
+                  const riskAgents = agents.filter(a => {
+                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                    const parts = a.lastAttendance.split('/');
+                    const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance);
+                    if (isNaN(lastDate.getTime())) return false;
+                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays >= 14;
+                  }).sort((a, b) => {
+                    const partsA = a.lastAttendance!.split('/');
+                    const dateA = new Date(parseInt(partsA[2]), parseInt(partsA[1]) - 1, parseInt(partsA[0])).getTime();
+                    const partsB = b.lastAttendance!.split('/');
+                    const dateB = new Date(parseInt(partsB[2]), parseInt(partsB[1]) - 1, parseInt(partsB[0])).getTime();
+                    return dateA - dateB;
+                  });
+
+                  if (riskAgents.length === 0) return (
+                    <div className="py-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                      <p className="text-[10px] text-white/30 font-black uppercase tracking-widest font-bebas">No se detectan agentes en riesgo crítico</p>
                     </div>
-                    <div className="space-y-4">
-                      <div className="p-3 bg-white/5 rounded-2xl w-fit group-hover:bg-[#ffb700]/10 transition-colors">
-                        <Users className="text-[#ffb700]" size={24} />
-                      </div>
-                      <div>
-                        <p className="text-xl font-bebas text-white uppercase tracking-wider group-hover:text-[#ffb700] transition-colors">{v.name}</p>
-                        <div className="flex items-center gap-4 mt-2">
-                          <div className="flex flex-col">
-                            <span className="text-[7px] text-gray-500 font-black uppercase">Frecuencia</span>
-                            <span className="text-[10px] text-white font-black uppercase">{v.visits || 0} Visitas</span>
+                  );
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {riskAgents.map(a => {
+                        const parts = a.lastAttendance!.split('/');
+                        const lastDate = parts.length === 3 ? new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])) : new Date(a.lastAttendance!);
+                        const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                        const isDanger = diffDays >= 21;
+                        return (
+                          <div key={a.id} onClick={() => { setFoundAgent(a); }} className={`group relative bg-[#001833] border rounded-[2.5rem] p-6 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1 ${isDanger ? 'border-red-500/30' : 'border-amber-500/20'}`}>
+                            <div className="flex items-center gap-4">
+                              <div className="relative w-16 h-16">
+                                <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full rounded-2xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10" />
+                                <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#001833] ${isDanger ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                              </div>
+                              <div className="flex-1 overflow-hidden">
+                                <p className="text-lg font-bebas text-white uppercase tracking-wider truncate">{a.name}</p>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${isDanger ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                    {diffDays} DÍAS AUSENTE
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="w-px h-6 bg-white/10" />
-                          <div className="flex flex-col">
-                            <span className="text-[7px] text-gray-500 font-black uppercase">ID</span>
-                            <span className="text-[10px] text-gray-400 font-mono">{v.id}</span>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* SECCIÓN 2: SEÑALES EXTERNAS (VISITANTES) */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                  <Users size={18} className="text-[#ffb700]" />
+                  <h3 className="text-xl font-bebas text-white tracking-widest uppercase">Señales Externas (Visitantes)</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visitorRadar.length > 0 ? (
+                    visitorRadar.map(v => (
+                      <div key={v.id} onClick={() => { setScannedId(v.id); setView(AppView.SCANNER); }} className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] p-8 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1">
+                        <div className="absolute top-4 right-6">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="p-3 bg-white/5 rounded-2xl w-fit group-hover:bg-[#ffb700]/10 transition-colors">
+                            <Users className="text-[#ffb700]" size={24} />
+                          </div>
+                          <div>
+                            <p className="text-xl font-bebas text-white uppercase tracking-wider group-hover:text-[#ffb700] transition-colors">{v.name}</p>
+                            <div className="flex items-center gap-4 mt-2">
+                              <div className="flex flex-col">
+                                <span className="text-[7px] text-gray-500 font-black uppercase">Frecuencia</span>
+                                <span className="text-[10px] text-white font-black uppercase">{v.visits || 0} Visitas</span>
+                              </div>
+                              <div className="w-px h-6 bg-white/10" />
+                              <div className="flex flex-col">
+                                <span className="text-[7px] text-gray-500 font-black uppercase">ID</span>
+                                <span className="text-[10px] text-gray-400 font-mono">{v.id}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                      <Activity className="mx-auto text-gray-800 mb-4 opacity-20" size={48} />
+                      <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">Buscando señales externas tácticas...</p>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
-                  <Activity className="mx-auto text-gray-800 mb-4 opacity-20" size={48} />
-                  <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">Buscando señales tácticas...</p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* BOTÓN FLOTANTE PARA ESCANEAR VISITA */}
+            {/* BOTÓN FLOTANTE PARA ESCANEAR */}
             <button
               onClick={() => setView(AppView.SCANNER)}
               className="fixed bottom-24 right-6 p-5 bg-blue-600 text-white rounded-[2rem] shadow-[0_15px_30px_rgba(37,99,235,0.4)] hover:bg-blue-500 transition-all active:scale-95 z-[45] flex items-center gap-3 border border-white/20 animate-in slide-in-from-bottom-6 group"
             >
               <QrCode size={24} className="group-hover:rotate-12 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Escanear Visita</span>
+              <span className="text-[10px] font-black uppercase tracking-widest font-bebas">Activar Escáner</span>
             </button>
           </div>
         );

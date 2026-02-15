@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import { AppView, Agent, UserRole, Visitor, Guide } from './types';
 import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
+import TacticalExpediente from './components/TacticalExpediente';
 import ContentModule from './components/ContentModule';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
@@ -238,7 +239,7 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
 };
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.8.9"; // Real Logo & Tactical Sweep v1.8.9
+  const APP_VERSION = "1.9.0"; // Tactical Dossier & Radar Expediente v1.9.0
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -254,6 +255,7 @@ const App: React.FC = () => {
   const [scannedId, setScannedId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
+  const [showExpedienteFor, setShowExpedienteFor] = useState<Agent | null>(null);
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [visitorRadar, setVisitorRadar] = useState<Visitor[]>([]);
@@ -1479,7 +1481,7 @@ const App: React.FC = () => {
                         const diffDays = lastDate ? Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
                         const isDanger = diffDays >= 21;
                         return (
-                          <div key={a.id} onClick={() => { setFoundAgent(a); }} className={`group relative bg-[#001833] border rounded-[2.5rem] p-6 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1 ${isDanger ? 'border-red-500/30' : 'border-amber-500/20'}`}>
+                          <div key={a.id} onClick={() => { setShowExpedienteFor(a); }} className={`group relative bg-[#001833] border rounded-[2.5rem] p-6 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1 ${isDanger ? 'border-red-500/30' : 'border-amber-500/20'}`}>
                             <div className="flex items-center gap-4">
                               <div className="relative w-16 h-16">
                                 <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full rounded-2xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10" />
@@ -1873,6 +1875,13 @@ const App: React.FC = () => {
             <DigitalIdCard agent={foundAgent} />
           </div>
         </div>
+      )}
+
+      {showExpedienteFor && (
+        <TacticalExpediente
+          agent={showExpedienteFor}
+          onClose={() => setShowExpedienteFor(null)}
+        />
       )}
 
       {showInstallBanner && (

@@ -478,7 +478,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           {/* RADAR DE DESERCIÓN - RESUMEN */}
           <div
             className="bg-[#001833] border border-red-500/20 p-4 rounded-3xl text-center shadow-lg cursor-pointer hover:border-red-500/40 transition-all group"
-            onClick={() => setView?.(AppView.SCANNER as any)}
+            onClick={() => setView?.(AppView.VISITOR as any)}
           >
             <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas group-hover:text-red-400 transition-colors">INTELIGENCIA DE DESERCIÓN</p>
             {(() => {

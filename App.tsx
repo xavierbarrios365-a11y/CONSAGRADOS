@@ -32,7 +32,7 @@ import {
 import { generateGoogleCalendarLink } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Shield, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import TacticalRanking from './components/TacticalRanking';
@@ -44,8 +44,13 @@ const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagr
 
 const LoadingScreen = ({ message }: { message: string }) => (
   <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 space-y-6 animate-in fade-in">
-    <div className="w-20 h-20 bg-[#ffb700]/10 rounded-full flex items-center justify-center border-2 border-[#ffb700]/20 animate-pulse shadow-[0_0_50px_rgba(255,183,0,0.1)]">
-      <Activity className="text-[#ffb700]" size={40} />
+    <div className="w-24 h-24 flex items-center justify-center relative">
+      <div className="absolute inset-0 bg-[#ffb700]/10 rounded-full animate-ping opacity-20"></div>
+      <img
+        src={formatDriveUrl(OFFICIAL_LOGO)}
+        alt="Consagrados Logo"
+        className="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(255,183,0,0.3)] animate-pulse"
+      />
     </div>
     <div className="space-y-2 text-center">
       <p className="text-[#ffb700] text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">{message}</p>
@@ -74,7 +79,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.7.2"; // Session Hardening & Master Reset
+  const APP_VERSION = "1.7.3"; // Emergency Audit & Schema Fix
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -857,7 +862,7 @@ const App: React.FC = () => {
                   {notificationPermission === 'granted' ? (
                     <Zap size={28} className="text-indigo-400 animate-pulse" />
                   ) : (
-                    <Shield size={28} className="text-red-500 animate-bounce" />
+                    <Zap size={28} className="text-red-500 animate-bounce" />
                   )}
                 </div>
 
@@ -1233,7 +1238,7 @@ const App: React.FC = () => {
                   {leaders.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 px-1">
-                        <Shield size={14} className="text-blue-400" />
+                        <Zap size={14} className="text-blue-400" />
                         <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.3em]">Líderes ({leaders.length})</span>
                       </div>
                       {renderGrid(leaders, "border-blue-400/20 bg-blue-400/5 hover:border-blue-400/40", "text-blue-400")}
@@ -1424,7 +1429,7 @@ const App: React.FC = () => {
             <div className="w-full flex justify-between items-center mb-4">
               <h2 className="text-3xl font-bebas text-white tracking-widest uppercase truncate">Expediente de Agente</h2>
               <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-                <Shield className="text-[#ffb700]" size={20} />
+                <Target className="text-[#ffb700]" size={20} />
               </div>
             </div>
 
@@ -1581,7 +1586,7 @@ const App: React.FC = () => {
                     onChange={(e) => setLoginId(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20 uppercase"
                   />
-                  <Shield size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
+                  <Fingerprint size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
                 </div>
 
                 <div className="relative group">

@@ -257,17 +257,30 @@ function doGet(e) {
         for (let i = 1; i < strikeData.length; i++) {
           streakMap.set(String(strikeData[i][strikeAgentIdIdx]), {
             streak: strikeData[i][streakCountIdx] || 0,
-            tasks: strikeData[i][tasksJsonIdx] || '[]'
+            tasks: strikeData[i][tasksJsonIdx] || '[]',
+            lastDate: strikeHeaders.indexOf('LAST_DATE') !== -1 ? String(strikeData[i][strikeHeaders.indexOf('LAST_DATE')]) : ''
           });
         }
       }
       
       // Inyectar columnas virtuales en la respuesta
+      const todayStr = Utilities.formatDate(new Date(), "GMT-4", "yyyy-MM-dd");
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
+
       directoryData[0].push('STREAK_COUNT', 'TASKS_JSON');
       for (let i = 1; i < directoryData.length; i++) {
         const agentId = String(directoryData[i][0]);
-        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]' };
-        directoryData[i].push(streakInfo.streak, streakInfo.tasks);
+        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
+        
+        // --- AUTO-RESET VIRTUAL: Si la racha es vieja, mostrar 0 ---
+        let displayStreak = parseInt(streakInfo.streak);
+        if (displayStreak > 0 && streakInfo.lastDate !== todayStr && streakInfo.lastDate !== yesterdayStr) {
+          displayStreak = 0;
+        }
+
+        directoryData[i].push(displayStreak, streakInfo.tasks);
       }
     }
     

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Shield, Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, ShieldAlert, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle } from 'lucide-react';
+import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
@@ -266,7 +266,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-[#ffb700] rounded-2xl shadow-lg">
-                  <Shield className="text-[#001f3f]" size={24} />
+                  <Target className="text-[#001f3f]" size={24} />
                 </div>
                 <div>
                   <h3 className="text-white font-black text-sm uppercase tracking-widest leading-none mb-1 font-bebas">Command Center: Alto Mando</h3>
@@ -501,7 +501,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                       e.stopPropagation();
                       if (onRefreshIntel) onRefreshIntel();
                     }}
-                    className="mt-3 flex items-center justify-center gap-1 w-full px-3 py-2 bg-indigo-600/10 border border-indigo-500/30 rounded-xl text-indigo-400 text-[7px] font-black uppercase tracking-widest hover:bg-indigo-600/20 transition-all active:scale-95"
+                    className="mt-3 flex items-center justify-center gap-1 w-full px-3 py-2 bg-indigo-600 border border-indigo-400 rounded-xl text-white text-[7px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-900/40"
                   >
                     <RefreshCw size={10} className={isRefreshingIntel ? 'animate-spin' : ''} /> Escanear Inasistencias
                   </button>
@@ -759,7 +759,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               <div className="p-5 bg-blue-950/10 border border-blue-500/10 rounded-2xl space-y-3 mt-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <ShieldAlert className="text-blue-500" size={14} />
+                    <Zap className="text-blue-500" size={14} />
                     <h4 className="text-white font-black uppercase tracking-widest text-[9px] font-bebas">COMANDO DE OPERACIONES</h4>
                   </div>
                   <p className="text-[8px] text-blue-400/50 font-bold uppercase tracking-widest">Procedimiento Seguro</p>

@@ -189,10 +189,47 @@ function getFcmAccessToken() {
 }
 
 /**
+ * @description AUTO-CURACIÓN DE ESQUEMA: Verifica que todas las columnas requeridas existan en DIRECTORIO_OFICIAL.
+ * Si faltan, las crea automáticamente al final de la hoja.
+ */
+function verifyAndFixSchema() {
+  var CONFIG = getGlobalConfig();
+  var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  if (!sheet) return;
+
+  var REQUIRED_COLUMNS = [
+    'ID', 'NOMBRE', 'PIN', 'RANGO', 'ESTADO', 'NIVEL_ACCESO', 'FOTO_URL',
+    'WHATSAPP', 'FECHA_NACIMIENTO', 'FECHA_INGRESO', 'TALENTO', 'BAUTIZADO',
+    'RELACION_CON_DIOS', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO',
+    'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN',
+    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE', 'BIOMETRIC_CREDENTIAL',
+    'NOTIF_PREFS', 'FCM_TOKEN'
+  ];
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var normalizedHeaders = headers.map(function(h) { return String(h).trim().toUpperCase(); });
+  var addedColumns = [];
+
+  REQUIRED_COLUMNS.forEach(function(col) {
+    if (normalizedHeaders.indexOf(col) === -1) {
+      var nextCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, nextCol).setValue(col).setFontWeight('bold');
+      addedColumns.push(col);
+      normalizedHeaders.push(col);
+    }
+  });
+
+  if (addedColumns.length > 0) {
+    Logger.log('AUTO-CURACIÓN: Se añadieron las columnas faltantes: ' + addedColumns.join(', '));
+  }
+}
+
+/**
  * @description Maneja las solicitudes GET. Devuelve todos los datos crudos del Directorio Oficial.
  */
 function doGet(e) {
-  const CONFIG = getGlobalConfig();
+  var CONFIG = getGlobalConfig();
   if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) {
     return ContentService.createTextOutput(JSON.stringify({ error: "Configuración incompleta: SPREADSHEET_ID no está definido en el script." })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -234,31 +271,7 @@ function doGet(e) {
       }
     }
     
-    // Virtual Join de Rachas
-    if (strikesSheet) {
-      const strikeData = strikesSheet.getDataRange().getValues();
-      const strikeHeaders = strikeData[0].map(h => String(h).trim().toUpperCase());
-      const strikeAgentIdIdx = strikeHeaders.indexOf('AGENT_ID');
-      const streakCountIdx = strikeHeaders.indexOf('STREAK_COUNT');
-      const tasksJsonIdx = strikeHeaders.indexOf('TASKS_JSON');
-      
-      const streakMap = new Map();
-      if (strikeAgentIdIdx !== -1) {
-        for (let i = 1; i < strikeData.length; i++) {
-          streakMap.set(String(strikeData[i][strikeAgentIdIdx]), {
-            streak: strikeData[i][streakCountIdx] || 0,
-            tasks: strikeData[i][tasksJsonIdx] || '[]'
-          });
-        }
-      }
-      
-      directoryData[0].push('STREAK_COUNT', 'TASKS_JSON');
-      for (let i = 1; i < directoryData.length; i++) {
-        const agentId = String(directoryData[i][0]);
-        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]' };
-        directoryData[i].push(streakInfo.streak, streakInfo.tasks);
-      }
-    }
+    // (Bloque duplicado de Rachas eliminado por Auto-Curación v1.7.2)
 
     // Virtual Join de Asistencia (Última Fecha)
     if (attendanceSheet) {
@@ -294,6 +307,9 @@ function doPost(e) {
   if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Configuración SPREADSHEET_ID incompleta." })).setMimeType(ContentService.MimeType.JSON);
   
   try {
+    // Auto-curación de esquema en cada llamada POST
+    try { verifyAndFixSchema(); } catch(schemaErr) { Logger.log('Schema check failed: ' + schemaErr.message); }
+
     const request = JSON.parse(e.postData.contents);
     switch (request.action) {
       case 'enroll_agent':

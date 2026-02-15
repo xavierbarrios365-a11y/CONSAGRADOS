@@ -457,24 +457,30 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">PERSONAL DE MANDO</p>
             <p className="text-2xl font-bebas font-black text-[#ffb700] leading-none">{totalLeaders}</p>
           </div>
-          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg cursor-pointer hover:border-blue-400/30 transition-all" onClick={() => setView?.(AppView.VISITOR as any)}>
-            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas">RADAR (VISITAS)</p>
+          <div className="bg-[#001833] border border-white/5 p-4 rounded-3xl text-center shadow-lg cursor-pointer hover:border-blue-400/30 transition-all group" onClick={() => setView?.(AppView.VISITOR as any)}>
+            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas group-hover:text-blue-400 transition-colors">INTELIGENCIA EXTERNA</p>
             <p className="text-2xl font-bebas font-black text-blue-400 leading-none">{visitorCount || 0}</p>
-            {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
+            <div className="mt-3 flex flex-col gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); setView?.(AppView.VISITOR as any); }}
-                className="mt-2 flex items-center justify-center gap-1 mx-auto px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 text-[7px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all active:scale-95"
+                className="flex items-center justify-center gap-1 w-full px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-[7px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all active:scale-95"
               >
-                <Plus size={10} /> Agregar
+                <Plus size={10} /> Registro de Visita
               </button>
-            )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setView?.(AppView.SCANNER as any); }}
+                className="flex items-center justify-center gap-1 w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white/60 text-[7px] font-black uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95"
+              >
+                <Camera size={10} /> Activar Escáner
+              </button>
+            </div>
           </div>
           {/* RADAR DE DESERCIÓN - RESUMEN */}
           <div
             className="bg-[#001833] border border-red-500/20 p-4 rounded-3xl text-center shadow-lg cursor-pointer hover:border-red-500/40 transition-all group"
             onClick={() => setView?.(AppView.SCANNER as any)}
           >
-            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas group-hover:text-red-400 transition-colors">RADAR (DESERCIÓN)</p>
+            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-[0.2em] font-bebas group-hover:text-red-400 transition-colors">INTELIGENCIA DE DESERCIÓN</p>
             {(() => {
               const riskCount = agents.filter(a => {
                 if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
@@ -490,6 +496,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     {riskCount}
                   </p>
                   <p className="text-[6px] text-white/20 font-bold uppercase mt-1">En Riesgo</p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onRefreshIntel) onRefreshIntel();
+                    }}
+                    className="mt-3 flex items-center justify-center gap-1 w-full px-3 py-2 bg-indigo-600/10 border border-indigo-500/30 rounded-xl text-indigo-400 text-[7px] font-black uppercase tracking-widest hover:bg-indigo-600/20 transition-all active:scale-95"
+                  >
+                    <RefreshCw size={10} className={isRefreshingIntel ? 'animate-spin' : ''} /> Escanear Inasistencias
+                  </button>
                 </div>
               );
             })()}

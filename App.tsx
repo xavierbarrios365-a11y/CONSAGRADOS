@@ -74,7 +74,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.7.0"; // Tactical Reset & Intelligence Consolidation
+  const APP_VERSION = "1.7.1"; // Tactical Persistence Booster
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
@@ -136,23 +136,21 @@ const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // --- SISTEMA DE PURGA AUTOMÁTICA (FORCE REFRESH ON UPDATE) ---
+  // --- SISTEMA DE PURGA TÁCTICA (FORCE REFRESH ON UPDATE) ---
   useEffect(() => {
-    const currentVersion = APP_VERSION;
-    const storedVersion = localStorage.getItem('consagrados_version');
+    const checkVersionAndPurge = async () => {
+      const storedVersion = localStorage.getItem('app_version');
+      if (storedVersion && storedVersion !== APP_VERSION) {
+        console.warn(`🚀 NUEVA VERSIÓN DETECTADA (${storedVersion} -> ${APP_VERSION}). EJECUTANDO PURGA TÁCTICA...`);
 
-    if (storedVersion && storedVersion !== currentVersion) {
-      console.warn(`🚀 NUEVA VERSIÓN DETECTADA (${currentVersion}). EJECUTANDO PURGA TÁCTICA...`);
-
-      const performPurge = async () => {
         try {
           if ('caches' in window) {
-            const names = await caches.keys();
-            await Promise.all(names.map(n => caches.delete(n)));
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
           }
-          if (navigator.serviceWorker) {
-            const regs = await navigator.serviceWorker.getRegistrations();
-            for (let reg of regs) await reg.unregister();
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(reg => reg.unregister()));
           }
 
           const lastId = localStorage.getItem('last_login_id');
@@ -169,19 +167,42 @@ const App: React.FC = () => {
           if (lastId) localStorage.setItem('last_login_id', lastId);
           if (remembered) localStorage.setItem('remembered_user', remembered);
           Object.entries(notifBackup).forEach(([k, v]) => localStorage.setItem(k, v));
-          localStorage.setItem('consagrados_version', currentVersion);
+          localStorage.setItem('app_version', APP_VERSION);
 
           window.location.reload();
         } catch (e) {
           console.error("Fallo en purga:", e);
-          localStorage.setItem('consagrados_version', currentVersion);
+          localStorage.setItem('app_version', APP_VERSION);
+          window.location.reload();
         }
-      };
-      performPurge();
-    } else if (!storedVersion) {
-      localStorage.setItem('consagrados_version', currentVersion);
-    }
+      } else {
+        localStorage.setItem('app_version', APP_VERSION);
+      }
+    };
+    checkVersionAndPurge();
   }, []);
+
+  // --- BOOSTER DE PERSISTENCIA (SINCRONIZAR PREFS DESDE NUBE AL LOGUEAR) ---
+  useEffect(() => {
+    if (isLoggedIn && currentUser && currentUser.id) {
+      const agentId = currentUser.id;
+      const READ_KEY = `read_notifications_${agentId}`;
+      const DELETED_KEY = `deleted_notifications_${agentId}`;
+
+      // Si local está vacío pero nube tiene data, hidratar
+      if (currentUser.notifPrefs) {
+        const localRead = localStorage.getItem(READ_KEY);
+        const localDeleted = localStorage.getItem(DELETED_KEY);
+
+        if (!localRead && currentUser.notifPrefs.read?.length > 0) {
+          localStorage.setItem(READ_KEY, JSON.stringify(currentUser.notifPrefs.read));
+        }
+        if (!localDeleted && currentUser.notifPrefs.deleted?.length > 0) {
+          localStorage.setItem(DELETED_KEY, JSON.stringify(currentUser.notifPrefs.deleted));
+        }
+      }
+    }
+  }, [isLoggedIn, currentUser]);
 
   const handleLogout = useCallback(() => {
     // Preservar llaves importantes antes de limpiar
@@ -233,49 +254,6 @@ const App: React.FC = () => {
       if (showSessionWarning) setShowSessionWarning(false);
     }
   }, [isLoggedIn, showSessionWarning]);
-
-  useEffect(() => {
-    const checkVersionAndPurge = async () => {
-      const savedVersion = localStorage.getItem('app_version');
-      if (savedVersion && savedVersion !== APP_VERSION) {
-        console.log(`🚀 NUEVA VERSIÓN DETECTADA: ${savedVersion} -> ${APP_VERSION}. Iniciando purga táctica...`);
-
-        try {
-          // 1. Limpiar Caches del Navegador
-          if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map(name => caches.delete(name)));
-          }
-
-          // 2. Desregistrar Service Workers
-          if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map(reg => reg.unregister()));
-          }
-
-          // 3. Limpiar memorias (manteniendo el usuario recordado)
-          const remembered = localStorage.getItem('remembered_user');
-          const dismissedBanner = localStorage.getItem('pwa_banner_dismissed');
-          localStorage.clear();
-          if (remembered) localStorage.setItem('remembered_user', remembered);
-          if (dismissedBanner) localStorage.setItem('pwa_banner_dismissed', dismissedBanner);
-
-          localStorage.setItem('app_version', APP_VERSION);
-
-          // 4. Recarga forzosa
-          window.location.reload();
-        } catch (err) {
-          console.error("Fallo en purga atómica:", err);
-          localStorage.setItem('app_version', APP_VERSION);
-          window.location.reload();
-        }
-      } else {
-        localStorage.setItem('app_version', APP_VERSION);
-      }
-    };
-
-    checkVersionAndPurge();
-  }, []);
 
   useEffect(() => {
     initRemoteConfig();

@@ -28,6 +28,7 @@ function getGlobalConfig() {
     VERSES_SHEET: 'VERSICULO_DIARIO',
     NOTIFICATIONS_SHEET: 'NOTIFICACIONES',
     EVENTS_SHEET_NAME: 'CALENDARIO_EVENTOS',
+    EVENT_CONFIRMATIONS_SHEET: 'CONFIRMACION_EVENTOS',
     SERVICE_ACCOUNT: {
       "project_id": "consagrados-c2d78",
       "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDNq6kEzfZMRDLP\nDvSGS3cLuUnf5zFbwFZppBtEyvyKTxL8m80E0BV8rQYmAlaSdG1vEd8bCsqiVp1Y\nVrFc/05yPCUdNRBJjj+6fj6hfq4rGKgm1nq4Wy3SaOAkFNPUS6hO6Ucx4q6+zk7q\n32KdJMfiXOv2cj3nHyBspbq1XG2Leg2zJaxY741Tan8bfnHjLsV29Q4NAVHopEsc\nYaqEQLSzAYA6yIwMe2qJqwbYJPny8Hsh9gKbb9QTTggEIeI5QrPT/KH6fE3nXRfh\n3gX4Kg8OgQ9cWoBompqj55PM9rdkhGHQA1HN0ylV2Fjykfj0Jq+dPhn2oM3UKn+W\nvhJLortDAgMBAAECggEAXOHiUe4mBilifMo3OhMIrz29lCWXz+Tb4ZegTQAS7u9p\nFrXR8BN9MLH/LdkuebOk3F1I0bCc9JWDN6rnLKWMKuDorfkR4vYf57wt0scgJwxa\nnDeOcoWS+wwr9X+GbsDAQOrvISNLYZZQY5gAtBExSBRI6CKNvDv9a7Ooz1Dvk+X5\n129n2U7vOm9oOWcWI4ysjID0L3TfO6jEMBIlH4cxBM4jZXf3v1NYH6IMZxPKI86D\nD97OHngSm8DJQdmVApDsI9Bnt70HHQlSSFDkeien4r3au+7rL1dUuo4wpw7+BcxT\nuSlfFpXldDDSjtLXSjoCKkULJ0gBfUUQurMR+9iYqQKBgQD9S8ULmkpvnYtmbI7H\n6EKrfrB7YPPM0bEpGM/ZBOAuUTlQ+Mx23r+pWgHcOCttyT1+bsaFA8s2OwSJGUjw\nKoGSmX8EgzfPJ1K6+OZTvqC1pPDfXjWMV9PaGmsTkGL2SXuP1RSstee5oav8D617\ns+i0k+406ngIqOg0NcJNVyyKHwKBgQDP3bxEZW1QNjmVAS6MzMCygKzYfMzKHe4O\nkjtj/1XdLhLhUf3n6cPAZjY9bYmp/Wzd1csc6gufhAdV4ObhkgL0ieWy6lw/fKpi\nkeiYjXP8DfnEov1w+s+OhJDBncH1mfReRXJxtzNooLNo+QXx1CNEeiJ7JgdTD+MW\n0VV58DWyXQKBgHNUXJO73MiVYzNvmlNLXY/YT2Ld8iQAFjowIfMeVTTBpudHYVF+\neqYRZWdv69ZBGs7GgX1vDMfUd2w1JxCzSewGF99mH7MipHide8IFugb64vHRY3BT\nTRKxlK+DvouFSc1jp9Y7vRa4liZevQ7mC76s3HkbiSvoPFIJaD7uwkjhAoGAeDzF\nyzZ0TeKf2j4NxCooCNj/olZGS1+WtV0G96fZ7g/ZofZAjaadsawuEchLykWqdINX\ncwk64fGIILfwNWi1RuiBMsX3yE1/bXcC+UNRZOpcoM67FWAvMTwjU6vCZyO/w8we\nEAMtvIbAYKczNhhEsjaHvX5Y3EYjUK6T5+330Y0CgYBsDgDMB0TT7+VggQA5FipB\nDpWe17uO8iIzv7HPTIlcX5m8ZB8pWiaSIm7mHyxkh/n27haLvSLvsNJm5lZni7Zf\nR3k8S2doGXfBBwkr/AahG2e52gbrQiSvd6+pROuIwQvNkTdvNi753o5BpAsgdo/V\nM8tnG9QAfWnKCnaT1eH3Yg==\n-----END PRIVATE KEY-----\n",
@@ -592,7 +593,7 @@ function registerIdScan(payload) {
      }
    }
 
-   attendanceSheet.appendRow([payload.scannedId, payload.type, payload.location, new Date(payload.timestamp)]);
+   attendanceSheet.appendRow([payload.scannedId, 'ASISTENCIA', payload.location, new Date(payload.timestamp)]);
 
    // Notificación a Telegram
    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
@@ -1468,14 +1469,19 @@ function setupAttendanceSheet() {
     let dateVal = row[3];
 
     // --- LÓGICA DE INTELIGENCIA DE RESCATE ---
-    const rowStr = row.join(' ');
+    const rowStr = row.join(' ').toUpperCase();
     
-    if (rowStr.includes('EVENT_CONFIR')) {
-      type = 'EVENTO';
-      location = row[3] || row[2] || 'EVENTO DESCONOCIDO';
-    } else if (rowStr.includes('DIRECTOR_CONFIRM')) {
-      type = 'MANUAL';
-      location = 'CENTRO DE OPERACIÓN';
+    if (rowStr.includes('EVENT_CONFIR') || rowStr.includes('EVENTO:')) {
+      // Es un evento: Lo mandamos a la hoja de eventos
+      const eventSheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
+      if (eventSheet) {
+        let eventName = String(row[5] || row[2] || 'EVENTO ANTIGUO').replace('EVENTO: ', '').split('(ID:')[0].trim();
+        eventSheet.appendRow([id, 'AGENTE MIGRADO', eventName, row[3] || row[2] || new Date()]);
+      }
+      continue; // No lo incluimos en la hoja de ASISTENCIA física
+    } else if (rowStr.includes('DIRECTOR_CONFIRM') || rowStr.includes('MANUAL')) {
+      type = 'ASISTENCIA';
+      location = 'REGISTRO MANUAL';
     }
 
     // Si la fecha en D no es válida, buscar en C
@@ -2316,11 +2322,11 @@ function confirmDirectorAttendance(data) {
     return ContentService.createTextOutput(JSON.stringify({ success: true, alreadyDone: true })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Registrar asistencia unificada [ID, TIPO, UBICACION, FECHA]
+  // Registrar asistencia unificada [ID, TRAMO/TIPO, UBICACION, FECHA]
   sheet.appendRow([
     data.agentId,
-    'MANUAL',
-    'CENTRO DE OPERACIÓN',
+    'ASISTENCIA',
+    'REGISTRO MANUAL',
     new Date()
   ]);
 
@@ -2435,19 +2441,23 @@ function getActiveEvents() {
 function confirmEventAttendance(data) {
   const CONFIG = getGlobalConfig();
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
-  if (!sheet) throw new Error("Hoja de asistencia no encontrada");
+  const sheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
+  if (!sheet) {
+    const newSheet = ss.insertSheet(CONFIG.EVENT_CONFIRMATIONS_SHEET);
+    newSheet.appendRow(['ID', 'AGENTE', 'EVENTO', 'FECHA']);
+    newSheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#001f3f').setFontColor('#ffffff');
+    return confirmEventAttendance(data); // Reintento
+  }
 
   const now = new Date();
-  const fecha = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
-  const hora = Utilities.formatDate(now, "GMT-4", "HH:mm:ss");
+  const fechaCompleta = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd HH:mm:ss");
 
-  // Registro de asistencia unificada [ID, TIPO, UBICACION, FECHA]
+  // Registro de confirmación de evento exclusivo
   sheet.appendRow([
     data.agentId,
-    'EVENTO',
-    `EVT: ${data.eventTitle}`,
-    new Date()
+    data.agentName,
+    data.eventTitle,
+    fechaCompleta
   ]);
 
   // Sumar 10 XP por confirmar asistencia al evento

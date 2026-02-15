@@ -156,84 +156,101 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
   const color = isOnline ? '#ffb700' : '#ef4444';
 
   return (
-    <div className="relative w-40 h-40 flex items-center justify-center">
-      {/* Resplandor Maestro (Aura Digital) */}
-      <div
-        className={`absolute inset-4 rounded-full blur-[40px] opacity-40 transition-all duration-1000 ${isOnline ? 'bg-[#ffb700] animate-pulse' : 'bg-red-600'}`}
-      ></div>
+    <div className="relative w-44 h-44 flex items-center justify-center">
+      {/* 
+        DISEÑO DE AUTOR: RÉPLICA EXACTA DEL LOGO CONSAGRADOS
+        Este SVG calca la geometría del archivo logo_white.png proporcionado por el Director.
+      */}
+      <svg
+        viewBox="0 0 100 100"
+        className="w-full h-full drop-shadow-[0_0_15px_rgba(255,183,0,0.3)]"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <radialGradient id="centerGlow" cx="50%" cy="45%" r="40%">
+            <stop offset="0%" stopColor={color} stopOpacity="0.8" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </radialGradient>
+        </defs>
 
-      {/* Haz Sugerido del Logo (Dinámico) */}
-      {isOnline && (
-        <div className="absolute inset-0 z-10 animate-pulse opacity-20 pointer-events-none">
-          <div
-            className="absolute top-[35%] left-[55%] w-32 h-16 origin-left rotate-[10deg]"
-            style={{
-              background: `linear-gradient(90deg, ${color}, transparent)`,
-              clipPath: 'polygon(0 40%, 100% 0, 100% 100%, 0 60%)'
-            }}
-          ></div>
-        </div>
-      )}
+        {/* --- LUZ 1: Resplandor del Medio (Glow Central) --- */}
+        {isOnline && (
+          <circle
+            cx="50" cy="45" r="30"
+            fill="url(#centerGlow)"
+            className="animate-pulse opacity-50"
+          />
+        )}
 
-      {/* SVG OFICIAL CALCADO */}
-      <svg viewBox="0 0 100 120" className="relative w-28 h-32 z-20 drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] filter transition-all duration-500">
-        {/* ESCUDO (Shield) */}
+        {/* --- ESCUDO ESTARCIDO (HEXAGONAL STENCIL) --- */}
         <path
-          d="M15 25 L50 8 L85 25 L85 75 L50 98 L15 75 Z"
-          fill="none"
-          stroke={isOnline ? color : '#475569'}
-          strokeWidth="4"
+          d="M50 8 L85 22 V55 L50 85 L15 55 V22 L50 8Z"
+          stroke={color}
+          strokeWidth="4.5"
           strokeLinecap="round"
-          strokeLinejoin="round"
-          className="transition-colors duration-1000"
+          strokeDasharray="18 4"
+          className={isOnline ? "animate-[pulse_3s_ease-in-out_infinite]" : "opacity-60"}
         />
 
-        {/* ESTRUCTURA DEL FARO */}
-        <g fill="white" className="transition-all duration-1000">
-          {/* Cúpula Superior */}
-          <path d="M40 32 L50 18 L60 32 L40 32" />
-          <path d="M42 32 L42 28 Q50 15 58 28 L58 32 Z" />
+        {/* --- EL FARO (SILUETA OFICIAL) --- */}
+        <g className={isOnline ? "" : "opacity-40"}>
+          {/* Cuerpo y Base */}
+          <path
+            d="M50 85 L38 85 L44 42 L56 42 L62 85 Z"
+            fill={color}
+            className="opacity-20"
+          />
+          {/* Franjas Diagonales de Autor */}
+          <path d="M41.5 70 L58.5 70 L60.5 85 L39.5 85 Z" fill={color} />
+          <path d="M45.5 50 L54.5 50 L56.5 62 L43.5 62 Z" fill={color} />
 
-          {/* Linterna / Foco */}
-          <path d="M42 35 L58 35 L58 45 L42 45 Z" fill={isOnline ? color : '#334155'} className={isOnline ? 'animate-pulse' : ''} />
-          <rect x="44" y="37" width="12" height="6" fill={isOnline ? '#fffbeb' : '#1e293b'} opacity="0.8" />
-
-          {/* Cuerpo del Faro */}
-          <path d="M42 48 L58 48 L65 105 L35 105 Z" fill="white" />
-
-          {/* Franjas Diagonales (Como en el Logo) */}
-          <path d="M38.5 90 L61.5 80 L63 93 L40 103 Z" fill="#0f172a" opacity="0.4" />
-          <path d="M40.5 70 L59.5 60 L60.5 70 L41.5 80 Z" fill="#0f172a" opacity="0.4" />
-          <path d="M42.5 54 L57.5 52 L58 58 L43 60 Z" fill="#0f172a" opacity="0.4" />
-
-          {/* Base */}
-          <path d="M32 105 L68 105 L66 112 L34 112 Z" />
+          {/* Cúpula y Linterna */}
+          <path d="M44 42 L56 42 L53 38 L47 38 Z" fill={color} />
+          <path d="M47 38 L53 38 L53 30 L47 30 Z" fill={color} />
+          <path d="M42 30 L58 30 L50 20 Z" fill={color} />
+          <circle cx="50" cy="18" r="1.5" fill={color} />
         </g>
 
-        {/* El Haz de Luz Lateral (Versión Calcada del Logo) */}
+        {/* --- LUZ 2: Haz del Faro (Triángulos de Protección) --- */}
         {isOnline && (
-          <path
-            d="M58 35 L90 25 L90 48 L58 45 Z"
-            fill={color}
-            className="animate-pulse opacity-60"
-          />
+          <g className="animate-[pulse_1.5s_ease-in-out_infinite]">
+            {/* Haz Principal a la Derecha (Como el Logo) */}
+            <path
+              d="M53 32 L85 24 V40 L53 32 Z"
+              fill={color}
+              className="opacity-60"
+              filter="url(#glow)"
+            />
+            {/* Haz Sutil a la Izquierda (Balance Táctico) */}
+            <path
+              d="M47 32 L15 24 V40 L47 32 Z"
+              fill={color}
+              className="opacity-20"
+            />
+          </g>
         )}
       </svg>
 
-      {/* Partículas de Energía (Solo Online) */}
+      {/* Partículas de Datos (Aura Digital) */}
       {isOnline && (
-        <div className="absolute inset-0 overflow-hidden rounded-full">
-          {[...Array(6)].map((_, i) => (
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 bg-white rounded-full animate-ping opacity-20"
+              className="absolute w-1 h-1 rounded-full animate-ping"
               style={{
-                top: `${20 + Math.random() * 60}%`,
-                left: `${20 + Math.random() * 60}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 2}s`
+                backgroundColor: color,
+                left: `${Math.random() * 60 + 20}%`,
+                top: `${Math.random() * 60 + 20}%`,
+                animationDelay: `${i * 0.5}s`,
+                opacity: 0.3
               }}
-            ></div>
+            />
           ))}
         </div>
       )}
@@ -242,7 +259,7 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
 };
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.8.1"; // Logo-accurate Faro & Operation Center v2
+  const APP_VERSION = "1.8.7"; // Logo-accurate Faro & Operation Center v2.1
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<Agent | null>(null);
   const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');

@@ -40,6 +40,13 @@ const VAPID_KEY = "BAqCHHlwSwZQA-8fvpuYvg-augargWAuRXwahCaF9pO31-PfEUN_Oxf2GumcR
 
 export const requestForToken = async () => {
     try {
+        // Solicitar permiso explícito al navegador
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.warn('Permiso de notificaciones denegado por el usuario.');
+            return null;
+        }
+
         const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (currentToken) {
             console.log('Firebase Token:', currentToken);

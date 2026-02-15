@@ -138,8 +138,7 @@
       pointer-events: none;
     }
   </style>
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  </style>
 </head>
 
 <body>
@@ -148,9 +147,10 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('SW Registered', reg))
-          .catch(err => console.log('SW Error', err));
+        // Registramos el worker de Firebase específicamente para notificaciones
+        navigator.serviceWorker.register('./firebase-messaging-sw.js')
+          .then(reg => console.log('Firebase Messaging SW Registered', reg))
+          .catch(err => console.log('Firebase Messaging SW Error', err));
       });
     }
   </script>

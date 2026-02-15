@@ -2206,3 +2206,11 @@ function deleteEvent(data) {
 
   return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Evento no encontrado" })).setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * @description Función de prueba para verificar la configuración de notificaciones push (FCM v1).
+ */
+function testPush() {
+  const result = sendPushNotification("PRUEBA TÁCTICA", "Si recibes esto, la configuración de FCM v1 es correcta y el sistema está listo.");
+  return "Ejecución completada. Revisa los logs para confirmar el éxito del envío.";
+}

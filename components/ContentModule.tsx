@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Guide, UserRole } from '../types';
 import { fetchGuides, uploadFile, uploadGuideMetadata, deleteGuide } from '../services/sheetsService';
 import { compressImage } from '../services/storageUtils';
-import { BookOpen, Download, Upload, Plus, X, FileText, Loader2, Search, Trash2 } from 'lucide-react';
+import { BookOpen, Download, Upload, Plus, X, FileText, Loader2, Search, Trash2, Link } from 'lucide-react';
 
 interface ContentModuleProps {
     userRole: UserRole;
@@ -21,6 +21,8 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
     const [newName, setNewName] = useState('');
     const [newType, setNewType] = useState<'ESTUDIANTE' | 'LIDER'>('ESTUDIANTE');
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [uploadMode, setUploadMode] = useState<'FILE' | 'LINK'>('FILE');
+    const [externalUrl, setExternalUrl] = useState('');
     const [uploadStatuses, setUploadStatuses] = useState<Record<string, 'IDLE' | 'UPLOADING' | 'SUCCESS' | 'ERROR'>>({});
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,11 +60,26 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
         if (selectedFiles.length === 0 || !newName) return;
 
         setIsUploading(true);
-        const newStatuses: Record<string, any> = {};
-        selectedFiles.forEach(f => newStatuses[f.name] = 'UPLOADING');
-        setUploadStatuses(newStatuses);
-
         try {
+            if (uploadMode === 'LINK') {
+                if (!externalUrl || !newName) return;
+                const metadataRes = await uploadGuideMetadata(newName, newType, externalUrl);
+                if (metadataRes.success) {
+                    setShowUploadModal(false);
+                    resetForm();
+                    loadGuides();
+                } else {
+                    alert('Error al guardar link: ' + metadataRes.error);
+                }
+                setIsUploading(false);
+                return;
+            }
+
+            // MODO ARCHIVO
+            if (selectedFiles.length === 0) return;
+            const newStatuses: Record<string, any> = {};
+            selectedFiles.forEach(f => newStatuses[f.name] = 'UPLOADING');
+            setUploadStatuses(newStatuses);
             const uploadPromises = selectedFiles.map(async (file, index) => {
                 try {
                     let finalBase64 = '';
@@ -138,6 +155,7 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
 
     const resetForm = () => {
         setNewName('');
+        setExternalUrl('');
         setSelectedFiles([]);
         setUploadStatuses({});
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -279,13 +297,31 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                         </div>
 
                         <form onSubmit={handleUpload} className="space-y-4">
+                            {/* Selector de Modo */}
+                            <div className="flex p-1 bg-white/5 rounded-2xl border border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => setUploadMode('FILE')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${uploadMode === 'FILE' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500'}`}
+                                >
+                                    <Upload size={14} /> Archivo
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setUploadMode('LINK')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${uploadMode === 'LINK' ? 'bg-[#ffb700] text-[#001f3f]' : 'text-gray-500'}`}
+                                >
+                                    <Link size={14} /> Link Drive
+                                </button>
+                            </div>
+
                             {/* Nombre */}
                             <div className="space-y-1">
-                                <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">Nombre</label>
+                                <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">Nombre del Material</label>
                                 <input
                                     type="text"
                                     required
-                                    placeholder="EJ. GUÍA LIDERAZGO"
+                                    placeholder="EJ. MANUAL DE COMBATE"
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-white text-[10px] font-bold uppercase tracking-widest outline-none focus:border-[#ffb700] font-bebas"
@@ -312,27 +348,42 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                                 </div>
                             </div>
 
-                            {/* Archivo - BOTÓN GRANDE para móvil con MULTI-SELECCIÓN */}
-                            <div className="space-y-1">
-                                <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">Archivos (Máx 3)</label>
-                                <div className="relative">
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        multiple
-                                        required
-                                        onChange={handleFileChange}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                        accept=".pdf,.doc,.docx,image/*"
-                                    />
-                                    <div className={`w-full py-6 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${selectedFiles.length > 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10'}`}>
-                                        <Plus className={selectedFiles.length > 0 ? 'text-green-500' : 'text-gray-400'} size={24} />
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-center px-4 text-gray-400 font-bebas">
-                                            {selectedFiles.length > 0 ? `${selectedFiles.length} ARCHIVOS SELECCIONADOS` : 'Toca para seleccionar'}
-                                        </p>
+                            {/* Input de Archivo o Link */}
+                            {uploadMode === 'FILE' ? (
+                                <div className="space-y-1">
+                                    <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">Archivos (Máx 3)</label>
+                                    <div className="relative">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            multiple
+                                            required
+                                            onChange={handleFileChange}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            accept=".pdf,.doc,.docx,image/*"
+                                        />
+                                        <div className={`w-full py-6 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${selectedFiles.length > 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10'}`}>
+                                            <Plus className={selectedFiles.length > 0 ? 'text-green-500' : 'text-gray-400'} size={24} />
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-center px-4 text-gray-400 font-bebas">
+                                                {selectedFiles.length > 0 ? `${selectedFiles.length} ARCHIVOS SELECCIONADOS` : 'Toca para seleccionar'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    <label className="text-[7px] text-gray-500 font-black uppercase tracking-widest ml-3">URL de Google Drive</label>
+                                    <input
+                                        type="url"
+                                        required
+                                        placeholder="https://drive.google.com/..."
+                                        value={externalUrl}
+                                        onChange={(e) => setExternalUrl(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-white text-[9px] font-bold outline-none focus:border-[#ffb700]"
+                                    />
+                                    <p className="text-[6px] text-gray-600 uppercase font-black tracking-widest mt-1 ml-2">Asegúrate de que el link sea público (Cualquiera con el enlace).</p>
+                                </div>
+                            )}
 
                             {/* Lista de archivos seleccionados con sus estados */}
                             {selectedFiles.length > 0 && (

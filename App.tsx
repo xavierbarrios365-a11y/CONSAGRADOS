@@ -1121,8 +1121,8 @@ const App: React.FC = () => {
       case AppView.HOME:
         return (
           <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            {/* ENCABEZADO COMPACTO (v3.0) */}
-            <div className="flex items-center gap-4 mb-4">
+            {/* ENCABEZADO COMPACTO - Solo Nombre y Estatus (v3.1) */}
+            <div className="flex items-center gap-4 mb-2">
               <div className="flex-shrink-0">
                 <LighthouseIndicator
                   status={isOnline && notificationPermission === 'granted' ? 'online' : 'offline'}
@@ -1131,12 +1131,11 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Bienvenido, Agente</p>
-                <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">{currentUser?.name?.split(' ')[0] || 'Agente'}</p>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full">{currentUser?.xp || 0} XP</span>
-                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full">🔥 {currentUser?.streakCount || 0} días</span>
-                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
+                <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">{currentUser?.name || 'Saúl'}</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-[8px] text-[#ffb700] font-black uppercase tracking-wider bg-[#ffb700]/10 border border-[#ffb700]/20 px-3 py-1 rounded-full">🔥 {currentUser?.streakCount || 0} DÍAS</span>
+                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
                 </div>
               </div>
             </div>

@@ -35,11 +35,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
   return (
     <div className="flex flex-col h-screen bg-[#001f3f] text-[#f4f4f4] overflow-hidden font-montserrat">
       <header className="min-h-[4rem] h-auto border-b border-white/5 bg-black/50 backdrop-blur-md px-6 py-2 flex items-center justify-between shrink-0 z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <div className="flex items-center gap-3">
-          <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-7 md:h-8 w-auto object-contain transition-transform active:scale-95" />
+        <div className="flex items-center gap-2">
+          <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-6 w-auto object-contain transition-transform active:scale-95" />
           <div className="flex flex-col">
-            <h1 className="font-bebas text-[12px] md:text-sm tracking-[0.15em] text-white leading-none">CONSAGRADOS 2026</h1>
-            <p className="text-[6px] md:text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">No pedimos permiso para ser luz</p>
+            <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">Consagrados</p>
           </div>
         </div>
         <div className="flex items-center gap-4">

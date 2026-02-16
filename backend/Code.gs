@@ -557,33 +557,45 @@ function enrollAgent(data) {
  */
 function uploadImage(data) {
   const CONFIG = getGlobalConfig();
-  const { file, mimeType, filename } = data;
-  
-  if (!file) throw new Error("No se recibió contenido de archivo.");
-  
-  const decoded = Utilities.base64Decode(file);
-  const blob = Utilities.newBlob(decoded, mimeType, filename);
-  
-  // Loguear tamaño para monitoreo de cuota (Límite sugerido: 10MB para estabilidad en Apps Script)
-  const sizeKb = Math.round(blob.getBytes().length / 1024);
-  console.log(`📤 Subiendo archivo: ${filename} (${sizeKb} KB) - Mime: ${mimeType}`);
+  try {
+    const { file, mimeType, filename } = data;
+    
+    if (!file) throw new Error("No se recibió contenido de archivo.");
+    
+    let decoded;
+    try {
+      decoded = Utilities.base64Decode(file);
+    } catch (e) {
+      throw new Error(`Fallo en decodificación Base64: ${e.message}`);
+    }
+    
+    const blob = Utilities.newBlob(decoded, mimeType, filename);
+    const sizeKb = Math.round(blob.getBytes().length / 1024);
+    console.log(`📤 Subiendo archivo: ${filename} (${sizeKb} KB) - Mime: ${mimeType}`);
 
-  const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
-  if (!folder) throw new Error("La carpeta de destino en Drive no fue encontrada. Verifique DRIVE_FOLDER_ID.");
-
-  const newFile = folder.createFile(blob);
-  newFile.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
-  
-  const isImage = mimeType && mimeType.startsWith('image/');
-  const fileUrl = isImage 
-    ? `https://lh3.googleusercontent.com/d/${newFile.getId()}`
-    : `https://drive.google.com/file/d/${newFile.getId()}/view`; // Cambiado a /view para que vean el original
-  
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    url: fileUrl,
-    id: newFile.getId() 
-  })).setMimeType(ContentService.MimeType.JSON);
+    if (!CONFIG.DRIVE_FOLDER_ID) throw new Error("DRIVE_FOLDER_ID no configurado.");
+    const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
+    
+    const newFile = folder.createFile(blob);
+    newFile.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+    
+    const isImage = mimeType && mimeType.startsWith('image/');
+    const fileUrl = isImage 
+      ? `https://lh3.googleusercontent.com/d/${newFile.getId()}`
+      : `https://drive.google.com/file/d/${newFile.getId()}/view`;
+    
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: true, 
+      url: fileUrl,
+      id: newFile.getId() 
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (e) {
+    console.error(`❌ Error en uploadImage: ${e.message}`);
+    return ContentService.createTextOutput(JSON.stringify({ 
+      success: false, 
+      error: `Error en servidor Drive: ${e.message}` 
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /**
@@ -1765,11 +1777,13 @@ function submitQuizResult(data) {
   if (!progressSheet || !lessonsSheet || !directorySheet) throw new Error("Error en la base de datos.");
   
   const lessonsData = lessonsSheet.getDataRange().getValues();
-  const lesson = lessonsData.slice(1).find(row => String(row[0]) === String(data.lessonId));
+  const lesson = lessonsData.slice(1).find(row => String(row[0]).trim().toUpperCase() === String(data.lessonId).trim().toUpperCase());
   if (!lesson) throw new Error("Lección no encontrada.");
 
   const progressData = progressSheet.getDataRange().getValues();
-  const existingProgressIdx = progressData.findIndex(row => String(row[0]) === String(data.agentId) && String(row[1]) === String(data.lessonId));
+  const searchAgentId = String(data.agentId).trim().toUpperCase();
+  const searchLessonId = String(data.lessonId).trim().toUpperCase();
+  const existingProgressIdx = progressData.findIndex(row => String(row[0]).trim().toUpperCase() === searchAgentId && String(row[1]).trim().toUpperCase() === searchLessonId);
   
   let attempts = 0;
   if (existingProgressIdx !== -1) {
@@ -1801,7 +1815,8 @@ function submitQuizResult(data) {
     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
     const idCol = headers.indexOf('ID');
     const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
-    const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+    const searchId = String(data.agentId).trim().toUpperCase();
+    const rowIdx = directoryData.findIndex(row => String(row[idCol]).trim().toUpperCase() === searchId);
     
     if (rowIdx !== -1) {
       agentName = directoryData[rowIdx][headers.indexOf('NOMBRE')] || "Agente";

@@ -580,3 +580,43 @@ export const deleteAgent = async (agentId: string) => {
   }
 };
 
+// ===== SISTEMA DE ASCENSO =====
+
+export const fetchTasks = async () => {
+  const res = await postToAction('get_tasks', {});
+  return res.success ? res.tasks : [];
+};
+
+export const createTask = async (data: { title: string; description: string; area: string; requiredLevel: string; xpReward: number }) => {
+  return postToAction('create_task', data);
+};
+
+export const deleteTask = async (taskId: string) => {
+  return postToAction('delete_task', { taskId });
+};
+
+export const submitTaskCompletion = async (taskId: string, agentId: string, agentName: string) => {
+  return postToAction('submit_task_completion', { taskId, agentId, agentName });
+};
+
+export const verifyTask = async (data: { taskId: string; agentId: string; agentName: string; verifiedBy: string; xpReward: number; taskTitle: string }) => {
+  return postToAction('verify_task', data);
+};
+
+export const fetchPromotionStatus = async (agentId: string) => {
+  return postToAction('get_promotion_status', { agentId });
+};
+
+export const promoteAgentAction = async (data: { agentId: string; agentName: string; newRank: string; xp: number; certificates: number }) => {
+  return postToAction('promote_agent', data);
+};
+
+export const fetchNewsFeed = async () => {
+  const res = await postToAction('get_news_feed', {});
+  return res.success ? res.news : [];
+};
+
+export const fetchTaskProgress = async (agentId: string) => {
+  const res = await postToAction('get_promotion_status', { agentId });
+  return res;
+};

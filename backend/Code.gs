@@ -29,6 +29,10 @@ function getGlobalConfig() {
     NOTIFICATIONS_SHEET: 'NOTIFICACIONES',
     EVENTS_SHEET_NAME: 'CALENDARIO_EVENTOS',
     EVENT_CONFIRMATIONS_SHEET: 'CONFIRMACION_EVENTOS',
+    TASKS_SHEET: 'TAREAS',
+    TASK_PROGRESS_SHEET: 'PROGRESO_TAREAS',
+    PROMOTIONS_SHEET: 'ASCENSOS',
+    NEWS_SHEET: 'NOTICIAS',
     SERVICE_ACCOUNT: {
       "project_id": "consagrados-c2d78",
       "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDNq6kEzfZMRDLP\nDvSGS3cLuUnf5zFbwFZppBtEyvyKTxL8m80E0BV8rQYmAlaSdG1vEd8bCsqiVp1Y\nVrFc/05yPCUdNRBJjj+6fj6hfq4rGKgm1nq4Wy3SaOAkFNPUS6hO6Ucx4q6+zk7q\n32KdJMfiXOv2cj3nHyBspbq1XG2Leg2zJaxY741Tan8bfnHjLsV29Q4NAVHopEsc\nYaqEQLSzAYA6yIwMe2qJqwbYJPny8Hsh9gKbb9QTTggEIeI5QrPT/KH6fE3nXRfh\n3gX4Kg8OgQ9cWoBompqj55PM9rdkhGHQA1HN0ylV2Fjykfj0Jq+dPhn2oM3UKn+W\nvhJLortDAgMBAAECggEAXOHiUe4mBilifMo3OhMIrz29lCWXz+Tb4ZegTQAS7u9p\nFrXR8BN9MLH/LdkuebOk3F1I0bCc9JWDN6rnLKWMKuDorfkR4vYf57wt0scgJwxa\nnDeOcoWS+wwr9X+GbsDAQOrvISNLYZZQY5gAtBExSBRI6CKNvDv9a7Ooz1Dvk+X5\n129n2U7vOm9oOWcWI4ysjID0L3TfO6jEMBIlH4cxBM4jZXf3v1NYH6IMZxPKI86D\nD97OHngSm8DJQdmVApDsI9Bnt70HHQlSSFDkeien4r3au+7rL1dUuo4wpw7+BcxT\nuSlfFpXldDDSjtLXSjoCKkULJ0gBfUUQurMR+9iYqQKBgQD9S8ULmkpvnYtmbI7H\n6EKrfrB7YPPM0bEpGM/ZBOAuUTlQ+Mx23r+pWgHcOCttyT1+bsaFA8s2OwSJGUjw\nKoGSmX8EgzfPJ1K6+OZTvqC1pPDfXjWMV9PaGmsTkGL2SXuP1RSstee5oav8D617\ns+i0k+406ngIqOg0NcJNVyyKHwKBgQDP3bxEZW1QNjmVAS6MzMCygKzYfMzKHe4O\nkjtj/1XdLhLhUf3n6cPAZjY9bYmp/Wzd1csc6gufhAdV4ObhkgL0ieWy6lw/fKpi\nkeiYjXP8DfnEov1w+s+OhJDBncH1mfReRXJxtzNooLNo+QXx1CNEeiJ7JgdTD+MW\n0VV58DWyXQKBgHNUXJO73MiVYzNvmlNLXY/YT2Ld8iQAFjowIfMeVTTBpudHYVF+\neqYRZWdv69ZBGs7GgX1vDMfUd2w1JxCzSewGF99mH7MipHide8IFugb64vHRY3BT\nTRKxlK+DvouFSc1jp9Y7vRa4liZevQ7mC76s3HkbiSvoPFIJaD7uwkjhAoGAeDzF\nyzZ0TeKf2j4NxCooCNj/olZGS1+WtV0G96fZ7g/ZofZAjaadsawuEchLykWqdINX\ncwk64fGIILfwNWi1RuiBMsX3yE1/bXcC+UNRZOpcoM67FWAvMTwjU6vCZyO/w8we\nEAMtvIbAYKczNhhEsjaHvX5Y3EYjUK6T5+330Y0CgYBsDgDMB0TT7+VggQA5FipB\nDpWe17uO8iIzv7HPTIlcX5m8ZB8pWiaSIm7mHyxkh/n27haLvSLvsNJm5lZni7Zf\nR3k8S2doGXfBBwkr/AahG2e52gbrQiSvd6+pROuIwQvNkTdvNi753o5BpAsgdo/V\nM8tnG9QAfWnKCnaT1eH3Yg==\n-----END PRIVATE KEY-----\n",
@@ -475,6 +479,23 @@ function doPost(e) {
         return updateNotifPrefs(request.data);
       case 'delete_agent':
         return deleteAgent(request.data);
+      // === SISTEMA DE ASCENSO ===
+      case 'get_tasks':
+        return getTasks();
+      case 'create_task':
+        return createTaskAction(request.data);
+      case 'delete_task':
+        return deleteTaskAction(request.data);
+      case 'submit_task_completion':
+        return submitTaskCompletion(request.data);
+      case 'verify_task':
+        return verifyTaskAction(request.data);
+      case 'get_promotion_status':
+        return getPromotionStatus(request.data);
+      case 'promote_agent':
+        return promoteAgent(request.data);
+      case 'get_news_feed':
+        return getNewsFeed();
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -1260,6 +1281,22 @@ function setupDatabase() {
     'DATE', 'VERSE', 'REFERENCE'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.VERSES_SHEET, verseHeaders));
+
+  // 10. TAREAS (Misiones)
+  const tasksHeaders = ['ID', 'TITULO', 'DESCRIPCION', 'AREA', 'NIVEL_REQUERIDO', 'XP_RECOMPENSA'];
+  results.push(ensureSheetColumns(ss, CONFIG.TASKS_SHEET, tasksHeaders));
+
+  // 11. PROGRESO DE TAREAS
+  const taskProgressHeaders = ['TASK_ID', 'AGENT_ID', 'AGENT_NAME', 'FECHA', 'VERIFICADO_POR', 'STATUS'];
+  results.push(ensureSheetColumns(ss, CONFIG.TASK_PROGRESS_SHEET, taskProgressHeaders));
+
+  // 12. ASCENSOS
+  const promotionsHeaders = ['AGENT_ID', 'AGENT_NAME', 'RANGO_ANTERIOR', 'RANGO_NUEVO', 'FECHA', 'XP', 'CERTIFICADOS'];
+  results.push(ensureSheetColumns(ss, CONFIG.PROMOTIONS_SHEET, promotionsHeaders));
+
+  // 13. NOTICIAS
+  const newsHeaders = ['ID', 'TIPO', 'MENSAJE', 'FECHA', 'AGENT_ID', 'AGENT_NAME'];
+  results.push(ensureSheetColumns(ss, CONFIG.NEWS_SHEET, newsHeaders));
   
   const summary = results.join('\n');
   const telegramMessage = `🛠️ <b>SETUP DE BASE DE DATOS COMPLETADO</b>\n\n${summary}\n\n<i>Sistema CONSAGRADOS 2026 listo para operar.</i>`;
@@ -2697,3 +2734,297 @@ function emergencyRollbackDirectory() {
 
   SpreadsheetApp.getUi().alert(`✅ RESTAURACIÓN COMPLETADA\n\nSe ha recuperado la información de: ${latestBackup.getName()}.\nRevisa que las fotos y el XP hayan vuelto.`);
 }
+
+
+/****************************************************************************************************************************
+ * 🎖️ SISTEMA DE ASCENSO - TAREAS, PROMOCIONES Y NOTICIAS
+ ****************************************************************************************************************************/
+
+/**
+ * @description Obtiene todas las tareas/misiones disponibles.
+ */
+function getTasks() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: [] })).setMimeType(ContentService.MimeType.JSON);
+  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toUpperCase());
+  const tasks = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    tasks.push({
+      id: String(row[headers.indexOf('ID')] || ''),
+      title: String(row[headers.indexOf('TITULO')] || ''),
+      description: String(row[headers.indexOf('DESCRIPCION')] || ''),
+      area: String(row[headers.indexOf('AREA')] || ''),
+      requiredLevel: String(row[headers.indexOf('NIVEL_REQUERIDO')] || 'RECLUTA'),
+      xpReward: parseInt(row[headers.indexOf('XP_RECOMPENSA')]) || 0
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: tasks })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Director crea una nueva tarea.
+ */
+function createTaskAction(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
+  if (!sheet) throw new Error("Hoja TAREAS no encontrada. Ejecuta setupDatabase().");
+  const id = 'TASK_' + new Date().getTime();
+  sheet.appendRow([id, data.title, data.description || '', data.area || 'SERVICIO', data.requiredLevel || 'RECLUTA', data.xpReward || 5]);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Director elimina una tarea.
+ */
+function deleteTaskAction(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
+  if (!sheet) throw new Error("Hoja TAREAS no encontrada.");
+  const allData = sheet.getDataRange().getValues();
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][0]) === String(data.taskId)) {
+      sheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Tarea no encontrada." })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Un agente solicita completar una tarea (status = PENDIENTE).
+ */
+function submitTaskCompletion(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  if (!sheet) throw new Error("Hoja PROGRESO_TAREAS no encontrada.");
+  const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy");
+  sheet.appendRow([data.taskId, data.agentId, data.agentName || '', fecha, '', 'PENDIENTE']);
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Director verifica una tarea completada → Agente recibe XP + noticia.
+ */
+function verifyTaskAction(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  // 1. Actualizar status en PROGRESO_TAREAS
+  const progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  if (!progressSheet) throw new Error("Hoja PROGRESO_TAREAS no encontrada.");
+  const progressData = progressSheet.getDataRange().getValues();
+  const progressHeaders = progressData[0].map(h => String(h).trim().toUpperCase());
+  
+  let foundRow = -1;
+  for (let i = 1; i < progressData.length; i++) {
+    if (String(progressData[i][progressHeaders.indexOf('TASK_ID')]) === String(data.taskId) &&
+        String(progressData[i][progressHeaders.indexOf('AGENT_ID')]) === String(data.agentId) &&
+        String(progressData[i][progressHeaders.indexOf('STATUS')]) === 'PENDIENTE') {
+      foundRow = i + 1;
+      break;
+    }
+  }
+  if (foundRow === -1) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Solicitud pendiente no encontrada." })).setMimeType(ContentService.MimeType.JSON);
+  
+  progressSheet.getRange(foundRow, progressHeaders.indexOf('STATUS') + 1).setValue('VERIFICADO');
+  progressSheet.getRange(foundRow, progressHeaders.indexOf('VERIFICADO_POR') + 1).setValue(data.verifiedBy || 'DIRECTOR');
+  
+  // 2. Otorgar XP al agente (sumamos a PUNTOS LIDERAZGO)
+  const xpReward = parseInt(data.xpReward) || 5;
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const dirData = directorySheet.getDataRange().getValues();
+  const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+  
+  for (let i = 1; i < dirData.length; i++) {
+    if (String(dirData[i][0]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+      const liderIdx = dirHeaders.indexOf('PUNTOS LIDERAZGO');
+      if (liderIdx !== -1) {
+        const currentPts = parseInt(dirData[i][liderIdx]) || 0;
+        directorySheet.getRange(i + 1, liderIdx + 1).setValue(currentPts + xpReward);
+      }
+      break;
+    }
+  }
+  
+  // 3. Generar noticia
+  addNewsItem(ss, 'TAREA', `¡${data.agentName || data.agentId} completó la misión "${data.taskTitle || ''}"! +${xpReward} XP`, data.agentId, data.agentName);
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene el estado de promoción de un agente (XP, certificados, examen).
+ */
+function getPromotionStatus(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  // 1. Obtener XP y rango actual del agente
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const dirData = directorySheet.getDataRange().getValues();
+  const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+  
+  let agentXp = 0;
+  let agentRank = 'RECLUTA';
+  let agentName = '';
+  for (let i = 1; i < dirData.length; i++) {
+    if (String(dirData[i][0]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+      const bibliaIdx = dirHeaders.indexOf('PUNTOS BIBLIA');
+      const apuntesIdx = dirHeaders.indexOf('PUNTOS APUNTES');
+      const liderazgoIdx = dirHeaders.indexOf('PUNTOS LIDERAZGO');
+      agentXp = (parseInt(dirData[i][bibliaIdx]) || 0) + (parseInt(dirData[i][apuntesIdx]) || 0) + (parseInt(dirData[i][liderazgoIdx]) || 0);
+      const rangoIdx = dirHeaders.indexOf('RANGO');
+      agentRank = String(dirData[i][rangoIdx] || 'RECLUTA').trim().toUpperCase();
+      const nameIdx = dirHeaders.indexOf('NOMBRE');
+      agentName = String(dirData[i][nameIdx] || '');
+      break;
+    }
+  }
+  
+  // 2. Contar certificados aprobados (lecciones con COMPLETADO)
+  const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+  let certificates = 0;
+  if (progressSheet && progressSheet.getLastRow() > 1) {
+    const progData = progressSheet.getDataRange().getValues();
+    const progHeaders = progData[0].map(h => String(h).trim().toUpperCase());
+    for (let i = 1; i < progData.length; i++) {
+      if (String(progData[i][progHeaders.indexOf('ID_AGENTE')]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase() &&
+          String(progData[i][progHeaders.indexOf('ESTADO')]).trim().toUpperCase() === 'COMPLETADO') {
+        certificates++;
+      }
+    }
+  }
+  
+  // 3. Verificar tareas completadas (verificadas)
+  const taskProgressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  let tasksCompleted = 0;
+  let tasksPending = 0;
+  if (taskProgressSheet && taskProgressSheet.getLastRow() > 1) {
+    const tpData = taskProgressSheet.getDataRange().getValues();
+    const tpHeaders = tpData[0].map(h => String(h).trim().toUpperCase());
+    for (let i = 1; i < tpData.length; i++) {
+      if (String(tpData[i][tpHeaders.indexOf('AGENT_ID')]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+        const status = String(tpData[i][tpHeaders.indexOf('STATUS')]).trim().toUpperCase();
+        if (status === 'VERIFICADO') tasksCompleted++;
+        if (status === 'PENDIENTE') tasksPending++;
+      }
+    }
+  }
+  
+  // 4. Historial de ascensos
+  const promoSheet = ss.getSheetByName(CONFIG.PROMOTIONS_SHEET);
+  let promotionHistory = [];
+  if (promoSheet && promoSheet.getLastRow() > 1) {
+    const promoData = promoSheet.getDataRange().getValues();
+    const promoHeaders = promoData[0].map(h => String(h).trim().toUpperCase());
+    for (let i = 1; i < promoData.length; i++) {
+      if (String(promoData[i][promoHeaders.indexOf('AGENT_ID')]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+        promotionHistory.push({
+          from: String(promoData[i][promoHeaders.indexOf('RANGO_ANTERIOR')] || ''),
+          to: String(promoData[i][promoHeaders.indexOf('RANGO_NUEVO')] || ''),
+          date: String(promoData[i][promoHeaders.indexOf('FECHA')] || ''),
+          xp: parseInt(promoData[i][promoHeaders.indexOf('XP')]) || 0,
+          certs: parseInt(promoData[i][promoHeaders.indexOf('CERTIFICADOS')]) || 0
+        });
+      }
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    xp: agentXp,
+    rank: agentRank,
+    agentName: agentName,
+    certificates: certificates,
+    tasksCompleted: tasksCompleted,
+    tasksPending: tasksPending,
+    promotionHistory: promotionHistory
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Asciende a un agente al siguiente rango. Actualiza DIRECTORIO y registra en ASCENSOS.
+ */
+function promoteAgent(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const dirData = directorySheet.getDataRange().getValues();
+  const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+  const rangoIdx = dirHeaders.indexOf('RANGO');
+  
+  for (let i = 1; i < dirData.length; i++) {
+    if (String(dirData[i][0]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+      const oldRank = String(dirData[i][rangoIdx] || 'RECLUTA');
+      const newRank = data.newRank;
+      
+      // Actualizar rango
+      directorySheet.getRange(i + 1, rangoIdx + 1).setValue(newRank);
+      
+      // Registrar ascenso
+      const promoSheet = ss.getSheetByName(CONFIG.PROMOTIONS_SHEET);
+      if (promoSheet) {
+        const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy");
+        promoSheet.appendRow([data.agentId, data.agentName || '', oldRank, newRank, fecha, data.xp || 0, data.certificates || 0]);
+      }
+      
+      // Generar noticia
+      addNewsItem(ss, 'ASCENSO', `🎖️ ¡${data.agentName || data.agentId} ascendió de ${oldRank} a ${newRank}!`, data.agentId, data.agentName);
+      
+      // Notificar por Telegram
+      sendTelegramNotification(`🎖️ <b>ASCENSO</b>\n\n${data.agentName || data.agentId} ha sido promovido de <b>${oldRank}</b> a <b>${newRank}</b>.\n\n<i>Consagrados 2026</i>`);
+      
+      return ContentService.createTextOutput(JSON.stringify({ success: true, oldRank: oldRank, newRank: newRank })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Agente no encontrado." })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene las últimas 20 noticias.
+ */
+function getNewsFeed() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.NEWS_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return ContentService.createTextOutput(JSON.stringify({ success: true, news: [] })).setMimeType(ContentService.MimeType.JSON);
+  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toUpperCase());
+  const news = [];
+  // Leer de abajo hacia arriba (más reciente primero)
+  for (let i = data.length - 1; i >= 1 && news.length < 20; i--) {
+    news.push({
+      id: String(data[i][headers.indexOf('ID')] || ''),
+      type: String(data[i][headers.indexOf('TIPO')] || ''),
+      message: String(data[i][headers.indexOf('MENSAJE')] || ''),
+      date: String(data[i][headers.indexOf('FECHA')] || ''),
+      agentId: String(data[i][headers.indexOf('AGENT_ID')] || ''),
+      agentName: String(data[i][headers.indexOf('AGENT_NAME')] || ''),
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: true, news: news })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Helper: Agrega un ítem al feed de noticias.
+ */
+function addNewsItem(ss, type, message, agentId, agentName) {
+  const CONFIG = getGlobalConfig();
+  const sheet = ss.getSheetByName(CONFIG.NEWS_SHEET);
+  if (!sheet) return;
+  const id = 'NEWS_' + new Date().getTime();
+  const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy HH:mm");
+  sheet.appendRow([id, type, message, fecha, agentId || '', agentName || '']);
+}
+

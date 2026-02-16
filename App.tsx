@@ -14,6 +14,9 @@ import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import NotificationInbox from './components/NotificationInbox';
 import TacticalChat from './components/TacticalChat';
 import TacticalRanking from './components/TacticalRanking';
+import PromotionModule from './components/PromotionModule';
+import TasksModule from './components/TasksModule';
+import NewsFeed from './components/NewsFeed';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -1217,6 +1220,10 @@ const App: React.FC = () => {
                 <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Material</span>
               </button>
             </div>
+
+            {/* News Feed */}
+            <NewsFeed />
+
           </div>
         );
       case AppView.SCANNER:
@@ -1579,6 +1586,8 @@ const App: React.FC = () => {
       case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;
       case AppView.RANKING: return <TacticalRanking agents={agents} currentUser={currentUser} />;
       case AppView.CONTENT: return <ContentModule userRole={effectiveRole} />;
+      case AppView.ASCENSO: return <PromotionModule agentId={currentUser?.id || ''} agentName={currentUser?.name || ''} userRole={effectiveRole} onActivity={resetSessionTimer} />;
+      case AppView.TAREAS: return <TasksModule agentId={currentUser?.id || ''} agentName={currentUser?.name || ''} userRole={effectiveRole} onActivity={resetSessionTimer} />;
       case AppView.PROFILE:
         return (
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-32 max-w-2xl mx-auto font-montserrat flex flex-col items-center">

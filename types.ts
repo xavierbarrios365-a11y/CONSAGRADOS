@@ -78,6 +78,8 @@ export enum AppView {
   VISITOR = 'VISITOR',
   ACADEMIA = 'ACADEMIA',
   RANKING = 'RANKING',
+  ASCENSO = 'ASCENSO',
+  TAREAS = 'TAREAS',
   HOME = 'home'
 }
 
@@ -143,3 +145,32 @@ export interface InboxNotification {
   categoria: 'ALERTA' | 'INFO' | 'MISION';
   emisor: string;
 }
+
+// ===== SISTEMA DE ASCENSO =====
+
+export interface ServiceTask {
+  id: string;
+  title: string;
+  description: string;
+  area: string;
+  requiredLevel: string;
+  xpReward: number;
+}
+
+export interface TaskProgress {
+  taskId: string;
+  agentId: string;
+  completedDate: string;
+  verifiedBy: string;
+  status: 'PENDIENTE' | 'COMPLETADO' | 'VERIFICADO';
+}
+
+export interface NewsFeedItem {
+  id: string;
+  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA';
+  message: string;
+  date: string;
+  agentId?: string;
+  agentName?: string;
+}
+

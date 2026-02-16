@@ -35,3 +35,19 @@ export const XP_RULES = {
   BIBLE_BONUS: 5,
   NOTES_BONUS: 5
 };
+
+export const PROMOTION_RULES: Record<string, { nextRank: string; requiredXp: number; requiredCertificates: number }> = {
+  'RECLUTA': { nextRank: 'ACTIVO', requiredXp: 300, requiredCertificates: 5 },
+  'ACTIVO': { nextRank: 'CONSAGRADO', requiredXp: 500, requiredCertificates: 10 },
+  'CONSAGRADO': { nextRank: 'REFERENTE', requiredXp: 700, requiredCertificates: 20 },
+  'REFERENTE': { nextRank: 'LÍDER', requiredXp: 1000, requiredCertificates: 40 },
+};
+
+export const TASK_AREAS = [
+  { value: 'SERVICIO', label: 'Servicio', icon: '🛠️' },
+  { value: 'ESPIRITUAL', label: 'Espiritual', icon: '🙏' },
+  { value: 'MISION', label: 'Misión', icon: '🎯' },
+  { value: 'CAPACITACION', label: 'Capacitación', icon: '📚' },
+  { value: 'LIDERAZGO', label: 'Liderazgo', icon: '👑' },
+  { value: 'FORMACION', label: 'Formación', icon: '🌱' },
+];

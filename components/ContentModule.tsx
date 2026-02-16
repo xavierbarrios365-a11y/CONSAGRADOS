@@ -409,7 +409,7 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
 
                             <button
                                 type="submit"
-                                disabled={isUploading || selectedFiles.length === 0 || !newName}
+                                disabled={isUploading || !newName.trim() || (uploadMode === 'FILE' ? selectedFiles.length === 0 : !externalUrl.trim())}
                                 className="w-full bg-[#ffb700] py-5 rounded-xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bebas"
                             >
                                 {isUploading ? 'Desplegando Contenido...' : 'Publicar Material'}

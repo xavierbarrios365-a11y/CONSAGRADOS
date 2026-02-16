@@ -226,13 +226,14 @@ export const enrollAgent = async (formData: any): Promise<{ success: boolean; er
   }
 };
 
-export const submitTransaction = async (rawString: string, type: 'ASISTENCIA' | 'SALIDA' | 'IDENTIFICACION' = 'IDENTIFICACION') => {
+export const submitTransaction = async (rawString: string, type: 'ASISTENCIA' | 'SALIDA' | 'IDENTIFICACION' = 'IDENTIFICACION', referidoPor?: string) => {
   try {
     const response = await postToAction('register_id_scan', {
       scannedId: rawString,
       location: 'CORE_V37_NODE',
       type: type,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      referidoPor
     });
     return response;
   } catch (error: any) {

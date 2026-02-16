@@ -660,7 +660,7 @@ function registerIdScan(payload) {
      }
    }
 
-   attendanceSheet.appendRow([payload.scannedId, 'ASISTENCIA', payload.location, new Date(payload.timestamp)]);
+   attendanceSheet.appendRow([payload.scannedId, 'ASISTENCIA', payload.location, new Date(payload.timestamp), payload.referidoPor || '']);
 
    // Notificación a Telegram y puntos
    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
@@ -673,6 +673,16 @@ function registerIdScan(payload) {
        agentName = directoryData[i][1]; 
        agentRowIdx = i + 1;
        break;
+     }
+   }
+   
+   // Publicar en Intel Feed (Siempré con NOMBRE)
+   if (agentRowIdx !== -1) {
+     addNewsItem(ss, 'DESPLIEGUE', '🛡️ ' + agentName + ' se reportó para el despliegue.', payload.scannedId, agentName);
+   } else {
+     // Si es visitante y tiene referido, acreditar al reclutador
+     if (payload.referidoPor) {
+        addNewsItem(ss, 'OPERACION', '🎯 ' + payload.referidoPor + ' trajo a un nuevo visitante (' + payload.scannedId + ').', '', payload.referidoPor);
      }
    }
    
@@ -1265,7 +1275,7 @@ function setupDatabase() {
   results.push(ensureSheetColumns(ss, CONFIG.ENROLLMENT_SHEET_NAME, enrollmentHeaders));
   
   const attendanceHeaders = [
-    'ID', 'TIPO', 'UBICACION', 'FECHA'
+    'ID', 'TIPO', 'UBICACION', 'FECHA', 'REFERIDO_POR'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.ATTENDANCE_SHEET_NAME, attendanceHeaders));
   
@@ -3220,6 +3230,21 @@ function addNewsItem(ss, type, message, agentId, agentName) {
   const CONFIG = getGlobalConfig();
   const sheet = ss.getSheetByName(CONFIG.NEWS_SHEET);
   if (!sheet) return;
+  
+  // Si no hay nombre pero hay ID, intentar reclamo táctico de nombre desde el directorio
+  if (!agentName && agentId && agentId !== 'SISTEMA' && agentId !== 'COMANDO') {
+    const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    if (dirSheet) {
+      const dirData = dirSheet.getDataRange().getValues();
+      for (let i = 1; i < dirData.length; i++) { // Búsqueda rápida
+        if (String(dirData[i][0]) === String(agentId)) {
+          agentName = dirData[i][1];
+          break;
+        }
+      }
+    }
+  }
+
   const id = 'NEWS_' + new Date().getTime();
   const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy HH:mm");
   sheet.appendRow([id, type, message, fecha, agentId || '', agentName || '']);
@@ -3253,11 +3278,13 @@ function computeBadges() {
     agentNames[String(dirData[i][idCol] || '').trim().toUpperCase()] = String(dirData[i][nameCol] || '');
   }
   
-  // --- 1. RECLUTADOR DEL MES: Más referidos este mes ---
+  // --- 1. RECLUTADOR DEL MES: Más referidos este mes (Inscripciones + Visitantes) ---
+  var refCounts = {};
   var refCol = dirHeaders.indexOf('REFERIDO_POR');
   var joinCol = dirHeaders.indexOf('FECHA_INGRESO');
+  
+  // A. De Directorio (Nuevos Agentes)
   if (refCol !== -1 && joinCol !== -1) {
-    var refCounts = {};
     for (var i = 1; i < dirData.length; i++) {
       var ref = String(dirData[i][refCol] || '').trim();
       if (!ref) continue;
@@ -3268,14 +3295,45 @@ function computeBadges() {
         }
       }
     }
-    var topRef = null, topRefCount = 0;
-    for (var name in refCounts) {
-      if (refCounts[name] > topRefCount) { topRef = name; topRefCount = refCounts[name]; }
-    }
-    if (topRef && topRefCount > 0) {
-      badges.push({ type: 'RECLUTADOR', emoji: '🎯', label: 'Reclutador del Mes', agentName: topRef, value: topRefCount });
+  }
+
+  // B. De Asistencia (Visitantes traídos)
+  var attSheetForRef = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  if (attSheetForRef) {
+    var aRefData = attSheetForRef.getDataRange().getValues();
+    var aRefHeaders = aRefData[0].map(function(h){ return String(h).trim().toUpperCase(); });
+    var aRefIdCol = aRefHeaders.indexOf('ID') !== -1 ? aRefHeaders.indexOf('ID') : aRefHeaders.indexOf('ID CÉDULA');
+    var aRefRefCol = aRefHeaders.indexOf('REFERIDO_POR');
+    var aRefDateCol = aRefHeaders.indexOf('FECHA');
+    var registeredIds = new Set(Object.keys(agentNames));
+
+    if (aRefRefCol !== -1 && aRefDateCol !== -1) {
+      for (var i = 1; i < aRefData.length; i++) {
+        var ref = String(aRefData[i][aRefRefCol] || '').trim();
+        if (!ref) continue;
+        var scId = String(aRefData[i][aRefIdCol] || '').trim().toUpperCase();
+        if (registeredIds.has(scId)) continue; // Saltar si es un agente registrado
+
+        var aDate = aRefData[i][aRefDateCol];
+        if (!(aDate instanceof Date)) {
+           var dp = String(aDate || '').split('/');
+           if (dp.length === 3) aDate = new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0]));
+        }
+        if (aDate instanceof Date && aDate.getMonth() === currentMonth && aDate.getFullYear() === currentYear) {
+          refCounts[ref] = (refCounts[ref] || 0) + 1;
+        }
+      }
     }
   }
+
+  var topRef = null, topRefCount = 0;
+  for (var name in refCounts) {
+    if (refCounts[name] > topRefCount) { topRef = name; topRefCount = refCounts[name]; }
+  }
+  if (topRef && topRefCount > 0) {
+    badges.push({ type: 'RECLUTADOR', emoji: '🎯', label: 'Reclutador del Mes', agentName: topRef, value: topRefCount });
+  }
+
   
   // --- 2. STREAKER: Racha más alta activa ---
   var streakSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);

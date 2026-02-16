@@ -36,7 +36,8 @@ import {
   confirmDirectorAttendance,
   fetchActiveEvents,
   confirmEventAttendance as confirmEventAttendanceService,
-  deleteAgent as deleteAgentService
+  deleteAgent as deleteAgentService,
+  fetchBadges
 } from './services/sheetsService';
 import { generateGoogleCalendarLink, downloadIcsFile } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -298,6 +299,7 @@ const App: React.FC = () => {
   // Consejero táctico eliminado
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [isConfirmingEvent, setIsConfirmingEvent] = useState<string | null>(null);
+  const [badges, setBadges] = useState<Badge[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
@@ -851,6 +853,9 @@ const App: React.FC = () => {
 
       const events = await fetchActiveEvents();
       setActiveEvents(events || []);
+
+      const badgeData = await fetchBadges();
+      setBadges(badgeData || []);
     } catch (err) { } finally {
       if (!isSilent) setIsSyncing(false);
     }
@@ -953,7 +958,7 @@ const App: React.FC = () => {
     if (!id || scanStatus === 'SUCCESS') return;
     setScanStatus('SCANNING');
     try {
-      const result = await submitTransaction(id, 'ASISTENCIA');
+      const result = await submitTransaction(id, 'ASISTENCIA', currentUser?.name);
       if (result.success) {
         setScanStatus('SUCCESS');
         const agent = agents.find(a => String(a.id) === String(id));
@@ -1477,6 +1482,16 @@ const App: React.FC = () => {
                       className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} animate-view transition-all p-1 active:scale-90 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-1`}
                     >
                       <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-700" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
+
+                      {/* Badge Overlays */}
+                      <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
+                        {badges.filter(b => String(b.agentId) === String(a.id) || String(b.agentName) === String(a.name)).map((b, i) => (
+                          <div key={i} className="w-4 h-4 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-[8px] animate-in zoom-in slide-in-from-right-1 shadow-lg" title={b.label}>
+                            {b.emoji}
+                          </div>
+                        ))}
+                      </div>
+
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-2 text-center pointer-events-none">
                         <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
                         <p className={`text-[6px] font-bold ${xpColor}`}>{a.xp} XP</p>

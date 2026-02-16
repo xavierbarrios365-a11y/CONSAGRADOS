@@ -620,3 +620,13 @@ export const fetchTaskProgress = async (agentId: string) => {
   const res = await postToAction('get_promotion_status', { agentId });
   return res;
 };
+
+export const fetchTaskRecruits = async () => {
+  try {
+    const res = await postToAction('get_task_recruits', {});
+    return res.success ? res.recruits : [];
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER RECLUTAS:", error);
+    return [];
+  }
+};

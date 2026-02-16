@@ -481,6 +481,8 @@ function doPost(e) {
         return verifyTaskAction(request.data);
       case 'get_promotion_status':
         return getPromotionStatus(request.data);
+      case 'get_task_recruits':
+        return getTaskRecruits();
       case 'promote_agent':
         return promoteAgent(request.data);
       case 'get_news_feed':
@@ -2833,6 +2835,37 @@ function getTasks() {
     });
   }
   return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: tasks })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Obtiene todos los reclutas inscritos en misiones (para vista Director).
+ */
+function getTaskRecruits() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  
+  if (!sheet || sheet.getLastRow() < 2) {
+    return ContentService.createTextOutput(JSON.stringify({ success: true, recruits: [] })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toUpperCase());
+  
+  const recruits = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const status = String(row[headers.indexOf('STATUS')] || '');
+    if (status === 'ELIMINADO') continue;
+    recruits.push({
+      taskId: String(row[headers.indexOf('TASK_ID')] || ''),
+      agentId: String(row[headers.indexOf('AGENT_ID')] || ''),
+      agentName: String(row[headers.indexOf('AGENT_NAME')] || ''),
+      date: String(row[headers.indexOf('FECHA')] || ''),
+      status: status
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: true, recruits: recruits })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

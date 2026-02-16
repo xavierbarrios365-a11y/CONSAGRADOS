@@ -76,6 +76,7 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'STREAK': ['streak_count', 'streak'],
       'TASKS': ['tasks_json', 'tasks'],
       'LAST_ATTENDANCE': ['last_attendance', 'última asistencia'],
+      'LAST_COURSE': ['last_course', 'último curso'],
       'LAST_STREAK_DATE': ['last_completed_date', 'laststreakdate', 'racha_fecha'],
       'NOTIF_PREFS': ['notif_prefs', 'notif_prefs_json', 'preferencias_notif', 'notif_prefs']
     };
@@ -196,7 +197,8 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
       } catch (e) {
         return { read: [], deleted: [] };
       }
-    })()
+    })(),
+    lastCourse: getV('LAST_COURSE') || ""
   };
 };
 
@@ -486,9 +488,9 @@ export const fetchDailyVerse = async () => {
   }
 };
 
-export const updateAgentStreaks = async (agentId: string, isWeekComplete: boolean, tasks: any[]) => {
+export const updateAgentStreaks = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string) => {
   try {
-    const response = await postToAction('update_streaks', { agentId, isWeekComplete, tasks });
+    const response = await postToAction('update_streaks', { agentId, isWeekComplete, tasks, agentName });
     return response;
   } catch (error: any) {
     console.error("⚠️ FALLO ACTUALIZACIÓN RACHAS:", error);

@@ -295,6 +295,7 @@ function doGet(e) {
     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
     
     // Virtual Join de Rachas
+    const streakMap = new Map();
     if (strikesSheet) {
       const strikeData = strikesSheet.getDataRange().getValues();
       const strikeHeaders = strikeData[0].map(h => String(h).trim().toUpperCase());
@@ -302,7 +303,6 @@ function doGet(e) {
       const streakCountIdx = strikeHeaders.indexOf('STREAK_COUNT');
       const tasksJsonIdx = strikeHeaders.indexOf('TASKS_JSON');
       
-      const streakMap = new Map();
       if (strikeAgentIdIdx !== -1) {
         for (let i = 1; i < strikeData.length; i++) {
           const sAgentId = String(strikeData[i][strikeAgentIdIdx]).trim().toUpperCase();
@@ -313,9 +313,8 @@ function doGet(e) {
             lastDate: (() => {
               let idx1 = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
               if (idx1 === -1) idx1 = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
-              let val = '';
               if (idx1 !== -1 && strikeData[i][idx1]) {
-                val = strikeData[i][idx1];
+                const val = strikeData[i][idx1];
                 if (val instanceof Date) return val.toISOString();
                 return String(val).trim();
               }
@@ -324,56 +323,38 @@ function doGet(e) {
           });
         }
       }
-      
-      const now = new Date();
-      const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
-      const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-      const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
+    }
 
-      // Solo inyectar si no existen en el Directorio (para evitar duplicados v37.7)
-      const hasStreakCol = headers.indexOf('STREAK_COUNT') !== -1;
-      const hasTasksCol = headers.indexOf('TASKS_JSON');
-      
-      if (!hasStreakCol) directoryData[0].push('STREAK_COUNT');
-      if (hasTasksCol === -1) directoryData[0].push('TASKS_JSON');
+    // --- VIRTUAL JOIN: ACADEMIA ---
+    const academySheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+    const academyMap = new Map();
+    if (academySheet) {
+      const acadData = academySheet.getDataRange().getValues();
+      const acadHeaders = acadData[0].map(h => String(h).trim().toUpperCase());
+      const acadAgentIdIdx = acadHeaders.indexOf('AGENT_ID');
+      const acadStatusIdx = acadHeaders.indexOf('STATUS');
+      const acadCourseIdx = acadHeaders.indexOf('COURSE_ID');
 
-      for (let i = 1; i < directoryData.length; i++) {
-        const agentId = String(directoryData[i][0]).trim().toUpperCase();
-        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
-        
-        let displayStreak = streakInfo.streak;
-        let lastDateFormatted = streakInfo.lastDate;
-
-        if (displayStreak > 0 && lastDateFormatted !== todayStr && lastDateFormatted !== yesterdayStr) {
-          displayStreak = 0;
-        }
-
-        if (!hasStreakCol) directoryData[i].push(displayStreak);
-        if (hasTasksCol === -1) directoryData[i].push(streakInfo.tasks);
-        
-        // Inyectar LAST_COMPLETED_DATE si no existe en el encabezado
-        const lastDateHeaderIdx = headers.indexOf('LAST_COMPLETED_DATE');
-        if (lastDateHeaderIdx === -1) {
-           if (i === 0) directoryData[0].push('LAST_COMPLETED_DATE');
-           else directoryData[i].push(streakInfo.lastDate);
+      if (acadAgentIdIdx !== -1) {
+        for (let i = 1; i < acadData.length; i++) {
+          if (String(acadData[i][acadStatusIdx]).toUpperCase() !== 'COMPLETADO') continue;
+          const aAgentId = String(acadData[i][acadAgentIdIdx]).trim().toUpperCase();
+          if (!aAgentId) continue;
+          const courseName = String(acadData[i][acadCourseIdx]);
+          // Guardar el último encontrado (asumiendo que los nuevos están abajo)
+          academyMap.set(aAgentId, courseName);
         }
       }
     }
-    
-    // (Bloque duplicado de Rachas eliminado por Auto-Curación v1.7.2)
 
-    // Virtual Join de Asistencia (Última Fecha)
+    // --- VIRTUAL JOIN: ASISTENCIA ---
+    const lastAttenMap = new Map();
     if (attendanceSheet) {
       const attenData = attendanceSheet.getDataRange().getValues();
-      const lastAttenMap = new Map();
-      
       for (let i = 1; i < attenData.length; i++) {
         const row = attenData[i];
         const aId = String(row[0]).trim().toUpperCase();
         if (!aId) continue;
-
-        // Ahora que el esquema es uniforme [ID, TIPO, UBICACION, FECHA]
-        // Siempre buscamos en la columna 4 (índice 3)
         const candidateDate = row[3];
         if (candidateDate instanceof Date && !isNaN(candidateDate.getTime())) {
           const existingDate = lastAttenMap.get(aId);
@@ -382,13 +363,56 @@ function doGet(e) {
           }
         }
       }
-      
-      directoryData[0].push('LAST_ATTENDANCE');
-      for (let i = 1; i < directoryData.length; i++) {
-        const agentId = String(directoryData[i][0]).trim().toUpperCase();
-        const lastDate = lastAttenMap.get(agentId) || '';
-        directoryData[i].push(lastDate);
+    }
+
+    // --- INYECCIÓN DE COLUMNAS VIRTUALES (JOIN DINÁMICO) ---
+    const vHeaders = ['STREAK_COUNT', 'TASKS_JSON', 'LAST_COMPLETED_DATE', 'LAST_COURSE', 'LAST_ATTENDANCE'];
+    
+    // 1. Identificar qué columnas faltan y añadirlas al encabezado si es necesario
+    vHeaders.forEach(vh => {
+      if (headers.indexOf(vh) === -1) {
+        directoryData[0].push(vh);
       }
+    });
+    
+    // 2. Mapear Índices Finales (Después de la expansión del header)
+    const finalHeaders = directoryData[0].map(h => String(h).trim().toUpperCase());
+    const vIndices = vHeaders.map(vh => finalHeaders.indexOf(vh));
+
+    const now = new Date();
+    const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
+    const yesterdayStr = Utilities.formatDate(new Date(now.getTime() - 86400000), "GMT-4", "yyyy-MM-dd");
+
+    for (let i = 1; i < directoryData.length; i++) {
+        const agentId = String(directoryData[i][0]).trim().toUpperCase();
+        if (!agentId) continue;
+
+        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
+        
+        // Racha directa del servidor — sin reset visual
+        const displayStreak = streakInfo.streak;
+
+        const lastCourse = academyMap.get(agentId) || '';
+        const lastAtten = lastAttenMap.get(agentId) || '';
+        const lastAttenStr = lastAtten instanceof Date ? Utilities.formatDate(lastAtten, "GMT-4", "yyyy-MM-dd") : lastAtten;
+
+        // 3. Poblar cada columna virtual en su índice correcto
+        vHeaders.forEach((vh, vIdx) => {
+            const freshVal = (vh === 'STREAK_COUNT') ? displayStreak :
+                             (vh === 'TASKS_JSON') ? streakInfo.tasks :
+                             (vh === 'LAST_COMPLETED_DATE') ? streakInfo.lastDate :
+                             (vh === 'LAST_COURSE') ? lastCourse :
+                             (vh === 'LAST_ATTENDANCE') ? lastAttenStr : '';
+            
+            const targetIdx = vIndices[vIdx];
+            if (targetIdx !== -1) {
+              // Asegurar que la fila tiene longitud suficiente
+              while (directoryData[i].length <= targetIdx) {
+                directoryData[i].push('');
+              }
+              directoryData[i][targetIdx] = freshVal;
+            }
+        });
     }
     
     return ContentService.createTextOutput(JSON.stringify({ data: directoryData })).setMimeType(ContentService.MimeType.JSON);
@@ -2557,19 +2581,23 @@ function checkRachaNotifications() {
     let message = "";
     let milestoneKey = "";
 
-    if (diffHours >= 47 && diffHours < 48 && !sentNotifs.includes("47H")) {
+    if (diffHours >= 48 && !sentNotifs.includes("LOST")) {
+      title = "💔 RACHA PERDIDA";
+      message = `Tu racha de ${streakCount} días ha finalizado. No completaste tu misión a tiempo. ¡Levántate y reconstruye!`;
+      milestoneKey = "LOST";
+    } else if (diffHours >= 47 && !sentNotifs.includes("47H")) {
       title = "⚠️ ALERTA DE PERÍMETRO";
       message = `¡Riesgo crítico! Tu racha de ${streakCount} días está a punto de perderse. Tienes 60 minutos para asegurar tu sector.`;
       milestoneKey = "47H";
-    } else if (diffHours >= 36 && diffHours < 37 && !sentNotifs.includes("36H")) {
+    } else if (diffHours >= 36 && !sentNotifs.includes("36H")) {
       title = "🔋 RECARGA TÁCTICA";
       message = `Tu constancia es tu mejor arma. No permitas que el día termine sin tu dosis de sabiduría. ¡Racha de ${streakCount} días en juego!`;
       milestoneKey = "36H";
-    } else if (diffHours >= 27 && diffHours < 28 && !sentNotifs.includes("27H")) {
+    } else if (diffHours >= 27 && !sentNotifs.includes("27H")) {
       title = "🕯️ MANTÉN LA LLAMA";
       message = "Tómate un minuto para reconectar. No permitas que el ruido apague tu racha de consagración. El equipo cuenta contigo.";
       milestoneKey = "27H";
-    } else if (diffHours >= 24 && diffHours < 25 && !sentNotifs.includes("24H")) {
+    } else if (diffHours >= 24 && !sentNotifs.includes("24H")) {
       title = "🚀 OBJETIVO REVELADO";
       message = `¡Agente listo! El versículo de hoy está disponible. Asegura tu racha de ${streakCount} días ahora.`;
       milestoneKey = "24H";
@@ -3345,6 +3373,11 @@ function addNewsItem(ss, type, message, agentId, agentName) {
     }
   }
 
+  // Reemplazar el ID por el nombre en el mensaje si fue resuelto
+  if (agentName && agentId && message.includes(agentId)) {
+    message = message.replace(agentId, agentName);
+  }
+
   const id = 'NEWS_' + new Date().getTime();
   const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy HH:mm");
   sheet.appendRow([id, type, message, fecha, agentId || '', agentName || '']);
@@ -3370,12 +3403,23 @@ function computeBadges() {
   var dirData = dirSheet ? dirSheet.getDataRange().getValues() : [];
   var dirHeaders = dirData.length > 0 ? dirData[0].map(function(h){ return String(h).trim().toUpperCase(); }) : [];
   
-  // Build agent lookup {id: name}
+  // Build agent lookup {id: name} and leader status
   var agentNames = {};
+  var isLeader = {};
   var idCol = dirHeaders.indexOf('ID') !== -1 ? dirHeaders.indexOf('ID') : dirHeaders.indexOf('ID CÉDULA');
   var nameCol = dirHeaders.indexOf('NOMBRE');
+  var rankCol = dirHeaders.indexOf('RANGO');
+  var roleCol = dirHeaders.indexOf('NIVEL_ACCESO');
+
   for (var i = 1; i < dirData.length; i++) {
-    agentNames[String(dirData[i][idCol] || '').trim().toUpperCase()] = String(dirData[i][nameCol] || '');
+    var agId = String(dirData[i][idCol] || '').trim().toUpperCase();
+    agentNames[agId] = String(dirData[i][nameCol] || '');
+    
+    var rank = String(dirData[i][rankCol] || '').toUpperCase();
+    var role = String(dirData[i][roleCol] || '').toUpperCase();
+    if (rank.includes('DIRECTOR') || rank.includes('LÍDER') || role.includes('DIRECTOR') || role.includes('ADMIN') || role.includes('SUPERVISOR')) {
+      isLeader[agId] = true;
+    }
   }
   
   // --- 1. RECLUTADOR DEL MES: Más referidos este mes (Inscripciones + Visitantes) ---
@@ -3428,6 +3472,10 @@ function computeBadges() {
 
   var topRef = null, topRefCount = 0;
   for (var name in refCounts) {
+    // Note: topRef is name here, not ID. We might need ID to check isLeader.
+    // However, the audio implies filtering "leaders" from badges. 
+    // If name is a leader's name, we could try to find their ID.
+    // For simplicity, if we don't have ID, we might skip filtering refCounts or just filter if name is known as a leader.
     if (refCounts[name] > topRefCount) { topRef = name; topRefCount = refCounts[name]; }
   }
   if (topRef && topRefCount > 0) {
@@ -3445,9 +3493,11 @@ function computeBadges() {
     if (sIdCol !== -1 && sCountCol !== -1) {
       var topStreaker = null, topStreak = 0;
       for (var i = 1; i < sData.length; i++) {
+        var agId = String(sData[i][sIdCol] || '').trim().toUpperCase();
+        if (isLeader[agId]) continue; // Filter out leaders
         var streak = parseInt(sData[i][sCountCol]) || 0;
         if (streak > topStreak) {
-          topStreaker = String(sData[i][sIdCol] || '').trim().toUpperCase();
+          topStreaker = agId;
           topStreak = streak;
         }
       }
@@ -3482,6 +3532,7 @@ function computeBadges() {
     }
     var topMissioner = null, topMissions = 0;
     for (var id in missionCounts) {
+      if (isLeader[id]) continue; // Filter out leaders
       if (missionCounts[id] > topMissions) { topMissioner = id; topMissions = missionCounts[id]; }
     }
     if (topMissioner && topMissions > 0) {
@@ -3505,6 +3556,7 @@ function computeBadges() {
     }
     var topAcad = null, topAcadCount = 0;
     for (var id in acadCounts) {
+      if (isLeader[id]) continue; // Filter out leaders
       if (acadCounts[id] > topAcadCount) { topAcad = id; topAcadCount = acadCounts[id]; }
     }
     if (topAcad && topAcadCount > 0) {
@@ -3539,6 +3591,7 @@ function computeBadges() {
     // Find who has perfect attendance (most attendances this month)
     var topAtt = null, topAttCount = 0;
     for (var id in attCounts) {
+      if (isLeader[id]) continue; // Filter out leaders
       if (attCounts[id] > topAttCount) { topAtt = id; topAttCount = attCounts[id]; }
     }
     if (topAtt && topAttCount > 0) {

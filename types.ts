@@ -53,6 +53,7 @@ export interface Agent {
   lastAttendance?: string;
   weeklyTasks?: { id: string; title: string; completed: boolean }[];
   notifPrefs?: { read: string[]; deleted: string[] };
+  lastCourse?: string;
 }
 
 export interface DailyVerse {

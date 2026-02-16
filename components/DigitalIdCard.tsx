@@ -33,14 +33,16 @@ export const formatDriveUrl = (url: string) => {
   if (fileId) {
     /** 
      * Estrategia de Renderizado Definitiva:
-     * El endpoint 'thumbnail' con 'sz=s1000' es el más permisivo y estable
-     * Se puede añadir un cache-buster si hay problemas de actualización
+     * El endpoint lh3.googleusercontent.com es el CDN directo de Google, 
+     * el más permisivo y estable (mismo formato que nuevos agentes).
+     * =s1000 controla el tamaño máximo de la imagen.
      */
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=s1000`;
+    return `https://lh3.googleusercontent.com/d/${fileId}=s1000`;
   }
 
-  // Fallback para URLs normales
+  // Fallback para URLs normales y assets locales
   if (url.startsWith('http')) return url;
+  if (url.startsWith('/')) return url;
 
   return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
 };

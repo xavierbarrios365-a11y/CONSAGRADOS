@@ -1,0 +1,151 @@
+﻿ */
+function doGet(e) {
+  var CONFIG = getGlobalConfig();
+  if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) {
+    return ContentService.createTextOutput(JSON.stringify({ error: "Configuraci├│n incompleta: SPREADSHEET_ID no est├í definido en el script." })).setMimeType(ContentService.MimeType.JSON);
+  }
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    const strikesSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+    const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+    
+    if (!directorySheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
+    
+    const directoryData = directorySheet.getDataRange().getValues();
+    const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
+    
+    // Virtual Join de Rachas
+    if (strikesSheet) {
+      const strikeData = strikesSheet.getDataRange().getValues();
+      const strikeHeaders = strikeData[0].map(h => String(h).trim().toUpperCase());
+      const strikeAgentIdIdx = strikeHeaders.indexOf('AGENT_ID');
+      const streakCountIdx = strikeHeaders.indexOf('STREAK_COUNT');
+      const tasksJsonIdx = strikeHeaders.indexOf('TASKS_JSON');
+      
+      const streakMap = new Map();
+      if (strikeAgentIdIdx !== -1) {
+        for (let i = 1; i < strikeData.length; i++) {
+          const sAgentId = String(strikeData[i][strikeAgentIdIdx]).trim().toUpperCase();
+          if (!sAgentId) continue;
+          streakMap.set(sAgentId, {
+            streak: parseInt(strikeData[i][streakCountIdx]) || 0,
+            tasks: strikeData[i][tasksJsonIdx] || '[]',
+            lastDate: (() => {
+              let idx1 = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
+              if (idx1 === -1) idx1 = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
+              let val = '';
+              if (idx1 !== -1 && strikeData[i][idx1]) {
+                val = strikeData[i][idx1];
+                if (val instanceof Date) return val.toISOString();
+                return String(val).trim();
+              }
+              return '';
+            })()
+          });
+        }
+      }
+      
+      const now = new Date();
+      const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
+      const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+      const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
+
+      // Solo inyectar si no existen en el Directorio (para evitar duplicados v37.7)
+      const hasStreakCol = headers.indexOf('STREAK_COUNT') !== -1;
+      const hasTasksCol = headers.indexOf('TASKS_JSON');
+      
+      if (!hasStreakCol) directoryData[0].push('STREAK_COUNT');
+      if (hasTasksCol === -1) directoryData[0].push('TASKS_JSON');
+
+      for (let i = 1; i < directoryData.length; i++) {
+        const agentId = String(directoryData[i][0]).trim().toUpperCase();
+        const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
+        
+        let displayStreak = streakInfo.streak;
+        let lastDateFormatted = streakInfo.lastDate;
+
+        if (displayStreak > 0 && lastDateFormatted !== todayStr && lastDateFormatted !== yesterdayStr) {
+          displayStreak = 0;
+        }
+
+        if (!hasStreakCol) directoryData[i].push(displayStreak);
+        if (hasTasksCol === -1) directoryData[i].push(streakInfo.tasks);
+        
+        // Inyectar LAST_COMPLETED_DATE si no existe en el encabezado
+        const lastDateHeaderIdx = headers.indexOf('LAST_COMPLETED_DATE');
+        if (lastDateHeaderIdx === -1) {
+           if (i === 0) directoryData[0].push('LAST_COMPLETED_DATE');
+           else directoryData[i].push(streakInfo.lastDate);
+        }
+      }
+    }
+    
+    // (Bloque duplicado de Rachas eliminado por Auto-Curaci├│n v1.7.2)
+
+    // Virtual Join de Asistencia (├Ültima Fecha)
+    if (attendanceSheet) {
+      const attenData = attendanceSheet.getDataRange().getValues();
+      const lastAttenMap = new Map();
+      
+      for (let i = 1; i < attenData.length; i++) {
+        const row = attenData[i];
+        const aId = String(row[0]).trim().toUpperCase();
+        if (!aId) continue;
+
+        // Ahora que el esquema es uniforme [ID, TIPO, UBICACION, FECHA]
+        // Siempre buscamos en la columna 4 (├¡ndice 3)
+        const candidateDate = row[3];
+        if (candidateDate instanceof Date && !isNaN(candidateDate.getTime())) {
+          const existingDate = lastAttenMap.get(aId);
+          if (!existingDate || candidateDate > existingDate) {
+            lastAttenMap.set(aId, candidateDate);
+          }
+        }
+      }
+      
+      directoryData[0].push('LAST_ATTENDANCE');
+      for (let i = 1; i < directoryData.length; i++) {
+        const agentId = String(directoryData[i][0]).trim().toUpperCase();
+        const lastDate = lastAttenMap.get(agentId) || '';
+        directoryData[i].push(lastDate);
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ data: directoryData })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    Logger.log(error);
+    return ContentService.createTextOutput(JSON.stringify({ error: error.message })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+
+/**
+ * @description Maneja las solicitudes POST. Enrutador de acciones.
+ */
+function doPost(e) {
+  const CONFIG = getGlobalConfig();
+  if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Configuraci├│n SPREADSHEET_ID incompleta." })).setMimeType(ContentService.MimeType.JSON);
+  
+  try {
+    // Auto-curaci├│n de esquema en cada llamada POST
+    try { verifyAndFixSchema(); } catch(schemaErr) { Logger.log('Schema check failed: ' + schemaErr.message); }
+
+    const request = JSON.parse(e.postData.contents);
+    switch (request.action) {
+      case 'enroll_agent':
+        return enrollAgent(request.data);
+      case 'upload_image':
+        if (!CONFIG.DRIVE_FOLDER_ID || CONFIG.DRIVE_FOLDER_ID.includes('PEGA_AQUI')) throw new Error("DRIVE_FOLDER_ID no configurado.");
+        return uploadImage(request.data);
+      case 'register_id_scan':
+        return registerIdScan(request.data);
+      case 'update_agent_points':
+        return updateAgentPoints(request.data);
+      case 'update_tactical_stats':
+        return updateTacticalStats(request.data);
+      case 'reconstruct_db':
+        return reconstructDb();
+      case 'update_user_password':
+        return updateUserPassword(request.data);
+      case 'get_security_question':

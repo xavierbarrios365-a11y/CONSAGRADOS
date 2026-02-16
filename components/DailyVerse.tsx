@@ -6,10 +6,11 @@ import { generateGoogleCalendarLink, downloadIcsFile } from '../services/calenda
 
 interface DailyVerseProps {
     verse: DailyVerseType | null;
+    streakCount?: number;
     onQuizComplete?: () => void;
 }
 
-const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
+const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizComplete }) => {
     const [showQuiz, setShowQuiz] = useState(false);
     const [quizCompleted, setQuizCompleted] = useState(false);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -66,7 +67,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
             const newDisplay = verse.verse.replace(target, '__________');
             setDisplayVerse(newDisplay);
         }
-    }, [verse]);
+    }, [verse?.verse]);
 
     if (!verse) return (
         <div className="w-full bg-white/5 border border-white/5 rounded-[2.5rem] p-8 animate-pulse">
@@ -99,10 +100,18 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
             </div>
 
             <div className="relative z-10 flex flex-col items-center text-center space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <BookOpen size={14} className="text-[#ffb700]" />
-                    <span className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.3em] font-bebas">Versículo del Día</span>
-                    {quizCompleted && <CheckCircle2 size={14} className="text-green-500" />}
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                        <BookOpen size={14} className="text-[#ffb700]" />
+                        <span className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.3em] font-bebas">Versículo del Día</span>
+                        {quizCompleted && <CheckCircle2 size={14} className="text-green-500" />}
+                    </div>
+                    {streakCount > 0 && (
+                        <div className="flex items-center gap-1.5 bg-[#ffb700] text-[#001f3f] px-2.5 py-0.5 rounded-full border border-white/20 shadow-lg animate-in slide-in-from-right-4 duration-500">
+                            <Sparkles size={10} className="animate-pulse" />
+                            <span className="text-[9px] font-black uppercase tracking-widest font-bebas">RACHA: {streakCount} DÍAS</span>
+                        </div>
+                    )}
                 </div>
 
                 {!showQuiz || quizCompleted ? (

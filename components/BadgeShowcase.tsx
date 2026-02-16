@@ -7,6 +7,7 @@ interface BadgeShowcaseProps {
     currentAgentId?: string;
     currentAgentName?: string;
     mode?: 'profile' | 'summary';
+    compact?: boolean;
 }
 
 const BADGE_CONFIG: Record<string, { icon: React.ReactNode; gradient: string; glow: string; border: string }> = {
@@ -42,7 +43,7 @@ const BADGE_CONFIG: Record<string, { icon: React.ReactNode; gradient: string; gl
     }
 };
 
-const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ currentAgentId, currentAgentName, mode = 'summary' }) => {
+const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ currentAgentId, currentAgentName, mode = 'summary', compact = false }) => {
     const [badges, setBadges] = useState<Badge[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -102,22 +103,22 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ currentAgentId, currentAg
                     return (
                         <div
                             key={badge.type + idx}
-                            className={`shrink-0 relative overflow-hidden rounded-2xl p-4 w-36 border ${config.border} ${config.glow} bg-gradient-to-br from-white/[0.04] to-white/[0.01] transition-all hover:scale-105 hover:-translate-y-1 cursor-default`}
+                            className={`shrink-0 relative overflow-hidden rounded-2xl ${compact ? 'p-2 w-24' : 'p-4 w-36'} border ${config.border} ${config.glow} bg-gradient-to-br from-white/[0.04] to-white/[0.01] transition-all hover:scale-105 hover:-translate-y-1 cursor-default`}
                             style={{ animationDelay: `${idx * 100}ms` }}
                         >
                             {/* Background Glow */}
-                            <div className={`absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br ${config.gradient} rounded-full blur-2xl opacity-20`} />
+                            <div className={`absolute -top-4 -right-4 ${compact ? 'w-10 h-10' : 'w-16 h-16'} bg-gradient-to-br ${config.gradient} rounded-full blur-2xl opacity-20`} />
 
-                            <div className="relative z-10 space-y-2">
-                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
-                                    {config.icon}
+                            <div className={`relative z-10 ${compact ? 'space-y-1' : 'space-y-2'}`}>
+                                <div className={`${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
+                                    {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: compact ? 14 : 20 }) : config.icon}
                                 </div>
                                 <div>
-                                    <p className="text-[8px] font-black text-white/50 uppercase tracking-wider leading-none">{badge.label}</p>
-                                    <p className="text-[10px] font-black text-white uppercase truncate mt-0.5 leading-tight">{badge.agentName}</p>
+                                    <p className={`${compact ? 'text-[6px]' : 'text-[8px]'} font-black text-white/50 uppercase tracking-wider leading-none`}>{badge.label}</p>
+                                    <p className={`${compact ? 'text-[8px]' : 'text-[10px]'} font-black text-white uppercase truncate mt-0.5 leading-tight`}>{badge.agentName}</p>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <span className="text-[16px] font-bebas font-black text-white leading-none">{badge.value}</span>
+                                    <span className={`${compact ? 'text-[12px]' : 'text-[16px]'} font-bebas font-black text-white leading-none`}>{badge.value}</span>
                                     <span className="text-[7px] text-white/40 font-bold uppercase">
                                         {badge.type === 'STREAKER' ? 'días' :
                                             badge.type === 'RECLUTADOR' ? 'referidos' :

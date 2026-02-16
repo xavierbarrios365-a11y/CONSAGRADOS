@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from './components/Layout';
-import { AppView, Agent, UserRole, Visitor, Guide } from './types';
+import { AppView, Agent, UserRole, Visitor, Guide, Badge } from './types';
 import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import IntelFeed from './components/IntelFeed';
@@ -20,6 +20,7 @@ import TasksModule from './components/TasksModule';
 import PromotionProgressCard from './components/PromotionProgressCard';
 import TrainingCenter from './components/TrainingCenter';
 import BadgeShowcase from './components/BadgeShowcase';
+import TacticalCertificate from './components/TacticalCertificate';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -42,14 +43,14 @@ import {
 import { generateGoogleCalendarLink, downloadIcsFile } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList, Share2 } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
 // SpiritualAdvisor removed per user request
 import { initRemoteConfig } from './services/configService';
 
-const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNF2X5f"; // ID Real de Consagrados 2026
+const OFFICIAL_LOGO = "/logo_white.png"; // Usando asset local para máxima confiabilidad
 
 const LoadingScreen = ({ message }: { message: string }) => (
   <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 space-y-6 animate-in fade-in">
@@ -261,6 +262,8 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [showExpedienteFor, setShowExpedienteFor] = useState<Agent | null>(null);
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [visitorRadar, setVisitorRadar] = useState<Visitor[]>([]);
@@ -389,9 +392,9 @@ const App: React.FC = () => {
     }
   }, [isLoggedIn, currentUser]);
 
-  const handleLogout = useCallback(() => {
-    // Preserve important keys for quick re-entry
-    const backupKeys = ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id'];
+  const handleLogout = useCallback((fullPurge = false) => {
+    // Preserve important keys for quick re-entry if not a full purge
+    const backupKeys = fullPurge ? ['app_version', 'pwa_banner_dismissed'] : ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id'];
     const backup: Record<string, string> = {};
 
     backupKeys.forEach(k => {
@@ -399,18 +402,20 @@ const App: React.FC = () => {
       if (v) backup[k] = v;
     });
 
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith('read_notifications_') || key.startsWith('deleted_notifications_'))) {
-        const v = localStorage.getItem(key);
-        if (v) backup[key] = v;
+    if (!fullPurge) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('read_notifications_') || key.startsWith('deleted_notifications_'))) {
+          const v = localStorage.getItem(key);
+          if (v) backup[key] = v;
+        }
       }
     }
 
     localStorage.clear();
     sessionStorage.clear();
 
-    // Restore backups (Legacy behavior, for standard logout)
+    // Restore backups
     Object.entries(backup).forEach(([k, v]) => localStorage.setItem(k, v));
 
     setIsLoggedIn(false);
@@ -423,10 +428,10 @@ const App: React.FC = () => {
     setIsMustChangeFlow(false);
     setShowForgotPassword(false);
     setViewingAsRole(null);
-    setShowQuickLogin(true);
+    setShowQuickLogin(fullPurge ? false : true);
 
     setTimeout(() => {
-      window.location.replace(window.location.origin + window.location.pathname + "?logout=" + Date.now());
+      window.location.replace(window.location.origin + window.location.pathname + "?logout=" + (fullPurge ? 'full' : 'soft') + "_" + Date.now());
     }, 50);
   }, []);
 
@@ -471,6 +476,7 @@ const App: React.FC = () => {
     initRemoteConfig();
     const storedUser = sessionStorage.getItem('consagrados_session');
     const storedLastActive = localStorage.getItem('last_active_time');
+    const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
     if (storedUser) {
       try {
@@ -478,8 +484,8 @@ const App: React.FC = () => {
         const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
         const now = Date.now();
 
-        // Timeout reducido a 30 minutos (1800000 ms)
-        if (now - lastActive > 1800000 && lastActive !== 0) {
+        // Timeout 30 minutos, pero NO aplica en PWA instalada
+        if (!isPwa && now - lastActive > 1800000 && lastActive !== 0) {
           handleLogout();
         } else {
           setIsLoggedIn(true);
@@ -546,14 +552,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
+      const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+
       const interval = setInterval(() => {
         const now = Date.now();
         const diff = now - lastActiveTime;
-        // 30 Minutos (1800000 ms)
-        if (diff >= 1800000) {
-          handleLogout();
-        } else if (diff >= 1500000) { // Aviso a los 25 min
-          setShowSessionWarning(true);
+
+        // El auto-logout por inactividad se desactiva en modo PWA
+        if (!isPwa) {
+          if (diff >= 1800000) {
+            handleLogout();
+          } else if (diff >= 1500000) { // Aviso a los 25 min
+            setShowSessionWarning(true);
+          }
         }
 
         // Detección de offline prolongado
@@ -708,9 +719,14 @@ const App: React.FC = () => {
       const leadershipHeadlines = topLeadership.map((a, i) => `🎖️ TOP ${i + 1} LIDERAZGO: ${a.name} (${a.leadership} PTS)`);
       const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
 
+      // 3. Insignias del Mes (Novedades)
+      const badgeData = await fetchBadges();
+      const badgeHeadlines = badgeData.slice(0, 5).map(b => `🎖️ LOGRO: ${b.agentName} ganó ${b.label} (${b.value})`);
+
       // Combinar todo
       const finalHeadlines = [
         ...notifHeadlines,
+        ...badgeHeadlines,
         ...rankHeadlines,
         ...bibleHeadlines,
         ...notesHeadlines,
@@ -1032,7 +1048,7 @@ const App: React.FC = () => {
 
     try {
       console.log("🔥 Sincronizando racha...");
-      const res = await updateAgentStreaks(currentUser.id, false, updatedTasks);
+      const res = await updateAgentStreaks(currentUser.id, false, updatedTasks, currentUser.name);
       if (res.success && res.streak !== undefined) {
         // Siempre confiar en el valor del servidor (es la fuente de verdad)
         const serverUser = {
@@ -1138,11 +1154,34 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
-                <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">{currentUser?.name || 'Saúl'}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                    <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">{currentUser?.name || 'Saúl'}</p>
+                  </div>
+                  {/* PROGRESO COMPACTO EN EL HEADER */}
+                  {currentUser && (
+                    <div className="hidden xs:block">
+                      <PromotionProgressCard
+                        agentId={currentUser.id}
+                        currentRank={currentUser.rank}
+                        compact={true}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-3 mt-2">
-                  <span className="text-[8px] text-[#ffb700] font-black uppercase tracking-wider bg-[#ffb700]/10 border border-[#ffb700]/20 px-3 py-1 rounded-full">🔥 {currentUser?.streakCount || 0} DÍAS</span>
                   <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
+                  {/* INSIGNIAS PROPIAS (Solo si tiene) */}
+                  <div className="flex-1">
+                    <BadgeShowcase
+                      currentAgentId={currentUser?.id}
+                      currentAgentName={currentUser?.name}
+                      mode="profile"
+                      compact={true}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1178,6 +1217,7 @@ const App: React.FC = () => {
             <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
               <DailyVerse
                 verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
+                streakCount={currentUser?.streakCount}
                 onQuizComplete={handleVerseQuizComplete}
               />
             </div>
@@ -1185,99 +1225,56 @@ const App: React.FC = () => {
             {/* Intel Feed - Posición Primaria (v3.0) */}
             <IntelFeed headlines={headlines} agents={agents} />
 
-            {/* Insignias del Mes */}
-            <BadgeShowcase currentAgentId={currentUser?.id} currentAgentName={currentUser?.name} mode="summary" />
+            {/* RADAR DE DESERCIÓN RÁPIDO - HOME (PERSONALIZADO POR ROL) */}
+            {(() => {
+              const isCommandRole = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER;
 
-            {/* Mi Insignia Personal */}
-            <BadgeShowcase currentAgentId={currentUser?.id} currentAgentName={currentUser?.name} mode="profile" />
+              if (isCommandRole) {
+                // DIRECTOR/LÍDER: Ver alerta general de deserción con conteo
+                const dangerCount = agents.filter(a => {
+                  if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                  const lastDate = parseAttendanceDate(a.lastAttendance);
+                  if (!lastDate) return false;
+                  const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                  return diffDays >= 21;
+                }).length;
 
-            <div className="flex flex-col gap-4">
+                if (dangerCount === 0) return null;
 
-              {/* TARJETA DE PROGRESO DE ASCENSO (NUEVA) */}
-              {currentUser && (
-                <PromotionProgressCard
-                  agentId={currentUser.id}
-                  currentRank={currentUser.rank}
-                  onClick={() => setView(AppView.ASCENSO)}
-                />
-              )}
-
-              <div className="relative group overflow-hidden rounded-3xl p-6 glass-amber shadow-[0_0_40px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
-                <div className="absolute inset-0 shimmer-bg opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                  <Flame size={100} className="text-[#ffb700]" />
-                </div>
-                <div className="relative z-10 w-full flex justify-between items-center">
-                  <div className="animate-fade">
-                    <p className="text-[8px] font-black text-[#ffb700] uppercase tracking-[0.2em] mb-1">Racha de Consagración</p>
-                    <p className="text-4xl font-bebas font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{currentUser?.streakCount || 0} DÍAS</p>
-                  </div>
-                  <div className="bg-[#ffb700] p-4 rounded-2xl shadow-[0_0_20px_rgba(255,183,0,0.4)] animate-scale">
-                    <Flame size={32} className="text-[#001f3f]" />
-                  </div>
-                </div>
-                <div className="w-full space-y-3 relative z-10 mt-4">
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
-                    <div className="h-full bg-gradient-to-r from-[#ffb700] to-amber-300 shadow-[0_0_15px_rgba(255,183,0,0.6)] transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser?.streakCount || 0) / 365) * 100)}%` }}></div>
-                  </div>
-                  <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest italic">
-                    <p className="text-white/30">Objetivo: 365 días</p>
-                    <p className="text-[#ffb700]">{Math.floor(((currentUser?.streakCount || 0) / 365) * 100)}% Completado</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* RADAR DE DESERCIÓN RÁPIDO - HOME (PERSONALIZADO POR ROL) */}
-              {(() => {
-                const isCommandRole = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER;
-
-                if (isCommandRole) {
-                  // DIRECTOR/LÍDER: Ver alerta general de deserción con conteo
-                  const dangerCount = agents.filter(a => {
-                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
-                    const lastDate = parseAttendanceDate(a.lastAttendance);
-                    if (!lastDate) return false;
-                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                    return diffDays >= 21;
-                  }).length;
-
-                  if (dangerCount === 0) return null;
-
-                  return (
-                    <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="text-red-500" size={20} />
-                        <div>
-                          <p className="text-[10px] text-white font-black uppercase tracking-widest">COMANDO: ALERTA DE DESERCIÓN</p>
-                          <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
-                        </div>
-                      </div>
-                      <ChevronRight size={16} className="text-red-500" />
-                    </div>
-                  );
-                } else {
-                  // ESTUDIANTE: Solo ver alerta personal si ELLOS están en riesgo
-                  if (!currentUser?.lastAttendance || currentUser.lastAttendance === 'N/A') return null;
-                  const myLastDate = parseAttendanceDate(currentUser.lastAttendance);
-                  if (!myLastDate) return null;
-                  const myDiffDays = Math.floor((new Date().getTime() - myLastDate.getTime()) / (1000 * 60 * 60 * 24));
-
-                  if (myDiffDays < 14) return null; // No están en riesgo
-
-                  return (
-                    <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="text-amber-500" size={20} />
-                        <div>
-                          <p className="text-[10px] text-white font-black uppercase tracking-widest">⚠️ ALERTA PERSONAL</p>
-                          <p className="text-[8px] text-amber-500/80 font-bold uppercase">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
-                        </div>
+                return (
+                  <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="text-red-500" size={20} />
+                      <div>
+                        <p className="text-[10px] text-white font-black uppercase tracking-widest">COMANDO: ALERTA DE DESERCIÓN</p>
+                        <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
                       </div>
                     </div>
-                  );
-                }
-              })()}
-            </div>
+                    <ChevronRight size={16} className="text-red-500" />
+                  </div>
+                );
+              } else {
+                // ESTUDIANTE: Solo ver alerta personal si ELLOS están en riesgo
+                if (!currentUser?.lastAttendance || currentUser.lastAttendance === 'N/A') return null;
+                const myLastDate = parseAttendanceDate(currentUser.lastAttendance);
+                if (!myLastDate) return null;
+                const myDiffDays = Math.floor((new Date().getTime() - myLastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                if (myDiffDays < 14) return null; // No están en riesgo
+
+                return (
+                  <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="text-amber-500" size={20} />
+                      <div>
+                        <p className="text-[10px] text-white font-black uppercase tracking-widest">⚠️ ALERTA PERSONAL</p>
+                        <p className="text-[8px] text-amber-500/80 font-bold uppercase">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })()}
 
             {/* EVENTOS ACTIVOS */}
             {activeEvents.length > 0 && (
@@ -1351,7 +1348,6 @@ const App: React.FC = () => {
                 </button>
               )}
             </div>
-
           </div>
         );
       case AppView.SCANNER:
@@ -1821,13 +1817,26 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-3 px-6 py-5 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all font-bebas shadow-lg active:scale-95"
-              >
-                <LogOut size={18} />
-                Cerrar Conexión
-              </button>
+              <div className="w-full grid grid-cols-1 gap-3 mt-6">
+                <button
+                  onClick={() => handleLogout(false)}
+                  className="flex items-center justify-center gap-3 px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas shadow-lg active:scale-95"
+                >
+                  <LogOut size={18} />
+                  Cerrar Conexión
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm("🚨 ¿CERRAR SESIÓN POR COMPLETO?\nEsto borrará tu acceso rápido de este dispositivo (ideal si el teléfono no es tuyo o es prestado).")) {
+                      handleLogout(true);
+                    }
+                  }}
+                  className="flex items-center justify-center gap-3 px-6 py-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-red-500/40 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 transition-all font-bebas active:scale-95"
+                >
+                  <Trash2 size={16} />
+                  Limpiar Datos de Sesión y Salir
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -1855,7 +1864,12 @@ const App: React.FC = () => {
         <div className="w-full max-w-sm space-y-10 z-10 animate-in fade-in zoom-in-95 duration-700">
           <div className="text-center space-y-2">
             <div className="relative inline-block mb-4">
-              <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-24 mx-auto relative z-10" />
+              <img
+                src={logoError ? '/logo_white.png' : formatDriveUrl(OFFICIAL_LOGO)}
+                alt="Logo"
+                className="h-24 mx-auto relative z-10 object-contain"
+                onError={() => setLogoError(true)}
+              />
               <div className="absolute inset-0 bg-[#ffb700] blur-2xl opacity-20 scale-150"></div>
             </div>
             <h1 className="text-4xl font-bebas font-bold text-white tracking-[0.2em] leading-none">CONSAGRADOS 2026</h1>
@@ -2109,6 +2123,13 @@ const App: React.FC = () => {
             onClose={() => setShowExpedienteFor(null)}
           />
         </div>
+      )}
+
+      {showCertificate && currentUser && (
+        <TacticalCertificate
+          agent={currentUser}
+          onClose={() => setShowCertificate(false)}
+        />
       )}
 
       {showInstallBanner && (

@@ -6,10 +6,11 @@ import { fetchPromotionStatus } from '../services/sheetsService';
 interface PromotionProgressCardProps {
     agentId: string;
     currentRank: string;
-    onClick: () => void;
+    onClick?: () => void;
+    compact?: boolean;
 }
 
-const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, currentRank, onClick }) => {
+const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, currentRank, onClick, compact = false }) => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<{ xp: number; certificates: number } | null>(null);
 
@@ -56,6 +57,41 @@ const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, 
     const missingCerts = Math.max(0, rule.requiredCertificates - certs);
 
     const isMet = (missingXp === 0 && missingCerts === 0) || isMaxRank;
+
+    if (compact) {
+        return (
+            <div
+                onClick={onClick}
+                className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-2xl hover:border-[#ffb700] transition-all cursor-pointer active:scale-95 group"
+            >
+                <div className="relative w-8 h-8 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90">
+                        <circle cx="16" cy="16" r="14" fill="transparent" stroke="currentColor" strokeWidth="3" className="text-white/10" />
+                        <circle
+                            cx="16"
+                            cy="16"
+                            r="14"
+                            fill="transparent"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeDasharray={2 * Math.PI * 14}
+                            strokeDashoffset={2 * Math.PI * 14 * (1 - (xpProgress + certProgress) / 200)}
+                            className={isMet ? 'text-green-500' : 'text-[#ffb700]'}
+                            strokeLinecap="round"
+                        />
+                    </svg>
+                    <Shield size={10} className="absolute text-white group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="flex flex-col">
+                    <p className="text-[7px] font-black text-white/40 uppercase tracking-widest leading-none">Prox: {isMaxRank ? 'MAX' : rule.nextRank}</p>
+                    <p className="text-[10px] font-bebas text-white tracking-widest uppercase mt-0.5 leading-none">
+                        {isMet ? 'ASCENSO LISTO' : `${Math.round((xpProgress + certProgress) / 2)}% COMPLETADO`}
+                    </p>
+                </div>
+                <ChevronRight size={12} className="text-white/20 ml-1 group-hover:translate-x-0.5 transition-all" />
+            </div>
+        );
+    }
 
     return (
         <div

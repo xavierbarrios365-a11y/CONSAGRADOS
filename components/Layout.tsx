@@ -16,9 +16,10 @@ interface LayoutProps {
   onOpenInbox: () => void;
 }
 
-const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f";
+const OFFICIAL_LOGO = "/logo_white.png";
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, onHardReset, notificationCount, onOpenInbox }) => {
+  const [logoError, setLogoError] = React.useState(false);
   const allNavItems = [
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
@@ -36,7 +37,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     <div className="flex flex-col h-screen bg-[#001f3f] text-[#f4f4f4] overflow-hidden font-montserrat">
       <header className="min-h-[4rem] h-auto border-b border-white/5 bg-black/50 backdrop-blur-md px-6 py-2 flex items-center justify-between shrink-0 z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2">
-          <img src={formatDriveUrl(OFFICIAL_LOGO)} alt="Logo" className="h-6 w-auto object-contain transition-transform active:scale-95" />
+          <img
+            src={logoError ? '/logo_white.png' : formatDriveUrl(OFFICIAL_LOGO)}
+            alt="Logo"
+            className="h-6 w-auto object-contain transition-transform active:scale-95"
+            onError={() => setLogoError(true)}
+          />
           <div className="flex flex-col">
             <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">Consagrados</p>
           </div>

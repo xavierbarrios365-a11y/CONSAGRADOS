@@ -19,6 +19,7 @@ import PromotionModule from './components/PromotionModule';
 import TasksModule from './components/TasksModule';
 import PromotionProgressCard from './components/PromotionProgressCard';
 import TrainingCenter from './components/TrainingCenter';
+import BadgeShowcase from './components/BadgeShowcase';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -1178,6 +1179,12 @@ const App: React.FC = () => {
             {/* Intel Feed - Posición Primaria (v3.0) */}
             <IntelFeed headlines={headlines} agents={agents} />
 
+            {/* Insignias del Mes */}
+            <BadgeShowcase currentAgentId={currentUser?.id} currentAgentName={currentUser?.name} mode="summary" />
+
+            {/* Mi Insignia Personal */}
+            <BadgeShowcase currentAgentId={currentUser?.id} currentAgentName={currentUser?.name} mode="profile" />
+
             <div className="flex flex-col gap-4">
 
               {/* TARJETA DE PROGRESO DE ASCENSO (NUEVA) */}
@@ -1816,7 +1823,7 @@ const App: React.FC = () => {
             </div>
           </div>
         );
-      case AppView.ENROLLMENT: return <EnrollmentForm onSuccess={() => { alert("Inscripción exitosa"); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} />;
+      case AppView.ENROLLMENT: return <EnrollmentForm onSuccess={() => { alert("Inscripción exitosa"); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} agents={agents} />;
       default: return null;
     }
   };

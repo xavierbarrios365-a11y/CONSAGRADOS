@@ -170,10 +170,19 @@ export interface TaskProgress {
 
 export interface NewsFeedItem {
   id: string;
-  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION';
+  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION' | 'INSIGNIA';
   message: string;
   date: string;
   agentId?: string;
   agentName?: string;
+}
+
+export interface Badge {
+  type: 'CONSAGRADO_MES' | 'RECLUTADOR' | 'STREAKER' | 'MISIONERO_ELITE' | 'ACADEMICO';
+  emoji: string;
+  label: string;
+  agentId?: string;
+  agentName: string;
+  value: number;
 }
 

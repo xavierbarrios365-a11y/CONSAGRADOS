@@ -630,3 +630,13 @@ export const fetchTaskRecruits = async () => {
     return [];
   }
 };
+
+export const fetchBadges = async () => {
+  try {
+    const res = await postToAction('get_badges', {});
+    return res.success ? res.badges : [];
+  } catch (error: any) {
+    console.error("⚠️ FALLO OBTENER INSIGNIAS:", error);
+    return [];
+  }
+};

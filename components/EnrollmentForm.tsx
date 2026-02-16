@@ -4,11 +4,12 @@ import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageI
 import { uploadImage, enrollAgent } from '../services/sheetsService';
 import { compressImage } from '../services/storageUtils';
 
-import { UserRole } from '../types';
+import { UserRole, Agent } from '../types';
 
 interface EnrollmentFormProps {
   onSuccess: () => void;
   userRole?: UserRole;
+  agents?: Agent[];
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -20,7 +21,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userRole }) => {
+export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userRole, agents = [] }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     whatsapp: '',
@@ -30,7 +31,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
     nivel: 'ESTUDIANTE',
     fechaNacimiento: '',
     preguntaSeguridad: '',
-    respuestaSeguridad: ''
+    respuestaSeguridad: '',
+    referidoPor: ''
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -103,7 +105,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
         nivel: 'ESTUDIANTE',
         fechaNacimiento: '',
         preguntaSeguridad: '',
-        respuestaSeguridad: ''
+        respuestaSeguridad: '',
+        referidoPor: ''
       });
       setSelectedFile(null);
       setImagePreview(null);
@@ -171,6 +174,23 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
                 <SelectField label="Nivel de Acceso" name="nivel" value={formData.nivel} onChange={handleChange} options={['ESTUDIANTE', 'LIDER', 'DIRECTOR']} />
               </div>
               <SelectField label="Bautizado" name="bautizado" value={formData.bautizado} onChange={handleChange} options={['SÍ', 'NO']} />
+
+              {/* Referral Dropdown */}
+              {agents.length > 0 && (
+                <div>
+                  <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">¿Quién te trajo? (Opcional)</label>
+                  <select
+                    name="referidoPor"
+                    value={formData.referidoPor}
+                    onChange={handleChange}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat"
+                  >
+                    <option value="" className="bg-black">-- Ninguno --</option>
+                    {agents.map(a => <option key={a.id} value={a.name} className="bg-black">{a.name}</option>)}
+                  </select>
+                </div>
+              )}
+
               <TextAreaField label="Relación con Dios" name="relacion" value={formData.relacion} onChange={handleChange} placeholder="Describe brevemente..." />
 
               <div className="border-t border-white/5 pt-6 mt-6 space-y-4">

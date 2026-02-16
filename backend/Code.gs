@@ -487,6 +487,8 @@ function doPost(e) {
         return promoteAgent(request.data);
       case 'get_news_feed':
         return getNewsFeed();
+      case 'get_badges':
+        return computeBadges();
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -542,11 +544,17 @@ function enrollAgent(data) {
       case 'PREGUNTA_SEGURIDAD': return data.preguntaSeguridad || '¿Cuál es tu color favorito?';
       case 'RESPUESTA_SEGURIDAD': return data.respuestaSeguridad || 'Azul';
       case 'CAMBIO_OBLIGATORIO_PIN': return 'SI';
+      case 'REFERIDO_POR': return data.referidoPor || '';
       default: return '';
     }
   });
   
   directorySheet.appendRow(newRow);
+  
+  // Registrar noticia de referido si aplica
+  if (data.referidoPor) {
+    addNewsItem(ss, 'OPERACION', '🎯 ' + data.referidoPor + ' reclutó a ' + data.nombre + ' — ¡Nuevo agente en las filas!', '', data.referidoPor);
+  }
   
   const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${data.nombre}\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID Generado:</b> <code>${newId}</code>\n<b>• PIN de Acceso:</b> <code>${newPin}</code>\n<b>• Pregunta:</b> ${data.preguntaSeguridad || '¿Cuál es tu color favorito?'}\n<b>• Respuesta:</b> ${data.respuestaSeguridad || 'Azul'}\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
   sendTelegramNotification(telegramMessage);
@@ -1246,7 +1254,7 @@ function setupDatabase() {
     'STATUS', 'XP', 'PUNTOS BIBLIA', 'PUNTOS APUNTES', 'PUNTOS LIDERAZGO', 'FECHA_INGRESO',
     'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN',
     'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE',
-    'BIOMETRIC_CREDENTIAL'
+    'BIOMETRIC_CREDENTIAL', 'REFERIDO_POR'
   ];
   results.push(ensureSheetColumns(ss, CONFIG.DIRECTORY_SHEET_NAME, directoryHeaders));
   
@@ -2886,6 +2894,11 @@ function createTaskAction(data) {
     data.xpReward || 5,
     data.maxSlots || 0
   ]);
+  
+  // Publicar en Intel Feed
+  var slotsMsg = (data.maxSlots && data.maxSlots > 0) ? ' — ' + data.maxSlots + ' cupos disponibles' : ' — Cupos ilimitados';
+  addNewsItem(ss, 'TAREA', '⚔️ NUEVA MISIÓN: ' + data.title + slotsMsg, '', 'COMANDO');
+  
   return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -2944,6 +2957,19 @@ function submitTaskCompletion(data) {
 
   const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy");
   sheet.appendRow([data.taskId, data.agentId, data.agentName || '', fecha, '', 'PENDIENTE']);
+  
+  // Publicar en Intel Feed con cupos restantes
+  var taskTitle = taskRow ? String(taskRow[tasksHeaders.indexOf('TITULO')] || data.taskId) : data.taskId;
+  var maxSlotsVal = (taskRow && cuposColIdx !== -1) ? (parseInt(taskRow[cuposColIdx]) || 0) : 0;
+  if (maxSlotsVal > 0) {
+    var progressNow = sheet.getDataRange().getValues();
+    var phNow = progressNow[0].map(function(h){return String(h).trim().toUpperCase();});
+    var usedNow = progressNow.slice(1).filter(function(p){ return String(p[phNow.indexOf('TASK_ID')]) === String(data.taskId) && p[phNow.indexOf('STATUS')] !== 'ELIMINADO'; }).length;
+    addNewsItem(ss, 'TAREA', '🎯 ' + (data.agentName || data.agentId) + ' se unió a "' + taskTitle + '" — ' + usedNow + '/' + maxSlotsVal + ' cupos', data.agentId, data.agentName);
+  } else {
+    addNewsItem(ss, 'TAREA', '🎯 ' + (data.agentName || data.agentId) + ' se unió a "' + taskTitle + '"', data.agentId, data.agentName);
+  }
+  
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -3197,5 +3223,171 @@ function addNewsItem(ss, type, message, agentId, agentName) {
   const id = 'NEWS_' + new Date().getTime();
   const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy HH:mm");
   sheet.appendRow([id, type, message, fecha, agentId || '', agentName || '']);
+}
+
+/**
+ * @description Calcula insignias/badges basadas en rendimiento real de los agentes.
+ * Insignias: CONSAGRADO_MES, RECLUTADOR, STREAKER, MISIONERO_ELITE, ACADEMICO
+ */
+function computeBadges() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  
+  // Get current month/year for monthly badges
+  var now = new Date();
+  var currentMonth = now.getMonth(); // 0-indexed
+  var currentYear = now.getFullYear();
+  
+  var badges = [];
+  
+  // --- Obtener directorio de agentes ---
+  var dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  var dirData = dirSheet ? dirSheet.getDataRange().getValues() : [];
+  var dirHeaders = dirData.length > 0 ? dirData[0].map(function(h){ return String(h).trim().toUpperCase(); }) : [];
+  
+  // Build agent lookup {id: name}
+  var agentNames = {};
+  var idCol = dirHeaders.indexOf('ID') !== -1 ? dirHeaders.indexOf('ID') : dirHeaders.indexOf('ID CÉDULA');
+  var nameCol = dirHeaders.indexOf('NOMBRE');
+  for (var i = 1; i < dirData.length; i++) {
+    agentNames[String(dirData[i][idCol] || '').trim().toUpperCase()] = String(dirData[i][nameCol] || '');
+  }
+  
+  // --- 1. RECLUTADOR DEL MES: Más referidos este mes ---
+  var refCol = dirHeaders.indexOf('REFERIDO_POR');
+  var joinCol = dirHeaders.indexOf('FECHA_INGRESO');
+  if (refCol !== -1 && joinCol !== -1) {
+    var refCounts = {};
+    for (var i = 1; i < dirData.length; i++) {
+      var ref = String(dirData[i][refCol] || '').trim();
+      if (!ref) continue;
+      var joinDate = dirData[i][joinCol];
+      if (joinDate instanceof Date) {
+        if (joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear) {
+          refCounts[ref] = (refCounts[ref] || 0) + 1;
+        }
+      }
+    }
+    var topRef = null, topRefCount = 0;
+    for (var name in refCounts) {
+      if (refCounts[name] > topRefCount) { topRef = name; topRefCount = refCounts[name]; }
+    }
+    if (topRef && topRefCount > 0) {
+      badges.push({ type: 'RECLUTADOR', emoji: '🎯', label: 'Reclutador del Mes', agentName: topRef, value: topRefCount });
+    }
+  }
+  
+  // --- 2. STREAKER: Racha más alta activa ---
+  var streakSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+  if (streakSheet && streakSheet.getLastRow() >= 2) {
+    var sData = streakSheet.getDataRange().getValues();
+    var sHeaders = sData[0].map(function(h){ return String(h).trim().toUpperCase(); });
+    var sIdCol = sHeaders.indexOf('AGENT_ID');
+    var sCountCol = sHeaders.indexOf('STREAK_COUNT') !== -1 ? sHeaders.indexOf('STREAK_COUNT') : sHeaders.indexOf('RACHA');
+    if (sIdCol !== -1 && sCountCol !== -1) {
+      var topStreaker = null, topStreak = 0;
+      for (var i = 1; i < sData.length; i++) {
+        var streak = parseInt(sData[i][sCountCol]) || 0;
+        if (streak > topStreak) {
+          topStreaker = String(sData[i][sIdCol] || '').trim().toUpperCase();
+          topStreak = streak;
+        }
+      }
+      if (topStreaker && topStreak > 0) {
+        badges.push({ type: 'STREAKER', emoji: '🔥', label: 'Streaker', agentId: topStreaker, agentName: agentNames[topStreaker] || topStreaker, value: topStreak });
+      }
+    }
+  }
+  
+  // --- 3. MISIONERO ELITE: Más misiones verificadas este mes ---
+  var progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  if (progressSheet && progressSheet.getLastRow() >= 2) {
+    var pData = progressSheet.getDataRange().getValues();
+    var pHeaders = pData[0].map(function(h){ return String(h).trim().toUpperCase(); });
+    var pAgentCol = pHeaders.indexOf('AGENT_ID');
+    var pStatusCol = pHeaders.indexOf('STATUS');
+    var pDateCol = pHeaders.indexOf('FECHA');
+    
+    var missionCounts = {};
+    for (var i = 1; i < pData.length; i++) {
+      if (String(pData[i][pStatusCol]) !== 'VERIFICADO') continue;
+      // Filter by month if date is available
+      var dStr = String(pData[i][pDateCol] || '');
+      var parts = dStr.split('/');
+      if (parts.length === 3) {
+        var m = parseInt(parts[1]) - 1; // dd/MM/yyyy
+        var y = parseInt(parts[2]);
+        if (m !== currentMonth || y !== currentYear) continue;
+      }
+      var agId = String(pData[i][pAgentCol] || '').trim().toUpperCase();
+      missionCounts[agId] = (missionCounts[agId] || 0) + 1;
+    }
+    var topMissioner = null, topMissions = 0;
+    for (var id in missionCounts) {
+      if (missionCounts[id] > topMissions) { topMissioner = id; topMissions = missionCounts[id]; }
+    }
+    if (topMissioner && topMissions > 0) {
+      badges.push({ type: 'MISIONERO_ELITE', emoji: '⚔️', label: 'Misionero Elite', agentId: topMissioner, agentName: agentNames[topMissioner] || topMissioner, value: topMissions });
+    }
+  }
+  
+  // --- 4. ACADÉMICO: Más cursos completados ---
+  var acadSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+  if (acadSheet && acadSheet.getLastRow() >= 2) {
+    var aData = acadSheet.getDataRange().getValues();
+    var aHeaders = aData[0].map(function(h){ return String(h).trim().toUpperCase(); });
+    var aAgentCol = aHeaders.indexOf('AGENT_ID');
+    var aStatusCol = aHeaders.indexOf('STATUS');
+    
+    var acadCounts = {};
+    for (var i = 1; i < aData.length; i++) {
+      if (String(aData[i][aStatusCol]) !== 'COMPLETADO') continue;
+      var agId = String(aData[i][aAgentCol] || '').trim().toUpperCase();
+      acadCounts[agId] = (acadCounts[agId] || 0) + 1;
+    }
+    var topAcad = null, topAcadCount = 0;
+    for (var id in acadCounts) {
+      if (acadCounts[id] > topAcadCount) { topAcad = id; topAcadCount = acadCounts[id]; }
+    }
+    if (topAcad && topAcadCount > 0) {
+      badges.push({ type: 'ACADEMICO', emoji: '📚', label: 'Académico', agentId: topAcad, agentName: agentNames[topAcad] || topAcad, value: topAcadCount });
+    }
+  }
+  
+  // --- 5. CONSAGRADO DEL MES: Asistencia perfecta ---
+  var attSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  if (attSheet && attSheet.getLastRow() >= 2) {
+    var attData = attSheet.getDataRange().getValues();
+    var attHeaders = attData[0].map(function(h){ return String(h).trim().toUpperCase(); });
+    var attIdCol = attHeaders.indexOf('ID') !== -1 ? attHeaders.indexOf('ID') : attHeaders.indexOf('ID CÉDULA');
+    var attDateCol = attHeaders.indexOf('FECHA');
+    
+    // Count attendance per agent this month
+    var attCounts = {};
+    for (var i = 1; i < attData.length; i++) {
+      var dateVal = attData[i][attDateCol];
+      var attDate;
+      if (dateVal instanceof Date) {
+        attDate = dateVal;
+      } else {
+        var dParts = String(dateVal || '').split('/');
+        if (dParts.length === 3) attDate = new Date(parseInt(dParts[2]), parseInt(dParts[1])-1, parseInt(dParts[0]));
+      }
+      if (!attDate || attDate.getMonth() !== currentMonth || attDate.getFullYear() !== currentYear) continue;
+      var agId = String(attData[i][attIdCol] || '').trim().toUpperCase();
+      attCounts[agId] = (attCounts[agId] || 0) + 1;
+    }
+    
+    // Find who has perfect attendance (most attendances this month)
+    var topAtt = null, topAttCount = 0;
+    for (var id in attCounts) {
+      if (attCounts[id] > topAttCount) { topAtt = id; topAttCount = attCounts[id]; }
+    }
+    if (topAtt && topAttCount > 0) {
+      badges.push({ type: 'CONSAGRADO_MES', emoji: '🏆', label: 'Consagrado del Mes', agentId: topAtt, agentName: agentNames[topAtt] || topAtt, value: topAttCount });
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: true, badges: badges })).setMimeType(ContentService.MimeType.JSON);
 }
 

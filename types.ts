@@ -80,6 +80,7 @@ export enum AppView {
   RANKING = 'RANKING',
   ASCENSO = 'ASCENSO',
   TAREAS = 'TAREAS',
+  CAPACITACION = 'CAPACITACION',
   HOME = 'home'
 }
 

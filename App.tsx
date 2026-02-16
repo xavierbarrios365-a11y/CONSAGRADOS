@@ -18,6 +18,7 @@ import PromotionModule from './components/PromotionModule';
 import TasksModule from './components/TasksModule';
 import NewsFeed from './components/NewsFeed';
 import PromotionProgressCard from './components/PromotionProgressCard';
+import TrainingCenter from './components/TrainingCenter';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -39,7 +40,7 @@ import {
 import { generateGoogleCalendarLink, downloadIcsFile } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList } from 'lucide-react';
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
@@ -561,21 +562,27 @@ const App: React.FC = () => {
     return () => events.forEach(e => window.removeEventListener(e, resetSessionTimer));
   }, [resetSessionTimer]);
 
-  // Firebase Cloud Messaging Integration
+  // Firebase Cloud Messaging Integration (ejecutar solo 1 vez por sesión)
+  const fcmInitialized = useRef(false);
   const initFirebaseMessaging = useCallback(async () => {
+    if (fcmInitialized.current) return; // Evitar múltiples inicializaciones
+    fcmInitialized.current = true;
     try {
       const token = await requestForToken();
       if (token) {
-        console.log("FCM Token listo para sincronización:", token);
-        if (currentUser) {
-          syncFcmToken(currentUser.id, token).then(res => {
-            if (res.success) console.log("Token sincronizado con el mando central.");
+        console.log("✅ FCM Token sincronizado.");
+        // Sincronizar con servidor usando el ID actual
+        const session = sessionStorage.getItem('consagrados_session');
+        const userId = session ? JSON.parse(session).id : null;
+        if (userId) {
+          syncFcmToken(userId, token).then(res => {
+            if (res.success) console.log("✅ Token registrado en servidor.");
           });
         }
       }
 
       onMessageListener().then((payload: any) => {
-        console.log("Notificación recibida en primer plano:", payload);
+        console.log("📩 Push recibido:", payload?.notification?.title);
 
         // --- DISPARADOR DE ALERTA DE SISTEMA (SUEÑA Y MUESTRA BANNER) ---
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -595,28 +602,42 @@ const App: React.FC = () => {
         checkHeadlines();
       });
     } catch (e) {
-      console.error("Error inicializando Firebase:", e);
+      console.warn("⚠️ Firebase Messaging no inicializado.");
+      fcmInitialized.current = false; // Permitir reintentar si falló
     }
-  }, [currentUser]);
+  }, []); // Sin dependencias — ejecutar solo 1 vez
 
   useEffect(() => {
     if (isLoggedIn) {
       initFirebaseMessaging();
+    } else {
+      fcmInitialized.current = false; // Reset al hacer logout
     }
   }, [isLoggedIn, initFirebaseMessaging]);
 
+  // --- SISTEMA DE PRESENCIA (FIRESTORE) CON THROTTLING ---
+  const lastPresenceUpdate = useRef<number>(0);
+  const lastPresenceStatus = useRef<string>('');
+
   useEffect(() => {
-    // --- SISTEMA DE PRESENCIA (FIRESTORE) ---
     if (currentUser && isLoggedIn) {
       const updatePresence = async (status: 'online' | 'offline') => {
+        const now = Date.now();
+        // Solo actualizar si pasaron más de 5 minutos o si el status cambió (online <-> offline)
+        if (status === 'online' && lastPresenceStatus.current === 'online' && (now - lastPresenceUpdate.current < 300000)) {
+          return;
+        }
+
         try {
           await setDoc(doc(db, 'presence', currentUser.id), {
             status,
             lastSeen: serverTimestamp(),
             agentName: currentUser.name
           }, { merge: true });
+          lastPresenceUpdate.current = now;
+          lastPresenceStatus.current = status;
         } catch (e) {
-          console.error("Error actualizando presencia:", e);
+          // Silenciar errores de presencia (Firestore backoff)
         }
       };
 
@@ -631,7 +652,7 @@ const App: React.FC = () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }
-  }, [currentUser, isLoggedIn]);
+  }, [currentUser?.id, isLoggedIn]); // Solo depender del ID, no del objeto completo (XP, etc)
 
   // Verificación periódica de datos (Notifications + Ranking)
   const checkHeadlines = useCallback(async () => {
@@ -794,11 +815,19 @@ const App: React.FC = () => {
       const sheetAgents = await fetchAgentsFromSheets();
       if (sheetAgents) {
         setAgents(sheetAgents);
-        if (currentUser) {
-          const updatedSelf = sheetAgents.find(a => String(a.id).toUpperCase() === String(currentUser.id).toUpperCase());
+
+        // Obtener usuario actual de la sesión para evitar dependencia circular
+        const session = sessionStorage.getItem('consagrados_session');
+        const sessionUser = session ? JSON.parse(session) : null;
+
+        if (sessionUser) {
+          const updatedSelf = sheetAgents.find(a => String(a.id).toUpperCase() === String(sessionUser.id).toUpperCase());
           if (updatedSelf) {
-            setCurrentUser(updatedSelf);
-            sessionStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
+            // Solo actualizar si algo relevante cambió para evitar bucles de renderizado
+            if (JSON.stringify(updatedSelf) !== JSON.stringify(sessionUser)) {
+              setCurrentUser(updatedSelf);
+              sessionStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
+            }
           }
         }
       }
@@ -810,7 +839,7 @@ const App: React.FC = () => {
     } catch (err) { } finally {
       if (!isSilent) setIsSyncing(false);
     }
-  }, [currentUser]);
+  }, []); // Sin dependencias externas
 
   useEffect(() => {
     syncData();
@@ -1054,9 +1083,8 @@ const App: React.FC = () => {
       case AppView.HOME:
         return (
           <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            {/* ENCABEZADO REESTRUCTURADO (v2.0) */}
-            <div className="flex items-center gap-4 mb-8">
-              {/* Box Izquierda: Logo + Status */}
+            {/* ENCABEZADO COMPACTO (v3.0) */}
+            <div className="flex items-center gap-4 mb-4">
               <div className="flex-shrink-0">
                 <LighthouseIndicator
                   status={notificationPermission === 'granted' ? 'online' : 'offline'}
@@ -1064,33 +1092,14 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {/* Box Derecha: Ticker de Noticias (Espacio Expandido) */}
-              <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
-
-                {headlines.length > 0 && (
-                  <div className="w-full overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl py-2.5 px-4 shadow-inner">
-                    <div
-                      className="flex items-center gap-12"
-                      style={{
-                        width: 'fit-content',
-                        animation: `ticker ${headlines.length * 5}s linear infinite`
-                      }}
-                    >
-                      {headlines.map((h, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <Radio size={14} className="text-[#ffb700] animate-pulse" />
-                          <span className="text-[13px] font-black text-[#ffb700] uppercase tracking-[0.15em] leading-none">{h}</span>
-                        </div>
-                      ))}
-                      {headlines.map((h, i) => (
-                        <div key={`dup-${i}`} className="flex items-center gap-3">
-                          <Radio size={14} className="text-[#ffb700] animate-pulse" />
-                          <span className="text-[13px] font-black text-[#ffb700] uppercase tracking-[0.15em] leading-none">{h}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Bienvenido, Agente</p>
+                <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">{currentUser?.name?.split(' ')[0] || 'Agente'}</p>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full">{currentUser?.xp || 0} XP</span>
+                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full">🔥 {currentUser?.streakCount || 0} días</span>
+                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
+                </div>
               </div>
             </div>
 
@@ -1277,19 +1286,17 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
               <button onClick={() => setView(AppView.RANKING)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
                 <Trophy size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
                 <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
               </button>
-              <button onClick={() => setView(AppView.ACADEMIA)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                <Database size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Academia</span>
-              </button>
-              <button onClick={() => setView(AppView.CONTENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                <BookOpen size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Material</span>
-              </button>
+              {currentUser?.userRole !== UserRole.STUDENT && (
+                <button onClick={() => setView(AppView.ENROLLMENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                  <UserPlus size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Reclutar</span>
+                </button>
+              )}
             </div>
 
             {/* News Feed */}
@@ -1505,6 +1512,12 @@ const App: React.FC = () => {
                   ESCANEAR DESERCIONES
                 </button>
                 <button
+                  onClick={() => setView(AppView.ENROLLMENT)}
+                  className="bg-green-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-green-900/40 border border-white/10"
+                >
+                  <UserPlus size={16} /> INSCRIPCIÓN DE AGENTE
+                </button>
+                <button
                   onClick={() => {
                     const name = prompt("INGRESAR NOMBRE DEL VISITANTE:");
                     if (name) {
@@ -1655,10 +1668,20 @@ const App: React.FC = () => {
           </div>
         );
       case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;
-      case AppView.RANKING: return <TacticalRanking agents={agents} currentUser={currentUser} />;
-      case AppView.CONTENT: return <ContentModule userRole={effectiveRole} />;
-      case AppView.ASCENSO: return <PromotionModule agentId={currentUser?.id || ''} agentName={currentUser?.name || ''} userRole={effectiveRole} onActivity={resetSessionTimer} />;
-      case AppView.TAREAS: return <TasksModule agentId={currentUser?.id || ''} agentName={currentUser?.name || ''} userRole={effectiveRole} onActivity={resetSessionTimer} />;
+      case AppView.ASCENSO:
+      case AppView.CONTENT:
+      case AppView.TAREAS:
+        return currentUser ? (
+          <TrainingCenter
+            currentUser={currentUser}
+            setView={setView}
+            onUpdateNeeded={() => syncData()}
+            initialTab={
+              view === AppView.CONTENT ? 'material' :
+                view === AppView.TAREAS ? 'misiones' : 'ascenso'
+            }
+          />
+        ) : null;
       case AppView.PROFILE:
         return (
           <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-32 max-w-2xl mx-auto font-montserrat flex flex-col items-center">
@@ -2008,10 +2031,12 @@ const App: React.FC = () => {
       )}
 
       {showExpedienteFor && (
-        <TacticalExpediente
-          agent={showExpedienteFor}
-          onClose={() => setShowExpedienteFor(null)}
-        />
+        <div className="fixed inset-0 z-[120]">
+          <TacticalExpediente
+            agent={showExpedienteFor}
+            onClose={() => setShowExpedienteFor(null)}
+          />
+        </div>
       )}
 
       {showInstallBanner && (

@@ -647,7 +647,7 @@ function registerIdScan(payload) {
 
    attendanceSheet.appendRow([payload.scannedId, 'ASISTENCIA', payload.location, new Date(payload.timestamp)]);
 
-   // Notificación a Telegram
+   // Notificación a Telegram y puntos
    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
    const directoryData = directorySheet.getDataRange().getValues();
    let agentName = "Desconocido";
@@ -668,6 +668,14 @@ function registerIdScan(payload) {
      if (leadCol > 0) {
        const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
        directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
+
+        // +10 Biblia, +10 Apuntes, +30 XP total
+        const bibleCol = headers.indexOf('PUNTOS BIBLIA') + 1;
+        const notesCol = headers.indexOf('PUNTOS APUNTES') + 1;
+        const xpCol = headers.indexOf('XP') + 1;
+        if (bibleCol > 0) { const bv = parseInt(directorySheet.getRange(agentRowIdx, bibleCol).getValue()) || 0; directorySheet.getRange(agentRowIdx, bibleCol).setValue(bv + 10); }
+        if (notesCol > 0) { const nv = parseInt(directorySheet.getRange(agentRowIdx, notesCol).getValue()) || 0; directorySheet.getRange(agentRowIdx, notesCol).setValue(nv + 10); }
+        if (xpCol > 0) { const xv = parseInt(directorySheet.getRange(agentRowIdx, xpCol).getValue()) || 0; directorySheet.getRange(agentRowIdx, xpCol).setValue(xv + 30); }
         
         // Notificación de XP por asistencia
         const fcmToken = getAgentFcmToken(payload.scannedId);
@@ -677,7 +685,7 @@ function registerIdScan(payload) {
       }
     }
    
-   const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}`;
+   const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}\n\n<b>PUNTOS:</b> +10 Biblia, +10 Apuntes, +10 Liderazgo`;
    sendTelegramNotification(telegramMessage);
 
    // --- VISITANTE RADAR ---
@@ -1283,7 +1291,7 @@ function setupDatabase() {
   results.push(ensureSheetColumns(ss, CONFIG.VERSES_SHEET, verseHeaders));
 
   // 10. TAREAS (Misiones)
-  const tasksHeaders = ['ID', 'TITULO', 'DESCRIPCION', 'AREA', 'NIVEL_REQUERIDO', 'XP_RECOMPENSA'];
+  const tasksHeaders = ['ID', 'TITULO', 'DESCRIPCION', 'AREA', 'NIVEL_REQUERIDO', 'XP_RECOMPENSA', 'CUPOS'];
   results.push(ensureSheetColumns(ss, CONFIG.TASKS_SHEET, tasksHeaders));
 
   // 11. PROGRESO DE TAREAS

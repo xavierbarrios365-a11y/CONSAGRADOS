@@ -12,12 +12,15 @@ remoteConfig.defaultConfig = {
     "maintenance_mode": false
 };
 
+let remoteConfigInitialized = false;
+
 export const initRemoteConfig = async () => {
+    if (remoteConfigInitialized) return;
+    remoteConfigInitialized = true;
     try {
         await fetchAndActivate(remoteConfig);
-        console.log("Remote Config Activated");
     } catch (err) {
-        console.error("Failed to fetch remote config:", err);
+        // Silenciar — Remote Config falla en localhost sin consecuencias
     }
 };
 

@@ -1037,7 +1037,8 @@ const App: React.FC = () => {
         // Siempre confiar en el valor del servidor (es la fuente de verdad)
         const serverUser = {
           ...updatedUser,
-          streakCount: res.streak
+          streakCount: res.streak,
+          lastStreakDate: res.lastStreakDate
         };
         setCurrentUser(serverUser);
         sessionStorage.setItem('consagrados_session', JSON.stringify(serverUser));
@@ -1176,7 +1177,7 @@ const App: React.FC = () => {
 
             <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
               <DailyVerse
-                verse={dailyVerse || { verse: 'Cargando versículo del día...', reference: '' }}
+                verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
                 onQuizComplete={handleVerseQuizComplete}
               />
             </div>

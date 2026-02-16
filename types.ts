@@ -49,6 +49,7 @@ export interface Agent {
   lastAiUpdate?: string;
   biometricCredential?: string;
   streakCount?: number;
+  lastStreakDate?: string;
   lastAttendance?: string;
   weeklyTasks?: { id: string; title: string; completed: boolean }[];
   notifPrefs?: { read: string[]; deleted: string[] };
@@ -57,6 +58,7 @@ export interface Agent {
 export interface DailyVerse {
   verse: string;
   reference: string;
+  lastStreakDate?: string;
 }
 
 export interface Guide {

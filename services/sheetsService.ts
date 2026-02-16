@@ -76,6 +76,7 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
       'STREAK': ['streak_count', 'streak'],
       'TASKS': ['tasks_json', 'tasks'],
       'LAST_ATTENDANCE': ['last_attendance', 'última asistencia'],
+      'LAST_STREAK_DATE': ['last_completed_date', 'laststreakdate', 'racha_fecha'],
       'NOTIF_PREFS': ['notif_prefs', 'notif_prefs_json', 'preferencias_notif', 'notif_prefs']
     };
 
@@ -181,6 +182,7 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
     lastAiUpdate: getV('LAST_UPDATE') || "",
     biometricCredential: getV('BIOMETRIC') || "",
     streakCount: parseInt(getV('STREAK')) || 0,
+    lastStreakDate: getV('LAST_STREAK_DATE') || "",
     lastAttendance: getV('LAST_ATTENDANCE') || "",
     weeklyTasks: getV('TASKS') ? JSON.parse(getV('TASKS')) : [
       { id: 'attendance', title: 'Asistoria Semanal', completed: false },

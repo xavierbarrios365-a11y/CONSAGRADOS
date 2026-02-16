@@ -16,15 +16,39 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
     const [inputValue, setInputValue] = useState('');
     const [missingWord, setMissingWord] = useState('');
     const [displayVerse, setDisplayVerse] = useState('');
+    const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
-    // Verificar si ya completó el quiz hoy (usando fecha local para evitar desfases UTC)
+    // Sincronizar estado de completado basado en el servidor (lastStreakDate)
     useEffect(() => {
-        const localToday = new Date().toLocaleDateString('en-CA'); // format: YYYY-MM-DD
-        const completed = localStorage.getItem('verse_quiz_completed');
-        if (completed === localToday) {
-            setQuizCompleted(true);
+        if (!verse?.lastStreakDate) {
+            setQuizCompleted(false);
+            return;
         }
-    }, []);
+
+        const checkCompletion = () => {
+            const lastDate = new Date(verse.lastStreakDate!);
+            const now = new Date();
+            const diffMs = now.getTime() - lastDate.getTime();
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+
+            if (diffMs < twentyFourHours) {
+                setQuizCompleted(true);
+                // Calcular tiempo restante para el reloj
+                const remaining = twentyFourHours - diffMs;
+                const hours = Math.floor(remaining / (1000 * 60 * 60));
+                const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((remaining % (1000 * 60)) / 1000);
+                setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+            } else {
+                setQuizCompleted(false);
+                setTimeLeft(null);
+            }
+        };
+
+        checkCompletion();
+        const interval = setInterval(checkCompletion, 1000);
+        return () => clearInterval(interval);
+    }, [verse?.lastStreakDate]);
 
     // Preparar el reto cuando el verso cambia
     useEffect(() => {
@@ -56,13 +80,11 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
             if (navigator.vibrate) navigator.vibrate(100);
             setIsCorrect(true);
 
-            const localToday = new Date().toLocaleDateString('en-CA');
-            localStorage.setItem('verse_quiz_completed', localToday);
-            setQuizCompleted(true);
+            // Al completar, avisar al padre (App.tsx) para que sincronice con el servidor
+            if (onQuizComplete) onQuizComplete();
 
-            setTimeout(() => {
-                if (onQuizComplete) onQuizComplete();
-            }, 1000);
+            // local set for immediate feedback
+            setQuizCompleted(true);
         } else {
             setIsCorrect(false);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
@@ -83,9 +105,9 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                     {quizCompleted && <CheckCircle2 size={14} className="text-green-500" />}
                 </div>
 
-                {!showQuiz ? (
+                {!showQuiz || quizCompleted ? (
                     <>
-                        <p className="text-sm md:text-base text-white font-bold italic leading-relaxed font-montserrat">
+                        <p className="text-sm md:text-base text-white font-bold italic leading-relaxed font-montserrat px-4">
                             "{verse.verse}"
                         </p>
 
@@ -106,7 +128,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                 {!quizCompleted && !showQuiz && (
                     <button
                         onClick={() => setShowQuiz(true)}
-                        className="mt-4 flex items-center gap-2 bg-green-500/20 border border-green-500/40 px-6 py-3 rounded-2xl text-green-500 text-[10px] font-black uppercase tracking-widest hover:bg-green-500/30 transition-all active:scale-95"
+                        className="mt-4 flex items-center gap-2 bg-green-500/20 border border-green-500/40 px-6 py-3 rounded-2xl text-green-500 text-[10px] font-black uppercase tracking-widest hover:bg-green-500/30 transition-all active:scale-95 shadow-lg shadow-green-900/10"
                     >
                         <Sparkles size={14} />
                         Marcar como Leído
@@ -114,7 +136,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                 )}
 
                 {showQuiz && !quizCompleted && (
-                    <div className="w-full mt-4 space-y-4 animate-in slide-in-from-bottom-2 bg-black/40 p-6 rounded-[2rem] border border-[#ffb700]/30 shadow-[0_0_30px_rgba(255,183,0,0.1)]">
+                    <div className="w-full mt-2 space-y-4 animate-in slide-in-from-bottom-2 bg-black/40 p-6 rounded-[2rem] border border-[#ffb700]/30 shadow-[0_0_30px_rgba(255,183,0,0.1)]">
                         <div className="flex flex-col items-center gap-1 mb-2">
                             <Sparkles className="text-[#ffb700] animate-bounce" size={20} />
                             <p className="text-[11px] text-[#ffb700] font-black uppercase tracking-widest">Reto de Memoria Táctica</p>
@@ -154,10 +176,21 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, onQuizComplete }) => {
                 )}
 
                 {quizCompleted && (
-                    <div className="flex flex-col items-center gap-3 mt-2">
-                        <p className="text-green-500 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
-                            <CheckCircle2 size={12} /> Racha Diaria Completada
-                        </p>
+                    <div className="flex flex-col items-center gap-3 mt-4 animate-in zoom-in duration-500">
+                        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-4 py-2 rounded-full">
+                            <CheckCircle2 size={12} className="text-green-500" />
+                            <p className="text-green-500 text-[9px] font-black uppercase tracking-widest">Racha Diaria Asegurada</p>
+                        </div>
+
+                        {timeLeft && (
+                            <div className="flex flex-col items-center gap-1 mt-1">
+                                <p className="text-[8px] text-white/40 font-bold uppercase tracking-[0.2em]">Próximo Objetivo Recon en:</p>
+                                <div className="flex items-center gap-2 text-xl font-bebas text-[#ffb700] tracking-widest bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner">
+                                    <Calendar size={14} className="animate-pulse" />
+                                    {timeLeft}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

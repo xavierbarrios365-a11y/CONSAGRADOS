@@ -257,6 +257,22 @@ function verifyAndFixSchema() {
       aIdRange.setValues(aCleanedValues);
     }
   }
+
+  // --- AUTO-CURACIÓN DE RACHAS ---
+  var streakSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+  if (streakSheet) {
+    var STREAK_REQUIRED = ['AGENT_ID', 'STREAK_COUNT', 'LAST_COMPLETED_DATE', 'TASKS_JSON', 'NOTIFS_SENT'];
+    var sHeaders = streakSheet.getRange(1, 1, 1, Math.max(1, streakSheet.getLastColumn())).getValues()[0];
+    var sNormHeaders = sHeaders.map(function(h) { return String(h).trim().toUpperCase(); });
+    
+    STREAK_REQUIRED.forEach(function(col) {
+      if (sNormHeaders.indexOf(col) === -1) {
+        var nextCol = streakSheet.getLastColumn() + 1;
+        streakSheet.getRange(1, nextCol).setValue(col).setFontWeight('bold');
+        sNormHeaders.push(col);
+      }
+    });
+  }
 }
 
 /**
@@ -296,14 +312,14 @@ function doGet(e) {
             tasks: strikeData[i][tasksJsonIdx] || '[]',
             lastDate: (() => {
               let idx1 = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
+              if (idx1 === -1) idx1 = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
               let val = '';
-              if (idx1 !== -1 && strikeData[i][idx1]) val = strikeData[i][idx1];
-              if (!val) return '';
-              if (val instanceof Date) return Utilities.formatDate(val, "GMT-4", "yyyy-MM-dd");
-              let s = String(val).trim();
-              if (s.includes('T')) return s.split('T')[0];
-              if (s.includes(' ')) return s.split(' ')[0];
-              return s;
+              if (idx1 !== -1 && strikeData[i][idx1]) {
+                val = strikeData[i][idx1];
+                if (val instanceof Date) return val.toISOString();
+                return String(val).trim();
+              }
+              return '';
             })()
           });
         }
@@ -334,6 +350,13 @@ function doGet(e) {
 
         if (!hasStreakCol) directoryData[i].push(displayStreak);
         if (hasTasksCol === -1) directoryData[i].push(streakInfo.tasks);
+        
+        // Inyectar LAST_COMPLETED_DATE si no existe en el encabezado
+        const lastDateHeaderIdx = headers.indexOf('LAST_COMPLETED_DATE');
+        if (lastDateHeaderIdx === -1) {
+           if (i === 0) directoryData[0].push('LAST_COMPLETED_DATE');
+           else directoryData[i].push(streakInfo.lastDate);
+        }
       }
     }
     
@@ -2200,18 +2223,20 @@ function updateStreaks(data) {
   const headers = values[0];
   const agentIdIdx = headers.indexOf('AGENT_ID');
   const streakIdx = headers.indexOf('STREAK_COUNT');
-  // Buscar la columna de fecha: usar la que tenga datos (preferir LAST_COMPLETED_WEEK que es donde se escribe)
-  let lastDateIdx = headers.indexOf('LAST_COMPLETED_WEEK');
-  if (lastDateIdx === -1) lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE');
+  let lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE');
+  if (lastDateIdx === -1) lastDateIdx = headers.indexOf('LAST_COMPLETED_WEEK');
   const tasksIdx = headers.indexOf('TASKS_JSON');
+  const notifsSentIdx = headers.indexOf('NOTIFS_SENT');
 
   const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
   
   const today = new Date();
   const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
+  const nowIso = today.toISOString();
   
   let streakCount = 0;
   let lastDate = "";
+  let lastDateOnly = "";
 
   if (rowIdx !== -1) {
     streakCount = parseInt(values[rowIdx][streakIdx]) || 0;
@@ -2224,26 +2249,29 @@ function updateStreaks(data) {
     if (!rawLastDate && idx2 !== -1 && values[rowIdx][idx2]) rawLastDate = values[rowIdx][idx2];
     
     if (rawLastDate instanceof Date) {
-      lastDate = Utilities.formatDate(rawLastDate, "GMT-4", "yyyy-MM-dd");
+      lastDate = rawLastDate.toISOString();
+      lastDateOnly = Utilities.formatDate(rawLastDate, "GMT-4", "yyyy-MM-dd");
     } else if (rawLastDate) {
       let s = String(rawLastDate).trim();
-      if (s.includes('T')) lastDate = s.split('T')[0];
-      else if (s.includes(' ')) lastDate = s.split(' ')[0];
-      else lastDate = s;
+      lastDate = s;
+      if (s.includes('T')) lastDateOnly = s.split('T')[0];
+      else if (s.includes(' ')) lastDateOnly = s.split(' ')[0];
+      else lastDateOnly = s;
     }
     
-    // Si hoy completó la tarea y no se había registrado hoy
-    if (lastDate !== todayStr) {
+    // Si hoy completó la tarea y no se había registrado hoy (comparando solo FECHA)
+    if (lastDateOnly !== todayStr) {
       const yesterday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
       const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
       
       // Si la última vez fue ayer, +1. Si no, racha = 1.
-      if (lastDate === yesterdayStr) {
+      if (lastDateOnly === yesterdayStr) {
         streakCount += 1;
       } else {
         streakCount = 1;
       }
-      lastDate = todayStr;
+      lastDate = nowIso;
+      lastDateOnly = todayStr;
       
       sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`);
 
@@ -2286,6 +2314,7 @@ function updateStreaks(data) {
     if (streakIdx !== -1) sheet.getRange(rowIdx + 1, streakIdx + 1).setValue(streakCount);
     if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(lastDate);
     if (tasksIdx !== -1) sheet.getRange(rowIdx + 1, tasksIdx + 1).setValue(JSON.stringify(data.tasks || []));
+    if (notifsSentIdx !== -1) sheet.getRange(rowIdx + 1, notifsSentIdx + 1).setValue(""); // Reset notifs sent tracker
 
   } else {
     // Nuevo registro
@@ -2296,6 +2325,7 @@ function updateStreaks(data) {
     if (streakIdx !== -1) newRow[streakIdx] = streakCount;
     if (lastDateIdx !== -1) newRow[lastDateIdx] = lastDate;
     if (tasksIdx !== -1) newRow[tasksIdx] = JSON.stringify(data.tasks || []);
+    if (notifsSentIdx !== -1) newRow[notifsSentIdx] = ""; 
     sheet.appendRow(newRow);
     
     addNewsItem(ss, 'RACHA', `⚡ NUEVA OPERACIÓN: ${data.agentName || data.agentId} inició su racha de consagración.`, data.agentId, data.agentName);
@@ -2321,7 +2351,7 @@ function updateStreaks(data) {
     console.error("Error sincronizando racha con directorio:", e);
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakCount })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakCount, lastStreakDate: lastDate })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -2487,6 +2517,76 @@ function confirmDirectorAttendance(data) {
   ]);
 
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Revisa las rachas y envía notificaciones motivacionales en hitos clave.
+ * Debe ejecutarse cada 1 hora mediante un activador.
+ */
+function checkRachaNotifications() {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toUpperCase());
+  const agentIdIdx = headers.indexOf('AGENT_ID');
+  const streakIdx = headers.indexOf('STREAK_COUNT');
+  const lastDateIdx = headers.indexOf('LAST_COMPLETED_DATE');
+  const notifsSentIdx = headers.indexOf('NOTIFS_SENT');
+
+  if (agentIdIdx === -1 || lastDateIdx === -1 || streakIdx === -1) return;
+
+  const now = new Date();
+  
+  for (let i = 1; i < data.length; i++) {
+    const agentId = String(data[i][agentIdIdx]).trim().toUpperCase();
+    const streakCount = parseInt(data[i][streakIdx]) || 0;
+    const lastDateStr = data[i][lastDateIdx];
+    let sentNotifs = String(data[i][notifsSentIdx] || "");
+
+    if (!lastDateStr || !agentId) continue;
+
+    const lastDate = new Date(lastDateStr);
+    if (isNaN(lastDate.getTime())) continue;
+
+    const diffHours = (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60);
+
+    let title = "";
+    let message = "";
+    let milestoneKey = "";
+
+    if (diffHours >= 47 && diffHours < 48 && !sentNotifs.includes("47H")) {
+      title = "⚠️ ALERTA DE PERÍMETRO";
+      message = `¡Riesgo crítico! Tu racha de ${streakCount} días está a punto de perderse. Tienes 60 minutos para asegurar tu sector.`;
+      milestoneKey = "47H";
+    } else if (diffHours >= 36 && diffHours < 37 && !sentNotifs.includes("36H")) {
+      title = "🔋 RECARGA TÁCTICA";
+      message = `Tu constancia es tu mejor arma. No permitas que el día termine sin tu dosis de sabiduría. ¡Racha de ${streakCount} días en juego!`;
+      milestoneKey = "36H";
+    } else if (diffHours >= 27 && diffHours < 28 && !sentNotifs.includes("27H")) {
+      title = "🕯️ MANTÉN LA LLAMA";
+      message = "Tómate un minuto para reconectar. No permitas que el ruido apague tu racha de consagración. El equipo cuenta contigo.";
+      milestoneKey = "27H";
+    } else if (diffHours >= 24 && diffHours < 25 && !sentNotifs.includes("24H")) {
+      title = "🚀 OBJETIVO REVELADO";
+      message = `¡Agente listo! El versículo de hoy está disponible. Asegura tu racha de ${streakCount} días ahora.`;
+      milestoneKey = "24H";
+    }
+
+    if (milestoneKey && message) {
+      const fcmToken = getAgentFcmToken(agentId);
+      if (fcmToken) {
+        sendPushNotification(title, message, fcmToken);
+        // Actualizar flags
+        sentNotifs += (sentNotifs ? "," : "") + milestoneKey;
+        if (notifsSentIdx !== -1) {
+          sheet.getRange(i + 1, notifsSentIdx + 1).setValue(sentNotifs);
+        }
+      }
+    }
+  }
 }
 
 /**

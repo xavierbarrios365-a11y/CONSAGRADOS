@@ -18,15 +18,19 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
 
     useEffect(() => {
         const updateScale = () => {
-            const verticalPadding = 180;
-            const horizontalPadding = 80;
+            const isMobile = window.innerWidth <= 768;
+            const verticalPadding = isMobile ? 120 : 180;
+            const horizontalPadding = isMobile ? 40 : 80;
             const availableHeight = window.innerHeight - verticalPadding;
             const availableWidth = window.innerWidth - horizontalPadding;
 
             const scaleH = availableHeight / 1920;
             const scaleW = availableWidth / 1080;
 
-            const finalScale = Math.min(scaleH, scaleW, 0.40);
+            // En móvil permitimos que crezca casi hasta el 100% de lo disponible
+            // En desktop mantenemos un límite preventivo para que no abrume
+            const maxScale = isMobile ? 0.95 : 0.45;
+            const finalScale = Math.min(scaleH, scaleW, maxScale);
 
             setContainerSize({
                 width: 1080 * finalScale,
@@ -140,31 +144,32 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
     return (
         <div className="fixed inset-0 z-[250] bg-black/98 flex flex-col items-center justify-center p-4 animate-in fade-in backdrop-blur-3xl overflow-hidden">
 
-            {/* Header Controls */}
-            <div className="w-full max-w-4xl flex justify-between items-center mb-6 px-4 shrink-0">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-[#ffb700]/10 flex items-center justify-center border border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.2)]">
-                        <Award className="text-[#ffb700]" size={24} />
+            {/* Header Controls (Compacted for Small Screens) */}
+            <div className="w-full max-w-4xl flex justify-between items-center mb-4 md:mb-6 px-4 shrink-0">
+                <div className="flex items-center gap-2 md:gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#ffb700]/10 flex items-center justify-center border border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.2)]">
+                        <Award className="text-[#ffb700]" size={20} />
                     </div>
-                    <div>
-                        <span className="text-white font-black uppercase tracking-[0.4em] text-[14px] font-bebas block leading-none">Command Center</span>
-                        <span className="text-[#ffb700] font-black uppercase tracking-[0.2em] text-[8px] font-montserrat block mt-1">Soberanía Táctica v1000 Final</span>
+                    <div className="hidden xs:block">
+                        <span className="text-white font-black uppercase tracking-[0.4em] text-[10px] md:text-[14px] font-bebas block leading-none">Command Center</span>
+                        <span className="text-[#ffb700] font-black uppercase tracking-[0.2em] text-[6px] md:text-[8px] font-montserrat block mt-1">Soberanía Táctica v1000 Final</span>
                     </div>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-2 md:gap-4">
                     <button
                         onClick={handleShare}
                         disabled={isGenerating}
-                        className="flex items-center gap-3 px-10 py-4 bg-[#ffb700] text-[#001f3f] font-black uppercase text-[12px] tracking-widest rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,183,0,0.3)] font-bebas disabled:opacity-50"
+                        className="flex items-center gap-2 md:gap-3 px-6 md:px-10 py-3 md:py-4 bg-[#ffb700] text-[#001f3f] font-black uppercase text-[10px] md:text-[12px] tracking-widest rounded-xl md:rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,183,0,0.3)] font-bebas disabled:opacity-50"
                     >
-                        {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
-                        {navigator.share ? 'COMPARTIR' : 'DESCARGAR'}
+                        {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+                        <span className="hidden xs:inline">{navigator.share ? 'COMPARTIR' : 'DESCARGAR'}</span>
+                        <span className="xs:hidden">{navigator.share ? 'SHARE' : 'SAVE'}</span>
                     </button>
                     <button
                         onClick={onClose}
-                        className="p-4 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 rounded-2xl transition-all border border-white/10"
+                        className="p-3 md:p-4 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 rounded-xl md:rounded-2xl transition-all border border-white/10"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
             </div>

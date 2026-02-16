@@ -1748,7 +1748,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {currentUser && <DigitalIdCard agent={currentUser} />}
+            {currentUser && <DigitalIdCard agent={currentUser} onClose={() => setView(AppView.HOME)} />}
 
             {currentUser?.userRole === UserRole.DIRECTOR && (
               <div className="w-full space-y-2 mt-6">
@@ -2105,13 +2105,8 @@ const App: React.FC = () => {
 
       {foundAgent && (
         <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center p-6 animate-in fade-in overflow-y-auto">
-          <div className="w-full max-w-sm sticky top-0 z-10 flex justify-end py-2">
-            <button onClick={() => setFoundAgent(null)} className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl px-6 py-3 text-white uppercase transition-all text-[10px] font-black tracking-[0.3em] flex items-center gap-2 active:scale-95">
-              <X size={16} /> Cerrar
-            </button>
-          </div>
           <div className="mt-4 flex-1 flex items-center justify-center w-full animate-scale">
-            <DigitalIdCard agent={foundAgent} />
+            <DigitalIdCard agent={foundAgent} onClose={() => setFoundAgent(null)} />
           </div>
         </div>
       )}

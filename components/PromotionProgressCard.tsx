@@ -32,8 +32,19 @@ const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, 
         loadPromoData();
     }, [agentId]);
 
-    const rule = PROMOTION_RULES[currentRank];
-    if (!rule) return null; // Max rank or unknown rank
+    let rule = PROMOTION_RULES[currentRank];
+    let isMaxRank = false;
+
+    if (!rule) {
+        // Si no hay siguiente rango, buscamos la regla que llevó al rango actual para mostrar el hito
+        const lastRuleKey = Object.keys(PROMOTION_RULES).find(key => PROMOTION_RULES[key].nextRank === currentRank);
+        if (lastRuleKey) {
+            rule = PROMOTION_RULES[lastRuleKey];
+            isMaxRank = true;
+        } else {
+            return null;
+        }
+    }
 
     const xp = data?.xp || 0;
     const certs = data?.certificates || 0;
@@ -41,12 +52,10 @@ const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, 
     const xpProgress = Math.min((xp / rule.requiredXp) * 100, 100);
     const certProgress = Math.min((certs / rule.requiredCertificates) * 100, 100);
 
-    // Unified progress (average of both or min of both?)
-    // User requested "Faltan X XP / Y certificados"
     const missingXp = Math.max(0, rule.requiredXp - xp);
     const missingCerts = Math.max(0, rule.requiredCertificates - certs);
 
-    const isMet = missingXp === 0 && missingCerts === 0;
+    const isMet = (missingXp === 0 && missingCerts === 0) || isMaxRank;
 
     return (
         <div
@@ -62,8 +71,8 @@ const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, 
                             <Shield size={18} />
                         </div>
                         <div>
-                            <p className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest">OBJETIVO: {rule.nextRank}</p>
-                            <h3 className="text-sm font-bebas font-black text-white tracking-widest uppercase">PROGRESO DE ASCENSO</h3>
+                            <p className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest">{isMaxRank ? 'ESTADO ACTUAL' : 'OBJETIVO'}: {isMaxRank ? currentRank : rule.nextRank}</p>
+                            <h3 className="text-sm font-bebas font-black text-white tracking-widest uppercase">{isMaxRank ? 'HITO DE ASCENSO' : 'PROGRESO DE ASCENSO'}</h3>
                         </div>
                     </div>
                     {loading ? (

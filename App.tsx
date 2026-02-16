@@ -36,7 +36,7 @@ import {
   confirmEventAttendance as confirmEventAttendanceService,
   deleteAgent as deleteAgentService
 } from './services/sheetsService';
-import { generateGoogleCalendarLink } from './services/calendarService';
+import { generateGoogleCalendarLink, downloadIcsFile } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Search, QrCode, X, ChevronRight, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio } from 'lucide-react';
@@ -215,8 +215,8 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline'; size?: 'sm' 
 
       {/* Etiquetas de Estado */}
       <div className="flex flex-col items-center">
-        <span className={`text-white font-bebas ${isSm ? 'text-lg tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
-          CONSAGRADOS {isSm ? '2026' : ''}
+        <span className={`text-white font-bebas ${isSm ? 'text-xl tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
+          CONSAGRADOS <span className="text-[#ffb700]">2026</span>
         </span>
         <div className={`flex items-center gap-2 ${isSm ? 'mt-1 py-0.5' : 'mt-2 py-1'} px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm`}>
           <div className={`${isSm ? 'w-1.5 h-1.5' : 'w-2 h-2'} rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
@@ -644,9 +644,10 @@ const App: React.FC = () => {
   }, [currentUser, isLoggedIn]);
 
   useEffect(() => {
-    // Verificación periódica de notificaciones internas
-    const checkNotifications = async () => {
+    // Verificación periódica de datos (Notidfications + Ranking)
+    const checkHeadlines = async () => {
       try {
+        // 1. Notificaciones
         const notifs = await fetchNotifications();
         const agentId = currentUser?.id;
         const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
@@ -657,16 +658,36 @@ const App: React.FC = () => {
 
         const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
         setUnreadNotifications(unreadNotifs.length);
-        setHeadlines(unreadNotifs.slice(0, 5).map(n => n.titulo));
+
+        const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
+
+        // 2. Ranking & Rachas
+        const agents = await fetchAgentsFromSheets();
+        const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
+        const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
+
+        const rankHeadlines = topXp.map((a, i) => `🔥 TOP ${i + 1} XP: ${a.name} (${a.xp} XP)`);
+        const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
+
+        // Combinar todo
+        const finalHeadlines = [
+          ...notifHeadlines,
+          ...rankHeadlines,
+          ...streakHeadlines,
+          "🚀 BIENVENIDO AL CENTRO DE OPERACIÓN CONSAGRADOS 2026",
+          "🎯 CUMPLE TUS MISIONES DIARIAS PARA SUBIR EN EL RANKING"
+        ];
+
+        setHeadlines(finalHeadlines);
         setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
       } catch (e) {
-        console.error("Error en pulso de notificaciones:", e);
+        console.error("Error en pulso de datos para ticker:", e);
       }
     };
 
     if (isLoggedIn) {
-      checkNotifications();
-      const interval = setInterval(checkNotifications, 120000); // Cada 2 minutos
+      checkHeadlines();
+      const interval = setInterval(checkHeadlines, 120000); // Cada 2 minutos
       return () => clearInterval(interval);
     }
   }, [isLoggedIn]);
@@ -1038,12 +1059,8 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {/* Box Derecha: Ticker de Noticias */}
-              <div className="flex-1 min-w-0 space-y-3">
-                <div className="flex flex-col">
-                  <h2 className="text-xl font-bebas font-black text-white tracking-widest leading-none">CENTRO DE OPERACIÓN</h2>
-                  <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">{currentUser?.name}</p>
-                </div>
+              {/* Box Derecha: Ticker de Noticias (Espacio Expandido) */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
 
                 {headlines.length > 0 && (
                   <div className="w-full overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl py-2 px-4 shadow-inner">
@@ -1206,14 +1223,43 @@ const App: React.FC = () => {
                       <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest mb-3 opacity-80">{evt.fecha} @ {evt.hora || 'S/H'}</p>
                       {evt.descripcion && <p className="text-[9px] text-white/50 mb-4 leading-relaxed font-montserrat">{evt.descripcion}</p>}
 
-                      <button
-                        onClick={() => handleConfirmEventAttendance(evt)}
-                        disabled={isConfirmingEvent === evt.id}
-                        className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas"
-                      >
-                        {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                        Confirmar Mi Asistencia
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => handleConfirmEventAttendance(evt)}
+                          disabled={isConfirmingEvent === evt.id}
+                          className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas"
+                        >
+                          {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                          Confirmar Mi Asistencia
+                        </button>
+
+                        <div className="flex gap-2">
+                          <a
+                            href={generateGoogleCalendarLink({
+                              title: evt.titulo,
+                              description: evt.descripcion || '',
+                              startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
+                              endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
+                            })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
+                          >
+                            <Calendar size={12} /> Google
+                          </a>
+                          <button
+                            onClick={() => downloadIcsFile({
+                              title: evt.titulo,
+                              description: evt.descripcion || '',
+                              startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
+                              endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
+                            })}
+                            className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
+                          >
+                            <Download size={12} /> .ICS
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}

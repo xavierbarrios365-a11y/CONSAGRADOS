@@ -49,8 +49,18 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
     }
 
     const currentRank = promoData.rank || 'RECLUTA';
-    const rule = PROMOTION_RULES[currentRank];
-    const isMaxRank = !rule;
+    let rule = PROMOTION_RULES[currentRank];
+    let isMaxRank = !rule;
+    let rankForRequirements = currentRank;
+
+    if (isMaxRank) {
+        // Buscamos la regla que llevó al rango actual para mostrar los hitos alcanzados
+        const lastRuleKey = Object.keys(PROMOTION_RULES).find(key => PROMOTION_RULES[key].nextRank === currentRank);
+        if (lastRuleKey) {
+            rule = PROMOTION_RULES[lastRuleKey];
+            rankForRequirements = lastRuleKey;
+        }
+    }
 
     const xp = promoData.xp || 0;
     const certs = promoData.certificates || 0;
@@ -133,18 +143,20 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                 </div>
             )}
 
-            {isMaxRank ? (
-                <div className="glass-card border border-[#ffb700]/30 rounded-2xl p-6 text-center space-y-3 bg-gradient-to-br from-[#ffb700]/5 to-transparent">
+            {isMaxRank && (
+                <div className="glass-card border border-[#ffb700]/30 rounded-2xl p-6 text-center space-y-3 bg-gradient-to-br from-[#ffb700]/5 to-transparent mb-6">
                     <div className="text-5xl">👑</div>
                     <h2 className="font-bebas text-2xl text-[#ffb700] tracking-wider">RANGO MÁXIMO ALCANZADO</h2>
                     <p className="text-sm text-gray-400">Has alcanzado el nivel más alto. ¡Felicidades, Líder!</p>
                 </div>
-            ) : (
+            )}
+
+            {rule && (
                 <>
                     {/* Requirements Title */}
                     <div className="flex items-center gap-2 text-white/60 text-xs uppercase tracking-widest">
                         <Shield size={14} />
-                        <span>Requisitos para ascender a <span className="text-[#ffb700] font-black">{rule?.nextRank}</span></span>
+                        <span>{isMaxRank ? 'Hitos alcanzados para' : 'Requisitos para ascender a'} <span className="text-[#ffb700] font-black">{isMaxRank ? currentRank : rule.nextRank}</span></span>
                     </div>
 
                     {/* 3 Requirement Cards */}
@@ -158,12 +170,12 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                                 </div>
                                 {xpMet && <CheckCircle size={18} className="text-green-400" />}
                             </div>
-                            <div className="text-2xl font-black text-white">{xp} <span className="text-sm text-gray-500">/ {rule?.requiredXp} XP</span></div>
+                            <div className="text-2xl font-black text-white">{xp} <span className="text-sm text-gray-500">/ {rule.requiredXp} XP</span></div>
                             <div className="w-full bg-white/5 rounded-full h-2.5 overflow-hidden">
                                 <div className={`h-full rounded-full transition-all duration-700 ${xpMet ? 'bg-green-500' : 'bg-gradient-to-r from-[#ffb700] to-orange-500'}`}
                                     style={{ width: `${xpProgress}%` }}></div>
                             </div>
-                            {!xpMet && <p className="text-[10px] text-gray-500">Faltan {(rule?.requiredXp || 0) - xp} XP</p>}
+                            {!xpMet && <p className="text-[10px] text-gray-500">Faltan {rule.requiredXp - xp} XP</p>}
                         </div>
 
                         {/* Certificates Card */}
@@ -175,12 +187,12 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                                 </div>
                                 {certMet && <CheckCircle size={18} className="text-green-400" />}
                             </div>
-                            <div className="text-2xl font-black text-white">{certs} <span className="text-sm text-gray-500">/ {rule?.requiredCertificates}</span></div>
+                            <div className="text-2xl font-black text-white">{certs} <span className="text-sm text-gray-500">/ {rule.requiredCertificates}</span></div>
                             <div className="w-full bg-white/5 rounded-full h-2.5 overflow-hidden">
                                 <div className={`h-full rounded-full transition-all duration-700 ${certMet ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`}
                                     style={{ width: `${certProgress}%` }}></div>
                             </div>
-                            {!certMet && <p className="text-[10px] text-gray-500">Faltan {(rule?.requiredCertificates || 0) - certs} certificados</p>}
+                            {!certMet && <p className="text-[10px] text-gray-500">Faltan {rule.requiredCertificates - certs} certificados</p>}
                         </div>
 
                         {/* Tasks Card */}
@@ -202,31 +214,33 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                         </div>
                     </div>
 
-                    {/* Promote Button */}
-                    <button
-                        onClick={handlePromote}
-                        disabled={!allMet || promoting}
-                        className={`w-full py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3 
-              ${allMet
-                                ? 'bg-gradient-to-r from-[#ffb700] to-amber-500 text-[#001f3f] hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,183,0,0.3)] active:scale-95'
-                                : 'bg-white/5 text-gray-600 cursor-not-allowed border border-white/5'
-                            }`}
-                    >
-                        {promoting ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-current"></div>
-                        ) : allMet ? (
-                            <>
-                                <ChevronUp size={20} />
-                                SOLICITAR ASCENSO A {rule?.nextRank}
-                                <ArrowRight size={16} />
-                            </>
-                        ) : (
-                            <>
-                                <Lock size={16} />
-                                COMPLETA LOS REQUISITOS PARA ASCENDER
-                            </>
-                        )}
-                    </button>
+                    {/* Promote Button (Only if not max rank) */}
+                    {!isMaxRank && (
+                        <button
+                            onClick={handlePromote}
+                            disabled={!allMet || promoting}
+                            className={`w-full py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3 
+                  ${allMet
+                                    ? 'bg-gradient-to-r from-[#ffb700] to-amber-500 text-[#001f3f] hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,183,0,0.3)] active:scale-95'
+                                    : 'bg-white/5 text-gray-600 cursor-not-allowed border border-white/5'
+                                }`}
+                        >
+                            {promoting ? (
+                                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-current"></div>
+                            ) : allMet ? (
+                                <>
+                                    <ChevronUp size={20} />
+                                    SOLICITAR ASCENSO A {rule.nextRank}
+                                    <ArrowRight size={16} />
+                                </>
+                            ) : (
+                                <>
+                                    <Lock size={16} />
+                                    COMPLETA LOS REQUISITOS PARA ASCENDER
+                                </>
+                            )}
+                        </button>
+                    )}
                 </>
             )}
 

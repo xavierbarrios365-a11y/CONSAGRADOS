@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle } from 'lucide-react';
+import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
@@ -11,6 +11,7 @@ import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, 
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
 import { applyAbsencePenalties } from '../services/sheetsService';
+import { PROMOTION_RULES } from '../constants';
 
 interface CIUProps {
   agents: Agent[];
@@ -510,6 +511,82 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             })()}
           </div>
         </div>
+
+        {/* RADAR DE APTOS PARA ASCENSO - Solo Directores */}
+        {userRole === UserRole.DIRECTOR && (() => {
+          const aptosAgents = agents.filter(a => {
+            if (a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR) return false;
+            const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
+            if (!rule) return false;
+            return a.xp >= rule.requiredXp;
+          });
+
+          if (aptosAgents.length === 0) return null;
+
+          return (
+            <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-3xl p-5 mb-4 backdrop-blur-md space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+                    <ArrowUpCircle className="text-emerald-400" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-black text-sm uppercase tracking-widest leading-none mb-1 font-bebas">Radar de Ascenso</h3>
+                    <p className="text-[9px] text-emerald-400/80 font-bold uppercase tracking-[0.2em] font-montserrat">
+                      {aptosAgents.length} agente{aptosAgents.length > 1 ? 's' : ''} listo{aptosAgents.length > 1 ? 's' : ''} para examen de ascenso
+                    </p>
+                  </div>
+                </div>
+                <span className="bg-emerald-500 text-[#001f3f] font-black text-lg px-3 py-1 rounded-xl font-bebas">{aptosAgents.length}</span>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                {aptosAgents.map(a => {
+                  const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
+                  return (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-emerald-500/10 hover:border-emerald-500/30 transition-all group cursor-pointer"
+                      onClick={() => {
+                        setSelectedAgentId(a.id);
+                        window.scrollTo({ top: 600, behavior: 'smooth' });
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={formatDriveUrl(a.photoUrl)}
+                          className="w-10 h-10 rounded-xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
+                          onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                        />
+                        <div>
+                          <p className="text-[11px] font-black text-white uppercase tracking-wider font-bebas">{a.name}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-bold text-white/40 uppercase">{a.rank || 'RECLUTA'}</span>
+                            <ChevronRight size={8} className="text-emerald-400" />
+                            <span className="text-[8px] font-bold text-emerald-400 uppercase">{rule?.nextRank}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-[#ffb700] font-bebas">{a.xp} XP</p>
+                          <p className="text-[7px] text-white/30 font-bold uppercase">Req: {rule?.requiredXp} XP</p>
+                        </div>
+                        <div className="bg-emerald-500/20 border border-emerald-500/30 p-2 rounded-lg">
+                          <ArrowUpCircle size={14} className="text-emerald-400" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-[8px] text-emerald-400/40 font-bold uppercase tracking-widest text-center mt-2">
+                ⚠ Estos agentes cumplen los requisitos de XP. Verificar certificados y programar examen de ascenso.
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Header Táctico */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-6 gap-4 font-montserrat">

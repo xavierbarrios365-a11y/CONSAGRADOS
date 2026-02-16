@@ -4,19 +4,19 @@ import Layout from './components/Layout';
 import { AppView, Agent, UserRole, Visitor, Guide } from './types';
 import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
-import TacticalExpediente from './components/TacticalExpediente';
-import ContentModule from './components/ContentModule';
+import IntelFeed from './components/IntelFeed';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
+import TacticalExpediente from './components/TacticalExpediente';
+import ContentModule from './components/ContentModule';
 import NotificationInbox from './components/NotificationInbox';
 import TacticalChat from './components/TacticalChat';
 import TacticalRanking from './components/TacticalRanking';
 import PromotionModule from './components/PromotionModule';
 import TasksModule from './components/TasksModule';
-import NewsFeed from './components/NewsFeed';
 import PromotionProgressCard from './components/PromotionProgressCard';
 import TrainingCenter from './components/TrainingCenter';
 import {
@@ -47,7 +47,7 @@ import { isBiometricAvailable, registerBiometric, authenticateBiometric } from '
 // SpiritualAdvisor removed per user request
 import { initRemoteConfig } from './services/configService';
 
-const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f"; // ID Real de Consagrados 2026
+const OFFICIAL_LOGO = "1DYDTGzou08o0NIPuCPH9JvYtaNF2X5f"; // ID Real de Consagrados 2026
 
 const LoadingScreen = ({ message }: { message: string }) => (
   <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 space-y-6 animate-in fade-in">
@@ -300,6 +300,7 @@ const App: React.FC = () => {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [headlines, setHeadlines] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -349,6 +350,18 @@ const App: React.FC = () => {
       }
     };
     checkVersionAndPurge();
+  }, []);
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // --- BOOSTER DE PERSISTENCIA (SINCRONIZAR PREFS DESDE NUBE AL LOGUEAR) ---
@@ -571,6 +584,7 @@ const App: React.FC = () => {
       const token = await requestForToken();
       if (token) {
         console.log("✅ FCM Token sincronizado.");
+        setNotificationPermission('granted'); // Update state immediately on success
         // Sincronizar con servidor usando el ID actual
         const session = sessionStorage.getItem('consagrados_session');
         const userId = session ? JSON.parse(session).id : null;
@@ -991,8 +1005,8 @@ const App: React.FC = () => {
     if (!currentUser) return;
 
     // Marcar la tarea de lectura como completada HOY
-    const today = new Date().toISOString().split('T')[0];
-    const alreadyDone = localStorage.getItem('verse_completed_date') === today;
+    const localToday = new Date().toLocaleDateString('es-VE', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'); // format: YYYY-MM-DD
+    const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
     if (alreadyDone) return; // Ya se completó hoy, no duplicar
 
     const updatedTasks = currentUser.weeklyTasks?.map(t =>
@@ -1008,7 +1022,7 @@ const App: React.FC = () => {
     };
     setCurrentUser(updatedUser);
     sessionStorage.setItem('consagrados_session', JSON.stringify(updatedUser));
-    localStorage.setItem('verse_completed_date', today);
+    localStorage.setItem('verse_completed_date', localToday);
 
     try {
       console.log("🔥 Sincronizando racha...");
@@ -1111,7 +1125,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-4 mb-4">
               <div className="flex-shrink-0">
                 <LighthouseIndicator
-                  status={notificationPermission === 'granted' ? 'online' : 'offline'}
+                  status={isOnline && notificationPermission === 'granted' ? 'online' : 'offline'}
                   size="xs"
                 />
               </div>
@@ -1161,6 +1175,9 @@ const App: React.FC = () => {
                 onQuizComplete={handleVerseQuizComplete}
               />
             </div>
+
+            {/* Intel Feed - Posición Primaria (v3.0) */}
+            <IntelFeed headlines={headlines} agents={agents} />
 
             <div className="flex flex-col gap-4">
 
@@ -1322,9 +1339,6 @@ const App: React.FC = () => {
                 </button>
               )}
             </div>
-
-            {/* News Feed */}
-            <NewsFeed headlines={headlines} agents={agents} />
 
           </div>
         );

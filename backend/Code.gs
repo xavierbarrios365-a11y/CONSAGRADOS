@@ -209,7 +209,8 @@ function verifyAndFixSchema() {
     'RELACION_CON_DIOS', 'PUNTOS_BIBLIA', 'PUNTOS_APUNTES', 'PUNTOS_LIDERAZGO', 
     'FOTO_URL', 'NIVEL_ACCESO', 'NOTIF_PREFS', 'FCM_TOKEN', 
     'PREGUNTA_SEGURIDAD', 'RESPUESTA_SEGURIDAD', 'CAMBIO_OBLIGATORIO_PIN', 
-    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE', 'BIOMETRIC_CREDENTIAL'
+    'STATS_JSON', 'TACTOR_SUMMARY', 'LAST_AI_UPDATE', 'BIOMETRIC_CREDENTIAL',
+    'STREAK_COUNT', 'LAST_COMPLETED_DATE'
   ];
 
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -288,28 +289,18 @@ function doGet(e) {
       const streakMap = new Map();
       if (strikeAgentIdIdx !== -1) {
         for (let i = 1; i < strikeData.length; i++) {
-          streakMap.set(String(strikeData[i][strikeAgentIdIdx]), {
-            streak: strikeData[i][streakCountIdx] || 0,
+          const sAgentId = String(strikeData[i][strikeAgentIdIdx]).trim().toUpperCase();
+          if (!sAgentId) continue;
+          streakMap.set(sAgentId, {
+            streak: parseInt(strikeData[i][streakCountIdx]) || 0,
             tasks: strikeData[i][tasksJsonIdx] || '[]',
             lastDate: (() => {
-              // Intentar AMBAS columnas y usar la que tenga datos reales
               let idx1 = strikeHeaders.indexOf('LAST_COMPLETED_DATE');
-              let idx2 = strikeHeaders.indexOf('LAST_COMPLETED_WEEK');
-              
               let val = '';
-              // Probar la primera columna
-              if (idx1 !== -1 && strikeData[i][idx1]) {
-                val = strikeData[i][idx1];
-              }
-              // Si está vacía, probar la segunda
-              if (!val && idx2 !== -1 && strikeData[i][idx2]) {
-                val = strikeData[i][idx2];
-              }
-              
+              if (idx1 !== -1 && strikeData[i][idx1]) val = strikeData[i][idx1];
               if (!val) return '';
               if (val instanceof Date) return Utilities.formatDate(val, "GMT-4", "yyyy-MM-dd");
               let s = String(val).trim();
-              if (!s || s === 'undefined' || s === 'null') return '';
               if (s.includes('T')) return s.split('T')[0];
               if (s.includes(' ')) return s.split(' ')[0];
               return s;
@@ -318,33 +309,31 @@ function doGet(e) {
         }
       }
       
-      // Inyectar columnas virtuales en la respuesta
       const now = new Date();
       const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
       const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
       const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
 
-      directoryData[0].push('STREAK_COUNT', 'TASKS_JSON');
+      // Solo inyectar si no existen en el Directorio (para evitar duplicados v37.7)
+      const hasStreakCol = headers.indexOf('STREAK_COUNT') !== -1;
+      const hasTasksCol = headers.indexOf('TASKS_JSON');
+      
+      if (!hasStreakCol) directoryData[0].push('STREAK_COUNT');
+      if (hasTasksCol === -1) directoryData[0].push('TASKS_JSON');
+
       for (let i = 1; i < directoryData.length; i++) {
-        const agentId = String(directoryData[i][0]);
+        const agentId = String(directoryData[i][0]).trim().toUpperCase();
         const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
         
-        // Formatear lastDate por si es un objeto Date
+        let displayStreak = streakInfo.streak;
         let lastDateFormatted = streakInfo.lastDate;
-        if (lastDateFormatted && typeof lastDateFormatted !== 'string') {
-          try {
-            lastDateFormatted = Utilities.formatDate(new Date(lastDateFormatted), "GMT-4", "yyyy-MM-dd");
-          } catch(e) { lastDateFormatted = String(lastDateFormatted); }
-        }
-        
-        // --- AUTO-RESET VIRTUAL: Si la racha es vieja (ni hoy ni ayer), mostrar 0 ---
-        let displayStreak = parseInt(streakInfo.streak);
+
         if (displayStreak > 0 && lastDateFormatted !== todayStr && lastDateFormatted !== yesterdayStr) {
-          // Si la fecha es de hace más de 1 día, la racha se rompió virtualmente
           displayStreak = 0;
         }
 
-        directoryData[i].push(displayStreak, streakInfo.tasks);
+        if (!hasStreakCol) directoryData[i].push(displayStreak);
+        if (hasTasksCol === -1) directoryData[i].push(streakInfo.tasks);
       }
     }
     
@@ -588,9 +577,13 @@ function uploadImage(data) {
   const isImage = mimeType && mimeType.startsWith('image/');
   const fileUrl = isImage 
     ? `https://lh3.googleusercontent.com/d/${newFile.getId()}`
-    : `https://drive.google.com/uc?export=download&id=${newFile.getId()}`;
+    : `https://drive.google.com/file/d/${newFile.getId()}/view`; // Cambiado a /view para que vean el original
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, url: fileUrl })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ 
+    success: true, 
+    url: fileUrl,
+    id: newFile.getId() 
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -1491,6 +1484,8 @@ function uploadGuide(data) {
   
   sheet.appendRow([id, data.name, data.type, data.url, date]);
   
+  addNewsItem(ss, 'DESPLIEGUE', `📡 NUEVO MATERIAL: Se ha desplegado la guía "${data.name}" (${data.type}).`, 'SISTEMA', 'LOGÍSTICA');
+
   const title = "📚 NUEVO RECURSO DISPONIBLE";
   const msg = `Se ha publicado una nueva guía (${data.type}): ${data.name}.`;
   sendPushNotification(title, msg);
@@ -1769,7 +1764,6 @@ function submitQuizResult(data) {
   
   if (!progressSheet || !lessonsSheet || !directorySheet) throw new Error("Error en la base de datos.");
   
-  // 1. Validar lección y límites de intentos
   const lessonsData = lessonsSheet.getDataRange().getValues();
   const lesson = lessonsData.slice(1).find(row => String(row[0]) === String(data.lessonId));
   if (!lesson) throw new Error("Lección no encontrada.");
@@ -1783,7 +1777,7 @@ function submitQuizResult(data) {
     if (progressData[existingProgressIdx][2] === 'COMPLETADO') {
       throw new Error("Esta lección ya ha sido superada.");
     }
-    if (attempts >= 2) { // Límite de 2 intentos
+    if (attempts >= 2) {
       throw new Error("Has finalizado esta evaluación. Contacta a un Director si necesitas un re-intento.");
     }
   }
@@ -1792,16 +1786,8 @@ function submitQuizResult(data) {
   const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
   attempts += 1;
 
-  // 2. Guardar/Actualizar progreso
   const now = new Date();
-  const progressRow = [
-    data.agentId,
-    data.lessonId,
-    isCorrect ? 'COMPLETADO' : 'FALLIDO',
-    data.score || 0,
-    now,
-    attempts
-  ];
+  const progressRow = [data.agentId, data.lessonId, isCorrect ? 'COMPLETADO' : 'FALLIDO', data.score || 0, now, attempts];
 
   if (existingProgressIdx !== -1) {
     progressSheet.getRange(existingProgressIdx + 1, 1, 1, progressRow.length).setValues([progressRow]);
@@ -1809,44 +1795,26 @@ function submitQuizResult(data) {
     progressSheet.appendRow(progressRow);
   }
   
-  // 3. Otorgar XP si es correcto
   let agentName = "Agente";
-  if (isCorrect && xpReward > 0) {
+  if (isCorrect) {
     const directoryData = directorySheet.getDataRange().getValues();
     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
     const idCol = headers.indexOf('ID');
     const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
-    const leadershipColIdx = (headers.indexOf('PUNTOS LIDERAZGO') + 1) || (headers.indexOf('LIDERAZGO') + 1);
-    
     const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
+    
     if (rowIdx !== -1) {
       agentName = directoryData[rowIdx][headers.indexOf('NOMBRE')] || "Agente";
-      // Sumar al XP total
       if (xpColIdx > 0) {
         const currentXp = parseInt(directorySheet.getRange(rowIdx + 1, xpColIdx).getValue()) || 0;
         directorySheet.getRange(rowIdx + 1, xpColIdx).setValue(currentXp + xpReward);
       }
-      // Sumar a Liderazgo/Academia (usando columna de Liderazgo por ahora)
-      if (leadershipColIdx > 0) {
-        const currentLead = parseInt(directorySheet.getRange(rowIdx + 1, leadershipColIdx).getValue()) || 0;
-        directorySheet.getRange(rowIdx + 1, leadershipColIdx).setValue(currentLead + xpReward);
-      }
-
-      // Notificación Push
-      const fcmToken = getAgentFcmToken(data.agentId);
-      if (fcmToken) {
-        sendPushNotification("🎓 LECCIÓN SUPERADA", `Has aprobado "${lesson[3]}" con éxito. Recompensa: +${xpReward} XP.`, fcmToken);
-      }
     }
-  }
-  
-  // 4. Notificar a Telegram y Feed de Noticias Globales
-  if (isCorrect) {
-    const lessonTitle = lesson[3];
-    const telegramMessage = `🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lessonTitle}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`;
-    sendTelegramNotification(telegramMessage);
 
-    // --- Lógica de Certificado Global (News Feed) ---
+    // Log Tactical Intel
+    addNewsItem(ss, 'OPERACION', `🎯 OBJETIVO CUMPLIDO: ${agentName} ha superado la lección "${lesson[3]}".`, data.agentId, agentName);
+
+    // Check for Certificate (Course Completion)
     try {
       const courseId = String(lesson[1]);
       const lessonsInCourse = lessonsData.slice(1).filter(r => String(r[1]) === courseId);
@@ -1860,15 +1828,8 @@ function submitQuizResult(data) {
         const course = coursesData.slice(1).find(r => String(r[0]) === courseId);
         const courseTitle = course ? course[1] : `CURSO #${courseId}`;
         
-        // Agregar al news feed global
-        addNewsItem({
-          type: 'CERTIFICADO',
-          message: `¡${agentName} ha obtenido su certificado en "${courseTitle}"! 🎓`,
-          agentId: data.agentId,
-          agentName: agentName
-        });
-        
-        // Notificación Push Especial
+        addNewsItem(ss, 'CERTIFICADO', `🎓 CERTIFICACIÓN: ${agentName} ha obtenido su diploma en "${courseTitle}".`, data.agentId, agentName);
+
         const fcmToken = getAgentFcmToken(data.agentId);
         if (fcmToken) {
           sendPushNotification("🏅 ¡CERTIFICADO OBTENIDO!", `Has completado "${courseTitle}". ¡Felicidades Agente!`, fcmToken);
@@ -1877,6 +1838,8 @@ function submitQuizResult(data) {
     } catch (e) {
       Logger.log("Error al verificar fin de curso: " + e.message);
     }
+
+    sendTelegramNotification(`🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lesson[3]}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`);
   }
   
   return ContentService.createTextOutput(JSON.stringify({ 
@@ -1911,6 +1874,9 @@ function saveBulkAcademyData(data) {
         coursesSheet.getRange(existingIdx + 1, 1, 1, newRow.length).setValues([newRow]);
       } else {
         coursesSheet.appendRow(newRow);
+        
+        addNewsItem(ss, 'OPERACION', `🚀 NUEVA OPERACIÓN: Se ha activado el curso "${course.title}".`, 'SISTEMA', 'COMANDO');
+
         // Notificar nuevo curso
         const title = "🚀 NUEVO CURSO DISPONIBLE";
         const msg = `Se ha publicado el curso: ${course.title}. ¡Inicia tu entrenamiento ahora!`;
@@ -2247,13 +2213,18 @@ function updateStreaks(data) {
       
       sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`);
 
+      // Log Intel Event for Significant Streaks
+      if (streakCount > 0 && (streakCount === 1 || streakCount % 7 === 0)) {
+        addNewsItem(ss, 'RACHA', `⚡ AGENTE SOCIAL: ${data.agentName || data.agentId} ha alcanzado una racha de ${streakCount} días.`, data.agentId, data.agentName);
+      }
+
       // --- HITOS DE XP (Cada 5 días) ---
       if (streakCount >= 5 && streakCount % 5 === 0) {
         let bonusXP = 0;
-        if (streakCount >= 30) bonusXP = 5 * 2;        // 30+ días: potenciador x2 = 10 XP
-        else if (streakCount >= 15) bonusXP = 5 * 1.50; // 15+ días: potenciador x1.50 = 7.5 XP
-        else if (streakCount >= 10) bonusXP = 5 * 1.25; // 10+ días: potenciador x1.25 = 6.25 XP
-        else if (streakCount === 5) bonusXP = 5;        // 5 días: 5 XP base
+        if (streakCount >= 30) bonusXP = 10;
+        else if (streakCount >= 15) bonusXP = 7.5;
+        else if (streakCount >= 10) bonusXP = 6;
+        else if (streakCount === 5) bonusXP = 5;
 
         if (bonusXP > 0) {
           try {
@@ -2277,19 +2248,43 @@ function updateStreaks(data) {
       }
     }
     
-    const row = [data.agentId, streakCount, lastDate, JSON.stringify(data.tasks || [])];
-    sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);
-    
-    // Sincronizar también LAST_COMPLETED_DATE (columna E) si existe
-    const lastDateColE = headers.indexOf('LAST_COMPLETED_DATE');
-    if (lastDateColE !== -1) {
-      sheet.getRange(rowIdx + 1, lastDateColE + 1).setValue(lastDate);
-    }
+    // Column-Aware Writes
+    if (streakIdx !== -1) sheet.getRange(rowIdx + 1, streakIdx + 1).setValue(streakCount);
+    if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(lastDate);
+    if (tasksIdx !== -1) sheet.getRange(rowIdx + 1, tasksIdx + 1).setValue(JSON.stringify(data.tasks || []));
+
   } else {
-    // Nuevo registro: Primera racha
+    // Nuevo registro
     streakCount = 1;
     lastDate = todayStr;
-    sheet.appendRow([data.agentId, streakCount, lastDate, JSON.stringify(data.tasks || [])]);
+    const newRow = new Array(headers.length).fill("");
+    if (agentIdIdx !== -1) newRow[agentIdIdx] = data.agentId;
+    if (streakIdx !== -1) newRow[streakIdx] = streakCount;
+    if (lastDateIdx !== -1) newRow[lastDateIdx] = lastDate;
+    if (tasksIdx !== -1) newRow[tasksIdx] = JSON.stringify(data.tasks || []);
+    sheet.appendRow(newRow);
+    
+    addNewsItem(ss, 'RACHA', `⚡ NUEVA OPERACIÓN: ${data.agentName || data.agentId} inició su racha de consagración.`, data.agentId, data.agentName);
+  }
+
+  // --- SINCRONIZACIÓN TÁCTICA CON EL DIRECTORIO (Crucial para la UI) ---
+  try {
+    const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    if (dirSheet) {
+      const dirData = dirSheet.getDataRange().getValues();
+      const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+      const agentIdCol = dirHeaders.indexOf('ID');
+      const streakColIdx = dirHeaders.indexOf('STREAK_COUNT');
+      const lastDateColIdx = dirHeaders.indexOf('LAST_COMPLETED_DATE');
+      
+      const agentRowIdx = dirData.findIndex(row => String(row[agentIdCol]) === String(data.agentId));
+      if (agentRowIdx !== -1) {
+        if (streakColIdx !== -1) dirSheet.getRange(agentRowIdx + 1, streakColIdx + 1).setValue(streakCount);
+        if (lastDateColIdx !== -1) dirSheet.getRange(agentRowIdx + 1, lastDateColIdx + 1).setValue(lastDate);
+      }
+    }
+  } catch (e) {
+    console.error("Error sincronizando racha con directorio:", e);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakCount })).setMimeType(ContentService.MimeType.JSON);
@@ -3066,7 +3061,12 @@ function getNewsFeed() {
   const CONFIG = getGlobalConfig();
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.NEWS_SHEET);
+  
   if (!sheet || sheet.getLastRow() < 2) {
+    // SEED TÁCTICO: Si no hay noticias, insertar mensaje inicial de sistema
+    if (sheet) {
+      addNewsItem(ss, 'OPERACION', '📡 SISTEMA CONSAGRADOS v3.0 EN LÍNEA: El Centro de Inteligencia ha sido activado. Esperando transmisiones...', 'SISTEMA', 'COMANDO');
+    }
     return ContentService.createTextOutput(JSON.stringify({ success: true, news: [] })).setMimeType(ContentService.MimeType.JSON);
   }
   const data = sheet.getDataRange().getValues();

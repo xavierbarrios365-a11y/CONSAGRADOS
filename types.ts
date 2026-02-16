@@ -168,7 +168,7 @@ export interface TaskProgress {
 
 export interface NewsFeedItem {
   id: string;
-  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA';
+  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION';
   message: string;
   date: string;
   agentId?: string;

@@ -121,9 +121,18 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         if (files.length > 3) {
-            alert('Límite táctico de 3 archivos alcanzado. Selecciona menos archivos.');
+            alert('LÍMITE TÁCTICO: Máximo 3 archivos permitidos.');
             return;
         }
+
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+        const oversized = files.find(f => f.size > MAX_SIZE);
+        if (oversized) {
+            alert(`ARCHIVO DEMASIADO GRANDE: "${oversized.name}" excede el límite de 10MB. Para libros pesados, sube a Drive directamente y comparte el link.`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setSelectedFiles(files);
     };
 

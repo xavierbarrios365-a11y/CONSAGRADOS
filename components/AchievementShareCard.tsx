@@ -19,17 +19,16 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
     useEffect(() => {
         const updateScale = () => {
             const isMobile = window.innerWidth <= 768;
-            const verticalPadding = isMobile ? 120 : 180;
-            const horizontalPadding = isMobile ? 40 : 80;
+            const verticalPadding = isMobile ? 60 : 180; // Menos padding en móvil
+            const horizontalPadding = isMobile ? 20 : 80; // Menos padding en móvil
             const availableHeight = window.innerHeight - verticalPadding;
             const availableWidth = window.innerWidth - horizontalPadding;
 
             const scaleH = availableHeight / 1920;
             const scaleW = availableWidth / 1080;
 
-            // En móvil permitimos que crezca casi hasta el 100% de lo disponible
-            // En desktop mantenemos un límite preventivo para que no abrume
-            const maxScale = isMobile ? 0.95 : 0.45;
+            // Permitimos que en móvil ocupe casi todo el viewport
+            const maxScale = isMobile ? 0.98 : 0.45;
             const finalScale = Math.min(scaleH, scaleW, maxScale);
 
             setContainerSize({
@@ -112,6 +111,10 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 canvasHeight: 1920,
                 pixelRatio: 2.5,
                 backgroundColor: '#001f3f',
+                style: {
+                    transform: 'scale(1)',
+                    transformOrigin: 'top left'
+                }
             });
 
             const res = await fetch(dataUrl);

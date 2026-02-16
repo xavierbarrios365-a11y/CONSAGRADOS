@@ -56,27 +56,27 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (selectedFiles.length === 0 || !newName) return;
+        if (!newName.trim()) { alert('Debes ingresar un nombre para el material.'); return; }
 
         setIsUploading(true);
         try {
             if (uploadMode === 'LINK') {
-                if (!externalUrl || !newName) return;
+                if (!externalUrl.trim()) { alert('Debes pegar un enlace de Google Drive.'); setIsUploading(false); return; }
                 const metadataRes = await uploadGuideMetadata(newName, newType, externalUrl);
                 if (metadataRes.success) {
+                    alert('✅ Material publicado exitosamente.');
                     setShowUploadModal(false);
                     resetForm();
                     loadGuides();
                 } else {
-                    alert('Error al guardar link: ' + metadataRes.error);
+                    alert('❌ Error al guardar link: ' + (metadataRes.error || 'Error desconocido'));
                 }
                 setIsUploading(false);
                 return;
             }
 
             // MODO ARCHIVO
-            if (selectedFiles.length === 0) return;
+            if (selectedFiles.length === 0) { alert('Selecciona al menos un archivo.'); setIsUploading(false); return; }
             const newStatuses: Record<string, any> = {};
             selectedFiles.forEach(f => newStatuses[f.name] = 'UPLOADING');
             setUploadStatuses(newStatuses);
@@ -115,11 +115,13 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                 }
             });
 
-            await Promise.allSettled(uploadPromises);
+            const settled = await Promise.allSettled(uploadPromises);
 
-            const results = Object.values(newStatuses);
-            if (results.every(s => s === 'SUCCESS')) {
-                // alert('¡Todo el contenido táctico ha sido desplegado!');
+            const allOk = settled.every(r => r.status === 'fulfilled');
+            if (allOk) {
+                alert('✅ ¡Material desplegado exitosamente!');
+            } else {
+                alert('⚠️ Algunos archivos fallaron. Revisa el estado de cada uno.');
             }
 
             setTimeout(() => {
@@ -129,8 +131,9 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                 setIsUploading(false);
             }, 1500);
 
-        } catch (err) {
+        } catch (err: any) {
             console.error('Multi-upload error:', err);
+            alert('❌ Error en la carga: ' + (err?.message || 'Revisa tu conexión e intenta de nuevo.'));
             setIsUploading(false);
         }
     };

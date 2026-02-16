@@ -1609,13 +1609,12 @@ function getGuides(data) {
     };
   });
   
-  // Filtrado por rol (a menos que sea DIRECTOR)
+  // Filtrado por rol: Estudiantes solo ven material ESTUDIANTE, Líderes y Directores ven TODO
   let filtered = guides;
   if (data.userRole === 'STUDENT') {
     filtered = guides.filter(g => g.type === 'ESTUDIANTE');
-  } else if (data.userRole === 'LEADER') {
-    filtered = guides.filter(g => g.type === 'LIDER');
   }
+  // LEADER y DIRECTOR ven todo el material
   
   return ContentService.createTextOutput(JSON.stringify({ success: true, data: filtered })).setMimeType(ContentService.MimeType.JSON);
 }

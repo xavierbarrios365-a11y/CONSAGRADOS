@@ -237,10 +237,7 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).toUpperCase();
     };
 
-    const getAgentPhoto = (agentId: string) => {
-        const agent = agents.find(a => a.id === agentId);
-        return agent?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent?.name || 'A')}&background=001f3f&color=ffb700&bold=true`;
-    };
+
 
     const insertEmoji = (emoji: string) => {
         setNewMessage(prev => prev + emoji);

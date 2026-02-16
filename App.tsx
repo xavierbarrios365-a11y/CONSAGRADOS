@@ -591,19 +591,8 @@ const App: React.FC = () => {
         }
 
         setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
-        // Actualizamos contador de inbox para forzar refresco visual
-        fetchNotifications().then(notifs => {
-          const agentId = currentUser?.id;
-          const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
-          const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
-
-          const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
-          const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
-
-          const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
-          setUnreadNotifications(unreadNotifs.length);
-          setHeadlines(unreadNotifs.slice(0, 5).map(n => n.titulo));
-        });
+        // Gatillo de actualización unificada para el Ticker
+        checkHeadlines();
       });
     } catch (e) {
       console.error("Error inicializando Firebase:", e);
@@ -644,69 +633,69 @@ const App: React.FC = () => {
     }
   }, [currentUser, isLoggedIn]);
 
+  // Verificación periódica de datos (Notifications + Ranking)
+  const checkHeadlines = useCallback(async () => {
+    try {
+      // 1. Notificaciones
+      const notifs = await fetchNotifications();
+      const agentId = currentUser?.id;
+      const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
+      const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
+
+      const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+      const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+
+      const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
+      setUnreadNotifications(unreadNotifs.length);
+
+      const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
+
+      // 2. Ranking & Rachas (Excluir Lideres y Directores)
+      const allAgents = await fetchAgentsFromSheets();
+      const agents = allAgents.filter(a => {
+        const isLeaderRank = a.rank === 'LÍDER' || a.rank === 'LIDER';
+        const isLeaderRole = a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
+        return !isLeaderRank && !isLeaderRole;
+      });
+
+      const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
+      const topBible = [...agents].sort((a, b) => (b.bible || 0) - (a.bible || 0)).slice(0, 3);
+      const topNotes = [...agents].sort((a, b) => (b.notes || 0) - (a.notes || 0)).slice(0, 3);
+      const topLeadership = [...agents].sort((a, b) => (b.leadership || 0) - (a.leadership || 0)).slice(0, 3);
+      const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
+
+      const rankHeadlines = topXp.map((a, i) => `🔥 TOP ${i + 1} XP: ${a.name} (${a.xp} XP)`);
+      const bibleHeadlines = topBible.map((a, i) => `📖 TOP ${i + 1} BIBLIA: ${a.name} (${a.bible} PTS)`);
+      const notesHeadlines = topNotes.map((a, i) => `📑 TOP ${i + 1} APUNTES: ${a.name} (${a.notes} PTS)`);
+      const leadershipHeadlines = topLeadership.map((a, i) => `🎖️ TOP ${i + 1} LIDERAZGO: ${a.name} (${a.leadership} PTS)`);
+      const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
+
+      // Combinar todo
+      const finalHeadlines = [
+        ...notifHeadlines,
+        ...rankHeadlines,
+        ...bibleHeadlines,
+        ...notesHeadlines,
+        ...leadershipHeadlines,
+        ...streakHeadlines,
+        "🚀 BIENVENIDO AL CENTRO DE OPERACIÓN CONSAGRADOS 2026",
+        "🎯 CUMPLE TUS MISIONES DIARIAS PARA SUBIR EN EL RANKING"
+      ];
+
+      setHeadlines(finalHeadlines);
+      setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
+    } catch (e) {
+      console.error("Error en pulso de datos para ticker:", e);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
-    // Verificación periódica de datos (Notidfications + Ranking)
-    const checkHeadlines = async () => {
-      try {
-        // 1. Notificaciones
-        const notifs = await fetchNotifications();
-        const agentId = currentUser?.id;
-        const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
-        const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
-
-        const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
-        const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
-
-        const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
-        setUnreadNotifications(unreadNotifs.length);
-
-        const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
-
-        // 2. Ranking & Rachas (Excluir Lideres y Directores)
-        const allAgents = await fetchAgentsFromSheets();
-        const agents = allAgents.filter(a => {
-          const isLeaderRank = a.rank === 'LÍDER' || a.rank === 'LIDER';
-          const isLeaderRole = a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
-          return !isLeaderRank && !isLeaderRole;
-        });
-
-        const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
-        const topBible = [...agents].sort((a, b) => (b.bible || 0) - (a.bible || 0)).slice(0, 3);
-        const topNotes = [...agents].sort((a, b) => (b.notes || 0) - (a.notes || 0)).slice(0, 3);
-        const topLeadership = [...agents].sort((a, b) => (b.leadership || 0) - (a.leadership || 0)).slice(0, 3);
-        const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
-
-        const rankHeadlines = topXp.map((a, i) => `🔥 TOP ${i + 1} XP: ${a.name} (${a.xp} XP)`);
-        const bibleHeadlines = topBible.map((a, i) => `📖 TOP ${i + 1} BIBLIA: ${a.name} (${a.bible} PTS)`);
-        const notesHeadlines = topNotes.map((a, i) => `📑 TOP ${i + 1} APUNTES: ${a.name} (${a.notes} PTS)`);
-        const leadershipHeadlines = topLeadership.map((a, i) => `🎖️ TOP ${i + 1} LIDERAZGO: ${a.name} (${a.leadership} PTS)`);
-        const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
-
-        // Combinar todo
-        const finalHeadlines = [
-          ...notifHeadlines,
-          ...rankHeadlines,
-          ...bibleHeadlines,
-          ...notesHeadlines,
-          ...leadershipHeadlines,
-          ...streakHeadlines,
-          "🚀 BIENVENIDO AL CENTRO DE OPERACIÓN CONSAGRADOS 2026",
-          "🎯 CUMPLE TUS MISIONES DIARIAS PARA SUBIR EN EL RANKING"
-        ];
-
-        setHeadlines(finalHeadlines);
-        setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
-      } catch (e) {
-        console.error("Error en pulso de datos para ticker:", e);
-      }
-    };
-
     if (isLoggedIn) {
       checkHeadlines();
       const interval = setInterval(checkHeadlines, 120000); // Cada 2 minutos
       return () => clearInterval(interval);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, checkHeadlines]);
 
   useEffect(() => {
     resetTimerOnActivity();
@@ -1694,13 +1683,49 @@ const App: React.FC = () => {
             )}
 
             <div className="w-full grid grid-cols-1 gap-3 mt-6">
-              <button onClick={() => alert("MÓDULO DE SEGURIDAD.")} className="flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas">
-                <div className="flex items-center gap-3">
-                  <Key size={18} className="text-[#ffb700]" />
-                  Cambiar PIN de Acceso
-                </div>
-                <ChevronRight size={14} className="text-gray-500" />
-              </button>
+              <div className="w-full space-y-3">
+                <button
+                  onClick={() => alert("MÓDULO DE SEGURIDAD.")}
+                  className="w-full flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas"
+                >
+                  <div className="flex items-center gap-3">
+                    <Key size={18} className="text-[#ffb700]" />
+                    Cambiar PIN de Acceso
+                  </div>
+                  <ChevronRight size={14} className="text-gray-500" />
+                </button>
+
+                {biometricAvailable && (
+                  <button
+                    onClick={async () => {
+                      if (!currentUser) return;
+                      setIsRegisteringBio(true);
+                      try {
+                        const credentialId = await registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : []);
+                        if (credentialId) {
+                          const res = await registerBiometrics(currentUser.id, credentialId);
+                          if (res.success) {
+                            alert("✅ BIOMETRÍA REGISTRADA EXITOSAMENTE.");
+                            syncData();
+                          }
+                        }
+                      } catch (err: any) {
+                        alert(err.message || "FALLO EN REGISTRO BIOMÉTRICO.");
+                      } finally {
+                        setIsRegisteringBio(false);
+                      }
+                    }}
+                    disabled={isRegisteringBio}
+                    className="w-full flex items-center justify-between px-6 py-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all font-bebas"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isRegisteringBio ? <Loader2 size={18} className="text-blue-400 animate-spin" /> : <Fingerprint size={18} className="text-blue-400" />}
+                      Registrar Huella / FaceID
+                    </div>
+                    <div className={`w-2 h-2 rounded-full ${currentUser?.biometricCredential ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={handleLogout}
                 className="flex items-center justify-center gap-3 px-6 py-5 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all font-bebas shadow-lg active:scale-95"
@@ -1765,7 +1790,10 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <div className="relative group">
                   <input
+                    id="login-pin"
+                    name="password"
                     type={showPin ? 'text' : 'password'}
+                    autoComplete="current-password"
                     placeholder="INTRODUCE TU PIN"
                     value={loginPin}
                     onChange={(e) => {
@@ -1775,7 +1803,7 @@ const App: React.FC = () => {
                     autoFocus
                     className={`w-full bg-white/5 border ${loginError.message ? 'border-red-500' : 'border-white/10'} rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center`}
                   />
-                  <button type="button" onClick={() => setShowPin(!showPin)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors">
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -1829,7 +1857,10 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <div className="relative group">
                   <input
+                    id="login-id-field"
+                    name="username"
                     type="text"
+                    autoComplete="username"
                     placeholder="ID DE AGENTE"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
@@ -1840,13 +1871,16 @@ const App: React.FC = () => {
 
                 <div className="relative group">
                   <input
+                    id="login-pin-field"
+                    name="password"
                     type={showPin ? 'text' : 'password'}
+                    autoComplete="current-password"
                     placeholder="PIN DE SEGURIDAD"
                     value={loginPin}
                     onChange={(e) => setLoginPin(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
                   />
-                  <button type="button" onClick={() => setShowPin(!showPin)} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors">
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>

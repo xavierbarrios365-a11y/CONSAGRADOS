@@ -849,9 +849,30 @@ const App: React.FC = () => {
 
   const handleLogin = (e?: React.FormEvent, overrideId?: string) => {
     if (e) e.preventDefault();
-    const effectiveId = overrideId || loginId;
-    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
-    if (user && String(user.pin).trim() === loginPin.trim()) {
+    const rawId = (overrideId || loginId).trim();
+    const effectiveId = rawId.toUpperCase();
+    const numericInput = rawId.replace(/[^0-9]/g, '');
+
+    // 1. Buscar el agente con estrategia de prioridad
+    // P1: Match exacto (case insensitive)
+    // P2: Match numérico (solo si el input tiene números significativos)
+    let user = agents.find(a => String(a.id).trim().toUpperCase() === effectiveId);
+
+    if (!user && numericInput.length > 3) {
+      user = agents.find(a => {
+        const agentNumeric = String(a.id).replace(/[^0-9]/g, '');
+        return agentNumeric.length > 0 && agentNumeric === numericInput;
+      });
+    }
+
+    if (!user) {
+      setLoginError({ field: 'id', message: 'ID DE AGENTE NO ENCONTRADO' });
+      trackEvent('login_fail', { id: effectiveId, reason: 'id_not_found' });
+      return;
+    }
+
+    // 2. Verificar el PIN
+    if (String(user.pin).trim() === loginPin.trim()) {
       sessionStorage.setItem('consagrados_session', JSON.stringify(user));
       localStorage.setItem('last_login_id', user.id);
       const now = Date.now();
@@ -866,8 +887,11 @@ const App: React.FC = () => {
       setIsLoggedIn(true);
       trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'password' });
       setView(AppView.HOME);
+      setLoginError({ field: null, message: null });
+      setLoginPin('');
     } else {
-      setLoginError({ field: 'both', message: 'CREDENCIALES INVÁLIDAS' });
+      setLoginError({ field: 'pin', message: 'PIN DE SEGURIDAD INCORRECTO' });
+      trackEvent('login_fail', { id: user.id, reason: 'wrong_pin' });
     }
   };
 
@@ -879,7 +903,7 @@ const App: React.FC = () => {
     }
     const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
     if (!user || !user.biometricCredential) {
-      alert("BIOMETRÍA NO CONFIGURADA PARA ESTE ID");
+      alert("BIOMETRÍA NO CONFIGURADA PARA ESTE ID.\n\nPor favor, ingresa con tu PIN primero y regístrala en 'Mi Perfil'.");
       return;
     }
 
@@ -1718,7 +1742,7 @@ const App: React.FC = () => {
                   <ChevronRight size={14} className="text-gray-500" />
                 </button>
 
-                {biometricAvailable && (
+                {biometricAvailable ? (
                   <button
                     onClick={async () => {
                       if (!currentUser) return;
@@ -1739,14 +1763,26 @@ const App: React.FC = () => {
                       }
                     }}
                     disabled={isRegisteringBio}
-                    className="w-full flex items-center justify-between px-6 py-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all font-bebas"
+                    className="w-full flex items-center justify-between px-6 py-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all font-bebas group"
                   >
                     <div className="flex items-center gap-3">
-                      {isRegisteringBio ? <Loader2 size={18} className="text-blue-400 animate-spin" /> : <Fingerprint size={18} className="text-blue-400" />}
-                      Registrar Huella / FaceID
+                      {isRegisteringBio ? <Loader2 size={18} className="text-blue-400 animate-spin" /> : <Fingerprint size={18} className="text-blue-400 group-hover:scale-110 transition-transform" />}
+                      <div className="flex flex-col items-start">
+                        <span>Configurar Biometría</span>
+                        <span className="text-[7px] text-blue-400/60 font-black tracking-[0.2em]">Huella o FaceID</span>
+                      </div>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${currentUser?.biometricCredential ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[8px] ${currentUser?.biometricCredential ? 'text-green-400' : 'text-red-400'} font-black uppercase tracking-widest`}>
+                        {currentUser?.biometricCredential ? 'ACTIVO' : 'PENDIENTE'}
+                      </span>
+                      <div className={`w-2 h-2 rounded-full ${currentUser?.biometricCredential ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 pulse-red'}`} />
+                    </div>
                   </button>
+                ) : (
+                  <div className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl opacity-50">
+                    <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-center">Biometría no soportada en este navegador</p>
+                  </div>
                 )}
               </div>
               <button

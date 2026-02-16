@@ -156,14 +156,15 @@ const parseAttendanceDate = (value: any): Date | null => {
  * Indicador de Conexión "Faro de Consagrados"
  * Estética Premium con animaciones de haz de luz rotativo.
  */
-const LighthouseIndicator: React.FC<{ status: 'online' | 'offline'; size?: 'sm' | 'md' }> = ({ status, size = 'md' }) => {
+const LighthouseIndicator: React.FC<{ status: 'online' | 'offline'; size?: 'xs' | 'sm' | 'md' }> = ({ status, size = 'md' }) => {
   const isOnline = status === 'online';
   const color = isOnline ? '#ffb700' : '#ef4444';
-  const isSm = size === 'sm';
+  const isXs = size === 'xs';
+  const isSm = size === 'sm' || isXs;
 
   return (
-    <div className={`flex flex-col items-center ${isSm ? 'gap-1' : 'gap-3'}`}>
-      <div className={`relative ${isSm ? 'w-24 h-24' : 'w-36 h-36'} flex items-center justify-center`}>
+    <div className={`flex flex-col items-center ${isXs ? 'gap-0.5' : isSm ? 'gap-1' : 'gap-3'}`}>
+      <div className={`relative ${isXs ? 'w-16 h-16' : isSm ? 'w-20 h-20' : 'w-36 h-36'} flex items-center justify-center`}>
         {/* Capa de Fondo (Silueta Blanca Original) */}
         <div
           className="absolute inset-0"
@@ -215,7 +216,7 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline'; size?: 'sm' 
 
       {/* Etiquetas de Estado */}
       <div className="flex flex-col items-center">
-        <span className={`text-white font-bebas ${isSm ? 'text-xl tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
+        <span className={`text-white font-bebas ${isXs ? 'text-sm tracking-[0.15em]' : isSm ? 'text-lg tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
           CONSAGRADOS <span className="text-[#ffb700]">2026</span>
         </span>
         <div className={`flex items-center gap-2 ${isSm ? 'mt-1 py-0.5' : 'mt-2 py-1'} px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm`}>
@@ -661,9 +662,13 @@ const App: React.FC = () => {
 
         const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
 
-        // 2. Ranking & Rachas (Excluir Lideres)
+        // 2. Ranking & Rachas (Excluir Lideres y Directores)
         const allAgents = await fetchAgentsFromSheets();
-        const agents = allAgents.filter(a => a.rank !== 'LÍDER');
+        const agents = allAgents.filter(a => {
+          const isLeaderRank = a.rank === 'LÍDER' || a.rank === 'LIDER';
+          const isLeaderRole = a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
+          return !isLeaderRank && !isLeaderRole;
+        });
 
         const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
         const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
@@ -1057,7 +1062,7 @@ const App: React.FC = () => {
               <div className="flex-shrink-0">
                 <LighthouseIndicator
                   status={notificationPermission === 'granted' ? 'online' : 'offline'}
-                  size="sm"
+                  size="xs"
                 />
               </div>
 
@@ -1069,14 +1074,14 @@ const App: React.FC = () => {
                     <div className="animate-[ticker_20s_linear_infinite] whitespace-nowrap flex items-center gap-12">
                       {headlines.map((h, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <Radio size={12} className="text-[#ffb700] animate-pulse" />
-                          <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
+                          <Radio size={14} className="text-[#ffb700] animate-pulse" />
+                          <span className="text-[13px] font-black text-[#ffb700] uppercase tracking-[0.15em] leading-none">{h}</span>
                         </div>
                       ))}
                       {headlines.map((h, i) => (
                         <div key={`dup-${i}`} className="flex items-center gap-3">
-                          <Radio size={12} className="text-[#ffb700] animate-pulse" />
-                          <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
+                          <Radio size={14} className="text-[#ffb700] animate-pulse" />
+                          <span className="text-[13px] font-black text-[#ffb700] uppercase tracking-[0.15em] leading-none">{h}</span>
                         </div>
                       ))}
                     </div>
@@ -1284,7 +1289,7 @@ const App: React.FC = () => {
             </div>
 
             {/* News Feed */}
-            <NewsFeed headlines={headlines} />
+            <NewsFeed headlines={headlines} agents={agents} />
 
           </div>
         );

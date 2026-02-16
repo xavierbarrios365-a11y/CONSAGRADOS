@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Newspaper, Trophy, GraduationCap, Award, Flame, Star, ClipboardCheck, RefreshCw } from 'lucide-react';
-import { NewsFeedItem } from '../types';
+import { Agent, NewsFeedItem, UserRole } from '../types';
 import { fetchNewsFeed } from '../services/sheetsService';
 
 interface NewsFeedProps {
     onActivity?: () => void;
     headlines?: string[];
+    agents?: Agent[];
 }
 
 const NEWS_ICONS: Record<string, { icon: string; color: string }> = {
@@ -18,7 +19,7 @@ const NEWS_ICONS: Record<string, { icon: string; color: string }> = {
     'HEADLINE': { icon: '📢', color: '#ffb700' },
 };
 
-const NewsFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [] }) => {
+const NewsFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [] }) => {
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -26,7 +27,17 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [] }) => {
         setLoading(true);
         try {
             const data = await fetchNewsFeed();
-            setNews(data || []);
+            // Filtrar noticias para excluir LIDERES y DIRECTORES
+            const filteredNews = (data || []).filter(item => {
+                if (!item.agentId) return true; // Noticias globales
+                const agent = agents.find(a => String(a.id) === String(item.agentId));
+                if (!agent) return true; // No encontramos al agente, lo dejamos por si acaso o filtramos? Mejor dejarlo.
+
+                const isLeaderRank = agent.rank === 'LÍDER' || agent.rank === 'LIDER';
+                const isLeaderRole = agent.userRole === UserRole.LEADER || agent.userRole === UserRole.DIRECTOR;
+                return !isLeaderRank && !isLeaderRole;
+            });
+            setNews(filteredNews);
         } catch (e) { console.error(e); }
         setLoading(false);
     };

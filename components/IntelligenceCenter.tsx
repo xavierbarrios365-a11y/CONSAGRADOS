@@ -7,7 +7,7 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
 import { applyAbsencePenalties } from '../services/sheetsService';
@@ -35,11 +35,34 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const [promoData, setPromoData] = useState<{ xp: number; certificates: number } | null>(null);
+  const [isLoadingPromo, setIsLoadingPromo] = useState(false);
   const [onlineAgencies, setOnlineAgencies] = useState<Record<string, boolean>>({});
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', description: '' });
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const loadPromoData = async () => {
+      if (!selectedAgentId) return;
+      setIsLoadingPromo(true);
+      try {
+        const res = await fetchPromotionStatus(selectedAgentId);
+        if (res.success) {
+          setPromoData({
+            xp: res.xp || 0,
+            certificates: res.certificates || 0
+          });
+        }
+      } catch (e) {
+        console.error("Error loading promo data for intelligence center:", e);
+      } finally {
+        setIsLoadingPromo(false);
+      }
+    };
+    loadPromoData();
+  }, [selectedAgentId]);
 
   React.useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'presence'), (snapshot) => {
@@ -736,6 +759,91 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar Cerebro IA'}
                   </button>
                 </div>
+
+                {/* VISUALIZACIÓN DE PROGRESO DE ASCENSO - SOLICITADO POR DIRECTOR */}
+                {(() => {
+                  const currentRank = (agent.rank || 'RECLUTA').toUpperCase();
+                  let rule = PROMOTION_RULES[currentRank];
+                  let isMaxRank = !rule;
+                  let targetRank = rule?.nextRank || 'MAX';
+
+                  if (isMaxRank) {
+                    const lastRuleKey = Object.keys(PROMOTION_RULES).find(key => PROMOTION_RULES[key].nextRank === agent.rank);
+                    if (lastRuleKey) rule = PROMOTION_RULES[lastRuleKey];
+                  }
+
+                  if (!rule) return null;
+
+                  const xp = promoData?.xp || agent.xp || 0;
+                  const certs = promoData?.certificates || 0;
+                  const xpProgress = Math.min((xp / rule.requiredXp) * 100, 100);
+                  const certProgress = Math.min((certs / rule.requiredCertificates) * 100, 100);
+                  const totalProgress = Math.round((xpProgress + certProgress) / 2);
+
+                  return (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-4 text-left space-y-4 shadow-inner relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-3 opacity-5">
+                        <ArrowUpCircle size={40} className="text-[#ffb700]" />
+                      </div>
+
+                      <div className="flex items-center justify-between relative z-10">
+                        <div>
+                          <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.2em] mb-0.5">Estado de Ascenso</p>
+                          <h4 className="text-[12px] font-bebas font-black text-white tracking-widest uppercase">
+                            {isMaxRank ? 'HITO MÁXIMO ALCANZADO' : `OBJETIVO: ${targetRank}`}
+                          </h4>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[14px] font-bebas font-black text-white leading-none">{totalProgress}%</p>
+                          <p className="text-[6px] text-white/30 font-bold uppercase">Consumado</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 relative z-10">
+                        {/* XP Progress */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[8px] font-bold uppercase">
+                            <span className="text-white/50">Experiencia Táctica</span>
+                            <span className={xp >= rule.requiredXp ? 'text-green-400' : 'text-[#ffb700]'}>
+                              {xp} / {rule.requiredXp} XP
+                              {xp >= rule.requiredXp && " ✓"}
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                            <div
+                              className={`h-full transition-all duration-1000 ${xp >= rule.requiredXp ? 'bg-green-500' : 'bg-gradient-to-r from-[#ffb700] to-orange-500'}`}
+                              style={{ width: `${xpProgress}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Certificates Progress */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[8px] font-bold uppercase">
+                            <span className="text-white/50">Certificados Academia</span>
+                            <span className={certs >= rule.requiredCertificates ? 'text-green-400' : 'text-blue-400'}>
+                              {certs} / {rule.requiredCertificates}
+                              {certs >= rule.requiredCertificates && " ✓"}
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                            <div
+                              className={`h-full transition-all duration-1000 ${certs >= rule.requiredCertificates ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
+                              style={{ width: `${certProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isMaxRank && xp >= rule.requiredXp && certs >= rule.requiredCertificates && (
+                        <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-lg flex items-center gap-2 animate-pulse mt-1">
+                          <Trophy size={14} className="text-green-400" />
+                          <p className="text-[8px] text-green-400 font-black uppercase tracking-widest">Apto para examen de ascenso</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="mt-8 w-full grid grid-cols-2 gap-3">

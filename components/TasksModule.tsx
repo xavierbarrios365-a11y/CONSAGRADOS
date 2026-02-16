@@ -22,7 +22,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
     const [creating, setCreating] = useState(false);
     const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState<string | null>(null);
-    const [newTask, setNewTask] = useState({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: 5 });
+    const [newTask, setNewTask] = useState({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: 5, maxSlots: 0 });
     const [filterArea, setFilterArea] = useState('TODAS');
     const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
 
@@ -58,7 +58,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
             const res = await createTask(newTask);
             if (res.success) {
                 setShowCreate(false);
-                setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: 5 });
+                setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: 5, maxSlots: 0 });
                 loadData();
             }
         } catch (e) { console.error(e); }
@@ -192,6 +192,16 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-[#ffb700]/50"
                             />
                         </div>
+                        <div>
+                            <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Cupos (0=∞)</label>
+                            <input
+                                type="number"
+                                min={0}
+                                value={newTask.maxSlots}
+                                onChange={e => setNewTask({ ...newTask, maxSlots: parseInt(e.target.value) || 0 })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-[#ffb700]/50"
+                            />
+                        </div>
                     </div>
                     <button
                         onClick={handleCreate}
@@ -253,9 +263,16 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-1.5 bg-[#ffb700]/10 px-2 py-1 rounded-lg">
-                                        <span className="text-[10px] font-black text-[#ffb700]">+{task.xpReward}</span>
-                                        <span className="text-[8px] text-[#ffb700]/60">XP</span>
+                                    <div className="flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-1.5 bg-[#ffb700]/10 px-2 py-1 rounded-lg">
+                                            <span className="text-[10px] font-black text-[#ffb700]">+{task.xpReward}</span>
+                                            <span className="text-[8px] text-[#ffb700]/60">XP</span>
+                                        </div>
+                                        {task.maxSlots > 0 && (
+                                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${task.currentSlots >= task.maxSlots ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
+                                                {task.currentSlots}/{task.maxSlots} RECLUTAS
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -266,11 +283,13 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                 {accessible ? (
                                     <button
                                         onClick={() => !isCompleted && handleComplete(task)}
-                                        disabled={isCompleted || submitting === task.id}
+                                        disabled={isCompleted || submitting === task.id || (task.maxSlots > 0 && task.currentSlots >= task.maxSlots)}
                                         className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95
                       ${isCompleted
                                                 ? 'bg-green-500/10 text-green-400 border border-green-500/20 cursor-default'
-                                                : 'bg-white/5 text-white hover:bg-[#ffb700]/10 hover:text-[#ffb700] border border-white/10 hover:border-[#ffb700]/30'
+                                                : (task.maxSlots > 0 && task.currentSlots >= task.maxSlots)
+                                                    ? 'bg-red-500/10 text-red-500 border border-red-500/20 cursor-not-allowed opacity-50'
+                                                    : 'bg-white/5 text-white hover:bg-[#ffb700]/10 hover:text-[#ffb700] border border-white/10 hover:border-[#ffb700]/30'
                                             }`}
                                     >
                                         {submitting === task.id ? (
@@ -280,6 +299,8 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                             </span>
                                         ) : isCompleted ? (
                                             <span className="flex items-center justify-center gap-2"><Check size={14} /> Enviado — Pendiente de verificación</span>
+                                        ) : (task.maxSlots > 0 && task.currentSlots >= task.maxSlots) ? (
+                                            <span className="flex items-center justify-center gap-2"><X size={14} /> Misión Completa (Sin Cupos)</span>
                                         ) : (
                                             <span className="flex items-center justify-center gap-2"><ClipboardList size={14} /> Completar Misión</span>
                                         )}

@@ -2797,21 +2797,40 @@ function getTasks() {
   const CONFIG = getGlobalConfig();
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
+  const progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  
   if (!sheet || sheet.getLastRow() < 2) {
     return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: [] })).setMimeType(ContentService.MimeType.JSON);
   }
+  
   const data = sheet.getDataRange().getValues();
   const headers = data[0].map(h => String(h).trim().toUpperCase());
+  
+  const progressData = progressSheet ? progressSheet.getDataRange().getValues() : [];
+  const progressHeaders = progressData.length > 0 ? progressData[0].map(h => String(h).trim().toUpperCase()) : [];
+  
   const tasks = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
+    const taskId = String(row[headers.indexOf('ID')] || '');
+    
+    // Contar reclutas actuales (PENDIENTE, COMPLETADO, VERIFICADO)
+    let currentSlots = 0;
+    if (progressData.length > 1) {
+      const taskIdCol = progressHeaders.indexOf('TASK_ID');
+      const statusCol = progressHeaders.indexOf('STATUS');
+      currentSlots = progressData.slice(1).filter(p => String(p[taskIdCol]) === taskId && p[statusCol] !== 'ELIMINADO').length;
+    }
+
     tasks.push({
-      id: String(row[headers.indexOf('ID')] || ''),
+      id: taskId,
       title: String(row[headers.indexOf('TITULO')] || ''),
       description: String(row[headers.indexOf('DESCRIPCION')] || ''),
       area: String(row[headers.indexOf('AREA')] || ''),
       requiredLevel: String(row[headers.indexOf('NIVEL_REQUERIDO')] || 'RECLUTA'),
-      xpReward: parseInt(row[headers.indexOf('XP_RECOMPENSA')]) || 0
+      xpReward: parseInt(row[headers.indexOf('XP_RECOMPENSA')]) || 0,
+      maxSlots: parseInt(row[headers.indexOf('CUPOS')]) || 0,
+      currentSlots: currentSlots
     });
   }
   return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: tasks })).setMimeType(ContentService.MimeType.JSON);
@@ -2826,7 +2845,15 @@ function createTaskAction(data) {
   const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
   if (!sheet) throw new Error("Hoja TAREAS no encontrada. Ejecuta setupDatabase().");
   const id = 'TASK_' + new Date().getTime();
-  sheet.appendRow([id, data.title, data.description || '', data.area || 'SERVICIO', data.requiredLevel || 'RECLUTA', data.xpReward || 5]);
+  sheet.appendRow([
+    id, 
+    data.title, 
+    data.description || '', 
+    data.area || 'SERVICIO', 
+    data.requiredLevel || 'RECLUTA', 
+    data.xpReward || 5,
+    data.maxSlots || 0
+  ]);
   return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -2855,7 +2882,34 @@ function submitTaskCompletion(data) {
   const CONFIG = getGlobalConfig();
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  const tasksSheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
+  
   if (!sheet) throw new Error("Hoja PROGRESO_TAREAS no encontrada.");
+  if (!tasksSheet) throw new Error("Hoja TAREAS no encontrada.");
+
+  // Validar cupos si es necesario
+  const tasksData = tasksSheet.getDataRange().getValues();
+  const tasksHeaders = tasksData[0].map(h => String(h).trim().toUpperCase());
+  const taskIdColIdx = tasksHeaders.indexOf('ID');
+  const cuposColIdx = tasksHeaders.indexOf('CUPOS');
+  
+  const taskRow = tasksData.slice(1).find(r => String(r[taskIdColIdx]) === String(data.taskId));
+  
+  if (taskRow && cuposColIdx !== -1) {
+    const maxSlots = parseInt(taskRow[cuposColIdx]) || 0;
+    if (maxSlots > 0) {
+      const progressData = sheet.getDataRange().getValues();
+      const progressHeaders = progressData[0].map(h => String(h).trim().toUpperCase());
+      const taskIdCol = progressHeaders.indexOf('TASK_ID');
+      const statusCol = progressHeaders.indexOf('STATUS');
+      const currentSlots = progressData.slice(1).filter(p => String(p[taskIdCol]) === String(data.taskId) && p[statusCol] !== 'ELIMINADO').length;
+      
+      if (currentSlots >= maxSlots) {
+        throw new Error("MISIÓN COMPLETA: Ya no hay cupos militares disponibles para este objetivo.");
+      }
+    }
+  }
+
   const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy");
   sheet.appendRow([data.taskId, data.agentId, data.agentName || '', fecha, '', 'PENDIENTE']);
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);

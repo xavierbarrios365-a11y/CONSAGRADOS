@@ -587,7 +587,7 @@ export const fetchTasks = async () => {
   return res.success ? res.tasks : [];
 };
 
-export const createTask = async (data: { title: string; description: string; area: string; requiredLevel: string; xpReward: number }) => {
+export const createTask = async (data: { title: string; description: string; area: string; requiredLevel: string; xpReward: number; maxSlots: number }) => {
   return postToAction('create_task', data);
 };
 

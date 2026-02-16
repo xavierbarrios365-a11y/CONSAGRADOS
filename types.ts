@@ -156,6 +156,8 @@ export interface ServiceTask {
   area: string;
   requiredLevel: string;
   xpReward: number;
+  maxSlots: number;
+  currentSlots: number;
 }
 
 export interface TaskProgress {

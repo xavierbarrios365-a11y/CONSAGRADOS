@@ -248,6 +248,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
                   src={imgError ? "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" : formatDriveUrl(agent.photoUrl)}
                   alt={agent.name}
                   onError={() => setImgError(true)}
+                  crossOrigin="anonymous"
                   className="relative w-32 h-32 rounded-[2.5rem] object-cover border-2 border-[#ffb700]/30 shadow-2xl grayscale hover:grayscale-0 transition-all duration-700 hover:rotate-2"
                 />
               </div>

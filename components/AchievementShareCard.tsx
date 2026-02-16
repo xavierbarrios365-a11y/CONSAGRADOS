@@ -259,6 +259,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                                     {photoUrl ? (
                                         <img
                                             src={photoUrl}
+                                            crossOrigin="anonymous"
                                             className="w-[250px] h-[250px] rounded-[45px] object-cover border-4 border-white shadow-2xl relative z-10"
                                             alt="Agent"
                                         />

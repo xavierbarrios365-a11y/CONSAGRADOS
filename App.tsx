@@ -661,8 +661,10 @@ const App: React.FC = () => {
 
         const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
 
-        // 2. Ranking & Rachas
-        const agents = await fetchAgentsFromSheets();
+        // 2. Ranking & Rachas (Excluir Lideres)
+        const allAgents = await fetchAgentsFromSheets();
+        const agents = allAgents.filter(a => a.rank !== 'LÍDER');
+
         const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
         const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
 
@@ -1063,18 +1065,18 @@ const App: React.FC = () => {
               <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
 
                 {headlines.length > 0 && (
-                  <div className="w-full overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl py-2 px-4 shadow-inner">
-                    <div className="animate-[ticker_20s_linear_infinite] whitespace-nowrap flex items-center gap-8">
+                  <div className="w-full overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl py-2.5 px-4 shadow-inner">
+                    <div className="animate-[ticker_20s_linear_infinite] whitespace-nowrap flex items-center gap-12">
                       {headlines.map((h, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <Radio size={10} className="text-[#ffb700] animate-pulse" />
-                          <span className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
+                        <div key={i} className="flex items-center gap-3">
+                          <Radio size={12} className="text-[#ffb700] animate-pulse" />
+                          <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
                         </div>
                       ))}
                       {headlines.map((h, i) => (
-                        <div key={`dup-${i}`} className="flex items-center gap-2">
-                          <Radio size={10} className="text-[#ffb700] animate-pulse" />
-                          <span className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
+                        <div key={`dup-${i}`} className="flex items-center gap-3">
+                          <Radio size={12} className="text-[#ffb700] animate-pulse" />
+                          <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
                         </div>
                       ))}
                     </div>
@@ -1282,7 +1284,7 @@ const App: React.FC = () => {
             </div>
 
             {/* News Feed */}
-            <NewsFeed />
+            <NewsFeed headlines={headlines} />
 
           </div>
         );

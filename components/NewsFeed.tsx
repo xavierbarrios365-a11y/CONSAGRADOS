@@ -5,6 +5,7 @@ import { fetchNewsFeed } from '../services/sheetsService';
 
 interface NewsFeedProps {
     onActivity?: () => void;
+    headlines?: string[];
 }
 
 const NEWS_ICONS: Record<string, { icon: string; color: string }> = {
@@ -14,9 +15,10 @@ const NEWS_ICONS: Record<string, { icon: string; color: string }> = {
     'RACHA': { icon: '🔥', color: '#ef4444' },
     'RANKING': { icon: '🏆', color: '#fbbf24' },
     'TAREA': { icon: '✅', color: '#22c55e' },
+    'HEADLINE': { icon: '📢', color: '#ffb700' },
 };
 
-const NewsFeed: React.FC<NewsFeedProps> = ({ onActivity }) => {
+const NewsFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [] }) => {
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -69,9 +71,29 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ onActivity }) => {
                 </button>
             </div>
 
-            <div className="space-y-2 max-h-[240px] overflow-y-auto scrollbar-hide pr-1">
+            <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide pr-1">
+                {/* Headlines Synchronized from Ticker */}
+                {headlines.map((headline, idx) => (
+                    <div
+                        key={`headline-${idx}`}
+                        className="flex items-start gap-3 p-2.5 rounded-xl bg-[#ffb700]/5 border border-[#ffb700]/10 transition-colors group"
+                    >
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0 mt-0.5 bg-[#ffb700]/10 border border-[#ffb700]/20">
+                            📢
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs text-[#ffb700] font-black uppercase tracking-wider leading-relaxed">{headline}</p>
+                            <p className="text-[9px] text-white/20 mt-0.5 font-bold uppercase">Boletín en tiempo real</p>
+                        </div>
+                    </div>
+                ))}
+
+                {/* Standard News Items */}
                 {news.slice(0, 10).map((item, idx) => {
                     const config = NEWS_ICONS[item.type] || { icon: '📌', color: '#9ca3af' };
+                    // Avoid duplicate ranking items if headlines already show ranking
+                    if (item.type === 'RANKING' && headlines.some(h => h.includes('XP') || h.includes('TOP'))) return null;
+
                     return (
                         <div
                             key={item.id || idx}

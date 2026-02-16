@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import { Agent, UserRole } from '../types';
-import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
+import { PROMOTION_RULES } from '../constants';
 
 interface TacticalRankingProps {
     agents: Agent[];
     currentUser: Agent | null;
 }
+
+// Verifica si un agente cumple los requisitos de XP para su próximo rango
+const isAptoParaAscenso = (agent: Agent): boolean => {
+    const rule = PROMOTION_RULES[agent.rank?.toUpperCase() || ''];
+    if (!rule) return false; // Ya es Líder o rango desconocido
+    return agent.xp >= rule.requiredXp;
+};
+
+const getNextRankLabel = (rank: string): string => {
+    const rule = PROMOTION_RULES[rank?.toUpperCase() || ''];
+    return rule ? rule.nextRank : '';
+};
 
 const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }) => {
     const [activeCategory, setActiveCategory] = useState<'AGENTS' | 'LEADERS'>('AGENTS');
@@ -14,19 +27,13 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
 
     const tiers = ['RECLUTA', 'ACTIVO', 'CONSAGRADO', 'REFERENTE', 'LÍDER'];
 
-    const getLevel = (xp: number) => {
-        if (xp < 300) return 'RECLUTA';
-        if (xp < 500) return 'ACTIVO';
-        if (xp < 700) return 'CONSAGRADO';
-        if (xp < 1000) return 'REFERENTE';
-        return 'LÍDER';
-    };
-
     const filteredAgents = agents.filter(a => {
         if (activeCategory === 'LEADERS') {
             return a.role === 'LIDER' || a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
         } else {
-            return getLevel(a.xp) === activeTier && (a.userRole === UserRole.STUDENT || !a.userRole);
+            // Agrupar por RANGO REAL, no por XP calculado
+            const agentRank = (a.rank || 'RECLUTA').toUpperCase();
+            return agentRank === activeTier && (a.userRole === UserRole.STUDENT || !a.userRole);
         }
     });
 
@@ -130,6 +137,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                 </div>
                                 <div className="text-center">
                                     <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase tracking-wider truncate w-20 sm:w-24 md:w-auto">{topThree[1].name}</h3>
+                                    {isAptoParaAscenso(topThree[1]) && (
+                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest animate-pulse mx-auto mb-1">
+                                            <ArrowUpCircle size={7} /> APTO
+                                        </span>
+                                    )}
                                     <div className="flex items-center justify-center gap-1 text-gray-400">
                                         <Zap size={8} className="md:size-3" fill="currentColor" />
                                         <span className="text-[8px] md:text-[11px] font-black">{topThree[1].xp} </span>
@@ -158,6 +170,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                 </div>
                                 <div className="text-center">
                                     <h3 className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase tracking-widest truncate w-24 sm:w-32 md:w-auto drop-shadow-md">{topThree[0].name}</h3>
+                                    {isAptoParaAscenso(topThree[0]) && (
+                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest animate-pulse mx-auto mb-1">
+                                            <ArrowUpCircle size={8} /> APTO PARA ASCENSO
+                                        </span>
+                                    )}
                                     <div className="flex items-center justify-center gap-1 text-[#FFB700]">
                                         <Flame size={10} className="md:size-5 animate-pulse" fill="currentColor" />
                                         <span className="text-[10px] md:text-xl font-black">{topThree[0].xp} XP</span>
@@ -184,6 +201,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                 </div>
                                 <div className="text-center">
                                     <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase tracking-wider truncate w-16 sm:w-20 md:w-auto">{topThree[2].name}</h3>
+                                    {isAptoParaAscenso(topThree[2]) && (
+                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest animate-pulse mx-auto mb-1">
+                                            <ArrowUpCircle size={7} /> APTO
+                                        </span>
+                                    )}
                                     <div className="flex items-center justify-center gap-1 text-orange-800/60">
                                         <Zap size={8} className="md:size-3" fill="currentColor" />
                                         <span className="text-[8px] md:text-[10px] font-black">{topThree[2].xp} XP</span>
@@ -233,7 +255,15 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                                             onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                                         />
                                                         <div className="min-w-0">
-                                                            <p className="text-[10px] md:text-[11px] font-black text-white uppercase tracking-wider truncate max-w-[120px] md:max-w-none">{agent.name}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-[10px] md:text-[11px] font-black text-white uppercase tracking-wider truncate max-w-[120px] md:max-w-none">{agent.name}</p>
+                                                                {isAptoParaAscenso(agent) && (
+                                                                    <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest whitespace-nowrap animate-pulse">
+                                                                        <ArrowUpCircle size={8} />
+                                                                        APTO
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <p className="text-[7px] md:text-[8px] text-[#FFB700] font-bold uppercase tracking-widest opacity-60">{agent.id}</p>
                                                         </div>
                                                     </div>

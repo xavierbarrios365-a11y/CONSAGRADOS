@@ -671,15 +671,24 @@ const App: React.FC = () => {
         });
 
         const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
+        const topBible = [...agents].sort((a, b) => (b.bible || 0) - (a.bible || 0)).slice(0, 3);
+        const topNotes = [...agents].sort((a, b) => (b.notes || 0) - (a.notes || 0)).slice(0, 3);
+        const topLeadership = [...agents].sort((a, b) => (b.leadership || 0) - (a.leadership || 0)).slice(0, 3);
         const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
 
         const rankHeadlines = topXp.map((a, i) => `🔥 TOP ${i + 1} XP: ${a.name} (${a.xp} XP)`);
+        const bibleHeadlines = topBible.map((a, i) => `📖 TOP ${i + 1} BIBLIA: ${a.name} (${a.bible} PTS)`);
+        const notesHeadlines = topNotes.map((a, i) => `📑 TOP ${i + 1} APUNTES: ${a.name} (${a.notes} PTS)`);
+        const leadershipHeadlines = topLeadership.map((a, i) => `🎖️ TOP ${i + 1} LIDERAZGO: ${a.name} (${a.leadership} PTS)`);
         const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
 
         // Combinar todo
         const finalHeadlines = [
           ...notifHeadlines,
           ...rankHeadlines,
+          ...bibleHeadlines,
+          ...notesHeadlines,
+          ...leadershipHeadlines,
           ...streakHeadlines,
           "🚀 BIENVENIDO AL CENTRO DE OPERACIÓN CONSAGRADOS 2026",
           "🎯 CUMPLE TUS MISIONES DIARIAS PARA SUBIR EN EL RANKING"
@@ -1071,7 +1080,13 @@ const App: React.FC = () => {
 
                 {headlines.length > 0 && (
                   <div className="w-full overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl py-2.5 px-4 shadow-inner">
-                    <div className="animate-[ticker_20s_linear_infinite] whitespace-nowrap flex items-center gap-12">
+                    <div
+                      className="flex items-center gap-12"
+                      style={{
+                        width: 'fit-content',
+                        animation: `ticker ${headlines.length * 5}s linear infinite`
+                      }}
+                    >
                       {headlines.map((h, i) => (
                         <div key={i} className="flex items-center gap-3">
                           <Radio size={14} className="text-[#ffb700] animate-pulse" />

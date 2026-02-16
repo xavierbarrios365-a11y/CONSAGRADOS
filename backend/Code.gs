@@ -1832,11 +1832,43 @@ function submitQuizResult(data) {
     }
   }
   
-  // 4. Notificar a Telegram
+  // 4. Notificar a Telegram y Feed de Noticias Globales
   if (isCorrect) {
     const lessonTitle = lesson[3];
     const telegramMessage = `🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lessonTitle}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`;
     sendTelegramNotification(telegramMessage);
+
+    // --- Lógica de Certificado Global (News Feed) ---
+    try {
+      const courseId = String(lesson[1]);
+      const lessonsInCourse = lessonsData.slice(1).filter(r => String(r[1]) === courseId);
+      const progRows = progressSheet.getDataRange().getValues();
+      const completedIds = progRows.filter(r => String(r[0]) === String(data.agentId) && r[2] === 'COMPLETADO').map(r => String(r[1]));
+      
+      const allDone = lessonsInCourse.every(l => completedIds.includes(String(l[0])));
+      if (allDone) {
+        const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
+        const coursesData = coursesSheet.getDataRange().getValues();
+        const course = coursesData.slice(1).find(r => String(r[0]) === courseId);
+        const courseTitle = course ? course[1] : `CURSO #${courseId}`;
+        
+        // Agregar al news feed global
+        addNewsItem({
+          type: 'CERTIFICADO',
+          message: `¡${agentName} ha obtenido su certificado en "${courseTitle}"! 🎓`,
+          agentId: data.agentId,
+          agentName: agentName
+        });
+        
+        // Notificación Push Especial
+        const fcmToken = getAgentFcmToken(data.agentId);
+        if (fcmToken) {
+          sendPushNotification("🏅 ¡CERTIFICADO OBTENIDO!", `Has completado "${courseTitle}". ¡Felicidades Agente!`, fcmToken);
+        }
+      }
+    } catch (e) {
+      Logger.log("Error al verificar fin de curso: " + e.message);
+    }
   }
   
   return ContentService.createTextOutput(JSON.stringify({ 

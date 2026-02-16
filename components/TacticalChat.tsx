@@ -51,6 +51,17 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
     const canModerate = currentUser.userRole === UserRole.DIRECTOR || currentUser.userRole === UserRole.LEADER;
 
+    const getAgentPhoto = useCallback((agentId: string) => {
+        const agent = agents.find(a => a.id === agentId);
+        return agent?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent?.name || 'A')}&background=001f3f&color=ffb700&bold=true`;
+    }, [agents]);
+
+    const scrollToBottom = useCallback(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, []);
+
     useEffect(() => {
         const q = query(
             collection(db, 'messages'),
@@ -59,6 +70,20 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const msg = change.doc.data();
+                    if (msg.senderId !== currentUser.id && document.hidden) {
+                        try {
+                            new Notification(`Nuevo de ${msg.senderName}`, {
+                                body: msg.text,
+                                icon: getAgentPhoto(msg.senderId)
+                            });
+                        } catch (e) { }
+                    }
+                }
+            });
+
             const msgs: Message[] = [];
             snapshot.forEach((d) => {
                 msgs.push({ id: d.id, ...d.data() } as Message);
@@ -67,20 +92,12 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             setTimeout(scrollToBottom, 100);
         });
 
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-        if (editingMsg && editInputRef.current) {
-            editInputRef.current.focus();
-        }
-    }, [editingMsg]);
-
-    const scrollToBottom = useCallback(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, []);
+    }, [currentUser.id, scrollToBottom, getAgentPhoto]);
 
     const handleSendMessage = async (e?: React.FormEvent, fileData?: { url: string; type: string; name: string }) => {
         if (e) e.preventDefault();
@@ -247,8 +264,12 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/60 hover:text-white">
-                        <X size={20} />
+                    <button
+                        onClick={onClose}
+                        className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-red-500/20 rounded-xl transition-all text-white/80 hover:text-red-400 border border-white/10 active:scale-95"
+                        title="SALIR DEL CANAL"
+                    >
+                        <X size={22} strokeWidth={3} />
                     </button>
                 </div>
             </div>
@@ -281,8 +302,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
                             <div className={`flex items-end gap-2 mb-1 group animate-in slide-in-from-bottom-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                                 {!isMe && (
-                                    <div className="w-8 h-8 rounded-full border border-white/10 overflow-hidden shrink-0 bg-white/5">
-                                        {showAvatar && <img src={getAgentPhoto(msg.senderId)} className="w-full h-full object-cover" alt={msg.senderName} title={msg.senderName} />}
+                                    <div className="w-8 h-8 rounded-full border border-white/10 overflow-hidden shrink-0 bg-[#001f3f] shadow-lg mb-1">
+                                        <img src={getAgentPhoto(msg.senderId)} className="w-full h-full object-cover" alt={msg.senderName} title={msg.senderName} />
                                     </div>
                                 )}
 

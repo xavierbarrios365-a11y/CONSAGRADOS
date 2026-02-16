@@ -16,6 +16,22 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
     const certRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
     const [logoBase64, setLogoBase64] = useState<string | null>(null);
+    const [scale, setScale] = useState(1);
+
+    // Responsive scaling logic
+    useEffect(() => {
+        const updateScale = () => {
+            if (typeof window !== 'undefined') {
+                const width = window.innerWidth;
+                const padding = 32; // p-4 = 16px * 2
+                const newScale = Math.min(1, (width - padding) / 842);
+                setScale(newScale);
+            }
+        };
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
 
     // Pre-fetch logo as base64 to avoid CORS issues during capture
     useEffect(() => {
@@ -148,6 +164,9 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({ agentName, co
                     boxShadow: '0 0 60px rgba(255, 183, 0, 0.15)',
                     backgroundImage: `linear-gradient(rgba(0, 31, 63, 0.95), rgba(0, 31, 63, 0.95)), url('https://www.transparenttextures.com/patterns/carbon-fibre.png')`,
                     fontFamily: "'Roboto', sans-serif",
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'center center',
+                    flexShrink: 0
                 }}
             >
                 {/* Inner Border */}

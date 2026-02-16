@@ -2890,18 +2890,48 @@ function getPromotionStatus(data) {
     }
   }
   
-  // 2. Contar certificados aprobados (lecciones con COMPLETADO)
+  // 2. Contar certificados aprobados (Solo si TODAS las lecciones de un curso están COMPLETADO)
+  const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
   const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
   let certificates = 0;
-  if (progressSheet && progressSheet.getLastRow() > 1) {
+  
+  if (lessonsSheet && progressSheet) {
+    const lessonsData = lessonsSheet.getDataRange().getValues();
+    const lessonsHeaders = lessonsData[0].map(h => String(h).trim().toUpperCase());
+    const courseIdIdx = lessonsHeaders.indexOf('COURSE_ID');
+    const lessonIdIdx = lessonsHeaders.indexOf('ID');
+    
+    // Agrupar lecciones por curso
+    const courseMap = {};
+    for (let i = 1; i < lessonsData.length; i++) {
+      const cId = String(lessonsData[i][courseIdIdx]);
+      const lId = String(lessonsData[i][lessonIdIdx]);
+      if (!courseMap[cId]) courseMap[cId] = [];
+      courseMap[cId].push(lId);
+    }
+    
+    // Obtener progreso del agente
     const progData = progressSheet.getDataRange().getValues();
     const progHeaders = progData[0].map(h => String(h).trim().toUpperCase());
+    const agentIdIdx = progHeaders.indexOf('ID_AGENTE');
+    const progLessonIdIdx = progHeaders.indexOf('ID_LECCION');
+    const statusIdx = progHeaders.indexOf('ESTADO');
+    
+    const completedLessons = new Set();
     for (let i = 1; i < progData.length; i++) {
-      if (String(progData[i][progHeaders.indexOf('ID_AGENTE')]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase() &&
-          String(progData[i][progHeaders.indexOf('ESTADO')]).trim().toUpperCase() === 'COMPLETADO') {
+        if (String(progData[i][agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase() &&
+            String(progData[i][statusIdx]).trim().toUpperCase() === 'COMPLETADO') {
+          completedLessons.add(String(progData[i][progLessonIdIdx]));
+        }
+    }
+    
+    // Validar cada curso
+    Object.keys(courseMap).forEach(cId => {
+      const courseLessons = courseMap[cId];
+      if (courseLessons.length > 0 && courseLessons.every(lId => completedLessons.has(lId))) {
         certificates++;
       }
-    }
+    });
   }
   
   // 3. Verificar tareas completadas (verificadas)

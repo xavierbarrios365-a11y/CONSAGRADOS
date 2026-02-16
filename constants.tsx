@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Shield, Target, Award, Star } from 'lucide-react';
+import { Shield, Target, Award, Star, Crown } from 'lucide-react';
 import { Rank } from './types';
 
 export const RANK_CONFIG = {
@@ -11,7 +11,7 @@ export const RANK_CONFIG = {
     label: 'Recluta'
   },
   [Rank.ACTIVO]: {
-    minXp: 100,
+    minXp: 300,
     color: '#3b82f6', // Blue
     icon: <Target className="w-5 h-5" />,
     label: 'Activo'
@@ -23,10 +23,16 @@ export const RANK_CONFIG = {
     label: 'Consagrado'
   },
   [Rank.REFERENTE]: {
-    minXp: 1000,
+    minXp: 700,
     color: '#d4af37', // Gold
     icon: <Star className="w-5 h-5" />,
     label: 'Referente'
+  },
+  [Rank.LIDER]: {
+    minXp: 1000,
+    color: '#ef4444', // Red
+    icon: <Crown className="w-5 h-5" />,
+    label: 'Líder'
   }
 };
 

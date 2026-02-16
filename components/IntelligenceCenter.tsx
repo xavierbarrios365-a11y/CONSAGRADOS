@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle } from 'lucide-react';
+import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
 import { applyAbsencePenalties } from '../services/sheetsService';
-import { PROMOTION_RULES } from '../constants';
+import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
 
 interface CIUProps {
   agents: Agent[];
@@ -127,11 +127,26 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const totalLeaders = agents.filter(a => a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR).length;
 
   const getLevelInfo = (xp: number) => {
-    if (xp < 300) return { current: 'RECLUTA', next: 'ACTIVO', target: 300, level: 0 };
-    if (xp < 500) return { current: 'ACTIVO', next: 'CONSAGRADO', target: 500, level: 1 };
-    if (xp < 700) return { current: 'CONSAGRADO', next: 'REFERENTE', target: 700, level: 2 };
-    if (xp < 1000) return { current: 'REFERENTE', next: 'LÍDER', target: 1000, level: 3 };
-    return { current: 'LÍDER', next: 'MAX', target: 1000, level: 4 };
+    const ranks = Object.entries(RANK_CONFIG).sort((a, b) => a[1].minXp - b[1].minXp);
+    let currentRank = 'RECLUTA';
+    let nextRank = 'ACTIVO';
+    let targetXp = 300;
+    let level = 0;
+
+    for (let i = 0; i < ranks.length; i++) {
+      if (xp >= ranks[i][1].minXp) {
+        currentRank = ranks[i][0];
+        level = i;
+        if (ranks[i + 1]) {
+          nextRank = ranks[i + 1][0];
+          targetXp = ranks[i + 1][1].minXp;
+        } else {
+          nextRank = 'MAX';
+          targetXp = ranks[i][1].minXp;
+        }
+      }
+    }
+    return { current: currentRank, next: nextRank, target: targetXp, level };
   };
 
   const levelInfo = getLevelInfo(agent.xp);
@@ -776,9 +791,38 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
                   const xp = promoData?.xp || agent.xp || 0;
                   const certs = promoData?.certificates || 0;
+                  const xpMet = xp >= rule.requiredXp;
+                  const certMet = certs >= rule.requiredCertificates;
                   const xpProgress = Math.min((xp / rule.requiredXp) * 100, 100);
                   const certProgress = Math.min((certs / rule.requiredCertificates) * 100, 100);
                   const totalProgress = Math.round((xpProgress + certProgress) / 2);
+
+                  const handlePromoteAgent = async () => {
+                    if (!xpMet || !certMet) return;
+                    const confirmPromote = window.confirm(`⚠️ PROTOCOLO DE ASCENSO\n\n¿Deseas ascender oficialmente a ${agent.name} al rango de ${targetRank.toUpperCase()}?`);
+                    if (confirmPromote) {
+                      setIsLoadingPromo(true);
+                      try {
+                        const res = await promoteAgentAction({
+                          agentId: agent.id,
+                          agentName: agent.name,
+                          newRank: targetRank,
+                          xp,
+                          certificates: certs
+                        });
+                        if (res.success) {
+                          alert(`✅ ASCENSO EXITOSO: ${agent.name} ahora es ${targetRank}`);
+                          onUpdateNeeded?.();
+                        } else {
+                          alert(`❌ ERROR EN ASCENSO: ${res.error}`);
+                        }
+                      } catch (e) {
+                        alert("❌ FALLO CRÍTICO EN PROTOCOLO");
+                      } finally {
+                        setIsLoadingPromo(false);
+                      }
+                    }
+                  };
 
                   return (
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-4 text-left space-y-4 shadow-inner relative overflow-hidden group">
@@ -804,14 +848,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         <div className="space-y-1">
                           <div className="flex justify-between text-[8px] font-bold uppercase">
                             <span className="text-white/50">Experiencia Táctica</span>
-                            <span className={xp >= rule.requiredXp ? 'text-green-400' : 'text-[#ffb700]'}>
+                            <span className={xpMet ? 'text-green-400' : 'text-[#ffb700]'}>
                               {xp} / {rule.requiredXp} XP
-                              {xp >= rule.requiredXp && " ✓"}
+                              {xpMet && " ✓"}
                             </span>
                           </div>
                           <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
                             <div
-                              className={`h-full transition-all duration-1000 ${xp >= rule.requiredXp ? 'bg-green-500' : 'bg-gradient-to-r from-[#ffb700] to-orange-500'}`}
+                              className={`h-full transition-all duration-1000 ${xpMet ? 'bg-green-500' : 'bg-gradient-to-r from-[#ffb700] to-orange-500'}`}
                               style={{ width: `${xpProgress}%` }}
                             />
                           </div>
@@ -821,24 +865,37 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         <div className="space-y-1">
                           <div className="flex justify-between text-[8px] font-bold uppercase">
                             <span className="text-white/50">Certificados Academia</span>
-                            <span className={certs >= rule.requiredCertificates ? 'text-green-400' : 'text-blue-400'}>
+                            <span className={certMet ? 'text-green-400' : 'text-blue-400'}>
                               {certs} / {rule.requiredCertificates}
-                              {certs >= rule.requiredCertificates && " ✓"}
+                              {certMet && " ✓"}
                             </span>
                           </div>
                           <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
                             <div
-                              className={`h-full transition-all duration-1000 ${certs >= rule.requiredCertificates ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
+                              className={`h-full transition-all duration-1000 ${certMet ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
                               style={{ width: `${certProgress}%` }}
                             />
                           </div>
                         </div>
                       </div>
 
-                      {!isMaxRank && xp >= rule.requiredXp && certs >= rule.requiredCertificates && (
-                        <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-lg flex items-center gap-2 animate-pulse mt-1">
-                          <Trophy size={14} className="text-green-400" />
-                          <p className="text-[8px] text-green-400 font-black uppercase tracking-widest">Apto para examen de ascenso</p>
+                      {!isMaxRank && xpMet && certMet && (
+                        <div className="space-y-2">
+                          <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-lg flex items-center gap-2 animate-pulse mt-1">
+                            <Trophy size={14} className="text-green-400" />
+                            <p className="text-[8px] text-green-400 font-black uppercase tracking-widest">Apto para examen de ascenso</p>
+                          </div>
+
+                          {userRole === UserRole.DIRECTOR && (
+                            <button
+                              onClick={handlePromoteAgent}
+                              disabled={isLoadingPromo}
+                              className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-green-900/30 flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/10"
+                            >
+                              {isLoadingPromo ? <Loader2 size={14} className="animate-spin" /> : <ChevronUp size={14} />}
+                              Ejecutar Ascenso Táctico
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

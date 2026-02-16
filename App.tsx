@@ -17,6 +17,7 @@ import TacticalRanking from './components/TacticalRanking';
 import PromotionModule from './components/PromotionModule';
 import TasksModule from './components/TasksModule';
 import NewsFeed from './components/NewsFeed';
+import PromotionProgressCard from './components/PromotionProgressCard';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -155,17 +156,14 @@ const parseAttendanceDate = (value: any): Date | null => {
  * Indicador de Conexión "Faro de Consagrados"
  * Estética Premium con animaciones de haz de luz rotativo.
  */
-const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ status }) => {
+const LighthouseIndicator: React.FC<{ status: 'online' | 'offline'; size?: 'sm' | 'md' }> = ({ status, size = 'md' }) => {
   const isOnline = status === 'online';
   const color = isOnline ? '#ffb700' : '#ef4444';
+  const isSm = size === 'sm';
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* 
-        DISEÑO DE AUTOR v1.8.9: IMAGEN REAL + BARRIDO TÁCTICO
-        Se utiliza logo_white.png como máscara para asegurar fidelidad total.
-      */}
-      <div className="relative w-36 h-36 flex items-center justify-center">
+    <div className={`flex flex-col items-center ${isSm ? 'gap-1' : 'gap-3'}`}>
+      <div className={`relative ${isSm ? 'w-24 h-24' : 'w-36 h-36'} flex items-center justify-center`}>
         {/* Capa de Fondo (Silueta Blanca Original) */}
         <div
           className="absolute inset-0"
@@ -197,7 +195,7 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
           }}
         >
           <div
-            className="absolute inset-y-0 w-32 -skew-x-12 opacity-90 blur-sm"
+            className={`absolute inset-y-0 ${isSm ? 'w-20' : 'w-32'} -skew-x-12 opacity-90 blur-sm`}
             style={{
               background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
               animation: 'tactical-sweep 4s ease-in-out infinite',
@@ -217,12 +215,12 @@ const LighthouseIndicator: React.FC<{ status: 'online' | 'offline' }> = ({ statu
 
       {/* Etiquetas de Estado */}
       <div className="flex flex-col items-center">
-        <span className="text-white font-bebas text-3xl tracking-[0.4em] font-black leading-none drop-shadow-lg">
-          CONSAGRADOS
+        <span className={`text-white font-bebas ${isSm ? 'text-lg tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
+          CONSAGRADOS {isSm ? '2026' : ''}
         </span>
-        <div className="flex items-center gap-2 mt-2 py-1 px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm">
-          <div className={`w-2 h-2 rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
-          <span className="text-[10px] uppercase font-montserrat font-black tracking-[0.2em]" style={{ color }}>
+        <div className={`flex items-center gap-2 ${isSm ? 'mt-1 py-0.5' : 'mt-2 py-1'} px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm`}>
+          <div className={`${isSm ? 'w-1.5 h-1.5' : 'w-2 h-2'} rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
+          <span className={`${isSm ? 'text-[6px]' : 'text-[10px]'} uppercase font-montserrat font-black tracking-[0.2em]`} style={{ color }}>
             {isOnline ? 'CONECTADO' : 'DESCONECTADO'}
           </span>
         </div>
@@ -1030,19 +1028,25 @@ const App: React.FC = () => {
       case AppView.HOME:
         return (
           <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            {/* ENCABEZADO PREMIUM CENTRO DE OPERACIÓN */}
-            <div className="flex flex-col items-center space-y-4 mb-6">
+            {/* ENCABEZADO REESTRUCTURADO (v2.0) */}
+            <div className="flex items-center gap-4 mb-8">
+              {/* Box Izquierda: Logo + Status */}
+              <div className="flex-shrink-0">
+                <LighthouseIndicator
+                  status={notificationPermission === 'granted' ? 'online' : 'offline'}
+                  size="sm"
+                />
+              </div>
 
-              {/* Indicador de Faro Táctico */}
-              <LighthouseIndicator status={notificationPermission === 'granted' ? 'online' : 'offline'} />
+              {/* Box Derecha: Ticker de Noticias */}
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="flex flex-col">
+                  <h2 className="text-xl font-bebas font-black text-white tracking-widest leading-none">CENTRO DE OPERACIÓN</h2>
+                  <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">{currentUser?.name}</p>
+                </div>
 
-              <div className="text-center">
-                <h2 className="text-3xl font-bebas font-black text-white tracking-[0.2em] leading-none mb-1">CENTRO DE OPERACIÓN</h2>
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mb-3">{currentUser?.name}</p>
-
-                {/* News Ticker de Titulares */}
                 {headlines.length > 0 && (
-                  <div className="w-full max-w-[300px] overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-lg py-1 px-4 mb-2 shadow-inner">
+                  <div className="w-full overflow-hidden bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl py-2 px-4 shadow-inner">
                     <div className="animate-[ticker_20s_linear_infinite] whitespace-nowrap flex items-center gap-8">
                       {headlines.map((h, i) => (
                         <div key={i} className="flex items-center gap-2">
@@ -1050,7 +1054,6 @@ const App: React.FC = () => {
                           <span className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest leading-none">{h}</span>
                         </div>
                       ))}
-                      {/* Repetir para el loop infinito */}
                       {headlines.map((h, i) => (
                         <div key={`dup-${i}`} className="flex items-center gap-2">
                           <Radio size={10} className="text-[#ffb700] animate-pulse" />
@@ -1060,19 +1063,21 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Botón de Activación Directa si está desconectado */}
-                {notificationPermission !== 'granted' && (
-                  <button
-                    onClick={initFirebaseMessaging}
-                    className="mt-2 px-8 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-900/40 active:scale-95 font-bebas flex items-center gap-3 border border-white/20"
-                  >
-                    <Bell size={14} className="animate-swing" />
-                    ACTIVAR CANAL TÁCTICO
-                  </button>
-                )}
               </div>
             </div>
+
+            {/* BOTÓN DE ACTIVACIÓN SI ESTÁ OFFLINE */}
+            {notificationPermission !== 'granted' && (
+              <div className="mb-6">
+                <button
+                  onClick={initFirebaseMessaging}
+                  className="w-full py-3 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600/30 transition-all active:scale-95 font-bebas flex items-center justify-center gap-3"
+                >
+                  <Bell size={14} className="animate-swing" />
+                  ACTIVAR CANAL TÁCTICO DE NOTIFICACIONES
+                </button>
+              </div>
+            )}
 
             <style>{`
               @keyframes ticker {
@@ -1097,6 +1102,15 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex flex-col gap-4">
+
+              {/* TARJETA DE PROGRESO DE ASCENSO (NUEVA) */}
+              {currentUser && (
+                <PromotionProgressCard
+                  agentId={currentUser.id}
+                  currentRank={currentUser.rank}
+                  onClick={() => setView(AppView.ASCENSO)}
+                />
+              )}
 
               <div className="relative group overflow-hidden rounded-3xl p-6 glass-amber shadow-[0_0_40px_rgba(255,183,0,0.1)] border border-[#ffb700]/30 transition-all duration-700">
                 <div className="absolute inset-0 shimmer-bg opacity-30 group-hover:opacity-50 transition-opacity"></div>

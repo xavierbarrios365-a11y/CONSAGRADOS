@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Check, Clock, Lock, Trash2, Shield, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { UserRole, ServiceTask } from '../types';
 import { TASK_AREAS } from '../constants';
-import { fetchTasks, createTask, deleteTask, submitTaskCompletion, verifyTask, fetchPromotionStatus, fetchTaskRecruits } from '../services/sheetsService';
+import { TASK_AREAS } from '../constants';
+import { fetchTasks, createTask, deleteTask, submitTaskCompletion, verifyTask, fetchPromotionStatus, fetchTaskRecruits, removeRecruitFromTask } from '../services/sheetsService';
 
 interface TasksModuleProps {
     agentId: string;
@@ -22,7 +23,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
     const [creating, setCreating] = useState(false);
     const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState<string | null>(null);
-    const [newTask, setNewTask] = useState({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: 5, maxSlots: 0 });
+    const [newTask, setNewTask] = useState({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: '', maxSlots: '' });
     const [filterArea, setFilterArea] = useState('TODAS');
     const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
     const [taskRecruits, setTaskRecruits] = useState<Record<string, { agentId: string; agentName: string; date: string; status: string }[]>>({});
@@ -71,9 +72,11 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
         try {
             const res = await createTask(newTask);
             if (res.success) {
-                setShowCreate(false);
-                setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: 5, maxSlots: 0 });
-                loadData();
+                if (res.success) {
+                    setShowCreate(false);
+                    setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: '', maxSlots: '' });
+                    loadData();
+                }
             }
         } catch (e) { console.error(e); }
         setCreating(false);
@@ -123,6 +126,15 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                 xpReward: item.xpReward || 5,
                 taskTitle: item.taskTitle || ''
             });
+            loadData();
+        } catch (e) { console.error(e); }
+        onActivity?.();
+    };
+
+    const handleRemoveRecruit = async (taskId: string, agentId: string) => {
+        if (!confirm(`¿Eliminar al agente ${agentId} de esta misión?`)) return;
+        try {
+            await removeRecruitFromTask(taskId, agentId);
             loadData();
         } catch (e) { console.error(e); }
         onActivity?.();
@@ -214,7 +226,8 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                 type="number"
                                 min={1}
                                 value={newTask.xpReward}
-                                onChange={e => setNewTask({ ...newTask, xpReward: parseInt(e.target.value) || 5 })}
+                                onChange={e => setNewTask({ ...newTask, xpReward: e.target.value })}
+                                placeholder="5"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-[#ffb700]/50"
                             />
                         </div>
@@ -224,14 +237,15 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                 type="number"
                                 min={0}
                                 value={newTask.maxSlots}
-                                onChange={e => setNewTask({ ...newTask, maxSlots: parseInt(e.target.value) || 0 })}
+                                onChange={e => setNewTask({ ...newTask, maxSlots: e.target.value })}
+                                placeholder="∞"
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-[#ffb700]/50"
                             />
                         </div>
                     </div>
                     <button
                         onClick={handleCreate}
-                        disabled={creating || !newTask.title.trim()}
+                        disabled={creating || !newTask.title.trim() || !newTask.xpReward}
                         className="w-full py-3 rounded-xl bg-[#ffb700] text-[#001f3f] font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                     >
                         {creating ? 'Creando...' : 'Crear Misión'}
@@ -362,9 +376,27 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                                                 <div className={`w-2 h-2 rounded-full ${r.status === 'VERIFICADO' ? 'bg-green-500' : r.status === 'PENDIENTE' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-500'}`} />
                                                                 <span className="text-[10px] font-bold text-white">{r.agentName || r.agentId}</span>
                                                             </div>
-                                                            <span className={`text-[8px] font-black uppercase tracking-wider ${r.status === 'VERIFICADO' ? 'text-green-500' : r.status === 'PENDIENTE' ? 'text-yellow-500' : 'text-gray-500'}`}>
-                                                                {r.status}
-                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-[8px] font-black uppercase tracking-wider ${r.status === 'VERIFICADO' ? 'text-green-500' : r.status === 'PENDIENTE' ? 'text-yellow-500' : 'text-gray-500'}`}>
+                                                                    {r.status}
+                                                                </span>
+                                                                {r.status === 'PENDIENTE' && (
+                                                                    <button
+                                                                        onClick={() => handleVerify({ taskId: task.id, agentId: r.agentId, agentName: r.agentName, xpReward: task.xpReward, taskTitle: task.title })}
+                                                                        className="p-1 rounded-full bg-green-500/20 text-green-500 hover:bg-green-500/40 transition-colors"
+                                                                        title="Aprobar Misión"
+                                                                    >
+                                                                        <Check size={12} />
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleRemoveRecruit(task.id, r.agentId)}
+                                                                    className="p-1 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500/40 transition-colors"
+                                                                    title="Eliminar de Misión"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ))
                                                 )}

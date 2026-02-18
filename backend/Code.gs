@@ -532,6 +532,8 @@ function doPost(e) {
         return getTaskRecruits();
       case 'promote_agent':
         return promoteAgent(request.data);
+      case 'remove_recruit_from_task':
+        return removeRecruitFromTask(request.data);
       case 'get_news_feed':
         return getNewsFeed();
       case 'get_badges':
@@ -2278,9 +2280,15 @@ function updateStreaks(data) {
     } else if (rawLastDate) {
       let s = String(rawLastDate).trim();
       lastDate = s;
+      lastDateOnly = s;
       if (s.includes('T')) lastDateOnly = s.split('T')[0];
       else if (s.includes(' ')) lastDateOnly = s.split(' ')[0];
-      else lastDateOnly = s;
+      else {
+        // Safe Parse fallback for stored local dates
+        const pd = new Date(s);
+        if (!isNaN(pd.getTime())) lastDateOnly = Utilities.formatDate(pd, "GMT-4", "yyyy-MM-dd");
+        else lastDateOnly = s;
+      }
     }
     
     // Si hoy completó la tarea y no se había registrado hoy (comparando solo FECHA)
@@ -2297,7 +2305,10 @@ function updateStreaks(data) {
       lastDate = nowIso;
       lastDateOnly = todayStr;
       
-      sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`);
+      const fcmToken = getAgentFcmToken(data.agentId);
+      if (fcmToken) {
+        sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`, fcmToken);
+      }
 
       // Log Intel Event for Significant Streaks
       if (streakCount > 0 && (streakCount === 1 || streakCount % 7 === 0)) {
@@ -2336,7 +2347,7 @@ function updateStreaks(data) {
     
     // Column-Aware Writes
     if (streakIdx !== -1) sheet.getRange(rowIdx + 1, streakIdx + 1).setValue(streakCount);
-    if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(lastDate);
+    if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(nowIso);
     if (tasksIdx !== -1) sheet.getRange(rowIdx + 1, tasksIdx + 1).setValue(JSON.stringify(data.tasks || []));
     if (notifsSentIdx !== -1) sheet.getRange(rowIdx + 1, notifsSentIdx + 1).setValue(""); // Reset notifs sent tracker
 
@@ -3159,6 +3170,32 @@ function verifyTaskAction(data) {
   addNewsItem(ss, 'TAREA', `¡${data.agentName || data.agentId} completó la misión "${data.taskTitle || ''}"! +${xpReward} XP`, data.agentId, data.agentName);
   
   return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * @description Director elimina a un recluta de una tarea.
+ */
+function removeRecruitFromTask(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  if (!progressSheet) throw new Error("Hoja PROGRESO_TAREAS no encontrada.");
+  
+  const progressData = progressSheet.getDataRange().getValues();
+  const progressHeaders = progressData[0].map(function(h){ return String(h).trim().toUpperCase(); });
+  const tIdCol = progressHeaders.indexOf('TASK_ID');
+  const aIdCol = progressHeaders.indexOf('AGENT_ID');
+  
+  if (tIdCol === -1 || aIdCol === -1) throw new Error("Columnas no encontradas en PROGRESO_TAREAS.");
+  
+  for (let i = 1; i < progressData.length; i++) {
+    if (String(progressData[i][tIdCol]) === String(data.taskId) &&
+        String(progressData[i][aIdCol]) === String(data.agentId)) {
+      progressSheet.deleteRow(i + 1);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Recluta no encontrado en esta tarea." })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**

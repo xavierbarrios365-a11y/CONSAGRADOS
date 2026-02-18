@@ -636,6 +636,10 @@ export const fetchTaskRecruits = async () => {
   }
 };
 
+export const removeRecruitFromTask = async (taskId: string, agentId: string) => {
+  return postToAction('remove_recruit_from_task', { taskId, agentId });
+};
+
 export const fetchBadges = async () => {
   try {
     const res = await postToAction('get_badges', {});

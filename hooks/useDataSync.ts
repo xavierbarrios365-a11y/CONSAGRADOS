@@ -26,8 +26,15 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         if (!isSilent) setIsSyncing(true);
         try {
             const sheetAgents = await fetchAgentsFromSheets();
-            if (sheetAgents) {
+            console.log(`🔄 SYNC: Received ${sheetAgents?.length || 0} agents`);
+            if (sheetAgents && sheetAgents.length > 0) {
+                // Log first 3 agents' XP for verification
+                sheetAgents.slice(0, 3).forEach(a =>
+                    console.log(`  📊 ${a.name}: XP=${a.xp} B=${a.bible} A=${a.notes} L=${a.leadership}`)
+                );
                 setAgents(sheetAgents);
+            } else {
+                console.warn('⚠️ SYNC: Empty response, keeping existing agents');
             }
             const radar = await fetchVisitorRadar();
             setVisitorRadar(radar || []);
@@ -40,6 +47,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             return sheetAgents;
         } catch (err) {
+            console.error('❌ SYNC ERROR:', err);
             return null;
         } finally {
             if (!isSilent) setIsSyncing(false);
@@ -65,7 +73,8 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
 
             // 2. Rankings (exclude Leaders/Directors)
-            const allAgents = await fetchAgentsFromSheets() || [];
+            // FIX #3: Reuse already-synced agents instead of fetching again (halves API calls)
+            const allAgents = agents;
             const filteredAgents = allAgents.filter(a => {
                 const isLeaderRank = a.rank === 'LÍDER' || a.rank === 'LIDER';
                 const isLeaderRole = a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;

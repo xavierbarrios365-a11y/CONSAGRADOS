@@ -7,7 +7,7 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
 import { applyAbsencePenalties } from '../services/sheetsService';
@@ -31,6 +31,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
+  const [isReconcilingXP, setIsReconcilingXP] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
@@ -250,12 +251,13 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     try {
       const res = await updateAgentPoints(agent.id, type, points);
       if (res.success) {
+        alert(`✅ ${points > 0 ? '+' : ''}${points} PUNTOS REGISTRADOS`);
         if (onUpdateNeeded) onUpdateNeeded();
       } else {
-        alert("ERROR: Fallo en protocolo de puntos.");
+        alert("❌ ERROR: " + (res.error || "Fallo en protocolo de puntos."));
       }
-    } catch (err) {
-      alert("FALLO TÁCTICO DE CONEXIÓN");
+    } catch (err: any) {
+      alert("⚠️ FALLO TÁCTICO DE CONEXIÓN: " + (err.message || "Error desconocido."));
     } finally {
       setIsUpdatingPoints(false);
     }
@@ -269,14 +271,39 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     try {
       const res = await deductPercentagePoints(agent.id, percentage);
       if (res.success) {
+        alert(`☠️ EXPULSIÓN COMPLETADA: -${percentage}% Puntos.`);
         if (onUpdateNeeded) onUpdateNeeded();
       } else {
-        alert("FALLO EN PROTOCOLO DE EXPULSIÓN");
+        alert("❌ ERROR: " + (res.error || "Fallo en protocolo de expulsión."));
       }
-    } catch (err) {
-      alert("FALLO TÁCTICO DE CONEXIÓN");
+    } catch (err: any) {
+      alert("⚠️ FALLO TÁCTICO DE CONEXIÓN: " + (err.message || "Error desconocido."));
     } finally {
       setIsUpdatingPoints(false);
+    }
+  };
+
+  const handleReconcileXP = async () => {
+    if (!window.confirm("🚨 ¿CONFIRMAR RECONSTRUCCIÓN DE PUNTOS?\n\nEsta acción buscará la asistencia de hoy y asignará +10 XP en cada categoría a los agentes que no los recibieron.\n\nÚselo solo si el Cuadro de Honor no sumó los puntos automáticamente.")) return;
+
+    setIsReconcilingXP(true);
+    try {
+      const res = await reconcileXP();
+      console.log("📊 RECONCILIATION RESULT:", JSON.stringify(res, null, 2));
+      if (res.success) {
+        const names = res.updatedNames?.length > 0 ? res.updatedNames.join(', ') : 'Ninguno';
+        const ids = res.foundIds?.length || 0;
+        const errs = res.errors?.length > 0 ? `\n\n⚠️ Errores: ${res.errors.join(', ')}` : '';
+        alert(`✅ CONCILIACIÓN EXITOSA\n\n📅 Fecha: ${res.today || 'Hoy'}\n🌐 Zona: ${res.tz || 'N/A'}\n🔍 IDs encontrados: ${ids}\n✅ Agentes actualizados: ${res.count}\n\n📋 Nombres: ${names}${errs}`);
+        resetSyncBackoff();
+        if (onUpdateNeeded) onUpdateNeeded();
+      } else {
+        alert("❌ FALLO EN LA CONCILIACIÓN: " + (res.error || "Error desconocido.") + "\n\nRevisa la consola para más detalles.");
+      }
+    } catch (err: any) {
+      alert("⚠️ FALLO TÁCTICO DE CONEXIÓN: " + err.message);
+    } finally {
+      setIsReconcilingXP(false);
     }
   };
 
@@ -544,6 +571,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   >
                     <RefreshCw size={10} className={isRefreshingIntel ? 'animate-spin' : ''} /> Escanear Inasistencias
                   </button>
+                  {userRole === UserRole.DIRECTOR && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleReconcileXP(); }}
+                      disabled={isReconcilingXP}
+                      className="mt-2 flex items-center justify-center gap-1 w-full px-3 py-2 bg-orange-600/20 border border-orange-500/40 rounded-xl text-orange-400 text-[6px] font-black uppercase tracking-widest hover:bg-orange-600/30 transition-all active:scale-95"
+                    >
+                      <Zap size={10} className={isReconcilingXP ? 'animate-pulse' : ''} /> {isReconcilingXP ? 'CONCILIANDO...' : 'Recuperar Puntos Hoy'}
+                    </button>
+                  )}
                 </div>
               );
             })()}

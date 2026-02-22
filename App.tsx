@@ -357,9 +357,13 @@ const App: React.FC = () => {
     try {
       const res = await updateAgentPoints(scannedAgentForPoints.id, type, 10);
       if (res.success) {
-        alert("+10 PUNTOS REGISTRADOS");
+        alert("✅ +10 PUNTOS REGISTRADOS EXITOSAMENTE");
         syncData();
+      } else {
+        alert("❌ ERROR AL REGISTRAR PUNTOS: " + (res.error || "Fallo en el protocolo."));
       }
+    } catch (err: any) {
+      alert("⚠️ FALLO DE CONEXIÓN CON EL NÚCLEO: " + (err.message || "Error desconocido."));
     } finally {
       setIsUpdatingPoints(false);
     }

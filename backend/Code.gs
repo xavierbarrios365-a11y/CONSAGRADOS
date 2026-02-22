@@ -1,4 +1,4 @@
-
+﻿
 /****************************************************************************************************************************
 * TACTICAL CORE V37 - BACKEND GOOGLE APPS SCRIPT (v3.5 - Backend Simplificado)
 * DESCRIPCIÓN: Backend para la aplicación Consagrados 2026.
@@ -72,6 +72,74 @@ function setupSecretProperties() {
   SpreadsheetApp.getUi().alert('✅ Credenciales almacenadas de forma segura.');
 }
 
+/**
+ * ======================================================================
+ * 🔑 RESTAURAR SOLO CREDENCIALES DE TELEGRAM
+ * ======================================================================
+ * Este método sólo toca las propiedades de Telegram, sin afectar el resto.
+ * PASOS:
+ *   1. Pega aquí el nuevo token y chat_id.
+ *   2. Corre esta función UNA SOLA VEZ desde el editor de Apps Script.
+ *   3. Después de correrla exitosamente, REEMPLAZA los valores con 'REPLACE_ME'
+ *      para no exponer el token en el código.
+ */
+function setupTelegramCredentials() {
+  var props = PropertiesService.getScriptProperties();
+  
+  // → REEMPLAZA ESTOS VALORES CON TUS CREDENCIALES REALES:
+  var BOT_TOKEN = '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA';
+  var CHAT_ID   = 'REPLACE_ME'; // ← Corre getChatIdFromBot() primero para obtener este valor
+
+  if (CHAT_ID === 'REPLACE_ME') {
+    Logger.log('⚠️  AUN NECESITAS PEGAR EL CHAT_ID. Corre getChatIdFromBot() primero.');
+    return;
+  }
+  
+  props.setProperty('TELEGRAM_BOT_TOKEN', BOT_TOKEN);
+  props.setProperty('TELEGRAM_CHAT_ID', CHAT_ID);
+  Logger.log('✅ Credenciales de Telegram guardadas. ¡No olvides reemplazar los valores con REPLACE_ME!');
+}
+
+/**
+ * ======================================================================
+ * 🔍 OBTENER CHAT ID DEL GRUPO DE TELEGRAM
+ * ======================================================================
+ * INSTRUCCIONES:
+ *   1. Añade el bot @Consagrados2026_bot al grupo de Telegram.
+ *   2. Envía cualquier mensaje en el grupo (ej: "/start").
+ *   3. Ejecuta esta función desde el editor de Apps Script.
+ *   4. Copia el Chat ID que aparece en los "Registros de ejecución".
+ *   5. Pégalo en setupTelegramCredentials() y córrela.
+ */
+function getChatIdFromBot() {
+  var BOT_TOKEN = '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA';
+  var url = 'https://api.telegram.org/bot' + BOT_TOKEN + '/getUpdates';
+  
+  try {
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var json = JSON.parse(response.getContentText());
+    
+    if (!json.ok || !json.result || json.result.length === 0) {
+      Logger.log('⚠️ No hay mensajes recientes. Asegúrate de:');
+      Logger.log('   1. Haber añadido @Consagrados2026_bot al grupo.');
+      Logger.log('   2. Haber enviado al menos un mensaje en el grupo.');
+      Logger.log('   Respuesta de Telegram: ' + response.getContentText());
+      return;
+    }
+    
+    Logger.log('🔗 Chats encontrados en getUpdates:');
+    json.result.forEach(function(update) {
+      var chat = update.message ? update.message.chat : (update.channel_post ? update.channel_post.chat : null);
+      if (chat) {
+        Logger.log('✨ Tipo: ' + chat.type + ' | ID: ' + chat.id + ' | Nombre: ' + (chat.title || chat.first_name || 'N/A'));
+      }
+    });
+    Logger.log('\n→ Copia el ID del grupo correcto y pégalo en setupTelegramCredentials()');
+  } catch (e) {
+    Logger.log('❌ Error al llamar getUpdates: ' + e.message);
+  }
+}
+
 // ============================================================================
 // HELPERS COMPARTIDOS — Reducen boilerplate en todas las funciones de acción
 // ============================================================================
@@ -84,7 +152,10 @@ var HEADER_ALIASES = {
   'ID':                 ['ID', 'ID CÉDULA', 'ID CEDULA', 'CEDULA'],
   'NOMBRE':             ['NOMBRE', 'NOMBRE COMPLETO'],
   'PIN':                ['PIN', 'CONTRASEÑA/PIN', 'PASS'],
-  'XP':                 ['XP', 'PUNTOS XP', 'PUNTOS_XP'],
+  // IMPORTANTE: Variantes con ESPACIO van PRIMERO — el spreadsheet real tiene
+  // columnas legacy 'PUNTOS BIBLIA' (col 6) con datos acumulados correctos.
+  // Las columnas 'PUNTOS_BIBLIA' (col 38) tienen datos incompletos/desincronizados.
+  'XP':                 ['PUNTOS XP', 'XP', 'PUNTOS_XP'],
   'RANGO':              ['RANGO'],
   'CARGO':              ['CARGO', 'NIVEL_ACCESO', 'PUESTO'],
   'ESTADO':             ['ESTADO', 'STATUS', 'ESTATUS'],
@@ -94,10 +165,10 @@ var HEADER_ALIASES = {
   'TALENTO':            ['TALENTO'],
   'BAUTIZADO':          ['BAUTIZADO'],
   'RELACION_CON_DIOS':  ['RELACION_CON_DIOS', 'RELACION CON DIOS'],
-  'PUNTOS_BIBLIA':      ['PUNTOS_BIBLIA', 'PUNTOS BIBLIA'],
-  'PUNTOS_APUNTES':     ['PUNTOS_APUNTES', 'PUNTOS APUNTES'],
-  'PUNTOS_LIDERAZGO':   ['PUNTOS_LIDERAZGO', 'PUNTOS LIDERAZGO'],
-  'FOTO_URL':           ['FOTO_URL', 'FOTO URL', 'FOTO'],
+  'PUNTOS_BIBLIA':      ['PUNTOS BIBLIA', 'PUNTOS_BIBLIA', 'BIBLIA', 'BIBLE', 'PUNTOS_BIBLIA_ESTUDIANTE'],
+  'PUNTOS_APUNTES':     ['PUNTOS APUNTES', 'PUNTOS_APUNTES', 'APUNTES', 'NOTES', 'PUNTOS_APUNTES_ESTUDIANTE'],
+  'PUNTOS_LIDERAZGO':   ['PUNTOS LIDERAZGO', 'PUNTOS_LIDERAZGO', 'LIDERAZGO', 'LEADERSHIP', 'PUNTOS_LIDERAZGO_ESTUDIANTE'],
+  'FOTO_URL':           ['FOTO_URL', 'FOTO URL', 'FOTO', 'PHOTO', 'PHOTO_URL'],
   'NOTIF_PREFS':        ['NOTIF_PREFS'],
   'FCM_TOKEN':          ['FCM_TOKEN'],
   'PREGUNTA_SEGURIDAD': ['PREGUNTA_SEGURIDAD'],
@@ -108,7 +179,8 @@ var HEADER_ALIASES = {
   'LAST_AI_UPDATE':     ['LAST_AI_UPDATE'],
   'BIOMETRIC_CREDENTIAL': ['BIOMETRIC_CREDENTIAL'],
   'STREAK_COUNT':       ['STREAK_COUNT'],
-  'LAST_COMPLETED_DATE':['LAST_COMPLETED_DATE', 'LAST_COMPLETED_WEEK']
+  'LAST_COMPLETED_DATE':['LAST_COMPLETED_DATE', 'LAST_COMPLETED_WEEK'],
+  'FECHA':              ['FECHA', 'TIMESTAMP', 'DATE', 'FECHA/HORA', 'MOMENTO']
 };
 
 /**
@@ -193,7 +265,7 @@ function findAndUpdateAgent(sheet, agentId, updates) {
  */
 function sendTelegramNotification(message) {
   const CONFIG = getGlobalConfig();
-  if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID || CONFIG.TELEGRAM_BOT_TOKEN.includes('PEGA_AQUI')) {
+  if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.TELEGRAM_CHAT_ID || CONFIG.TELEGRAM_BOT_TOKEN === 'REPLACE_ME') {
     Logger.log("El Token o Chat ID de Telegram no han sido configurados en el script.");
     return;
   }
@@ -205,14 +277,47 @@ function sendTelegramNotification(message) {
       text: message,
       parse_mode: 'HTML'
     };
-    UrlFetchApp.fetch(url, {
+    
+    const response = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
-      payload: JSON.stringify(payload)
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     });
+    
+    const responseCode = response.getResponseCode();
+    if (responseCode !== 200) {
+      Logger.log(`⚠️ ERROR TELEGRAM (HTTP ${responseCode}): ${response.getContentText()}`);
+    } else {
+      Logger.log(`✅ Telegram: Mensaje enviado exitosamente.`);
+    }
   } catch (error) {
-    Logger.log(`Error al enviar notificación a Telegram: ${error.message}`);
+    Logger.log(`❌ Error crítico al enviar a Telegram: ${error.message}`);
   }
+}
+
+/**
+ * ======================================================================
+ * 🧪 TEST MANUAL: VERIFICAR TELEGRAM
+ * ======================================================================
+ * Selecciona esta función en el dropdown y dale a "Ejecutar".
+ * Revisa los "Registros de ejecución" abajo para ver el resultado.
+ */
+function testTelegramManually() {
+  Logger.log("🚀 Iniciando prueba técnica de Telegram...");
+  const CONFIG = getGlobalConfig();
+  
+  if (!CONFIG.TELEGRAM_BOT_TOKEN || CONFIG.TELEGRAM_BOT_TOKEN === 'REPLACE_ME') {
+    Logger.log("❌ ERROR: TELEGRAM_BOT_TOKEN no está configurado o tiene 'REPLACE_ME'.");
+  }
+  if (!CONFIG.TELEGRAM_CHAT_ID || CONFIG.TELEGRAM_CHAT_ID === 'REPLACE_ME') {
+    Logger.log("❌ ERROR: TELEGRAM_CHAT_ID no está configurado o tiene 'REPLACE_ME'.");
+  }
+
+  const testMsg = `🧪 <b>PRUEBA DE CONEXIÓN</b>\n\nSi lees esto, el bot de Consagrados 2026 está configurado correctamente.\n\n<b>Fecha:</b> ${new Date().toLocaleString()}`;
+  sendTelegramNotification(testMsg);
+  
+  Logger.log("🏁 Prueba finalizada. Revisa si llegó el mensaje a Telegram.");
 }
 
 /**
@@ -498,11 +603,16 @@ function doGet(e) {
     const lastAttenMap = new Map();
     if (attendanceSheet) {
       const attenData = attendanceSheet.getDataRange().getValues();
+      const attenHeaders = attenData[0].map(h => String(h).trim().toUpperCase());
+      const attenIdIdx = findHeaderIdx(attenHeaders, 'ID');
+      
       for (let i = 1; i < attenData.length; i++) {
         const row = attenData[i];
-        const aId = String(row[0]).trim().toUpperCase();
+        const aId = String(row[attenIdIdx]).trim().toUpperCase();
         if (!aId) continue;
-        const candidateDate = row[3];
+        // FIX #4: Use dynamic header lookup for date column
+        const attenDateColIdx = findHeaderIdx(attenHeaders, 'FECHA');
+        const candidateDate = row[attenDateColIdx !== -1 ? attenDateColIdx : 3];
         if (candidateDate instanceof Date && !isNaN(candidateDate.getTime())) {
           const existingDate = lastAttenMap.get(aId);
           if (!existingDate || candidateDate > existingDate) {
@@ -529,9 +639,16 @@ function doGet(e) {
     const now = new Date();
     const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
     const yesterdayStr = Utilities.formatDate(new Date(now.getTime() - 86400000), "GMT-4", "yyyy-MM-dd");
+    const idColIdx = findHeaderIdx(finalHeaders, 'ID');
+
+    // Índices de categorías para recalcular XP
+    const bibleColIdx = findHeaderIdx(finalHeaders, 'PUNTOS_BIBLIA');
+    const notesColIdx = findHeaderIdx(finalHeaders, 'PUNTOS_APUNTES');
+    const leadColIdx = findHeaderIdx(finalHeaders, 'PUNTOS_LIDERAZGO');
+    const xpColIdx = findHeaderIdx(finalHeaders, 'XP');
 
     for (let i = 1; i < directoryData.length; i++) {
-        const agentId = String(directoryData[i][0]).trim().toUpperCase();
+        const agentId = String(directoryData[i][idColIdx]).trim().toUpperCase();
         if (!agentId) continue;
 
         const streakInfo = streakMap.get(agentId) || { streak: 0, tasks: '[]', lastDate: '' };
@@ -560,6 +677,15 @@ function doGet(e) {
               directoryData[i][targetIdx] = freshVal;
             }
         });
+
+        // FIX DEFINITIVO: XP SIEMPRE = BIBLIA + APUNTES + LIDERAZGO (recalculado dinámicamente)
+        if (xpColIdx !== -1) {
+          while (directoryData[i].length <= xpColIdx) directoryData[i].push('');
+          const b = parseInt(directoryData[i][bibleColIdx]) || 0;
+          const a = parseInt(directoryData[i][notesColIdx]) || 0;
+          const l = parseInt(directoryData[i][leadColIdx]) || 0;
+          directoryData[i][xpColIdx] = b + a + l;
+        }
     }
     
     return ContentService.createTextOutput(JSON.stringify({ data: directoryData })).setMimeType(ContentService.MimeType.JSON);
@@ -596,6 +722,8 @@ function doPost(e) {
         return updateTacticalStats(request.data);
       case 'reconstruct_db':
         return reconstructDb();
+      case 'reconcile_xp':
+        return reconcileTodayAttendanceXP();
       case 'update_user_password':
         return updateUserPassword(request.data);
       case 'get_security_question':
@@ -833,15 +961,21 @@ function registerIdScan(payload) {
    
    // --- VALIDACIÓN: UN ESCANEO POR DÍA ---
    const attendanceData = attendanceSheet.getDataRange().getValues();
+   const attenHeaders = attendanceData[0].map(h => String(h).trim().toUpperCase());
+   const attenIdIdx = findHeaderIdx(attenHeaders, 'ID');
+   // FIX #4: Dynamic header lookup instead of hardcoded column index
+   let attenDateIdx = findHeaderIdx(attenHeaders, 'FECHA');
+   if (attenDateIdx === -1) attenDateIdx = 3; // fallback
+   
    const today = new Date();
    today.setHours(0,0,0,0);
    
    for (let i = 1; i < attendanceData.length; i++) {
-     const rowId = attendanceData[i][0];
-     const rowDate = new Date(attendanceData[i][3]);
+     const rowId = attendanceData[i][attenIdIdx !== -1 ? attenIdIdx : 0];
+     const rowDate = new Date(attendanceData[i][attenDateIdx]);
      rowDate.setHours(0,0,0,0);
      
-     if (String(rowId) === String(payload.scannedId) && rowDate.getTime() === today.getTime()) {
+     if (String(rowId).trim() === String(payload.scannedId).trim() && rowDate.getTime() === today.getTime()) {
        return jsonError("ALERTA: Agente ya registrado el día de hoy.");
      }
    }
@@ -851,12 +985,16 @@ function registerIdScan(payload) {
    // Notificación a Telegram y puntos
    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
    const directoryData = directorySheet.getDataRange().getValues();
+   const dirHeaders = directoryData[0].map(h => String(h).trim().toUpperCase());
+   const dirIdCol = findHeaderIdx(dirHeaders, 'ID');
+   const dirNameCol = findHeaderIdx(dirHeaders, 'NOMBRE');
+   
    let agentName = "Desconocido";
    let agentRowIdx = -1;
 
    for (let i = 1; i < directoryData.length; i++) {
-     if (String(directoryData[i][0]) == String(payload.scannedId)) {
-       agentName = directoryData[i][1]; 
+     if (String(directoryData[i][dirIdCol !== -1 ? dirIdCol : 0]).trim().toUpperCase() == String(payload.scannedId).trim().toUpperCase()) {
+       agentName = directoryData[i][dirNameCol !== -1 ? dirNameCol : 1]; 
        agentRowIdx = i + 1;
        break;
      }
@@ -874,19 +1012,24 @@ function registerIdScan(payload) {
    
    // AUTO-XP: +10 Liderazgo, +10 Biblia, +10 Apuntes, +30 XP total (1 batch write)
    if (agentRowIdx !== -1) {
-     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
-     const leadCol = findHeaderIdx(headers, 'PUNTOS_LIDERAZGO');
-     const bibleCol = findHeaderIdx(headers, 'PUNTOS_BIBLIA');
-     const notesCol = findHeaderIdx(headers, 'PUNTOS_APUNTES');
-     const xpCol = findHeaderIdx(headers, 'XP');
+     const leadCol = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
+     const bibleCol = findHeaderIdx(dirHeaders, 'PUNTOS_BIBLIA');
+     const notesCol = findHeaderIdx(dirHeaders, 'PUNTOS_APUNTES');
+     const xpCol = findHeaderIdx(dirHeaders, 'XP');
 
      if (leadCol !== -1 || bibleCol !== -1 || notesCol !== -1 || xpCol !== -1) {
-       const rowData = directorySheet.getRange(agentRowIdx, 1, 1, headers.length).getValues()[0];
+       const rowData = directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).getValues()[0];
        if (leadCol !== -1) rowData[leadCol] = (parseInt(rowData[leadCol]) || 0) + 10;
        if (bibleCol !== -1) rowData[bibleCol] = (parseInt(rowData[bibleCol]) || 0) + 10;
        if (notesCol !== -1) rowData[notesCol] = (parseInt(rowData[notesCol]) || 0) + 10;
-       if (xpCol !== -1) rowData[xpCol] = (parseInt(rowData[xpCol]) || 0) + 30;
-       directorySheet.getRange(agentRowIdx, 1, 1, headers.length).setValues([rowData]);
+       // FIX DEFINITIVO: XP = suma de categorías (no +30 independiente)
+       if (xpCol !== -1) {
+         const b = bibleCol !== -1 ? (parseInt(rowData[bibleCol]) || 0) : 0;
+         const a = notesCol !== -1 ? (parseInt(rowData[notesCol]) || 0) : 0;
+         const l = leadCol !== -1 ? (parseInt(rowData[leadCol]) || 0) : 0;
+         rowData[xpCol] = b + a + l;
+       }
+       directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).setValues([rowData]);
        
        // Notificación de XP por asistencia
        const fcmToken = getAgentFcmToken(payload.scannedId);
@@ -903,7 +1046,8 @@ function registerIdScan(payload) {
    if (agentRowIdx === -1) {
      let visitorVisits = 0;
      for (let i = 1; i < attendanceData.length; i++) {
-       if (String(attendanceData[i][0]) === String(payload.scannedId)) {
+       // Re-usar attenIdIdx o fallback a 0
+       if (String(attendanceData[i][attenIdIdx !== -1 ? attenIdIdx : 0]).trim().toUpperCase() === String(payload.scannedId).trim().toUpperCase()) {
          visitorVisits++;
        }
      }
@@ -979,7 +1123,7 @@ function applyAbsencePenalties() {
   const attendanceData = attendanceSheet.getDataRange().getValues();
   
   const idColIdx = headers.indexOf('ID');
-  const xpColIdx = headers.indexOf('XP') !== -1 ? headers.indexOf('XP') : headers.indexOf('PUNTOS XP');
+  const xpColIdx = findHeaderIdx(headers, 'XP');
   const leadColIdx = headers.indexOf('PUNTOS LIDERAZGO');
 
   if (idColIdx === -1 || xpColIdx === -1) throw new Error("Estructura de Directorio inválida.");
@@ -1067,7 +1211,7 @@ function activateVisitorAsAgent(data) {
     const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
     const directoryData = directorySheet.getDataRange().getValues();
     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
-    const xpColIdx = headers.indexOf('XP') !== -1 ? headers.indexOf('XP') : headers.indexOf('PUNTOS XP');
+    const xpColIdx = findHeaderIdx(headers, 'XP');
     const leadColIdx = headers.indexOf('PUNTOS LIDERAZGO');
 
     let agentRow = -1;
@@ -1186,12 +1330,19 @@ function updateAgentPoints(data) {
   }
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
-  // Batch write: actualizar categoría + XP total en 1 llamada
+  // Batch write: actualizar categoría + RECALCULAR XP como suma de las 3 categorías
   const rowData = sheet.getRange(rowIdx + 1, 1, 1, headers.length).getValues()[0];
   const currentVal = parseInt(rowData[colIdx]) || 0;
   rowData[colIdx] = currentVal + data.points;
+  // FIX DEFINITIVO: XP = BIBLIA + APUNTES + LIDERAZGO (nunca una columna independiente)
   if (xpColIdx !== -1) {
-    rowData[xpColIdx] = (parseInt(rowData[xpColIdx]) || 0) + data.points;
+    const bCol = findHeaderIdx(headers, 'PUNTOS_BIBLIA');
+    const aCol = findHeaderIdx(headers, 'PUNTOS_APUNTES');
+    const lCol = findHeaderIdx(headers, 'PUNTOS_LIDERAZGO');
+    const bVal = bCol !== -1 ? (parseInt(rowData[bCol]) || 0) : 0;
+    const aVal = aCol !== -1 ? (parseInt(rowData[aCol]) || 0) : 0;
+    const lVal = lCol !== -1 ? (parseInt(rowData[lCol]) || 0) : 0;
+    rowData[xpColIdx] = bVal + aVal + lVal;
   }
   sheet.getRange(rowIdx + 1, 1, 1, headers.length).setValues([rowData]);
 
@@ -1385,6 +1536,125 @@ function reconstructDb() {
 
   return jsonOk({ message: "Directorio actualizado.", newAgents: newAgentsCount });
 }
+
+/**
+ * @description Concilia los puntos de asistencia de hoy para todos los agentes registrados.
+ * v3.5: Lógica dinámica de cabeceras.
+ */
+function reconcileTodayAttendanceXP() {
+  var CONFIG = getGlobalConfig();
+  var ss = getSpreadsheet();
+  var attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+  var directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  
+  if (!attendanceSheet || !directorySheet) return jsonError("Hojas no encontradas.");
+  
+  // 1. Leer asistencia
+  var attendanceData = attendanceSheet.getDataRange().getValues();
+  var attenHeaders = attendanceData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  var attenIdIdx = findHeaderIdx(attenHeaders, 'ID');
+  if (attenIdIdx === -1) attenIdIdx = 0;
+  
+  var attenDateIdx = findHeaderIdx(attenHeaders, 'FECHA');
+  if (attenDateIdx === -1) attenDateIdx = 3;
+  
+  // 2. Fecha de hoy (zona horaria del spreadsheet)
+  var tz = ss.getSpreadsheetTimeZone();
+  var todayStr = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+  
+  // 3. Recoger IDs únicos con asistencia hoy
+  var uniqueIds = {};
+  for (var i = 1; i < attendanceData.length; i++) {
+    var rawDate = attendanceData[i][attenDateIdx];
+    if (!rawDate) continue;
+    var rowDateStr = "";
+    try {
+      if (rawDate instanceof Date) {
+        rowDateStr = Utilities.formatDate(rawDate, tz, "yyyy-MM-dd");
+      } else {
+        var d = new Date(rawDate);
+        if (!isNaN(d.getTime())) rowDateStr = Utilities.formatDate(d, tz, "yyyy-MM-dd");
+      }
+    } catch(e) { continue; }
+    
+    if (rowDateStr === todayStr) {
+      var id = String(attendanceData[i][attenIdIdx]).trim().toUpperCase();
+      if (id && id !== '') uniqueIds[id] = true;
+    }
+  }
+  
+  var idsArray = Object.keys(uniqueIds);
+  if (idsArray.length === 0) {
+    return jsonOk({ message: "No se encontró asistencia para hoy (" + todayStr + ").", count: 0, foundIds: [], tz: tz });
+  }
+  
+  // 4. Leer directorio UNA sola vez
+  var dirData = directorySheet.getDataRange().getValues();
+  var dirHeaders = dirData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  var dirIdCol    = findHeaderIdx(dirHeaders, 'ID');
+  var bibleCol    = findHeaderIdx(dirHeaders, 'PUNTOS_BIBLIA');
+  var notesCol    = findHeaderIdx(dirHeaders, 'PUNTOS_APUNTES');
+  var leadCol     = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
+  var xpCol       = findHeaderIdx(dirHeaders, 'XP');
+  
+  if (dirIdCol === -1) dirIdCol = 0;
+  
+  var reconciledCount = 0;
+  var updatedNames = [];
+  var errors = [];
+  
+  // 5. Para cada ID, buscar en directorio y sumar puntos
+  for (var k = 0; k < idsArray.length; k++) {
+    var searchId = idsArray[k];
+    try {
+      for (var r = 1; r < dirData.length; r++) {
+        if (String(dirData[r][dirIdCol]).trim().toUpperCase() === searchId) {
+          // Leer fila actual de la hoja (NO del cache, para evitar conflictos)
+          var sheetRow = r + 1; // Fila real en Google Sheets (1-indexed)
+          var rowRange = directorySheet.getRange(sheetRow, 1, 1, dirHeaders.length);
+          var rowVals  = rowRange.getValues()[0];
+          
+          // Sumar puntos sobre los valores REALES de la fila
+          if (bibleCol !== -1) rowVals[bibleCol] = (parseInt(rowVals[bibleCol]) || 0) + 10;
+          if (notesCol !== -1) rowVals[notesCol] = (parseInt(rowVals[notesCol]) || 0) + 10;
+          if (leadCol  !== -1) rowVals[leadCol]  = (parseInt(rowVals[leadCol])  || 0) + 10;
+          if (xpCol    !== -1) rowVals[xpCol]    = (parseInt(rowVals[xpCol])    || 0) + 30;
+          
+          // Escribir de vuelta
+          rowRange.setValues([rowVals]);
+          
+          var agentName = dirData[r][findHeaderIdx(dirHeaders, 'NOMBRE')] || searchId;
+          updatedNames.push(String(agentName));
+          reconciledCount++;
+          break;
+        }
+      }
+    } catch (e) {
+      errors.push(searchId + ": " + e.message);
+    }
+  }
+  
+  // 6. Notificación
+  var nameList = updatedNames.length > 0 ? updatedNames.join(', ') : 'Ninguno';
+  var msg = '⚡ <b>CONCILIACIÓN COMPLETADA</b>\n\n'
+          + 'Fecha: <b>' + todayStr + '</b>\n'
+          + 'Agentes encontrados: <b>' + idsArray.length + '</b>\n'
+          + 'Puntos restaurados: <b>' + reconciledCount + '</b>\n\n'
+          + '📋 ' + nameList;
+  sendTelegramNotification(msg);
+  
+  return jsonOk({ 
+    message: "Conciliación exitosa.", 
+    count: reconciledCount, 
+    foundIds: idsArray, 
+    updatedNames: updatedNames,
+    errors: errors,
+    today: todayStr,
+    tz: tz
+  });
+}
+
+
 
 /**
  * @description ESCANEA EL DIRECTORIO Y REPARA DATOS FALTANTES (ID y PIN).
@@ -1961,6 +2231,7 @@ function getAcademyData(data) {
 
 /**
  * @description Procesa el resultado de un quiz y otorga recompensas.
+ * FIX #2: Usa header-based lookups en vez de índices posicionales hardcodeados.
  */
 function submitQuizResult(data) {
   const CONFIG = getGlobalConfig();
@@ -1972,19 +2243,52 @@ function submitQuizResult(data) {
   
   if (!progressSheet || !lessonsSheet || !directorySheet) throw new Error("Error en la base de datos.");
   
+  // --- LECCIONES: Header-based lookup ---
   const lessonsData = lessonsSheet.getDataRange().getValues();
-  const lesson = lessonsData.slice(1).find(row => String(row[0]).trim().toUpperCase() === String(data.lessonId).trim().toUpperCase());
+  const lesHeaders = lessonsData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  const lesIdIdx = lesHeaders.indexOf('ID') !== -1 ? lesHeaders.indexOf('ID') : 0;
+  const lesCourseIdx = lesHeaders.indexOf('ID_CURSO') !== -1 ? lesHeaders.indexOf('ID_CURSO') : (lesHeaders.indexOf('COURSE_ID') !== -1 ? lesHeaders.indexOf('COURSE_ID') : 1);
+  const lesTitleIdx = lesHeaders.indexOf('TITULO') !== -1 ? lesHeaders.indexOf('TITULO') : (lesHeaders.indexOf('TITLE') !== -1 ? lesHeaders.indexOf('TITLE') : 3);
+  const lesXpIdx = lesHeaders.indexOf('XP_REWARD') !== -1 ? lesHeaders.indexOf('XP_REWARD') : (lesHeaders.indexOf('XP') !== -1 ? lesHeaders.indexOf('XP') : 12);
+  
+  const lesson = lessonsData.slice(1).find(function(row) {
+    return String(row[lesIdIdx]).trim().toUpperCase() === String(data.lessonId).trim().toUpperCase();
+  });
   if (!lesson) throw new Error("Lección no encontrada.");
 
+  // --- PROGRESO: Header-based lookup ---
   const progressData = progressSheet.getDataRange().getValues();
+  const progHeaders = progressData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  const hasProgHeader = progHeaders.some(function(h) { return h.includes('ID') || h.includes('AGENT'); });
+  
+  var progAgentIdx = 0, progLessonIdx = 1, progStatusIdx = 2, progScoreIdx = 3, progDateIdx = 4, progAttemptsIdx = 5;
+  if (hasProgHeader) {
+    var ph = progHeaders;
+    for (var k = 0; k < ph.length; k++) {
+      if (['ID_AGENTE', 'AGENT_ID', 'AGENTID'].indexOf(ph[k]) !== -1) progAgentIdx = k;
+      if (['ID_LECCION', 'LESSON_ID', 'LESSONID'].indexOf(ph[k]) !== -1) progLessonIdx = k;
+      if (['ESTADO', 'STATUS'].indexOf(ph[k]) !== -1) progStatusIdx = k;
+      if (['SCORE', 'PUNTAJE', 'NOTA'].indexOf(ph[k]) !== -1) progScoreIdx = k;
+      if (['FECHA', 'DATE', 'TIMESTAMP'].indexOf(ph[k]) !== -1) progDateIdx = k;
+      if (['INTENTOS', 'ATTEMPTS'].indexOf(ph[k]) !== -1) progAttemptsIdx = k;
+    }
+  }
+
   const searchAgentId = String(data.agentId).trim().toUpperCase();
   const searchLessonId = String(data.lessonId).trim().toUpperCase();
-  const existingProgressIdx = progressData.findIndex(row => String(row[0]).trim().toUpperCase() === searchAgentId && String(row[1]).trim().toUpperCase() === searchLessonId);
+  const startRow = hasProgHeader ? 1 : 0;
+  var existingProgressIdx = -1;
+  for (var pi = startRow; pi < progressData.length; pi++) {
+    if (String(progressData[pi][progAgentIdx]).trim().toUpperCase() === searchAgentId && String(progressData[pi][progLessonIdx]).trim().toUpperCase() === searchLessonId) {
+      existingProgressIdx = pi;
+      break;
+    }
+  }
   
   let attempts = 0;
   if (existingProgressIdx !== -1) {
-    attempts = parseInt(progressData[existingProgressIdx][5]) || 0;
-    if (progressData[existingProgressIdx][2] === 'COMPLETADO') {
+    attempts = parseInt(progressData[existingProgressIdx][progAttemptsIdx]) || 0;
+    if (String(progressData[existingProgressIdx][progStatusIdx]).trim().toUpperCase() === 'COMPLETADO') {
       throw new Error("Esta lección ya ha sido superada.");
     }
     if (attempts >= 2) {
@@ -1993,7 +2297,7 @@ function submitQuizResult(data) {
   }
 
   const isCorrect = data.score >= 75;
-  const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
+  const xpReward = isCorrect ? (parseInt(lesson[lesXpIdx]) || 10) : 0;
   attempts += 1;
 
   const now = new Date();
@@ -2015,29 +2319,45 @@ function submitQuizResult(data) {
     const rowIdx = directoryData.findIndex(row => String(row[idCol]).trim().toUpperCase() === searchId);
     
     if (rowIdx !== -1) {
-      agentName = directoryData[rowIdx][headers.indexOf('NOMBRE')] || "Agente";
+      const nombreIdx = findHeaderIdx(headers, 'NOMBRE');
+      agentName = (nombreIdx !== -1 ? directoryData[rowIdx][nombreIdx] : "Agente");
+      const bibliaColIdx = findHeaderIdx(headers, 'PUNTOS_BIBLIA') + 1;
       if (xpColIdx > 0) {
         const currentXp = parseInt(directorySheet.getRange(rowIdx + 1, xpColIdx).getValue()) || 0;
         directorySheet.getRange(rowIdx + 1, xpColIdx).setValue(currentXp + xpReward);
       }
+      if (bibliaColIdx > 0) {
+        const currentBiblia = parseInt(directorySheet.getRange(rowIdx + 1, bibliaColIdx).getValue()) || 0;
+        directorySheet.getRange(rowIdx + 1, bibliaColIdx).setValue(currentBiblia + xpReward);
+      }
     }
 
-    // Log Tactical Intel
-    addNewsItem(ss, 'OPERACION', `🎯 OBJETIVO CUMPLIDO: ${agentName} ha superado la lección "${lesson[3]}".`, data.agentId, agentName);
+    // Log Tactical Intel — use header-based title index
+    const lessonTitle = lesson[lesTitleIdx] || lesson[3] || 'Lección';
+    addNewsItem(ss, 'OPERACION', `🎯 OBJETIVO CUMPLIDO: ${agentName} ha superado la lección "${lessonTitle}".`, data.agentId, agentName);
 
-    // Check for Certificate (Course Completion)
+    // Check for Certificate (Course Completion) — use header-based indices
     try {
-      const courseId = String(lesson[1]);
-      const lessonsInCourse = lessonsData.slice(1).filter(r => String(r[1]) === courseId);
+      const courseId = String(lesson[lesCourseIdx]);
+      const lessonsInCourse = lessonsData.slice(1).filter(function(r) { return String(r[lesCourseIdx]) === courseId; });
       const progRows = progressSheet.getDataRange().getValues();
-      const completedIds = progRows.filter(r => String(r[0]) === String(data.agentId) && r[2] === 'COMPLETADO').map(r => String(r[1]));
+      const pStartRow = hasProgHeader ? 1 : 0;
+      const completedIds = [];
+      for (var ci = pStartRow; ci < progRows.length; ci++) {
+        if (String(progRows[ci][progAgentIdx]) === String(data.agentId) && String(progRows[ci][progStatusIdx]).trim().toUpperCase() === 'COMPLETADO') {
+          completedIds.push(String(progRows[ci][progLessonIdx]));
+        }
+      }
       
-      const allDone = lessonsInCourse.every(l => completedIds.includes(String(l[0])));
+      const allDone = lessonsInCourse.every(function(l) { return completedIds.includes(String(l[lesIdIdx])); });
       if (allDone) {
         const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
         const coursesData = coursesSheet.getDataRange().getValues();
-        const course = coursesData.slice(1).find(r => String(r[0]) === courseId);
-        const courseTitle = course ? course[1] : `CURSO #${courseId}`;
+        const courseHeaders = coursesData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+        const courseIdColIdx = courseHeaders.indexOf('ID') !== -1 ? courseHeaders.indexOf('ID') : 0;
+        const courseTitleColIdx = courseHeaders.indexOf('TITULO') !== -1 ? courseHeaders.indexOf('TITULO') : (courseHeaders.indexOf('TITLE') !== -1 ? courseHeaders.indexOf('TITLE') : 1);
+        const course = coursesData.slice(1).find(function(r) { return String(r[courseIdColIdx]) === courseId; });
+        const courseTitle = course ? course[courseTitleColIdx] : `CURSO #${courseId}`;
         
         addNewsItem(ss, 'CERTIFICADO', `🎓 CERTIFICACIÓN: ${agentName} ha obtenido su diploma en "${courseTitle}".`, data.agentId, agentName);
 
@@ -2050,7 +2370,7 @@ function submitQuizResult(data) {
       Logger.log("Error al verificar fin de curso: " + e.message);
     }
 
-    sendTelegramNotification(`🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lesson[3]}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`);
+    sendTelegramNotification(`🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lesson[lesTitleIdx] || lesson[3]}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`);
   }
   
   return jsonOk({ isCorrect, xpAwarded: xpReward });
@@ -2404,8 +2724,11 @@ function updateStreaks(data) {
       if (!isNaN(numVal) && numVal > 1000000000000) {
         // Es un epoch ms
         lastDateStr = Utilities.formatDate(new Date(numVal), "GMT-4", "yyyy-MM-dd");
+      } else if (rawStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+        // Formato ISO ya listo
+        lastDateStr = rawStr.split('T')[0];
       } else {
-        // Intentar parsear el string directamente (asumir YYYY-MM-DD o similar)
+        // Intentar parsear el string directamente
         try {
           const d = new Date(rawStr);
           if (!isNaN(d.getTime())) {
@@ -3279,10 +3602,16 @@ function verifyTaskAction(data) {
   
   for (let i = 1; i < dirData.length; i++) {
     if (String(dirData[i][0]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
-      const liderIdx = dirHeaders.indexOf('PUNTOS LIDERAZGO');
+      const liderIdx = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
+      const xpIdx = findHeaderIdx(dirHeaders, 'XP');
+
       if (liderIdx !== -1) {
         const currentPts = parseInt(dirData[i][liderIdx]) || 0;
         directorySheet.getRange(i + 1, liderIdx + 1).setValue(currentPts + xpReward);
+      }
+      if (xpIdx !== -1) {
+        const currentXP = parseInt(dirData[i][xpIdx]) || 0;
+        directorySheet.getRange(i + 1, xpIdx + 1).setValue(currentXP + xpReward);
       }
       break;
     }
@@ -3350,50 +3679,87 @@ function getPromotionStatus(data) {
     }
   }
   
-  // 2. Contar certificados aprobados (Solo si TODAS las lecciones de un curso están COMPLETADO)
+  // 2. Contar certificados aprobados
+  //    PROGRESO rows: [0]=ID_AGENTE, [1]=ID_LECCION, [2]=ESTADO, [3]=score, [4]=fecha, [5]=intentos
+  //    (Esto coincide con lo que escribe submitQuizResult)
   const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
   const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
   let certificates = 0;
-  
+
   if (lessonsSheet && progressSheet) {
     const lessonsData = lessonsSheet.getDataRange().getValues();
     const lessonsHeaders = lessonsData[0].map(h => String(h).trim().toUpperCase());
-    const courseIdIdx = lessonsHeaders.indexOf('COURSE_ID');
-    const lessonIdIdx = lessonsHeaders.indexOf('ID');
-    
+
+    // Columnas de ACADEMIA_LECCIONES
+    // La columna del curso es ID_CURSO (no COURSE_ID) en la hoja real
+    const courseIdColIdx = lessonsHeaders.indexOf('ID_CURSO') !== -1 ? lessonsHeaders.indexOf('ID_CURSO') : lessonsHeaders.indexOf('COURSE_ID');
+    const lessonIdColIdx = lessonsHeaders.indexOf('ID');
+    // Intentar también LESSON_ID si ID no existe
+    const altLessonIdColIdx = courseIdColIdx === -1 ? -1 : lessonIdColIdx !== -1 ? lessonIdColIdx : lessonsHeaders.indexOf('LESSON_ID');
+    const finalLessonIdIdx = altLessonIdColIdx !== -1 ? altLessonIdColIdx : lessonIdColIdx;
+
     // Agrupar lecciones por curso
     const courseMap = {};
     for (let i = 1; i < lessonsData.length; i++) {
-      const cId = String(lessonsData[i][courseIdIdx]);
-      const lId = String(lessonsData[i][lessonIdIdx]);
+      if (courseIdColIdx === -1 || finalLessonIdIdx === -1) continue;
+      const cId = String(lessonsData[i][courseIdColIdx]).trim();
+      const lId = String(lessonsData[i][finalLessonIdIdx]).trim();
+      if (!cId || !lId) continue;
       if (!courseMap[cId]) courseMap[cId] = [];
-      courseMap[cId].push(lId);
+      courseMap[cId].push(lId.toUpperCase());
     }
-    
-    // Obtener progreso del agente
+
+    // Leer progreso: columnas posicionales (como escribe submitQuizResult)
     const progData = progressSheet.getDataRange().getValues();
-    const progHeaders = progData[0].map(h => String(h).trim().toUpperCase());
-    const agentIdIdx = progHeaders.indexOf('ID_AGENTE');
-    const progLessonIdIdx = progHeaders.indexOf('ID_LECCION');
-    const statusIdx = progHeaders.indexOf('ESTADO');
     
-    const completedLessons = new Set();
-    for (let i = 1; i < progData.length; i++) {
-        if (String(progData[i][agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase() &&
-            String(progData[i][statusIdx]).trim().toUpperCase() === 'COMPLETADO') {
-          completedLessons.add(String(progData[i][progLessonIdIdx]));
-        }
+    // Detectar si la primera fila es encabezado o datos reales
+    const firstRow = progData[0] || [];
+    const hasHeader = String(firstRow[0]).trim().toUpperCase().includes('ID') || String(firstRow[0]).trim().toUpperCase().includes('AGENT');
+    const startRow = hasHeader ? 1 : 0;
+
+    // Indices posicionales (columna 0=agentId, 1=lessonId, 2=estado)
+    // También intentar con headers si existen
+    let agentColIdx = 0;
+    let lessonColIdx = 1;
+    let statusColIdx = 2;
+
+    if (hasHeader) {
+      const ph = firstRow.map(h => String(h).trim().toUpperCase());
+      const altAgent = ['ID_AGENTE', 'AGENT_ID', 'AGENTID'];
+      const altLesson = ['ID_LECCION', 'LESSON_ID', 'LESSONID'];
+      const altStatus = ['ESTADO', 'STATUS'];
+      for (let k = 0; k < ph.length; k++) {
+        if (altAgent.includes(ph[k])) agentColIdx = k;
+        if (altLesson.includes(ph[k])) lessonColIdx = k;
+        if (altStatus.includes(ph[k])) statusColIdx = k;
+      }
     }
-    
-    // Validar cada curso
+
+    const completedLessons = new Set();
+    for (let i = startRow; i < progData.length; i++) {
+      const rowAgentId = String(progData[i][agentColIdx] || '').trim().toUpperCase();
+      const rowStatus  = String(progData[i][statusColIdx] || '').trim().toUpperCase();
+      const rowLessonId = String(progData[i][lessonColIdx] || '').trim().toUpperCase();
+
+      if (rowAgentId === String(data.agentId).trim().toUpperCase() && (rowStatus === 'COMPLETADO' || rowStatus === 'COMPLETADA' || rowStatus === 'V')) {
+        completedLessons.add(rowLessonId);
+      }
+    }
+
+    Logger.log(`[CERTS] Agente ${data.agentId}: ${completedLessons.size} lecciones completadas, ${Object.keys(courseMap).length} cursos en hoja.`);
+
+    // Contar cursos donde TODAS las lecciones están COMPLETADO
     Object.keys(courseMap).forEach(cId => {
       const courseLessons = courseMap[cId];
       if (courseLessons.length > 0 && courseLessons.every(lId => completedLessons.has(lId))) {
         certificates++;
+        Logger.log(`[CERTS] ✅ Curso ${cId} completado.`);
       }
     });
+
+    Logger.log(`[CERTS] Total certificados: ${certificates}`);
   }
-  
+
   // 3. Verificar tareas completadas (verificadas)
   const taskProgressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
   let tasksCompleted = 0;
@@ -3450,9 +3816,10 @@ function promoteAgent(data) {
   const dirData = directorySheet.getDataRange().getValues();
   const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
   const rangoIdx = dirHeaders.indexOf('RANGO');
+  const idColIdx = findHeaderIdx(dirHeaders, 'ID');
   
   for (let i = 1; i < dirData.length; i++) {
-    if (String(dirData[i][0]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+    if (String(dirData[i][idColIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
       const oldRank = String(dirData[i][rangoIdx] || 'RECLUTA');
       const newRank = data.newRank;
       
@@ -3923,4 +4290,263 @@ function setupRankingTrigger() {
     .create();
 
   Logger.log('[RANKING] ✅ Trigger horario creado exitosamente para checkRankingChanges.');
+}
+
+/**
+ * ============================================================
+ * @function backfillAscensos
+ * @description EJECUTAR UNA SOLA VEZ desde el editor de Apps Script.
+ *
+ * Recorre todos los agentes del DIRECTORIO y, para aquellos cuyo RANGO
+ * es mayor que RECLUTA, genera entradas retroactivas en la hoja ASCENSOS.
+ * No sobrescribe registros existentes.
+ * ============================================================
+ */
+function backfillAscensos() {
+  const CONFIG = getGlobalConfig();
+  const ss = getSpreadsheet();
+
+  const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  const promoSheet = ss.getSheetByName(CONFIG.PROMOTIONS_SHEET);
+  if (!dirSheet || !promoSheet) {
+    Logger.log('[BACKFILL] Hoja DIRECTORIO o ASCENSOS no encontrada.');
+    return;
+  }
+
+  const RANK_ORDER = ['RECLUTA', 'ACTIVO', 'CONSAGRADO', 'REFERENTE', 'LIDER', 'LÍDER'];
+
+  const dirData = dirSheet.getDataRange().getValues();
+  const dirHeaders = dirData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  const idIdx   = findHeaderIdx(dirHeaders, 'ID');
+  const nameIdx = findHeaderIdx(dirHeaders, 'NOMBRE');
+  const xpIdx   = findHeaderIdx(dirHeaders, 'XP');
+  const rankIdx = findHeaderIdx(dirHeaders, 'RANGO');
+
+  // Agentes que ya tienen registro en ASCENSOS
+  const promoData = promoSheet.getDataRange().getValues();
+  const alreadyDone = new Set();
+  for (var p = 1; p < promoData.length; p++) {
+    var pid = String(promoData[p][0] || '').trim().toUpperCase();
+    if (pid) alreadyDone.add(pid);
+  }
+
+  const today = Utilities.formatDate(new Date(), 'GMT-4', 'dd/MM/yyyy');
+  var added = 0;
+
+  for (var i = 1; i < dirData.length; i++) {
+    var agentId   = String(dirData[i][idIdx] || '').trim();
+    var agentName = String(dirData[i][nameIdx] || '').trim();
+    var xp        = parseInt(dirData[i][xpIdx]) || 0;
+    var rankRaw   = String(dirData[i][rankIdx] || 'RECLUTA').trim().toUpperCase();
+    var rank      = (rankRaw === 'LIDER') ? 'LÍDER' : rankRaw;
+
+    if (!agentId) continue;
+    var rankIndex = RANK_ORDER.indexOf(rank);
+    if (rankIndex <= 0) continue; // RECLUTA o desconocido  no hay ascenso que recuperar
+    if (alreadyDone.has(agentId.toUpperCase())) continue; // ya tiene registro
+
+    // Crear una entrada por cada salto de rango desde RECLUTA hasta el actual
+    var prevRank = 'RECLUTA';
+    var ranksToCreate = ['ACTIVO', 'CONSAGRADO', 'REFERENTE', 'LÍDER'];
+    for (var r = 0; r < Math.min(rankIndex, ranksToCreate.length); r++) {
+      var nextRank = ranksToCreate[r];
+      promoSheet.appendRow([agentId, agentName, prevRank, nextRank, today, xp, 0]);
+      Logger.log('[BACKFILL] ' + agentName + ': ' + prevRank + '  ' + nextRank);
+      prevRank = nextRank;
+      added++;
+    }
+  }
+
+  Logger.log('[BACKFILL] Completado. Entradas creadas: ' + added);
+}
+
+/**
+ * ============================================================
+ * @function diagnosticCertificates
+ * @description HERRAMIENTA DE DIAGNÓSTICO - Ejecutar desde Apps Script.
+ * Muestra en el log cuántas lecciones COMPLETADO tiene cada agente
+ * y cuántos certificados de curso le corresponden.
+ * ============================================================
+ */
+function diagnosticCertificates() {
+  const CONFIG = getGlobalConfig();
+  const ss = getSpreadsheet();
+
+  const lessonsSheet  = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+  const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
+
+  if (!lessonsSheet || !progressSheet) {
+    Logger.log('[DIAG] No se encontraron las hojas ACADEMIA_LECCIONES o ACADEMIA_PROGRESO.');
+    return;
+  }
+
+  // Leer lecciones
+  const lessonsData = lessonsSheet.getDataRange().getValues();
+  const lHeaders = lessonsData[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  const cidIdx = lHeaders.indexOf('ID_CURSO') !== -1 ? lHeaders.indexOf('ID_CURSO') : lHeaders.indexOf('COURSE_ID');
+  const lidIdx = lHeaders.indexOf('ID');
+
+  Logger.log('[DIAG] Encabezados LECCIONES: ' + lHeaders.join(' | '));
+  Logger.log('[DIAG] courseIdIdx=' + cidIdx + '  lessonIdIdx=' + lidIdx);
+
+  const courseMap = {};
+  for (var i = 1; i < lessonsData.length; i++) {
+    var cId = String(lessonsData[i][cidIdx] || '').trim();
+    var lId = String(lessonsData[i][lidIdx] || '').trim();
+    if (!cId || !lId) continue;
+    if (!courseMap[cId]) courseMap[cId] = [];
+    courseMap[cId].push(lId);
+  }
+  Logger.log('[DIAG] Cursos encontrados: ' + JSON.stringify(Object.keys(courseMap)));
+
+  // Leer progreso (positional: col 0=agentId, col 1=lessonId, col 2=estado)
+  const progData = progressSheet.getDataRange().getValues();
+  Logger.log('[DIAG] Encabezados PROGRESO (fila 1): ' + progData[0].join(' | '));
+  Logger.log('[DIAG] Total filas de progreso: ' + (progData.length - 1));
+
+  // Agrupar lecciones completadas por agente
+  const agentCompleted = {};
+  var startRow = 0;
+  var firstVal = String(progData[0][0] || '').toLowerCase();
+  if (firstVal.includes('id') || firstVal.includes('agent')) startRow = 1;
+
+  for (var j = startRow; j < progData.length; j++) {
+    var aId    = String(progData[j][0] || '').trim();
+    var lIdP   = String(progData[j][1] || '').trim();
+    var estado = String(progData[j][2] || '').trim().toUpperCase();
+    if (!aId || !lIdP) continue;
+    if (!agentCompleted[aId]) agentCompleted[aId] = [];
+    if (estado === 'COMPLETADO') agentCompleted[aId].push(lIdP);
+  }
+
+  // Calcular certificados por agente
+  var courseIds = Object.keys(courseMap);
+  var agentIds  = Object.keys(agentCompleted);
+
+  Logger.log('[DIAG] Agentes con progreso: ' + agentIds.length);
+
+  agentIds.forEach(function(aId) {
+    var completed = agentCompleted[aId];
+    var certs = 0;
+    courseIds.forEach(function(cId) {
+      var lessons = courseMap[cId];
+      // Comparacion sin case-sensitivity
+      var allDone = lessons.length > 0 && lessons.every(function(lId) {
+        return completed.some(function(cLid) {
+          return cLid.trim().toLowerCase() === lId.trim().toLowerCase();
+        });
+      });
+      if (allDone) certs++;
+    });
+    Logger.log('[DIAG] ' + aId + ': ' + completed.length + ' lecciones COMPLETADO  ' + certs + ' certificados');
+  });
+
+  Logger.log('[DIAG] === Diagnóstico completo ===');
+}
+
+/**
+ * ======================================================================
+ * 🔧 MIGRACIÓN: RECUPERAR PUNTOS DE COLUMNAS DUPLICADAS
+ * ======================================================================
+ * EJECUTAR UNA SOLA VEZ después de desplegar el Code.gs corregido.
+ * 
+ * El spreadsheet tiene columnas duplicadas:
+ *   - Legacy:  "PUNTOS BIBLIA" (col G), "PUNTOS APUNTES" (col H), "PUNTOS LIDERAZGO" (col I), "PUNTOS XP" (col D)
+ *   - Nuevas:  "PUNTOS_BIBLIA" (col AM), "PUNTOS_APUNTES" (col AN), "PUNTOS_LIDERAZGO" (col AO), "XP" (col T)
+ * 
+ * Esta función:
+ *   1. Lee los valores de AMBOS sets de columnas
+ *   2. SUMA los valores de las columnas nuevas a las legacy
+ *   3. Recalcula XP = BIBLIA + APUNTES + LIDERAZGO
+ *   4. Pone en 0 las columnas nuevas (para evitar doble conteo)
+ *   5. Envía notificación por Telegram con reporte
+ */
+function migrateRecoverDuplicatePoints() {
+  var CONFIG = getGlobalConfig();
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  if (!sheet) throw new Error("Hoja del directorio no encontrada.");
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(function(h) { return String(h).trim().toUpperCase(); });
+
+  // Encontrar AMBOS sets de columnas por nombre exacto
+  var legacyBible = headers.indexOf('PUNTOS BIBLIA');
+  var legacyNotes = headers.indexOf('PUNTOS APUNTES');
+  var legacyLead  = headers.indexOf('PUNTOS LIDERAZGO');
+  var legacyXp    = headers.indexOf('PUNTOS XP');
+
+  var newBible = headers.indexOf('PUNTOS_BIBLIA');
+  var newNotes = headers.indexOf('PUNTOS_APUNTES');
+  var newLead  = headers.indexOf('PUNTOS_LIDERAZGO');
+  var newXp    = headers.indexOf('XP');
+
+  Logger.log('🔍 MIGRACIÓN — Índices encontrados:');
+  Logger.log('  Legacy: BIBLIA=' + legacyBible + ' APUNTES=' + legacyNotes + ' LIDERAZGO=' + legacyLead + ' XP=' + legacyXp);
+  Logger.log('  Nuevas: BIBLIA=' + newBible + ' APUNTES=' + newNotes + ' LIDERAZGO=' + newLead + ' XP=' + newXp);
+
+  if (legacyBible === -1 || legacyNotes === -1 || legacyLead === -1 || legacyXp === -1) {
+    throw new Error('No se encontraron las columnas legacy. Headers: ' + headers.join(', '));
+  }
+  if (newBible === -1 && newNotes === -1 && newLead === -1) {
+    Logger.log('⚠️ No hay columnas duplicadas. No se necesita migración.');
+    return;
+  }
+
+  var idCol = headers.indexOf('ID CÉDULA') !== -1 ? headers.indexOf('ID CÉDULA') : headers.indexOf('ID');
+  var nameCol = headers.indexOf('NOMBRE');
+  var migratedCount = 0;
+  var totalRecovered = 0;
+  var report = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var agentId = String(data[i][idCol] || '').trim();
+    var agentName = String(data[i][nameCol] || '').trim();
+    if (!agentId) continue;
+
+    // Leer valores de las columnas NUEVAS (las que tienen datos perdidos)
+    var addBible = newBible !== -1 ? (parseInt(data[i][newBible]) || 0) : 0;
+    var addNotes = newNotes !== -1 ? (parseInt(data[i][newNotes]) || 0) : 0;
+    var addLead  = newLead  !== -1 ? (parseInt(data[i][newLead])  || 0) : 0;
+    var pointsToRecover = addBible + addNotes + addLead;
+
+    if (pointsToRecover === 0) continue; // No hay nada que migrar
+
+    // Leer fila actual directamente de la hoja (no del cache)
+    var rowRange = sheet.getRange(i + 1, 1, 1, headers.length);
+    var rowData = rowRange.getValues()[0];
+
+    // Sumar valores nuevos a los legacy
+    rowData[legacyBible] = (parseInt(rowData[legacyBible]) || 0) + addBible;
+    rowData[legacyNotes] = (parseInt(rowData[legacyNotes]) || 0) + addNotes;
+    rowData[legacyLead]  = (parseInt(rowData[legacyLead])  || 0) + addLead;
+
+    // Recalcular XP = suma de las 3 categorías
+    rowData[legacyXp] = (parseInt(rowData[legacyBible]) || 0) + 
+                        (parseInt(rowData[legacyNotes]) || 0) + 
+                        (parseInt(rowData[legacyLead])  || 0);
+
+    // Poner en 0 las columnas nuevas (evitar doble conteo futuro)
+    if (newBible !== -1) rowData[newBible] = 0;
+    if (newNotes !== -1) rowData[newNotes] = 0;
+    if (newLead  !== -1) rowData[newLead]  = 0;
+    if (newXp    !== -1) rowData[newXp]    = 0;
+
+    // Guardar
+    rowRange.setValues([rowData]);
+
+    migratedCount++;
+    totalRecovered += pointsToRecover;
+    report.push('• ' + agentName + ': +' + addBible + 'B +' + addNotes + 'A +' + addLead + 'L = +' + pointsToRecover + ' → XP total: ' + rowData[legacyXp]);
+    Logger.log('✅ ' + agentId + ' (' + agentName + '): +' + addBible + 'B +' + addNotes + 'A +' + addLead + 'L → XP=' + rowData[legacyXp]);
+  }
+
+  var summary = '🔧 <b>MIGRACIÓN COMPLETADA</b>\n\n' +
+    'Agentes actualizados: <b>' + migratedCount + '</b>\n' +
+    'Puntos recuperados: <b>' + totalRecovered + '</b>\n\n' +
+    report.join('\n');
+  
+  try { sendTelegramNotification(summary); } catch(e) { Logger.log('Error Telegram: ' + e.message); }
+
+  Logger.log('\n🎯 MIGRACIÓN COMPLETA: ' + migratedCount + ' agentes, ' + totalRecovered + ' puntos recuperados.');
 }

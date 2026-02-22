@@ -147,10 +147,10 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] bg-black/98 flex flex-col items-center animate-in fade-in backdrop-blur-3xl overflow-hidden pt-8 pb-10">
+        <div className="fixed inset-0 z-[9999] bg-black/98 flex flex-col items-center justify-center animate-in fade-in backdrop-blur-3xl overflow-hidden p-4">
 
             {/* Header Controls (Fixed top layout) */}
-            <div className="w-full max-w-4xl flex justify-between items-center px-6 mb-8 md:mb-12 shrink-0 relative z-[10000]">
+            <div className="w-full max-w-4xl flex justify-between items-center px-2 mb-4 shrink-0 relative z-[10000]">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#ffb700]/10 flex items-center justify-center border border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.2)]">
                         <Award className="text-[#ffb700]" size={20} />
@@ -307,7 +307,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 </div>
             </div>
 
-            <p className="mt-4 md:mt-8 text-white/20 text-[10px] font-black uppercase tracking-[10px] md:tracking-[1em] mb-4 text-center">Consagrados Command Center • Elite Perfection 2026</p>
+            <p className="mt-4 text-white/10 text-[8px] font-black uppercase tracking-[1em] text-center shrink-0">Consagrados Command Center • Elite Perfection 2026</p>
         </div>
     );
 };

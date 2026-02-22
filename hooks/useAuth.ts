@@ -236,7 +236,7 @@ export function useAuth() {
                 const agent = JSON.parse(storedUser);
                 const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
                 const now = Date.now();
-                if (!isPwa && now - lastActive > 1800000 && lastActive !== 0) {
+                if (!isPwa && now - lastActive > 3600000 && lastActive !== 0) {
                     handleLogout();
                 } else {
                     setIsLoggedIn(true);
@@ -277,14 +277,14 @@ export function useAuth() {
                 const now = Date.now();
                 const diff = now - lastActiveTime;
                 if (!isPwa) {
-                    if (diff >= 1800000) { handleLogout(); }
-                    else if (diff >= 1500000) { setShowSessionWarning(true); }
+                    if (diff >= 3600000) { handleLogout(); }
+                    else if (diff >= 3300000) { setShowSessionWarning(true); }
                 }
                 if (!navigator.onLine) {
                     const offlineStart = parseInt(localStorage.getItem('offline_start_time') || '0');
                     if (offlineStart === 0) {
                         localStorage.setItem('offline_start_time', String(now));
-                    } else if (now - offlineStart > 300000) { handleLogout(); }
+                    } else if (now - offlineStart > 1800000) { handleLogout(); }
                 } else {
                     localStorage.removeItem('offline_start_time');
                 }

@@ -2009,8 +2009,8 @@ function submitQuizResult(data) {
   if (isCorrect) {
     const directoryData = directorySheet.getDataRange().getValues();
     const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
-    const idCol = headers.indexOf('ID');
-    const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
+    const idCol = findHeaderIdx(headers, 'ID');
+    const xpColIdx = findHeaderIdx(headers, 'XP') + 1;
     const searchId = String(data.agentId).trim().toUpperCase();
     const rowIdx = directoryData.findIndex(row => String(row[idCol]).trim().toUpperCase() === searchId);
     
@@ -3336,14 +3336,15 @@ function getPromotionStatus(data) {
   let agentRank = 'RECLUTA';
   let agentName = '';
   for (let i = 1; i < dirData.length; i++) {
-    if (String(dirData[i][0]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
-      const bibliaIdx = dirHeaders.indexOf('PUNTOS BIBLIA');
-      const apuntesIdx = dirHeaders.indexOf('PUNTOS APUNTES');
-      const liderazgoIdx = dirHeaders.indexOf('PUNTOS LIDERAZGO');
-      agentXp = (parseInt(dirData[i][bibliaIdx]) || 0) + (parseInt(dirData[i][apuntesIdx]) || 0) + (parseInt(dirData[i][liderazgoIdx]) || 0);
-      const rangoIdx = dirHeaders.indexOf('RANGO');
+    const idColIdx = findHeaderIdx(dirHeaders, 'ID');
+    if (String(dirData[i][idColIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+      const totalXpIdx = findHeaderIdx(dirHeaders, 'XP');
+      
+      agentXp = totalXpIdx !== -1 ? (parseInt(dirData[i][totalXpIdx]) || 0) : 0;
+      
+      const rangoIdx = findHeaderIdx(dirHeaders, 'RANGO');
       agentRank = String(dirData[i][rangoIdx] || 'RECLUTA').trim().toUpperCase();
-      const nameIdx = dirHeaders.indexOf('NOMBRE');
+      const nameIdx = findHeaderIdx(dirHeaders, 'NOMBRE');
       agentName = String(dirData[i][nameIdx] || '');
       break;
     }

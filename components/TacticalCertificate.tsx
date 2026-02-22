@@ -1,6 +1,6 @@
 
 import React, { useRef, useState } from 'react';
-import { Shield, CheckCircle, Download, Printer, X, Loader2 } from 'lucide-react';
+import { Shield, CheckCircle, Download, Printer, X, Loader2, Share2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from './DigitalIdCard';
 import { Agent } from '../types';
@@ -85,11 +85,40 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
         }
     };
 
+    const handleShare = async () => {
+        if (!certificateRef.current) return;
+        try {
+            const dataUrl = await toPng(certificateRef.current, {
+                cacheBust: true,
+                canvasWidth: 1080,
+                canvasHeight: 760,
+                pixelRatio: 1,
+                backgroundColor: '#001F3F',
+            });
+
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            const file = new File([blob], `certificado-${resolvedName}.png`, { type: 'image/png' });
+
+            if (navigator.share) {
+                await navigator.share({
+                    title: '¡Certificación Táctica Obtenida!',
+                    text: `He completado con éxito: ${resolvedCourse}`,
+                    files: [file]
+                });
+            } else {
+                alert("La función de compartir no está disponible en este navegador. Usa el botón de DESCARGAR HD.");
+            }
+        } catch (err) {
+            console.error('Error sharing certificate:', err);
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 bg-black/98 backdrop-blur-xl animate-in fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 bg-black/98 backdrop-blur-xl animate-in fade-in overflow-hidden">
 
             {/* Action Bar - GitHub Quality Pro */}
-            <div className="w-full max-w-[842px] flex justify-between items-center mb-6 print:hidden">
+            <div className="w-full max-w-[842px] flex flex-wrap justify-between items-center gap-4 mb-6 print:hidden">
                 <div className="flex items-center gap-3">
                     <Shield className="text-[#FFB700] rotate-12" size={28} />
                     <div className="flex flex-col">
@@ -97,25 +126,32 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
                         <span className="text-[#FFB700] font-black uppercase tracking-[0.2em] text-[9px] font-montserrat mt-1">Soberanía Táctica Original</span>
                     </div>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-2 sm:gap-4">
+                    <button
+                        onClick={handleShare}
+                        className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-indigo-600/20 text-indigo-400 font-black uppercase text-[12px] tracking-widest rounded-2xl border border-indigo-500/30 hover:bg-indigo-600/30 transition-all font-bebas shadow-xl"
+                    >
+                        <Share2 size={18} />
+                        COMPARTIR
+                    </button>
                     <button
                         onClick={handleDownloadImage}
                         disabled={isDownloading}
-                        className="flex items-center gap-2 px-8 py-4 bg-white/5 text-white font-black uppercase text-[12px] tracking-widest rounded-2xl border border-white/10 hover:bg-white/20 transition-all font-bebas disabled:opacity-50 shadow-xl"
+                        className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white/5 text-white font-black uppercase text-[12px] tracking-widest rounded-2xl border border-white/10 hover:bg-white/20 transition-all font-bebas disabled:opacity-50 shadow-xl"
                     >
                         {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                        DESCARGAR HD
+                        HD
                     </button>
                     <button
                         onClick={() => window.print()}
-                        className="flex items-center gap-2 px-8 py-4 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[12px] tracking-widest rounded-2xl hover:scale-105 transition-all shadow-[0_15px_40px_rgba(255,183,0,0.4)] font-bebas"
+                        className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[12px] tracking-widest rounded-2xl hover:scale-105 transition-all shadow-[0_15px_40px_rgba(255,183,0,0.4)] font-bebas"
                     >
                         <Printer size={18} />
-                        IMPRIMIR A4
+                        A4
                     </button>
                     <button
                         onClick={onClose}
-                        className="p-4 bg-red-600/10 text-red-500 rounded-2xl hover:bg-red-600 hover:text-white transition-all border border-red-600/30"
+                        className="p-3 sm:p-4 bg-red-600/10 text-red-500 rounded-2xl hover:bg-red-600 hover:text-white transition-all border border-red-600/30"
                     >
                         <X size={24} />
                     </button>
@@ -123,7 +159,7 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
             </div>
 
             {/* Original Certificate Layout */}
-            <div className="relative shadow-[0_50px_120px_rgba(0,0,0,1)] rounded-lg overflow-visible scale-[0.35] sm:scale-[0.55] md:scale-[0.8] lg:scale-100 origin-center transition-transform">
+            <div className="relative shadow-[0_50px_120px_rgba(0,0,0,1)] rounded-lg overflow-visible scale-[0.3] xs:scale-[0.4] sm:scale-[0.6] md:scale-[0.8] lg:scale-100 origin-center transition-transform">
                 <div
                     ref={certificateRef}
                     id="certificate-content"

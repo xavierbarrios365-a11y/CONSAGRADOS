@@ -2178,9 +2178,23 @@ function resetStudentAttempts(data) {
   const values = range.getValues();
   let deletedCount = 0;
   
+  let lessonIdsToDelete: string[] = [];
+  if (data.courseId) {
+    const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
+    if (lessonsSheet) {
+      const lessonsData = lessonsSheet.getDataRange().getValues();
+      lessonIdsToDelete = lessonsData.slice(1)
+        .filter(row => String(row[1]).trim() === String(data.courseId).trim())
+        .map(row => String(row[0]).trim());
+    }
+  }
+
   // Eliminamos de abajo hacia arriba para evitar problemas con los índices al borrar filas
   for (let i = values.length - 1; i >= 1; i--) {
-    if (String(values[i][0]).trim() === String(data.agentId).trim()) {
+    const agentMatch = String(values[i][0]).trim() === String(data.agentId).trim();
+    const lessonMatch = lessonIdsToDelete.length > 0 ? lessonIdsToDelete.includes(String(values[i][1]).trim()) : true;
+    
+    if (agentMatch && lessonMatch) {
       progressSheet.deleteRow(i + 1);
       deletedCount++;
     }

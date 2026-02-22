@@ -42,6 +42,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const [isAnalyzingDeeply, setIsAnalyzingDeeply] = useState(false);
     const [isVideoWatched, setIsVideoWatched] = useState(false);
     const [uploadingCourseId, setUploadingCourseId] = useState<string | null>(null);
+    const [selectedAuditCourseId, setSelectedAuditCourseId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -169,11 +170,15 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         });
     };
 
-    const handleResetAttempts = async (aId: string) => {
-        if (!confirm(`¿Estás seguro de resetear los intentos para el agente ${aId}?`)) return;
+    const handleResetAttempts = async (aId: string, courseId?: string) => {
+        const confirmMsg = courseId
+            ? `¿Estás seguro de resetear los intentos de este curso para el agente ${aId}?`
+            : `¿Estás seguro de resetear TODOS los intentos para el agente ${aId}?`;
+
+        if (!confirm(confirmMsg)) return;
         setIsLoading(true);
         try {
-            const res = await resetStudentAttempts(aId);
+            const res = await resetStudentAttempts(aId, courseId);
             if (res.success) {
                 alert("Reseteo exitoso. El agente puede re-intentar las evaluaciones.");
                 // Refrescar tanto la auditoría como el progreso actual (si es el mismo usuario)
@@ -462,84 +467,140 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     />
                 ) : directorView === 'AUDIT' ? (
                     <div className="space-y-6 animate-in fade-in">
-                        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                            <div className="relative w-full md:w-96">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar agente por nombre o ID..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[10px] text-white font-bold uppercase focus:border-[#ffb700]/50 outline-none transition-all"
-                                />
-                            </div>
-                            <div className="flex items-center gap-4 text-[10px] text-gray-500 font-black uppercase">
-                                <Users size={16} /> {allAgents.length} Agentes Registrados
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {allAgents.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.includes(searchQuery)).map(agent => {
-                                const studentProgress = auditProgress.filter(p => String(p.agentId) === String(agent.id));
-                                const completedLessonIds = studentProgress.filter(p => p.status === 'COMPLETADO').map((p: any) => p.lessonId);
-                                const completedCount = completedLessonIds.length;
-                                const percent = lessons.length > 0 ? (completedCount / lessons.length) * 100 : 0;
-
-                                // Per-course completion
-                                const courseStats = courses.map(course => {
-                                    const courseLessons = lessons.filter(l => l.courseId === course.id);
-                                    const completedInCourse = courseLessons.filter(l => completedLessonIds.includes(l.id)).length;
-                                    const isComplete = courseLessons.length > 0 && completedInCourse === courseLessons.length;
-                                    return { courseId: course.id, title: course.title, isComplete, completedInCourse, total: courseLessons.length };
-                                });
-
-                                return (
-                                    <div key={agent.id} className="bg-[#3A3A3A]/10 border border-white/5 rounded-3xl p-6 hover:border-[#FFB700]/30 transition-all group">
-                                        <div className="flex items-center gap-4 mb-3">
-                                            <img
-                                                src={formatDriveUrl(agent.photoUrl)}
-                                                className="w-12 h-12 rounded-2xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
-                                                onError={(e) => {
-                                                    e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                                                    e.currentTarget.className = "w-12 h-12 rounded-2xl object-cover border border-white/10 opacity-20";
-                                                }}
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black text-white uppercase truncate">{agent.name}</p>
-                                                <p className="text-[8px] text-gray-500 font-bold uppercase">{agent.id} • {agent.rank}</p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-[7px] font-black uppercase text-[#ffb700]">
-                                                <span>Progreso General</span>
-                                                <span>{Math.round(percent)}%</span>
-                                            </div>
-                                            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-[#ffb700]" style={{ width: `${percent}%` }} />
-                                            </div>
-                                        </div>
-                                        {/* Per-course detail */}
-                                        {courseStats.length > 0 && (
-                                            <div className="mt-3 space-y-1.5 border-t border-white/5 pt-3">
-                                                {courseStats.map(cs => (
-                                                    <div key={cs.courseId} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[8px] font-black uppercase ${cs.isComplete ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
-                                                        {cs.isComplete ? <CheckCircle size={10} className="text-green-500 shrink-0" /> : <AlertCircle size={10} className="text-gray-600 shrink-0" />}
-                                                        <span className="truncate flex-1">{cs.title}</span>
-                                                        <span className="shrink-0">{cs.completedInCourse} de {cs.total}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => handleResetAttempts(agent.id)}
-                                            className="mt-3 w-full py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[8px] font-black uppercase hover:bg-red-500/20 transition-all"
-                                        >
-                                            Resetear Intentos
-                                        </button>
+                        {!selectedAuditCourseId ? (
+                            <>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl font-bebas text-white uppercase tracking-wider">Auditoría por Curso</h3>
+                                    <div className="flex items-center gap-4 text-[10px] text-gray-500 font-black uppercase">
+                                        <BookOpen size={16} /> {courses.length} Cursos Activos
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {courses.map(course => {
+                                        const courseLessons = lessons.filter(l => l.courseId === course.id);
+                                        const completions = auditProgress.filter(p => p.status === 'COMPLETADO' && courseLessons.some(cl => cl.id === p.lessonId)).length;
+
+                                        return (
+                                            <div
+                                                key={course.id}
+                                                onClick={() => setSelectedAuditCourseId(course.id)}
+                                                className="bg-[#3A3A3A]/10 border border-white/5 rounded-3xl p-6 hover:border-[#FFB700]/30 transition-all cursor-pointer group"
+                                            >
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="p-3 bg-[#ffb700]/10 rounded-2xl">
+                                                        <GraduationCap className="text-[#ffb700]" size={24} />
+                                                    </div>
+                                                    <ChevronRight className="text-gray-600 group-hover:text-white transition-all" size={20} />
+                                                </div>
+                                                <h4 className="text-sm font-black text-white uppercase mb-1">{course.title}</h4>
+                                                <p className="text-[8px] text-gray-500 font-bold uppercase mb-4">{courseLessons.length} Lecciones • {completions} Completadas</p>
+                                                <button className="w-full py-2 bg-white/5 border border-white/10 rounded-xl text-[8px] font-black uppercase hover:bg-white/10 transition-all">
+                                                    Auditar Agentes
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <button
+                                        onClick={() => setSelectedAuditCourseId(null)}
+                                        className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-white transition-all"
+                                    >
+                                        <ArrowLeft size={16} />
+                                    </button>
+                                    <div>
+                                        <h3 className="text-xl font-bebas text-white uppercase tracking-wider">
+                                            {courses.find(c => c.id === selectedAuditCourseId)?.title}
+                                        </h3>
+                                        <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest">Auditoría Detallada de Agentes</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
+                                    <div className="relative w-full md:w-96">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar agente por nombre o ID..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[10px] text-white font-bold uppercase focus:border-[#ffb700]/50 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {allAgents
+                                        .filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.includes(searchQuery))
+                                        .map(agent => {
+                                            const courseLessons = lessons.filter(l => l.courseId === selectedAuditCourseId);
+                                            const studentProgress = auditProgress.filter(p => String(p.agentId) === String(agent.id) && courseLessons.some(cl => cl.id === p.lessonId));
+                                            const completedCount = studentProgress.filter(p => p.status === 'COMPLETADO').length;
+                                            const percent = courseLessons.length > 0 ? (completedCount / courseLessons.length) * 100 : 0;
+
+                                            return (
+                                                <div key={agent.id} className="bg-[#3A3A3A]/10 border border-white/5 rounded-3xl p-6 hover:border-[#FFB700]/30 transition-all group">
+                                                    <div className="flex items-center gap-4 mb-4">
+                                                        <img
+                                                            src={formatDriveUrl(agent.photoUrl)}
+                                                            className="w-12 h-12 rounded-2xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                                                                e.currentTarget.className = "w-12 h-12 rounded-2xl object-cover border border-white/10 opacity-20";
+                                                            }}
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[10px] font-black text-white uppercase truncate">{agent.name}</p>
+                                                            <p className="text-[8px] text-gray-500 font-bold uppercase">{agent.id} • {agent.rank}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-3 mb-4">
+                                                        <div className="flex justify-between text-[7px] font-black uppercase text-[#ffb700]">
+                                                            <span>Progreso en Curso</span>
+                                                            <span>{Math.round(percent)}%</span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-[#ffb700]" style={{ width: `${percent}%` }} />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                                                        {courseLessons.map(lesson => {
+                                                            const prog = studentProgress.find(p => p.lessonId === lesson.id);
+                                                            return (
+                                                                <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-white/5">
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-[7px] text-white font-black uppercase truncate">{lesson.title}</span>
+                                                                        <span className="text-[6px] text-gray-500 font-bold uppercase">Intentos: {prog?.attempts || 0}</span>
+                                                                    </div>
+                                                                    {prog?.status === 'COMPLETADO' ? (
+                                                                        <CheckCircle size={10} className="text-green-500" />
+                                                                    ) : prog?.status === 'FALLIDO' ? (
+                                                                        <AlertCircle size={10} className="text-red-500" />
+                                                                    ) : (
+                                                                        <div className="w-2.5 h-2.5 rounded-full border border-white/10" />
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => handleResetAttempts(agent.id, selectedAuditCourseId!)}
+                                                        className="mt-4 w-full py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[8px] font-black uppercase hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Trash2 size={10} /> Resetear Curso
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

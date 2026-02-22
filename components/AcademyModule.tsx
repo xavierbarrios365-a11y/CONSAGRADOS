@@ -211,6 +211,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         setUserAnswers([]);
         setDeepAnalysis(null);
         setIsVideoWatched(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const getLessonAttempts = (lessonId: string) => progress.find(p => p.lessonId === lessonId)?.attempts || 0;
@@ -710,7 +711,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             <div className="max-w-5xl mx-auto p-6 md:p-10 flex flex-col lg:flex-row gap-10">
                 <div className="flex-1 space-y-8">
                     {activeLesson ? (
-                        <div className="animate-in slide-in-from-bottom-4">
+                        <div key={activeLesson.id} className="animate-in slide-in-from-bottom-4">
                             <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl mb-10">
                                 {activeLesson.videoUrl ? (
                                     <>
@@ -903,6 +904,26 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         )}
                                                     </div>
                                                 )}
+
+                                                {/* Botón Siguiente Lección */}
+                                                {(() => {
+                                                    const currentIndex = courseLessons.findIndex(l => l.id === activeLesson.id);
+                                                    const nextLesson = courseLessons[currentIndex + 1];
+                                                    if (nextLesson) {
+                                                        return (
+                                                            <div className="pt-8 mt-8 border-t-2 border-dashed border-black/10">
+                                                                <button
+                                                                    onClick={() => handleLessonSelect(nextLesson)}
+                                                                    className="w-full py-6 bg-[#ffb700] hover:bg-[#e6a500] text-[#001f3f] font-black uppercase text-[12px] tracking-[0.4em] rounded-sm transition-all shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:-translate-y-1 active:translate-y-1 active:shadow-none flex items-center justify-center gap-4 group"
+                                                                >
+                                                                    CONTINUAR A LA SIGUIENTE LECCIÓN
+                                                                    <ChevronRight size={20} className="group-hover:translate-x-2 transition-transform" />
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
                                             </div>
                                         )}
                                     </div>

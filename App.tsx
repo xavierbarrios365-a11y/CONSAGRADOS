@@ -507,9 +507,13 @@ const App: React.FC = () => {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
-                    <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">{currentUser?.name || 'Saúl'}</p>
+                    <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
+                      {currentUser?.name
+                        ? currentUser.name.split(' ').slice(0, 2).join(' ')
+                        : 'Saúl'}
+                    </p>
                   </div>
                   {/* PROGRESO COMPACTO EN EL HEADER */}
                   {currentUser && (

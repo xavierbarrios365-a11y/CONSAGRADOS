@@ -27,9 +27,22 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
         }
 
         const checkCompletion = () => {
-            const lastDate = new Date(verse.lastStreakDate!);
+            // Robust parsing: supports epoch ms (string/number), ISO strings, Date objects
+            let lastMs = 0;
+            const raw = verse.lastStreakDate!;
+            const numVal = Number(raw);
+            if (!isNaN(numVal) && numVal > 1000000000000) {
+                lastMs = numVal;
+            } else {
+                const pd = new Date(raw);
+                if (!isNaN(pd.getTime())) lastMs = pd.getTime();
+            }
+            if (lastMs === 0) {
+                setQuizCompleted(false);
+                return;
+            }
             const now = new Date();
-            const diffMs = now.getTime() - lastDate.getTime();
+            const diffMs = now.getTime() - lastMs;
             const twentyFourHours = 24 * 60 * 60 * 1000;
 
             if (diffMs < twentyFourHours) {

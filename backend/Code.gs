@@ -316,6 +316,9 @@ function doGet(e) {
               if (idx1 !== -1 && strikeData[i][idx1]) {
                 const val = strikeData[i][idx1];
                 if (val instanceof Date) return val.toISOString();
+                // Si es epoch ms (número grande), devolverlo directamente como string
+                const numVal = Number(val);
+                if (!isNaN(numVal) && numVal > 1000000000000) return String(val).trim();
                 return String(val).trim();
               }
               return '';
@@ -2256,54 +2259,76 @@ function updateStreaks(data) {
 
   const rowIdx = values.findIndex(row => String(row[agentIdIdx]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
   
-  const today = new Date();
-  const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
-  const nowIso = today.toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const nowMs = now.getTime();
+  const HOURS_24 = 24 * 60 * 60 * 1000;
+  const HOURS_48 = 48 * 60 * 60 * 1000;
   
   let streakCount = 0;
   let lastDate = "";
-  let lastDateOnly = "";
 
   if (rowIdx !== -1) {
     streakCount = parseInt(values[rowIdx][streakIdx]) || 0;
     
-    // Leer de AMBAS columnas de fecha, usar la que tenga datos
+    // --- LECTURA ROBUSTA DE FECHA (v4 — Anti-reset fix) ---
+    // Priorizar LAST_COMPLETED_DATE, fallback a LAST_COMPLETED_WEEK
     let rawLastDate = null;
-    let idx1 = headers.indexOf('LAST_COMPLETED_WEEK');
     let idx2 = headers.indexOf('LAST_COMPLETED_DATE');
-    if (idx1 !== -1 && values[rowIdx][idx1]) rawLastDate = values[rowIdx][idx1];
-    if (!rawLastDate && idx2 !== -1 && values[rowIdx][idx2]) rawLastDate = values[rowIdx][idx2];
+    let idx1 = headers.indexOf('LAST_COMPLETED_WEEK');
+    if (idx2 !== -1 && values[rowIdx][idx2]) rawLastDate = values[rowIdx][idx2];
+    if (!rawLastDate && idx1 !== -1 && values[rowIdx][idx1]) rawLastDate = values[rowIdx][idx1];
     
+    // Parsear el timestamp guardado a milisegundos — con TRIPLE fallback
+    let lastMs = 0;
     if (rawLastDate instanceof Date) {
-      lastDate = rawLastDate.toISOString();
-      lastDateOnly = Utilities.formatDate(rawLastDate, "GMT-4", "yyyy-MM-dd");
+      // Google Sheets convirtió el valor a Date
+      lastMs = rawLastDate.getTime();
     } else if (rawLastDate) {
-      let s = String(rawLastDate).trim();
-      lastDate = s;
-      lastDateOnly = s;
-      if (s.includes('T')) lastDateOnly = s.split('T')[0];
-      else if (s.includes(' ')) lastDateOnly = s.split(' ')[0];
-      else {
-        // Safe Parse fallback for stored local dates
-        const pd = new Date(s);
-        if (!isNaN(pd.getTime())) lastDateOnly = Utilities.formatDate(pd, "GMT-4", "yyyy-MM-dd");
-        else lastDateOnly = s;
+      const rawStr = String(rawLastDate).trim();
+      // 1) Intentar como epoch ms (número grande)
+      const numVal = Number(rawStr);
+      if (!isNaN(numVal) && numVal > 1000000000000) {
+        lastMs = numVal;
+      } else {
+        // 2) Intentar como ISO string o formato reconocible
+        const pd = new Date(rawStr);
+        if (!isNaN(pd.getTime())) {
+          lastMs = pd.getTime();
+        } else {
+          // 3) Intentar formato dd/MM/yyyy HH:mm:ss (locale de Sheets en español)
+          const parts = rawStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+          if (parts) {
+            const reconstructed = parts[3] + '-' + parts[2].padStart(2, '0') + '-' + parts[1].padStart(2, '0') + 'T12:00:00Z';
+            const pd2 = new Date(reconstructed);
+            if (!isNaN(pd2.getTime())) lastMs = pd2.getTime();
+          }
+        }
       }
     }
     
-    // Si hoy completó la tarea y no se había registrado hoy (comparando solo FECHA)
-    if (lastDateOnly !== todayStr) {
-      const yesterday = new Date(today.getTime() - (24 * 60 * 60 * 1000));
-      const yesterdayStr = Utilities.formatDate(yesterday, "GMT-4", "yyyy-MM-dd");
+    // --- DEBUG: Log para diagnóstico de rachas ---
+    Logger.log("🔍 RACHA DEBUG [" + data.agentId + "]: streakCount=" + streakCount + 
+               ", rawLastDate=" + rawLastDate + " (type:" + typeof rawLastDate + ")" +
+               ", lastMs=" + lastMs + ", nowMs=" + nowMs + 
+               ", diffHrs=" + (lastMs > 0 ? ((nowMs - lastMs) / 3600000).toFixed(1) : "Infinity"));
+
+    // --- LÓGICA DE RACHA POR VENTANA DE TIEMPO (Agnóstica a timezone) ---
+    const diffMs = lastMs > 0 ? (nowMs - lastMs) : Infinity;
+    
+    // Guardar como epoch ms para evitar problemas de parsing futuro
+    const nowEpoch = String(nowMs);
+    
+    if (diffMs < HOURS_24) {
+      // Ya completó en las últimas 24h — no duplicar, mantener racha actual
+      lastDate = nowEpoch;
+      Logger.log("⏩ RACHA [" + data.agentId + "]: Ya completó hoy. Manteniendo streak=" + streakCount);
+    } else if (diffMs < HOURS_48) {
+      // Entre 24h y 48h — racha continúa
+      streakCount += 1;
+      lastDate = nowEpoch;
       
-      // Si la última vez fue ayer, +1. Si no, racha = 1.
-      if (lastDateOnly === yesterdayStr) {
-        streakCount += 1;
-      } else {
-        streakCount = 1;
-      }
-      lastDate = nowIso;
-      lastDateOnly = todayStr;
+      Logger.log("🔥 RACHA [" + data.agentId + "]: Incrementada a " + streakCount);
       
       const fcmToken = getAgentFcmToken(data.agentId);
       if (fcmToken) {
@@ -2336,25 +2361,43 @@ function updateStreaks(data) {
               const currentLead = parseInt(dirSheet.getRange(agentRowIdx + 1, leadColIdx).getValue()) || 0;
               dirSheet.getRange(agentRowIdx + 1, leadColIdx).setValue(currentLead + bonusXP);
               
-              sendPushNotification("⭐ BONO DE RACHA", `¡Excelente constancia! Has ganado +${bonusXP} XP extra por tu hito de ${streakCount} días.`);
+              sendPushNotification("⭐ BONO DE RACHA", `¡Excelente constancia! Has ganado +${bonusXP} XP extra por tu hito de ${streakCount} días.`, fcmToken);
             }
           } catch (e) {
             console.error("Error acreditando bono de racha:", e);
           }
         }
       }
+    } else {
+      // Más de 48h — reiniciar racha
+      streakCount = 1;
+      lastDate = nowEpoch;
+      
+      Logger.log("💔 RACHA [" + data.agentId + "]: Reiniciada a 1 (diffMs=" + diffMs + ", diffHrs=" + (diffMs / 3600000).toFixed(1) + ")");
+      
+      const fcmToken = getAgentFcmToken(data.agentId);
+      if (fcmToken) {
+        sendPushNotification("🔥 ¡NUEVA RACHA!", `Has iniciado una nueva racha de consagración. ¡No la dejes caer!`, fcmToken);
+      }
+      
+      addNewsItem(ss, 'RACHA', `⚡ AGENTE SOCIAL: ${data.agentName || data.agentId} ha alcanzado una racha de ${streakCount} días.`, data.agentId, data.agentName);
     }
     
-    // Column-Aware Writes
+    // Column-Aware Writes — Guardar como epoch ms y sincronizar ambas columnas
     if (streakIdx !== -1) sheet.getRange(rowIdx + 1, streakIdx + 1).setValue(streakCount);
-    if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(nowIso);
+    if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(lastDate);
+    // Si existe la columna alternativa, también actualizarla para evitar datos stale
+    var altDateIdx = (lastDateIdx === idx2) ? idx1 : idx2;
+    if (altDateIdx !== -1 && altDateIdx !== lastDateIdx) {
+      sheet.getRange(rowIdx + 1, altDateIdx + 1).setValue(lastDate);
+    }
     if (tasksIdx !== -1) sheet.getRange(rowIdx + 1, tasksIdx + 1).setValue(JSON.stringify(data.tasks || []));
     if (notifsSentIdx !== -1) sheet.getRange(rowIdx + 1, notifsSentIdx + 1).setValue(""); // Reset notifs sent tracker
 
   } else {
-    // Nuevo registro
+    // Nuevo registro — Usar epoch ms
     streakCount = 1;
-    lastDate = todayStr;
+    lastDate = String(nowMs);
     const newRow = new Array(headers.length).fill("");
     if (agentIdIdx !== -1) newRow[agentIdIdx] = data.agentId;
     if (streakIdx !== -1) newRow[streakIdx] = streakCount;
@@ -2363,6 +2406,7 @@ function updateStreaks(data) {
     if (notifsSentIdx !== -1) newRow[notifsSentIdx] = ""; 
     sheet.appendRow(newRow);
     
+    Logger.log("🆕 RACHA [" + data.agentId + "]: Nuevo registro creado con streak=1");
     addNewsItem(ss, 'RACHA', `⚡ NUEVA OPERACIÓN: ${data.agentName || data.agentId} inició su racha de consagración.`, data.agentId, data.agentName);
   }
 
@@ -2583,10 +2627,22 @@ function checkRachaNotifications() {
 
     if (!lastDateStr || !agentId) continue;
 
-    const lastDate = new Date(lastDateStr);
-    if (isNaN(lastDate.getTime())) continue;
+    // Parseo robusto (soporta epoch ms, Date objects, ISO strings)
+    let lastMs = 0;
+    if (lastDateStr instanceof Date) {
+      lastMs = lastDateStr.getTime();
+    } else {
+      const numVal = Number(lastDateStr);
+      if (!isNaN(numVal) && numVal > 1000000000000) {
+        lastMs = numVal;
+      } else {
+        const pd = new Date(String(lastDateStr).trim());
+        if (!isNaN(pd.getTime())) lastMs = pd.getTime();
+      }
+    }
+    if (lastMs === 0) continue;
 
-    const diffHours = (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60);
+    const diffHours = (now.getTime() - lastMs) / (1000 * 60 * 60);
 
     let title = "";
     let message = "";

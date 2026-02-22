@@ -27,7 +27,6 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
         }
 
         const checkCompletion = () => {
-            // Robust parsing: supports epoch ms (string/number), ISO strings, Date objects
             let lastMs = 0;
             const raw = verse.lastStreakDate!;
             const numVal = Number(raw);
@@ -37,21 +36,49 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                 const pd = new Date(raw);
                 if (!isNaN(pd.getTime())) lastMs = pd.getTime();
             }
+
             if (lastMs === 0) {
                 setQuizCompleted(false);
                 return;
             }
-            const now = new Date();
-            const diffMs = now.getTime() - lastMs;
-            const twentyFourHours = 24 * 60 * 60 * 1000;
 
-            if (diffMs < twentyFourHours) {
+            // --- LÓGICA DE DÍA CALENDARIO (GMT-4 / Caracas) ---
+            const now = new Date();
+            const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+            const lastDateStr = new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+            if (lastDateStr === todayStr) {
                 setQuizCompleted(true);
-                // Calcular tiempo restante para el reloj
-                const remaining = twentyFourHours - diffMs;
-                const hours = Math.floor(remaining / (1000 * 60 * 60));
-                const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-                const secs = Math.floor((remaining % (1000 * 60)) / 1000);
+
+                // Calcular tiempo hasta la medianoche de Caracas
+                const formatter = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'America/Caracas',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                // Obtener medianoche (próximo día)
+                const parts = formatter.formatToParts(now);
+                const getPart = (type: string) => parts.find(p => p.type === type)?.value;
+                const tomorrow = new Date(`${getPart('year')}-${getPart('month')}-${getPart('day')}T00:00:00Z`);
+                tomorrow.setDate(tomorrow.getDate() + 1); // Este objeto Date está en UTC pero representa la medianoche de Caracas si lo tratamos con cuidado
+
+                // Forma más robusta de obtener ms hasta medianoche Caracas
+                const caracasNowStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
+                const caracasNow = new Date(caracasNowStr);
+                const midnightCaracas = new Date(caracasNow);
+                midnightCaracas.setHours(24, 0, 0, 0); // Siguiente medianoche local
+
+                const msRemaining = midnightCaracas.getTime() - caracasNow.getTime();
+
+                const hours = Math.floor(msRemaining / (1000 * 60 * 60));
+                const mins = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((msRemaining % (1000 * 60)) / 1000);
                 setTimeLeft(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
             } else {
                 setQuizCompleted(false);

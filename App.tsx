@@ -378,10 +378,10 @@ const App: React.FC = () => {
   const handleVerseQuizComplete = async () => {
     if (!currentUser) return;
 
-    // Marcar la tarea de lectura como completada HOY
-    const localToday = new Date().toLocaleDateString('es-VE', { timeZone: 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'); // format: YYYY-MM-DD
+    // Marcar la tarea de lectura como completada HOY (Zona Horaria Caracas)
+    const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }); // format: YYYY-MM-DD
     const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
-    if (alreadyDone) return; // Ya se completó hoy, no duplicar
+    if (alreadyDone) return;
 
     const updatedTasks = currentUser.weeklyTasks?.map(t =>
       t.id === 'bible' ? { ...t, completed: true } : t

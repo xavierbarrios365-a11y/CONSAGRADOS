@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Agent, UserRole } from '../types';
-import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus } from 'lucide-react';
 import { formatDriveUrl } from './DigitalIdCard';
 import { PROMOTION_RULES } from '../constants';
 
@@ -40,6 +40,53 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
     const sortedAgents = [...filteredAgents]
         .sort((a, b) => b.xp - a.xp)
         .map((agent, index) => ({ ...agent, position: index + 1 }));
+
+    // --- POSITION CHANGE TRACKING ---
+    // Snapshot is taken the first time data loads in a given category/tier.
+    // When the user refreshes, positions are compared vs this snapshot to show arrows.
+    const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>({});
+    const [snapshotKey, setSnapshotKey] = useState('');
+
+    const currentKey = `${activeCategory}-${activeTier}`;
+
+    React.useEffect(() => {
+        // Reset snapshot when the user changes category or tier
+        if (snapshotKey !== currentKey) {
+            setSnapshotKey(currentKey);
+            setSnapshotRanks({});
+        }
+    }, [currentKey, snapshotKey]);
+
+    React.useEffect(() => {
+        // Save initial positions on first load for this view
+        if (sortedAgents.length > 0 && Object.keys(snapshotRanks).length === 0 && snapshotKey === currentKey) {
+            const initial: Record<string, number> = {};
+            sortedAgents.forEach(a => { initial[a.id] = a.position; });
+            setSnapshotRanks(initial);
+        }
+    }, [sortedAgents, snapshotRanks, snapshotKey, currentKey]);
+
+    const getPositionChange = (agentId: string, currentPos: number): number => {
+        const oldPos = snapshotRanks[agentId];
+        if (oldPos === undefined) return 0;
+        return oldPos - currentPos; // Positive = moved UP (e.g., was 5, now 3 → +2)
+    };
+
+    const RankingIndicator = ({ change }: { change: number }) => {
+        if (change > 0) return (
+            <div className="flex flex-col items-center animate-in zoom-in duration-500">
+                <ChevronUp size={14} className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                <span className="text-[7px] font-black text-emerald-400 leading-none">+{change}</span>
+            </div>
+        );
+        if (change < 0) return (
+            <div className="flex flex-col items-center animate-in zoom-in duration-500">
+                <ChevronDown size={14} className="text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                <span className="text-[7px] font-black text-red-400 leading-none">{change}</span>
+            </div>
+        );
+        return <Minus size={10} className="text-white/15" />;
+    };
 
     const topThree = sortedAgents.slice(0, 3);
     const restOfAgents = sortedAgents.slice(3);
@@ -131,8 +178,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale transition-all shadow-xl"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-6 h-6 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-lg md:rounded-xl flex items-center justify-center text-gray-400">
-                                        <span className="font-bebas text-xs md:text-xl">2</span>
+                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-6 h-6 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-lg md:rounded-xl flex flex-col items-center justify-center text-gray-400 overflow-hidden">
+                                        <span className="font-bebas text-xs md:text-xl leading-none">2</span>
+                                        <div className="scale-75 origin-bottom">
+                                            <RankingIndicator change={getPositionChange(topThree[1].id, 2)} />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="text-center">
@@ -164,8 +214,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)]"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
-                                        <span className="font-bebas text-lg md:text-3xl font-black">1</span>
+                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex flex-col items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl overflow-hidden`}>
+                                        <span className="font-bebas text-lg md:text-3xl font-black leading-none">1</span>
+                                        <div className="scale-75 origin-center -mt-1">
+                                            <RankingIndicator change={getPositionChange(topThree[0].id, 1)} />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="text-center">
@@ -195,8 +248,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         className="relative w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale transition-all shadow-xl"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-5 h-5 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-lg md:rounded-xl flex items-center justify-center text-orange-800">
-                                        <span className="font-bebas text-[10px] md:text-lg">3</span>
+                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-5 h-5 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-lg md:rounded-xl flex flex-col items-center justify-center text-orange-800 overflow-hidden">
+                                        <span className="font-bebas text-[10px] md:text-lg leading-none">3</span>
+                                        <div className="scale-75 origin-bottom">
+                                            <RankingIndicator change={getPositionChange(topThree[2].id, 3)} />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="text-center">
@@ -240,12 +296,23 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         {restOfAgents.map((agent) => (
                                             <tr
                                                 key={agent.id}
-                                                className={`group hover:bg-[#FFB700]/5 transition-all duration-300 ${agent.id === currentUser?.id ? 'bg-[#FFB700]/10 border-l-4 border-l-[#FFB700]' : ''}`}
+                                                className={`group transition-all duration-500 
+                                                    ${agent.id === currentUser?.id
+                                                        ? 'bg-[#FFB700]/10 border-l-4 border-l-[#FFB700]'
+                                                        : getPositionChange(agent.id, agent.position) > 0
+                                                            ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500/50 hover:bg-emerald-500/10'
+                                                            : getPositionChange(agent.id, agent.position) < 0
+                                                                ? 'bg-red-500/5 border-l-2 border-l-red-500/30 hover:bg-red-500/10'
+                                                                : 'hover:bg-[#FFB700]/5'
+                                                    }`}
                                             >
                                                 <td className="px-4 md:px-8 py-4 md:py-6">
-                                                    <span className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-bebas text-sm md:text-lg ${getRankColor(agent.position)} bg-white/5 border border-white/10`}>
-                                                        {agent.position}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-bebas text-sm md:text-lg ${getRankColor(agent.position)} bg-white/5 border border-white/10`}>
+                                                            {agent.position}
+                                                        </span>
+                                                        <RankingIndicator change={getPositionChange(agent.id, agent.position)} />
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 md:px-8 py-4 md:py-6">
                                                     <div className="flex items-center gap-3 md:gap-4">

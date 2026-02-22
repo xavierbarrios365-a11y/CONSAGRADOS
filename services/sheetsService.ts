@@ -23,7 +23,17 @@ export const fetchNotifications = async (): Promise<InboxNotification[]> => {
   return data.success ? data.data : [];
 };
 
-export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
+// --- Backoff para errores de configuración del backend ---
+let _lastSyncErrorTime = 0;
+let _syncErrorLogged = false;
+const SYNC_BACKOFF_MS = 5 * 60 * 1000; // 5 minutos
+
+export const fetchAgentsFromSheets = async (): Promise<Agent[]> => {
+  // Si hubo un error de config reciente, no reintentar hasta que pase el backoff
+  if (_lastSyncErrorTime && (Date.now() - _lastSyncErrorTime < SYNC_BACKOFF_MS)) {
+    return [];
+  }
+
   try {
     const response = await fetch(`${APPS_SCRIPT_URL}?timestamp=${new Date().getTime()}`);
     if (!response.ok) throw new Error(`HTTP ERROR: ${response.status}`);
@@ -37,6 +47,10 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
     }
 
     if (result.error) throw new Error(`Error del backend: ${result.error}`);
+
+    // Éxito — resetear backoff
+    _lastSyncErrorTime = 0;
+    _syncErrorLogged = false;
 
     // Determinar la fuente de los datos (directo o en propiedad .data)
     const rawContent = Array.isArray(result) ? result : (result.data || []);
@@ -118,8 +132,12 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[] | null> => {
     }
   } catch (error) {
     const errorMessage = (error instanceof Error) ? error.message : String(error);
-    console.error("⚠️ ERROR DE SINCRONIZACIÓN:", errorMessage);
-    return null;
+    _lastSyncErrorTime = Date.now();
+    if (!_syncErrorLogged) {
+      console.error("⚠️ ERROR DE SINCRONIZACIÓN: Error del backend:", errorMessage);
+      _syncErrorLogged = true;
+    }
+    return [];
   }
 };
 

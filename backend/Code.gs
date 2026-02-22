@@ -10,13 +10,22 @@
 *
 ****************************************************************************************************************************/
 
-// --- FUNCIÓN DE CONFIGURACIÓN GLOBAL ---
+// --- FUNCIÓN DE CONFIGURACIÓN GLOBAL (v4 — Credenciales aseguradas) ---
+// Las credenciales sensibles se leen de PropertiesService.
+// Ejecuta setupSecretProperties() UNA VEZ desde el editor de Apps Script para guardarlas.
 function getGlobalConfig() {
+  var props = PropertiesService.getScriptProperties();
+  
+  // Leer credenciales desde PropertiesService (nunca expuestas en código)
+  var saPrivateKey = props.getProperty('SA_PRIVATE_KEY') || '';
+  var saClientEmail = props.getProperty('SA_CLIENT_EMAIL') || '';
+  var saProjectId = props.getProperty('SA_PROJECT_ID') || '';
+
   return {
-    SPREADSHEET_ID: '1Zz4a_Gbom0bSEQNZpc-Dmgaoy0VogCnJFEIHuIee4bo',
-    DRIVE_FOLDER_ID: '1iVpCg1ZcbJcrh-txxeO-vciw686zrm-N',
-    TELEGRAM_BOT_TOKEN: '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA',
-    TELEGRAM_CHAT_ID: '1009537014',
+    SPREADSHEET_ID: props.getProperty('SPREADSHEET_ID') || '',
+    DRIVE_FOLDER_ID: props.getProperty('DRIVE_FOLDER_ID') || '',
+    TELEGRAM_BOT_TOKEN: props.getProperty('TELEGRAM_BOT_TOKEN') || '',
+    TELEGRAM_CHAT_ID: props.getProperty('TELEGRAM_CHAT_ID') || '',
     DIRECTORY_SHEET_NAME: 'DIRECTORIO_OFICIAL',
     ENROLLMENT_SHEET_NAME: 'INSCRIPCIONES',
     ATTENDANCE_SHEET_NAME: 'ASISTENCIA',
@@ -34,13 +43,148 @@ function getGlobalConfig() {
     PROMOTIONS_SHEET: 'ASCENSOS',
     NEWS_SHEET: 'NOTICIAS',
     SERVICE_ACCOUNT: {
-      "project_id": "consagrados-c2d78",
-      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDNq6kEzfZMRDLP\nDvSGS3cLuUnf5zFbwFZppBtEyvyKTxL8m80E0BV8rQYmAlaSdG1vEd8bCsqiVp1Y\nVrFc/05yPCUdNRBJjj+6fj6hfq4rGKgm1nq4Wy3SaOAkFNPUS6hO6Ucx4q6+zk7q\n32KdJMfiXOv2cj3nHyBspbq1XG2Leg2zJaxY741Tan8bfnHjLsV29Q4NAVHopEsc\nYaqEQLSzAYA6yIwMe2qJqwbYJPny8Hsh9gKbb9QTTggEIeI5QrPT/KH6fE3nXRfh\n3gX4Kg8OgQ9cWoBompqj55PM9rdkhGHQA1HN0ylV2Fjykfj0Jq+dPhn2oM3UKn+W\nvhJLortDAgMBAAECggEAXOHiUe4mBilifMo3OhMIrz29lCWXz+Tb4ZegTQAS7u9p\nFrXR8BN9MLH/LdkuebOk3F1I0bCc9JWDN6rnLKWMKuDorfkR4vYf57wt0scgJwxa\nnDeOcoWS+wwr9X+GbsDAQOrvISNLYZZQY5gAtBExSBRI6CKNvDv9a7Ooz1Dvk+X5\n129n2U7vOm9oOWcWI4ysjID0L3TfO6jEMBIlH4cxBM4jZXf3v1NYH6IMZxPKI86D\nD97OHngSm8DJQdmVApDsI9Bnt70HHQlSSFDkeien4r3au+7rL1dUuo4wpw7+BcxT\nuSlfFpXldDDSjtLXSjoCKkULJ0gBfUUQurMR+9iYqQKBgQD9S8ULmkpvnYtmbI7H\n6EKrfrB7YPPM0bEpGM/ZBOAuUTlQ+Mx23r+pWgHcOCttyT1+bsaFA8s2OwSJGUjw\nKoGSmX8EgzfPJ1K6+OZTvqC1pPDfXjWMV9PaGmsTkGL2SXuP1RSstee5oav8D617\ns+i0k+406ngIqOg0NcJNVyyKHwKBgQDP3bxEZW1QNjmVAS6MzMCygKzYfMzKHe4O\nkjtj/1XdLhLhUf3n6cPAZjY9bYmp/Wzd1csc6gufhAdV4ObhkgL0ieWy6lw/fKpi\nkeiYjXP8DfnEov1w+s+OhJDBncH1mfReRXJxtzNooLNo+QXx1CNEeiJ7JgdTD+MW\n0VV58DWyXQKBgHNUXJO73MiVYzNvmlNLXY/YT2Ld8iQAFjowIfMeVTTBpudHYVF+\neqYRZWdv69ZBGs7GgX1vDMfUd2w1JxCzSewGF99mH7MipHide8IFugb64vHRY3BT\nTRKxlK+DvouFSc1jp9Y7vRa4liZevQ7mC76s3HkbiSvoPFIJaD7uwkjhAoGAeDzF\nyzZ0TeKf2j4NxCooCNj/olZGS1+WtV0G96fZ7g/ZofZAjaadsawuEchLykWqdINX\ncwk64fGIILfwNWi1RuiBMsX3yE1/bXcC+UNRZOpcoM67FWAvMTwjU6vCZyO/w8we\nEAMtvIbAYKczNhhEsjaHvX5Y3EYjUK6T5+330Y0CgYBsDgDMB0TT7+VggQA5FipB\nDpWe17uO8iIzv7HPTIlcX5m8ZB8pWiaSIm7mHyxkh/n27haLvSLvsNJm5lZni7Zf\nR3k8S2doGXfBBwkr/AahG2e52gbrQiSvd6+pROuIwQvNkTdvNi753o5BpAsgdo/V\nM8tnG9QAfWnKCnaT1eH3Yg==\n-----END PRIVATE KEY-----\n",
-      "client_email": "firebase-adminsdk-fbsvc@consagrados-c2d78.iam.gserviceaccount.com"
+      project_id: saProjectId,
+      private_key: saPrivateKey,
+      client_email: saClientEmail
     },
-    OFFICIAL_LOGO_ID: '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
-    EVENTS_SHEET_NAME: 'CALENDARIO_EVENTOS'
+    OFFICIAL_LOGO_ID: '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f'
   };
+}
+
+/**
+ * @description EJECUTAR UNA SOLA VEZ desde el editor de Apps Script.
+ * Guarda todas las credenciales sensibles en PropertiesService.
+ * INSTRUCCIONES: Reemplaza cada 'REPLACE_ME' con el valor real ANTES de ejecutar.
+ * Después de ejecutar exitosamente, BORRA los valores de este archivo.
+ */
+function setupSecretProperties() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperties({
+    'SPREADSHEET_ID': 'REPLACE_ME',
+    'DRIVE_FOLDER_ID': 'REPLACE_ME',
+    'TELEGRAM_BOT_TOKEN': 'REPLACE_ME',
+    'TELEGRAM_CHAT_ID': 'REPLACE_ME',
+    'SA_PROJECT_ID': 'REPLACE_ME',
+    'SA_CLIENT_EMAIL': 'REPLACE_ME',
+    'SA_PRIVATE_KEY': 'REPLACE_ME'
+  });
+  Logger.log('✅ CREDENCIALES GUARDADAS EN PROPERTIES SERVICE.');
+  SpreadsheetApp.getUi().alert('✅ Credenciales almacenadas de forma segura.');
+}
+
+// ============================================================================
+// HELPERS COMPARTIDOS — Reducen boilerplate en todas las funciones de acción
+// ============================================================================
+
+/**
+ * Mapa centralizado de alias de encabezados.
+ * Permite encontrar una columna sin importar si usa el nombre viejo o el nuevo.
+ */
+var HEADER_ALIASES = {
+  'ID':                 ['ID', 'ID CÉDULA', 'ID CEDULA', 'CEDULA'],
+  'NOMBRE':             ['NOMBRE', 'NOMBRE COMPLETO'],
+  'PIN':                ['PIN', 'CONTRASEÑA/PIN', 'PASS'],
+  'XP':                 ['XP', 'PUNTOS XP', 'PUNTOS_XP'],
+  'RANGO':              ['RANGO'],
+  'CARGO':              ['CARGO', 'NIVEL_ACCESO', 'PUESTO'],
+  'ESTADO':             ['ESTADO', 'STATUS', 'ESTATUS'],
+  'WHATSAPP':           ['WHATSAPP', 'TELEFONO', 'TELÉFONO'],
+  'FECHA_NACIMIENTO':   ['FECHA_NACIMIENTO', 'FECHA DE NACIMIENTO'],
+  'FECHA_INGRESO':      ['FECHA_INGRESO', 'FECHA DE INGRESO'],
+  'TALENTO':            ['TALENTO'],
+  'BAUTIZADO':          ['BAUTIZADO'],
+  'RELACION_CON_DIOS':  ['RELACION_CON_DIOS', 'RELACION CON DIOS'],
+  'PUNTOS_BIBLIA':      ['PUNTOS_BIBLIA', 'PUNTOS BIBLIA'],
+  'PUNTOS_APUNTES':     ['PUNTOS_APUNTES', 'PUNTOS APUNTES'],
+  'PUNTOS_LIDERAZGO':   ['PUNTOS_LIDERAZGO', 'PUNTOS LIDERAZGO'],
+  'FOTO_URL':           ['FOTO_URL', 'FOTO URL', 'FOTO'],
+  'NOTIF_PREFS':        ['NOTIF_PREFS'],
+  'FCM_TOKEN':          ['FCM_TOKEN'],
+  'PREGUNTA_SEGURIDAD': ['PREGUNTA_SEGURIDAD'],
+  'RESPUESTA_SEGURIDAD':['RESPUESTA_SEGURIDAD'],
+  'CAMBIO_OBLIGATORIO_PIN': ['CAMBIO_OBLIGATORIO_PIN'],
+  'STATS_JSON':         ['STATS_JSON'],
+  'TACTOR_SUMMARY':     ['TACTOR_SUMMARY'],
+  'LAST_AI_UPDATE':     ['LAST_AI_UPDATE'],
+  'BIOMETRIC_CREDENTIAL': ['BIOMETRIC_CREDENTIAL'],
+  'STREAK_COUNT':       ['STREAK_COUNT'],
+  'LAST_COMPLETED_DATE':['LAST_COMPLETED_DATE', 'LAST_COMPLETED_WEEK']
+};
+
+/**
+ * Busca el índice de un encabezado canónico en un array de headers,
+ * probando todos los alias conocidos.
+ * @param {string[]} headers - Array de encabezados normalizados a UPPERCASE.
+ * @param {string} canonicalName - Nombre canónico (ej: 'PUNTOS_BIBLIA').
+ * @returns {number} Índice 0-based, o -1 si no se encontró.
+ */
+function findHeaderIdx(headers, canonicalName) {
+  var aliases = HEADER_ALIASES[canonicalName] || [canonicalName];
+  for (var a = 0; a < aliases.length; a++) {
+    var idx = headers.indexOf(aliases[a]);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+/** Devuelve una respuesta JSON exitosa. */
+function jsonOk(data) {
+  return ContentService.createTextOutput(JSON.stringify(
+    typeof data === 'object' ? Object.assign({ success: true }, data) : { success: true }
+  )).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Devuelve una respuesta JSON de error. */
+function jsonError(msg) {
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: msg })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** Abre el spreadsheet principal (evita repetir getGlobalConfig + openById). */
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(getGlobalConfig().SPREADSHEET_ID);
+}
+
+/**
+ * Busca la fila de un agente por ID en un array de datos del directorio.
+ * @returns {number} Índice 0-based de la fila, o -1 si no se encontró.
+ */
+function findAgentRow(directoryData, agentId) {
+  const searchId = String(agentId).trim().toUpperCase();
+  for (let i = 1; i < directoryData.length; i++) {
+    if (String(directoryData[i][0]).trim().toUpperCase() === searchId) return i;
+  }
+  return -1;
+}
+
+/**
+ * Busca un agente y actualiza múltiples columnas en una sola escritura batch.
+ * @param {Sheet} sheet - Hoja del directorio.
+ * @param {string} agentId - ID del agente a buscar.
+ * @param {Object} updates - Objeto { nombreCanónico: nuevoValor } con las columnas a actualizar.
+ * @returns {{ rowIdx: number, headers: string[], data: any[][] }} Info del agente encontrado.
+ */
+function findAndUpdateAgent(sheet, agentId, updates) {
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0].map(function(h) { return String(h).trim().toUpperCase(); });
+  var idCol = findHeaderIdx(headers, 'ID');
+
+  var rowIdx = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]).trim().toUpperCase() === String(agentId).trim().toUpperCase()) {
+      rowIdx = i;
+      break;
+    }
+  }
+  if (rowIdx === -1) throw new Error("Agente no encontrado.");
+
+  var rowData = sheet.getRange(rowIdx + 1, 1, 1, headers.length).getValues()[0];
+  var keys = Object.keys(updates);
+  for (var k = 0; k < keys.length; k++) {
+    var colIdx = findHeaderIdx(headers, keys[k]);
+    if (colIdx !== -1) rowData[colIdx] = updates[keys[k]];
+  }
+  sheet.getRange(rowIdx + 1, 1, 1, headers.length).setValues([rowData]);
+  return { rowIdx: rowIdx, headers: headers, data: data, rowData: rowData };
 }
 
 
@@ -131,7 +275,7 @@ function sendPushNotification(title, message, targetToken) {
  */
 function getAgentFcmToken(agentId) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   if (!sheet) return null;
 
@@ -284,7 +428,7 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({ error: "Configuración incompleta: SPREADSHEET_ID no está definido en el script." })).setMimeType(ContentService.MimeType.JSON);
   }
   try {
-    const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const ss = getSpreadsheet();
     const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
     const strikesSheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
     const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
@@ -434,8 +578,8 @@ function doPost(e) {
   if (!CONFIG.SPREADSHEET_ID || CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI')) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Configuración SPREADSHEET_ID incompleta." })).setMimeType(ContentService.MimeType.JSON);
   
   try {
-    // Auto-curación de esquema en cada llamada POST
-    try { verifyAndFixSchema(); } catch(schemaErr) { Logger.log('Schema check failed: ' + schemaErr.message); }
+    // Auto-curación de esquema desactivada del hot-path para rendimiento.
+    // Ejecutar verifyAndFixSchema() manualmente desde el menú CONSAGRADOS o con un trigger.
 
     const request = JSON.parse(e.postData.contents);
     switch (request.action) {
@@ -555,7 +699,7 @@ function doPost(e) {
  */
 function enrollAgent(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   if (!directorySheet) throw new Error(`Sheet "${CONFIG.DIRECTORY_SHEET_NAME}" no encontrada.`);
   
@@ -611,7 +755,7 @@ function enrollAgent(data) {
   const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${data.nombre}\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID Generado:</b> <code>${newId}</code>\n<b>• PIN de Acceso:</b> <code>${newPin}</code>\n<b>• Pregunta:</b> ${data.preguntaSeguridad || '¿Cuál es tu color favorito?'}\n<b>• Respuesta:</b> ${data.respuestaSeguridad || 'Azul'}\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
   sendTelegramNotification(telegramMessage);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, newId: newId })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ newId: newId });
 }
 
 /**
@@ -646,17 +790,10 @@ function uploadImage(data) {
       ? `https://lh3.googleusercontent.com/d/${newFile.getId()}`
       : `https://drive.google.com/file/d/${newFile.getId()}/view`;
     
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: true, 
-      url: fileUrl,
-      id: newFile.getId() 
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ url: fileUrl, id: newFile.getId() });
   } catch (e) {
     console.error(`❌ Error en uploadImage: ${e.message}`);
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      error: `Error en servidor Drive: ${e.message}` 
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonError(`Error en servidor Drive: ${e.message}`);
   }
 }
 
@@ -665,7 +802,7 @@ function uploadImage(data) {
  */
 function updateNotifPrefs(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -682,7 +819,7 @@ function updateNotifPrefs(data) {
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
   sheet.getRange(rowIdx + 1, prefsCol + 1).setValue(JSON.stringify(data.prefs));
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -690,7 +827,7 @@ function updateNotifPrefs(data) {
  */
 function registerIdScan(payload) {
    const CONFIG = getGlobalConfig();
-   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+   const ss = getSpreadsheet();
    const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
    if (!attendanceSheet) throw new Error(`Sheet "${CONFIG.ATTENDANCE_SHEET_NAME}" no encontrada.`);
    
@@ -705,10 +842,7 @@ function registerIdScan(payload) {
      rowDate.setHours(0,0,0,0);
      
      if (String(rowId) === String(payload.scannedId) && rowDate.getTime() === today.getTime()) {
-       return ContentService.createTextOutput(JSON.stringify({ 
-         success: false, 
-         error: "ALERTA: Agente ya registrado el día de hoy." 
-       })).setMimeType(ContentService.MimeType.JSON);
+       return jsonError("ALERTA: Agente ya registrado el día de hoy.");
      }
    }
 
@@ -738,28 +872,28 @@ function registerIdScan(payload) {
      }
    }
    
-   // AUTO-XP: +10 por asistencia -> Sumar a Liderazgo para visualización frontal
+   // AUTO-XP: +10 Liderazgo, +10 Biblia, +10 Apuntes, +30 XP total (1 batch write)
    if (agentRowIdx !== -1) {
      const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
-     const leadCol = headers.indexOf('PUNTOS LIDERAZGO') + 1;
-     if (leadCol > 0) {
-       const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
-       directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
+     const leadCol = findHeaderIdx(headers, 'PUNTOS_LIDERAZGO');
+     const bibleCol = findHeaderIdx(headers, 'PUNTOS_BIBLIA');
+     const notesCol = findHeaderIdx(headers, 'PUNTOS_APUNTES');
+     const xpCol = findHeaderIdx(headers, 'XP');
 
-        // +10 Biblia, +10 Apuntes, +30 XP total
-        const bibleCol = headers.indexOf('PUNTOS BIBLIA') + 1;
-        const notesCol = headers.indexOf('PUNTOS APUNTES') + 1;
-        const xpCol = headers.indexOf('XP') + 1;
-        if (bibleCol > 0) { const bv = parseInt(directorySheet.getRange(agentRowIdx, bibleCol).getValue()) || 0; directorySheet.getRange(agentRowIdx, bibleCol).setValue(bv + 10); }
-        if (notesCol > 0) { const nv = parseInt(directorySheet.getRange(agentRowIdx, notesCol).getValue()) || 0; directorySheet.getRange(agentRowIdx, notesCol).setValue(nv + 10); }
-        if (xpCol > 0) { const xv = parseInt(directorySheet.getRange(agentRowIdx, xpCol).getValue()) || 0; directorySheet.getRange(agentRowIdx, xpCol).setValue(xv + 30); }
-        
-        // Notificación de XP por asistencia
-        const fcmToken = getAgentFcmToken(payload.scannedId);
-        if (fcmToken) {
-          sendPushNotification("🛡️ ASISTENCIA REGISTRADA", `¡Buen despliegue, Agente! Has ganado +10 XP por tu asistencia de hoy.`, fcmToken);
-        }
-      }
+     if (leadCol !== -1 || bibleCol !== -1 || notesCol !== -1 || xpCol !== -1) {
+       const rowData = directorySheet.getRange(agentRowIdx, 1, 1, headers.length).getValues()[0];
+       if (leadCol !== -1) rowData[leadCol] = (parseInt(rowData[leadCol]) || 0) + 10;
+       if (bibleCol !== -1) rowData[bibleCol] = (parseInt(rowData[bibleCol]) || 0) + 10;
+       if (notesCol !== -1) rowData[notesCol] = (parseInt(rowData[notesCol]) || 0) + 10;
+       if (xpCol !== -1) rowData[xpCol] = (parseInt(rowData[xpCol]) || 0) + 30;
+       directorySheet.getRange(agentRowIdx, 1, 1, headers.length).setValues([rowData]);
+       
+       // Notificación de XP por asistencia
+       const fcmToken = getAgentFcmToken(payload.scannedId);
+       if (fcmToken) {
+         sendPushNotification("🛡️ ASISTENCIA REGISTRADA", `¡Buen despliegue, Agente! Has ganado +10 XP por tu asistencia de hoy.`, fcmToken);
+       }
+     }
     }
    
    const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}\n\n<b>PUNTOS:</b> +10 Biblia, +10 Apuntes, +10 Liderazgo`;
@@ -780,7 +914,7 @@ function registerIdScan(payload) {
      }
    }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, agentName: agentName })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ agentName: agentName });
 }
 
 /**
@@ -788,7 +922,7 @@ function registerIdScan(payload) {
  */
 function getVisitorRadar() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
@@ -826,7 +960,7 @@ function getVisitorRadar() {
   // Ordenar por visitas (más frecuentes primero)
   radar.sort((a, b) => b.visits - a.visits);
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, data: radar })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ data: radar });
 }
 
 /**
@@ -834,7 +968,7 @@ function getVisitorRadar() {
  */
 function applyAbsencePenalties() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
   
@@ -897,7 +1031,7 @@ function applyAbsencePenalties() {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, agentsPenalized: totalDeductions })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ agentsPenalized: totalDeductions });
 }
 
 /**
@@ -905,7 +1039,7 @@ function applyAbsencePenalties() {
  */
 function activateVisitorAsAgent(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
   
   if (!attendanceSheet) throw new Error("Hoja de asistencia no encontrada.");
@@ -969,7 +1103,7 @@ function activateVisitorAsAgent(data) {
  */
 function deleteAgent(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const agentId = String(data.agentId).trim();
   
   if (!agentId) throw new Error("ID de agente requerido.");
@@ -1018,7 +1152,7 @@ function deleteAgent(data) {
   // 4. Notificación Telegram
   sendTelegramNotification(`🗑️ <b>AGENTE ELIMINADO</b>\n\n<b>• Nombre:</b> ${agentName}\n<b>• ID:</b> <code>${agentId}</code>\n<b>• Acción:</b> Dado de baja del sistema por un Director.`);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, deletedAgent: agentName })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ deletedAgent: agentName });
 }
 
 /**
@@ -1026,42 +1160,43 @@ function deleteAgent(data) {
  */
 function updateAgentPoints(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
   
-  let colName = '';
-  switch(data.type) {
-    case 'BIBLIA': colName = 'PUNTOS BIBLIA'; break;
-    case 'APUNTES': colName = 'PUNTOS APUNTES'; break;
-    case 'LIDERAZGO': colName = 'PUNTOS LIDERAZGO'; break;
-  }
+  // Mapear tipo a nombre canónico
+  const typeToCanonical = { 'BIBLIA': 'PUNTOS_BIBLIA', 'APUNTES': 'PUNTOS_APUNTES', 'LIDERAZGO': 'PUNTOS_LIDERAZGO' };
+  const canonicalName = typeToCanonical[data.type];
+  if (!canonicalName) throw new Error(`Tipo de puntos no reconocido: ${data.type}`);
   
-  const colIdx = headers.indexOf(colName) + 1;
-  const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
+  const colIdx = findHeaderIdx(headers, canonicalName);
+  const xpColIdx = findHeaderIdx(headers, 'XP');
   
-  if (colIdx === 0) throw new Error(`Columna ${colName} no encontrada.`);
+  if (colIdx === -1) throw new Error(`Columna ${canonicalName} no encontrada.`);
 
+  // Buscar fila del agente
+  const idCol = findHeaderIdx(headers, 'ID');
   let rowIdx = -1;
   for (let i = 1; i < directoryData.length; i++) {
-    if (String(directoryData[i][0]) === String(data.agentId)) {
-      rowIdx = i + 1;
+    if (String(directoryData[i][idCol]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+      rowIdx = i;
       break;
     }
   }
-
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
-  const currentVal = parseInt(sheet.getRange(rowIdx, colIdx).getValue()) || 0;
-  sheet.getRange(rowIdx, colIdx).setValue(currentVal + data.points);
-  
-  // También sumamos al XP total
-  if (xpColIdx > 0) {
-    const currentXp = parseInt(sheet.getRange(rowIdx, xpColIdx).getValue()) || 0;
-    sheet.getRange(rowIdx, xpColIdx).setValue(currentXp + data.points);
+  // Batch write: actualizar categoría + XP total en 1 llamada
+  const rowData = sheet.getRange(rowIdx + 1, 1, 1, headers.length).getValues()[0];
+  const currentVal = parseInt(rowData[colIdx]) || 0;
+  rowData[colIdx] = currentVal + data.points;
+  if (xpColIdx !== -1) {
+    rowData[xpColIdx] = (parseInt(rowData[xpColIdx]) || 0) + data.points;
+  }
+  sheet.getRange(rowIdx + 1, 1, 1, headers.length).setValues([rowData]);
 
-    // Notificación de XP si es un cambio positivo o negativo
+  // Notificación de XP
+  if (xpColIdx !== -1) {
     const fcmToken = getAgentFcmToken(data.agentId);
     if (fcmToken) {
       if (data.points > 0) {
@@ -1079,46 +1214,45 @@ function updateAgentPoints(data) {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, newVal: (currentVal + data.points) })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ newVal: (currentVal + data.points) });
 }
 
 function deductPercentagePoints(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
   
-  const xpColIdx = (headers.indexOf('XP') + 1) || (headers.indexOf('PUNTOS XP') + 1);
-  const bibliaColIdx = headers.indexOf('PUNTOS BIBLIA') + 1;
-  const apuntesColIdx = headers.indexOf('PUNTOS APUNTES') + 1;
-  const liderazgoColIdx = headers.indexOf('PUNTOS LIDERAZGO') + 1;
+  const colNames = ['PUNTOS_BIBLIA', 'PUNTOS_APUNTES', 'PUNTOS_LIDERAZGO', 'XP'];
+  const colIndices = colNames.map(cn => findHeaderIdx(headers, cn));
+  const idCol = findHeaderIdx(headers, 'ID');
 
   let rowIdx = -1;
   for (let i = 1; i < directoryData.length; i++) {
-    if (String(directoryData[i][0]) === String(data.agentId)) {
-      rowIdx = i + 1;
+    if (String(directoryData[i][idCol]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase()) {
+      rowIdx = i;
       break;
     }
   }
-
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
-  const categories = [bibliaColIdx, apuntesColIdx, liderazgoColIdx, xpColIdx];
-  categories.forEach(col => {
-    if (col > 0) {
-      const current = parseInt(sheet.getRange(rowIdx, col).getValue()) || 0;
-      const newValue = Math.max(0, Math.floor(current * (1 - (data.percentage / 100))));
-      sheet.getRange(rowIdx, col).setValue(newValue);
+  // Batch write: aplicar deducción porcentual a todas las categorías en 1 llamada
+  const rowData = sheet.getRange(rowIdx + 1, 1, 1, headers.length).getValues()[0];
+  colIndices.forEach(col => {
+    if (col !== -1) {
+      const current = parseInt(rowData[col]) || 0;
+      rowData[col] = Math.max(0, Math.floor(current * (1 - (data.percentage / 100))));
     }
   });
+  sheet.getRange(rowIdx + 1, 1, 1, headers.length).setValues([rowData]);
 
   const fcmToken = getAgentFcmToken(data.agentId);
   if (fcmToken) {
     sendPushNotification("🚨 PENALIZACIÓN EXTRAORDINARIA", `Se ha aplicado una reducción del ${data.percentage}% en todos tus méritos por infracción de protocolo.`, fcmToken);
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -1126,7 +1260,7 @@ function deductPercentagePoints(data) {
  */
 function deleteAcademyCourse(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
   const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
   
@@ -1153,7 +1287,7 @@ function deleteAcademyCourse(data) {
   const telegramMessage = `🗑️ <b>CURSO ELIMINADO</b>\n\n<b>• Nombre:</b> ${courseName}\n<b>• Ejecutado por:</b> Director\n\n<i>El curso y sus lecciones han sido retirados de la academia.</i>`;
   sendTelegramNotification(telegramMessage);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: `Curso "${courseName}" eliminado.` })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ message: `Curso "${courseName}" eliminado.` });
 }
 
 /**
@@ -1161,7 +1295,7 @@ function deleteAcademyCourse(data) {
  */
 function deleteAcademyLesson(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
   
   if (!lessonsSheet) throw new Error("Hoja de lecciones no encontrada.");
@@ -1177,7 +1311,7 @@ function deleteAcademyLesson(data) {
   const telegramMessage = `🗑️ <b>LECCIÓN ELIMINADA</b>\n\n<b>• Título:</b> ${lessonTitle}\n<b>• Ejecutado por:</b> Director\n\n<i>La lección ha sido retirada de la academia.</i>`;
   sendTelegramNotification(telegramMessage);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: `Lección "${lessonTitle}" eliminada.` })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ message: `Lección "${lessonTitle}" eliminada.` });
 }
 
 /**
@@ -1185,7 +1319,7 @@ function deleteAcademyLesson(data) {
  */
 function reconstructDb() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const enrollmentSheet = ss.getSheetByName(CONFIG.ENROLLMENT_SHEET_NAME);
   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   
@@ -1249,7 +1383,7 @@ function reconstructDb() {
   const message = `⚙️ <b>BASE DE DATOS SINCRONIZADA</b>\n\nSe han procesado <b>${newAgentsCount}</b> nuevas activaciones desde el portal de inscripciones.\n\nEstatus: <b>OPERATIVO</b>`;
   sendTelegramNotification(message);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Directorio actualizado.", newAgents: newAgentsCount })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ message: "Directorio actualizado.", newAgents: newAgentsCount });
 }
 
 /**
@@ -1258,7 +1392,7 @@ function reconstructDb() {
  */
 function repairMissingData() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   if (!sheet) return "Error: Hoja no encontrada.";
 
@@ -1307,7 +1441,7 @@ function setupDatabase() {
     return "❌ ERROR: Debes configurar SPREADSHEET_ID en getGlobalConfig() antes de ejecutar.";
   }
   
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const results = [];
   
   const directoryHeaders = [
@@ -1441,7 +1575,7 @@ function formatHeaders(sheet, numCols, startCol = 1) {
  */
 function checkSystemStatus() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   const checks = {
     'SPREADSHEET_ID': !!CONFIG.SPREADSHEET_ID && !CONFIG.SPREADSHEET_ID.includes('PEGA_AQUI'),
@@ -1470,7 +1604,7 @@ function checkSystemStatus() {
  */
 function getSecurityQuestion(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -1480,10 +1614,7 @@ function getSecurityQuestion(data) {
   const agent = directoryData.find(row => String(row[idCol]) === String(data.agentId));
   if (!agent) throw new Error("Agente no encontrado.");
   
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    question: agent[questionCol] || "¿Cuál es tu color favorito?" 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ question: agent[questionCol] || "¿Cuál es tu color favorito?" });
 }
 
 /**
@@ -1491,7 +1622,7 @@ function getSecurityQuestion(data) {
  */
 function resetPasswordWithAnswer(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -1507,10 +1638,7 @@ function resetPasswordWithAnswer(data) {
   const providedAnswer = String(data.answer).trim().toLowerCase();
   
   if (storedAnswer === providedAnswer) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: true, 
-      pin: agentRow[pinCol] 
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ pin: agentRow[pinCol] });
   } else {
     throw new Error("Respuesta de seguridad incorrecta.");
   }
@@ -1521,7 +1649,7 @@ function resetPasswordWithAnswer(data) {
  */
 function updateUserPassword(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -1539,7 +1667,7 @@ function updateUserPassword(data) {
   if (data.answer && answerCol !== -1) sheet.getRange(agentRowIdx + 1, answerCol + 1).setValue(data.answer);
   if (mustChangeCol !== -1) sheet.getRange(agentRowIdx + 1, mustChangeCol + 1).setValue('NO');
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 function onOpen() {
@@ -1560,7 +1688,7 @@ function onOpen() {
  */
 function uploadGuide(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.GUIAS_SHEET_NAME);
   
   const id = `GUIA-${Date.now()}`;
@@ -1577,7 +1705,7 @@ function uploadGuide(data) {
   const telegramMessage = `📚 <b>NUEVA GUÍA DISPONIBLE</b>\n\n<b>• Nombre:</b> ${data.name}\n<b>• Tipo:</b> ${data.type}\n\n<i>El material ha sido cargado al centro de inteligencia.</i>`;
   sendTelegramNotification(telegramMessage);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ id: id });
 }
 
 /**
@@ -1586,7 +1714,7 @@ function uploadGuide(data) {
  */
 function setupAttendanceSheet() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
   
   if (!sheet) {
@@ -1665,7 +1793,7 @@ function setupAttendanceSheet() {
  */
 function getGuides(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.GUIAS_SHEET_NAME);
   
   const values = sheet.getDataRange().getValues();
@@ -1688,7 +1816,7 @@ function getGuides(data) {
   }
   // LEADER y DIRECTOR ven todo el material
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, data: filtered })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ data: filtered });
 }
 
 /**
@@ -1696,7 +1824,7 @@ function getGuides(data) {
  */
 function deleteGuide(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.GUIAS_SHEET_NAME);
   
   const values = sheet.getDataRange().getValues();
@@ -1711,7 +1839,7 @@ function deleteGuide(data) {
   const telegramMessage = `🗑️ <b>GUÍA ELIMINADA</b>\n\n<b>• Nombre:</b> ${guideName}\n<b>• Ejecutado por:</b> Director\n\n<i>El recurso ha sido retirado del centro de inteligencia.</i>`;
   sendTelegramNotification(telegramMessage);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -1719,7 +1847,7 @@ function deleteGuide(data) {
  */
 function updateAgentPhoto(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -1740,7 +1868,7 @@ function updateAgentPhoto(data) {
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
   sheet.getRange(rowIdx, photoCol).setValue(data.photoUrl);
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -1748,7 +1876,7 @@ function updateAgentPhoto(data) {
  */
 function getAcademyData(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
   const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
@@ -1828,10 +1956,7 @@ function getAcademyData(data) {
     }
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    data: { courses, lessons, progress } 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ data: { courses, lessons, progress } });
 }
 
 /**
@@ -1839,7 +1964,7 @@ function getAcademyData(data) {
  */
 function submitQuizResult(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
   const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
@@ -1928,11 +2053,7 @@ function submitQuizResult(data) {
     sendTelegramNotification(`🎓 <b>LOGRO ACADÉMICO</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• Lección:</b> ${lesson[3]}\n<b>• Resultado:</b> APROBADO ✅\n<b>• Recompensa:</b> +${xpReward} XP Tácticos`);
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    isCorrect, 
-    xpAwarded: xpReward 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ isCorrect, xpAwarded: xpReward });
 }
 
 /**
@@ -1940,7 +2061,7 @@ function submitQuizResult(data) {
  */
 function saveBulkAcademyData(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   const coursesSheet = ss.getSheetByName(CONFIG.ACADEMY_COURSES_SHEET);
   const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
@@ -2013,7 +2134,7 @@ function saveBulkAcademyData(data) {
     });
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Datos actualizados masivamente." })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ message: "Datos actualizados masivamente." });
 }
 
 /**
@@ -2021,7 +2142,7 @@ function saveBulkAcademyData(data) {
  */
 function updateTacticalStats(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -2041,7 +2162,7 @@ function updateTacticalStats(data) {
   sheet.getRange(row, summaryCol).setValue(data.summary);
   sheet.getRange(row, updateCol).setValue(data.lastUpdate);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -2049,7 +2170,7 @@ function updateTacticalStats(data) {
  */
 function resetStudentAttempts(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const progressSheet = ss.getSheetByName(CONFIG.ACADEMY_PROGRESS_SHEET);
   if (!progressSheet) throw new Error("Hoja de progreso no encontrada.");
   
@@ -2065,10 +2186,7 @@ function resetStudentAttempts(data) {
     }
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    deletedCount 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ deletedCount });
 }
 
 /**
@@ -2076,7 +2194,7 @@ function resetStudentAttempts(data) {
  */
 function sendAgentCredentials(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -2095,7 +2213,7 @@ function sendAgentCredentials(data) {
   const message = `📡 <b>DESPLIEGUE DE CREDENCIALES</b>\n\n<b>• Agente:</b> ${name}\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID:</b> <code>${id}</code>\n<b>• PIN:</b> <code>${pin}</code>\n<b>• Pregunta:</b> ${question || 'S/D'}\n<b>• Respuesta:</b> ${answer || 'S/D'}`;
   sendTelegramNotification(message);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -2103,7 +2221,7 @@ function sendAgentCredentials(data) {
  */
 function bulkSendCredentials() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -2129,7 +2247,7 @@ function bulkSendCredentials() {
 
   sendTelegramNotification(`✅ <b>TRANSMISIÓN COMPLETADA</b>\n\nSe enviaron <b>${count}</b> credenciales exitosamente.`);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, count: count })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ count: count });
 }
 
 /**
@@ -2137,7 +2255,7 @@ function bulkSendCredentials() {
  */
 function registerBiometrics(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -2151,7 +2269,7 @@ function registerBiometrics(data) {
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
 
   sheet.getRange(rowIdx + 1, bioCol).setValue(data.credential);
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -2159,7 +2277,7 @@ function registerBiometrics(data) {
  */
 function verifyBiometrics(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -2174,10 +2292,7 @@ function verifyBiometrics(data) {
   // La lógica de verificación real se hace en el frontend (comparación), 
   // aquí solo devolvemos el "challenge" o la credencial almacenada para que el frontend la use.
   
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    credential: storedCredential 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ credential: storedCredential });
 }
 
 /**
@@ -2185,17 +2300,14 @@ function verifyBiometrics(data) {
  */
 function getDailyVerse() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.VERSES_SHEET);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Hoja de versos no encontrada" })).setMimeType(ContentService.MimeType.JSON);
+  if (!sheet) return jsonError("Hoja de versos no encontrada");
   
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) {
      // Versículo por defecto si no hay nada en la hoja
-     return ContentService.createTextOutput(JSON.stringify({ 
-       success: true, 
-       data: { verse: "Mas el que persevere hasta el fin, este será salvo.", reference: "Mateo 24:13" } 
-     })).setMimeType(ContentService.MimeType.JSON);
+     return jsonOk({ data: { verse: "Mas el que persevere hasta el fin, este será salvo.", reference: "Mateo 24:13" } });
   }
 
   // Buscar el verso de hoy por fecha
@@ -2224,18 +2336,12 @@ function getDailyVerse() {
   });
 
   if (verseFound) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: true, 
-      data: { verse: verseFound[verseIdx], reference: verseFound[refIdx] } 
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ data: { verse: verseFound[verseIdx], reference: verseFound[refIdx] } });
   }
 
   // Si no hay para hoy, dar uno aleatorio
   const randomRow = values[Math.floor(Math.random() * (values.length - 1)) + 1];
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    data: { verse: randomRow[verseIdx], reference: randomRow[refIdx] } 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ data: { verse: randomRow[verseIdx], reference: randomRow[refIdx] } });
 }
 
 /**
@@ -2244,7 +2350,7 @@ function getDailyVerse() {
  */
 function updateStreaks(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
   if (!sheet) throw new Error("Hoja de rachas no encontrada");
 
@@ -2383,16 +2489,18 @@ function updateStreaks(data) {
       addNewsItem(ss, 'RACHA', `⚡ AGENTE SOCIAL: ${data.agentName || data.agentId} ha alcanzado una racha de ${streakCount} días.`, data.agentId, data.agentName);
     }
     
-    // Column-Aware Writes — Guardar como epoch ms y sincronizar ambas columnas
-    if (streakIdx !== -1) sheet.getRange(rowIdx + 1, streakIdx + 1).setValue(streakCount);
-    if (lastDateIdx !== -1) sheet.getRange(rowIdx + 1, lastDateIdx + 1).setValue(lastDate);
-    // Si existe la columna alternativa, también actualizarla para evitar datos stale
-    var altDateIdx = (lastDateIdx === idx2) ? idx1 : idx2;
-    if (altDateIdx !== -1 && altDateIdx !== lastDateIdx) {
-      sheet.getRange(rowIdx + 1, altDateIdx + 1).setValue(lastDate);
-    }
-    if (tasksIdx !== -1) sheet.getRange(rowIdx + 1, tasksIdx + 1).setValue(JSON.stringify(data.tasks || []));
-    if (notifsSentIdx !== -1) sheet.getRange(rowIdx + 1, notifsSentIdx + 1).setValue(""); // Reset notifs sent tracker
+    // --- ESCRITURA POR LOTE (Optimización v5 — 1 llamada en vez de 5) ---
+    var rowData = sheet.getRange(rowIdx + 1, 1, 1, headers.length).getValues()[0];
+    if (streakIdx !== -1) rowData[streakIdx] = streakCount;
+    if (lastDateIdx !== -1) rowData[lastDateIdx] = lastDate;
+    // Sincronizar columna alternativa
+    var idx2alt = headers.indexOf('LAST_COMPLETED_DATE');
+    var idx1alt = headers.indexOf('LAST_COMPLETED_WEEK');
+    var altDateIdx = (lastDateIdx === idx2alt) ? idx1alt : idx2alt;
+    if (altDateIdx !== -1 && altDateIdx !== lastDateIdx) rowData[altDateIdx] = lastDate;
+    if (tasksIdx !== -1) rowData[tasksIdx] = JSON.stringify(data.tasks || []);
+    if (notifsSentIdx !== -1) rowData[notifsSentIdx] = "";
+    sheet.getRange(rowIdx + 1, 1, 1, headers.length).setValues([rowData]);
 
   } else {
     // Nuevo registro — Usar epoch ms
@@ -2410,7 +2518,7 @@ function updateStreaks(data) {
     addNewsItem(ss, 'RACHA', `⚡ NUEVA OPERACIÓN: ${data.agentName || data.agentId} inició su racha de consagración.`, data.agentId, data.agentName);
   }
 
-  // --- SINCRONIZACIÓN TÁCTICA CON EL DIRECTORIO (Crucial para la UI) ---
+  // --- SINCRONIZACIÓN TÁCTICA CON EL DIRECTORIO (Optimizado v5 — batch write) ---
   try {
     const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
     if (dirSheet) {
@@ -2420,17 +2528,19 @@ function updateStreaks(data) {
       const streakColIdx = dirHeaders.indexOf('STREAK_COUNT');
       const lastDateColIdx = dirHeaders.indexOf('LAST_COMPLETED_DATE');
       
-      const agentRowIdx = dirData.findIndex(row => String(row[agentIdCol]) === String(data.agentId));
-      if (agentRowIdx !== -1) {
-        if (streakColIdx !== -1) dirSheet.getRange(agentRowIdx + 1, streakColIdx + 1).setValue(streakCount);
-        if (lastDateColIdx !== -1) dirSheet.getRange(agentRowIdx + 1, lastDateColIdx + 1).setValue(lastDate);
+      const agentRowIdx = dirData.findIndex(row => String(row[agentIdCol]).trim().toUpperCase() === String(data.agentId).trim().toUpperCase());
+      if (agentRowIdx !== -1 && (streakColIdx !== -1 || lastDateColIdx !== -1)) {
+        var dirRowData = dirSheet.getRange(agentRowIdx + 1, 1, 1, dirHeaders.length).getValues()[0];
+        if (streakColIdx !== -1) dirRowData[streakColIdx] = streakCount;
+        if (lastDateColIdx !== -1) dirRowData[lastDateColIdx] = lastDate;
+        dirSheet.getRange(agentRowIdx + 1, 1, 1, dirHeaders.length).setValues([dirRowData]);
       }
     }
   } catch (e) {
     console.error("Error sincronizando racha con directorio:", e);
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, streak: streakCount, lastStreakDate: lastDate })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ streak: streakCount, lastStreakDate: lastDate });
 }
 
 /**
@@ -2441,7 +2551,7 @@ function sendBroadcastNotification(data) {
   if (!title || !message) throw new Error("Título y mensaje son requeridos para el broadcast.");
 
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(CONFIG.NOTIFICATIONS_SHEET);
   
   // Crear hoja de historial si no existe
@@ -2466,10 +2576,7 @@ function sendBroadcastNotification(data) {
   const telegramMsg = `📢 <b>RECOMUNICADO TÁCTICO: ${title.toUpperCase()}</b>\n\n${message}\n\n<i>Enviado desde el Command Center.</i>`;
   sendTelegramNotification(telegramMsg);
 
-  return ContentService.createTextOutput(JSON.stringify({ 
-    success: true, 
-    message: "Aviso transmitido y guardado en base de datos táctica." 
-  })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ message: "Aviso transmitido y guardado en base de datos táctica." });
 }
 
 /**
@@ -2477,13 +2584,13 @@ function sendBroadcastNotification(data) {
  */
 function getNotifications() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.NOTIFICATIONS_SHEET);
   
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+  if (!sheet) return jsonOk({ data: [] });
   
   const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+  if (data.length <= 1) return jsonOk({ data: [] });
   
   const headers = data[0];
   const rows = data.slice(1).reverse(); // Más recientes primero
@@ -2497,7 +2604,7 @@ function getNotifications() {
     return obj;
   });
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, data: notifications.slice(0, 50) })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ data: notifications.slice(0, 50) });
 }
 
 
@@ -2506,7 +2613,7 @@ function getNotifications() {
  */
 function syncFcmToken(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
@@ -2553,10 +2660,10 @@ function syncFcmToken(data) {
       subscriptionStatus = "error: " + e.message;
     }
     
-    return ContentService.createTextOutput(JSON.stringify({ success: true, subscription: subscriptionStatus })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ subscription: subscriptionStatus });
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Agente no encontrado" })).setMimeType(ContentService.MimeType.JSON);
+  return jsonError("Agente no encontrado");
 }
 
 /**
@@ -2564,7 +2671,7 @@ function syncFcmToken(data) {
  */
 function confirmDirectorAttendance(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
   if (!sheet) throw new Error("Hoja de asistencia no encontrada");
 
@@ -2584,7 +2691,7 @@ function confirmDirectorAttendance(data) {
   );
 
   if (alreadyConfirmed) {
-    return ContentService.createTextOutput(JSON.stringify({ success: true, alreadyDone: true })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ alreadyDone: true });
   }
 
   // Registrar asistencia unificada [ID, TRAMO/TIPO, UBICACION, FECHA]
@@ -2595,7 +2702,7 @@ function confirmDirectorAttendance(data) {
     new Date()
   ]);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -2604,7 +2711,7 @@ function confirmDirectorAttendance(data) {
  */
 function checkRachaNotifications() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.STREAKS_SHEET);
   if (!sheet) return;
 
@@ -2690,7 +2797,7 @@ function checkRachaNotifications() {
  */
 function scheduledDailyVerseNotification() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.VERSES_SHEET);
   const data = sheet.getDataRange().getValues();
   
@@ -2733,7 +2840,7 @@ function setupDailyVerseTrigger() {
  */
 function createEvent(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(CONFIG.EVENTS_SHEET_NAME);
   
   if (!sheet) {
@@ -2752,7 +2859,7 @@ function createEvent(data) {
     new Date().toISOString()
   ]);
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, eventId: eventId })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ eventId: eventId });
 }
 
 /**
@@ -2760,9 +2867,9 @@ function createEvent(data) {
  */
 function getActiveEvents() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.EVENTS_SHEET_NAME);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+  if (!sheet) return jsonOk({ data: [] });
 
   const values = sheet.getDataRange().getValues();
   const headers = values[0];
@@ -2783,7 +2890,7 @@ function getActiveEvents() {
     data.push(event);
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true, data: data })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ data: data });
 }
 
 /**
@@ -2791,7 +2898,7 @@ function getActiveEvents() {
  */
 function confirmEventAttendance(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
   if (!sheet) {
     const newSheet = ss.insertSheet(CONFIG.EVENT_CONFIRMATIONS_SHEET);
@@ -2838,7 +2945,7 @@ function confirmEventAttendance(data) {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -2846,9 +2953,9 @@ function confirmEventAttendance(data) {
  */
 function deleteEvent(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.EVENTS_SHEET_NAME);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Hoja de eventos no encontrada" })).setMimeType(ContentService.MimeType.JSON);
+  if (!sheet) return jsonError("Hoja de eventos no encontrada");
 
   const values = sheet.getDataRange().getValues();
   const idColIdx = values[0].indexOf('ID');
@@ -2856,11 +2963,11 @@ function deleteEvent(data) {
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][idColIdx]).trim() === String(data.eventId).trim()) {
       sheet.deleteRow(i + 1);
-      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+      return jsonOk();
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Evento no encontrado" })).setMimeType(ContentService.MimeType.JSON);
+  return jsonError("Evento no encontrado");
 }
 
 /**
@@ -2877,7 +2984,7 @@ function testPush() {
  */
 function standardizeDirectory() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   if (!sheet) return;
 
@@ -2965,7 +3072,7 @@ function standardizeDirectory() {
  */
 function emergencyRollbackDirectory() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const mainSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   
   const sheets = ss.getSheets();
@@ -3009,12 +3116,12 @@ function emergencyRollbackDirectory() {
  */
 function getTasks() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
   const progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
   
   if (!sheet || sheet.getLastRow() < 2) {
-    return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: [] })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ tasks: [] });
   }
   
   const data = sheet.getDataRange().getValues();
@@ -3047,7 +3154,7 @@ function getTasks() {
       currentSlots: currentSlots
     });
   }
-  return ContentService.createTextOutput(JSON.stringify({ success: true, tasks: tasks })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ tasks: tasks });
 }
 
 /**
@@ -3055,11 +3162,11 @@ function getTasks() {
  */
 function getTaskRecruits() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
   
   if (!sheet || sheet.getLastRow() < 2) {
-    return ContentService.createTextOutput(JSON.stringify({ success: true, recruits: [] })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ recruits: [] });
   }
   
   const data = sheet.getDataRange().getValues();
@@ -3078,7 +3185,7 @@ function getTaskRecruits() {
       status: status
     });
   }
-  return ContentService.createTextOutput(JSON.stringify({ success: true, recruits: recruits })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ recruits: recruits });
 }
 
 /**
@@ -3086,7 +3193,7 @@ function getTaskRecruits() {
  */
 function createTaskAction(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
   if (!sheet) throw new Error("Hoja TAREAS no encontrada. Ejecuta setupDatabase().");
   const id = 'TASK_' + new Date().getTime();
@@ -3104,7 +3211,7 @@ function createTaskAction(data) {
   var slotsMsg = (data.maxSlots && data.maxSlots > 0) ? ' — ' + data.maxSlots + ' cupos disponibles' : ' — Cupos ilimitados';
   addNewsItem(ss, 'TAREA', '⚔️ NUEVA MISIÓN: ' + data.title + slotsMsg, '', 'COMANDO');
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true, id: id })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ id: id });
 }
 
 /**
@@ -3112,17 +3219,17 @@ function createTaskAction(data) {
  */
 function deleteTaskAction(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
   if (!sheet) throw new Error("Hoja TAREAS no encontrada.");
   const allData = sheet.getDataRange().getValues();
   for (let i = 1; i < allData.length; i++) {
     if (String(allData[i][0]) === String(data.taskId)) {
       sheet.deleteRow(i + 1);
-      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+      return jsonOk();
     }
   }
-  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Tarea no encontrada." })).setMimeType(ContentService.MimeType.JSON);
+  return jsonError("Tarea no encontrada.");
 }
 
 /**
@@ -3130,7 +3237,7 @@ function deleteTaskAction(data) {
  */
 function submitTaskCompletion(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
   const tasksSheet = ss.getSheetByName(CONFIG.TASKS_SHEET);
   
@@ -3175,7 +3282,7 @@ function submitTaskCompletion(data) {
     addNewsItem(ss, 'TAREA', '🎯 ' + (data.agentName || data.agentId) + ' se unió a "' + taskTitle + '"', data.agentId, data.agentName);
   }
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -3183,7 +3290,7 @@ function submitTaskCompletion(data) {
  */
 function verifyTaskAction(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   // 1. Actualizar status en PROGRESO_TAREAS
   const progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
@@ -3200,7 +3307,7 @@ function verifyTaskAction(data) {
       break;
     }
   }
-  if (foundRow === -1) return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Solicitud pendiente no encontrada." })).setMimeType(ContentService.MimeType.JSON);
+  if (foundRow === -1) return jsonError("Solicitud pendiente no encontrada.");
   
   progressSheet.getRange(foundRow, progressHeaders.indexOf('STATUS') + 1).setValue('VERIFICADO');
   progressSheet.getRange(foundRow, progressHeaders.indexOf('VERIFICADO_POR') + 1).setValue(data.verifiedBy || 'DIRECTOR');
@@ -3225,7 +3332,7 @@ function verifyTaskAction(data) {
   // 3. Generar noticia
   addNewsItem(ss, 'TAREA', `¡${data.agentName || data.agentId} completó la misión "${data.taskTitle || ''}"! +${xpReward} XP`, data.agentId, data.agentName);
   
-  return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk();
 }
 
 /**
@@ -3233,7 +3340,7 @@ function verifyTaskAction(data) {
  */
 function removeRecruitFromTask(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const progressSheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
   if (!progressSheet) throw new Error("Hoja PROGRESO_TAREAS no encontrada.");
   
@@ -3248,10 +3355,10 @@ function removeRecruitFromTask(data) {
     if (String(progressData[i][tIdCol]) === String(data.taskId) &&
         String(progressData[i][aIdCol]) === String(data.agentId)) {
       progressSheet.deleteRow(i + 1);
-      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+      return jsonOk();
     }
   }
-  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Recluta no encontrado en esta tarea." })).setMimeType(ContentService.MimeType.JSON);
+  return jsonError("Recluta no encontrado en esta tarea.");
 }
 
 /**
@@ -3259,7 +3366,7 @@ function removeRecruitFromTask(data) {
  */
 function getPromotionStatus(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   // 1. Obtener XP y rango actual del agente
   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
@@ -3362,8 +3469,7 @@ function getPromotionStatus(data) {
     }
   }
   
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true,
+  return jsonOk({
     xp: agentXp,
     rank: agentRank,
     agentName: agentName,
@@ -3371,7 +3477,7 @@ function getPromotionStatus(data) {
     tasksCompleted: tasksCompleted,
     tasksPending: tasksPending,
     promotionHistory: promotionHistory
-  })).setMimeType(ContentService.MimeType.JSON);
+  });
 }
 
 /**
@@ -3379,7 +3485,7 @@ function getPromotionStatus(data) {
  */
 function promoteAgent(data) {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
   const dirData = directorySheet.getDataRange().getValues();
   const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
@@ -3406,10 +3512,10 @@ function promoteAgent(data) {
       // Notificar por Telegram
       sendTelegramNotification(`🎖️ <b>ASCENSO</b>\n\n${data.agentName || data.agentId} ha sido promovido de <b>${oldRank}</b> a <b>${newRank}</b>.\n\n<i>Consagrados 2026</i>`);
       
-      return ContentService.createTextOutput(JSON.stringify({ success: true, oldRank: oldRank, newRank: newRank })).setMimeType(ContentService.MimeType.JSON);
+      return jsonOk({ oldRank: oldRank, newRank: newRank });
     }
   }
-  return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Agente no encontrado." })).setMimeType(ContentService.MimeType.JSON);
+  return jsonError("Agente no encontrado.");
 }
 
 /**
@@ -3417,7 +3523,7 @@ function promoteAgent(data) {
  */
 function getNewsFeed() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.NEWS_SHEET);
   
   if (!sheet || sheet.getLastRow() < 2) {
@@ -3425,7 +3531,7 @@ function getNewsFeed() {
     if (sheet) {
       addNewsItem(ss, 'OPERACION', '📡 SISTEMA CONSAGRADOS v3.0 EN LÍNEA: El Centro de Inteligencia ha sido activado. Esperando transmisiones...', 'SISTEMA', 'COMANDO');
     }
-    return ContentService.createTextOutput(JSON.stringify({ success: true, news: [] })).setMimeType(ContentService.MimeType.JSON);
+    return jsonOk({ news: [] });
   }
   const data = sheet.getDataRange().getValues();
   const headers = data[0].map(h => String(h).trim().toUpperCase());
@@ -3441,7 +3547,7 @@ function getNewsFeed() {
       agentName: String(data[i][headers.indexOf('AGENT_NAME')] || ''),
     });
   }
-  return ContentService.createTextOutput(JSON.stringify({ success: true, news: news })).setMimeType(ContentService.MimeType.JSON);
+  return jsonOk({ news: news });
 }
 
 /**
@@ -3482,7 +3588,7 @@ function addNewsItem(ss, type, message, agentId, agentName) {
  */
 function computeBadges() {
   const CONFIG = getGlobalConfig();
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const ss = getSpreadsheet();
   
   // Get current month/year for monthly badges
   var now = new Date();
@@ -3691,7 +3797,39 @@ function computeBadges() {
       badges.push({ type: 'CONSAGRADO_MES', emoji: '🏆', label: 'Consagrado del Mes', agentId: topAtt, agentName: agentNames[topAtt] || topAtt, value: topAttCount });
     }
   }
-  
-  return ContentService.createTextOutput(JSON.stringify({ success: true, badges: badges })).setMimeType(ContentService.MimeType.JSON);
+
+  // --- 6. CATEGORÍAS POR PUNTOS (Menciones Especiales) ---
+  // Nota: Estas se basan en el total acumulado actual en el directorio.
+  var topXp = null, maxXp = 0;
+  var topBiblia = null, maxBiblia = 0;
+  var topApuntes = null, maxApuntes = 0;
+  var topLiderazgo = null, maxLiderazgo = 0;
+
+  var xpCol = findHeaderIdx(dirHeaders, 'XP');
+  var bibliaCol = findHeaderIdx(dirHeaders, 'PUNTOS_BIBLIA');
+  var apuntesCol = findHeaderIdx(dirHeaders, 'PUNTOS_APUNTES');
+  var liderazgoCol = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
+
+  for (var i = 1; i < dirData.length; i++) {
+    var agId = String(dirData[i][idCol] || '').trim().toUpperCase();
+    if (isLeader[agId]) continue; // Filtrar líderes del cuadro de honor
+
+    var xp = parseInt(dirData[i][xpCol]) || 0;
+    var biblia = parseInt(dirData[i][bibliaCol]) || 0;
+    var apuntes = parseInt(dirData[i][apuntesCol]) || 0;
+    var liderazgo = parseInt(dirData[i][liderazgoCol]) || 0;
+
+    if (xp > maxXp) { topXp = agId; maxXp = xp; }
+    if (biblia > maxBiblia) { topBiblia = agId; maxBiblia = biblia; }
+    if (apuntes > maxApuntes) { topApuntes = agId; maxApuntes = apuntes; }
+    if (liderazgo > maxLiderazgo) { topLiderazgo = agId; maxLiderazgo = liderazgo; }
+  }
+
+  if (topXp) badges.push({ type: 'LEYENDA', emoji: '👑', label: 'Leyenda (Top XP)', agentId: topXp, agentName: agentNames[topXp] || topXp, value: maxXp });
+  if (topBiblia) badges.push({ type: 'GUERRERO', emoji: '⚔️', label: 'Guerrero (Biblia)', agentId: topBiblia, agentName: agentNames[topBiblia] || topBiblia, value: maxBiblia });
+  if (topApuntes) badges.push({ type: 'ESCRIBA', emoji: '📜', label: 'Escriba (Apuntes)', agentId: topApuntes, agentName: agentNames[topApuntes] || topApuntes, value: maxApuntes });
+  if (topLiderazgo) badges.push({ type: 'LIDER', emoji: '⭐', label: 'Líder de Influencia', agentId: topLiderazgo, agentName: agentNames[topLiderazgo] || topLiderazgo, value: maxLiderazgo });
+
+  return jsonOk({ badges: badges });
 }
 

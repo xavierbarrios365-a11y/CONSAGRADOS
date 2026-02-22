@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Check, Clock, Lock, Trash2, Shield, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { UserRole, ServiceTask } from '../types';
 import { TASK_AREAS } from '../constants';
-import { TASK_AREAS } from '../constants';
 import { fetchTasks, createTask, deleteTask, submitTaskCompletion, verifyTask, fetchPromotionStatus, fetchTaskRecruits, removeRecruitFromTask } from '../services/sheetsService';
 
 interface TasksModuleProps {
@@ -70,13 +69,15 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
         if (!newTask.title.trim()) return;
         setCreating(true);
         try {
-            const res = await createTask(newTask);
+            const res = await createTask({
+                ...newTask,
+                xpReward: parseInt(newTask.xpReward) || 0,
+                maxSlots: parseInt(newTask.maxSlots) || 0
+            });
             if (res.success) {
-                if (res.success) {
-                    setShowCreate(false);
-                    setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: '', maxSlots: '' });
-                    loadData();
-                }
+                setShowCreate(false);
+                setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: '', maxSlots: '' });
+                loadData();
             }
         } catch (e) { console.error(e); }
         setCreating(false);

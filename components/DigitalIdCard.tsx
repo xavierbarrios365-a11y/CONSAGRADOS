@@ -17,11 +17,18 @@ export const formatDriveUrl = (url: string) => {
     return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
   }
 
+  // Si es un enlace directo de lh3, ya está procesado, pero nos aseguramos de que tenga un tamaño decente (s1000)
+  if (url.includes('lh3.googleusercontent.com/d/')) {
+    // Si ya tiene un parámetro de tamaño, lo dejamos, si no, le ponemos s1000
+    return url.includes('=') ? url : `${url}=s1000`;
+  }
+
   // SI YA ES UN ENLACE DIRECTO DE GOOGLE CONTENT (LH3), LO DEJAMOS PASAR
   if (url.includes('googleusercontent.com')) return url;
 
-  // Extraer el ID de Google Drive (cubre múltiples formatos: /d/, open?id=, uc?id=, file/d/, preview)
-  const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=|\/file\/d\/|preview\/d\/)([\w-]{25,100})/;
+  // Extraer el ID de Google Drive (cubre múltiples formatos: /d/, open?id=, uc?id=, file/d/, preview, etc.)
+  // El regex ahora es más específico para capturar el ID correctamente incluso con parámetros extra
+  const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=|\/file\/d\/|preview\/d\/|open\?id=)([\w-]{25,100})/;
   const match = url.match(driveRegex);
 
   let fileId = "";

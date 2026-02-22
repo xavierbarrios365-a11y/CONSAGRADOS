@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from './components/Layout';
 import { AppView, Agent, UserRole, Visitor, Guide, Badge } from './types';
-import { INITIAL_AGENTS } from './mockData';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
 import IntelFeed from './components/IntelFeed';
 import AcademyModule from './components/AcademyModule';
@@ -21,6 +20,9 @@ import PromotionProgressCard from './components/PromotionProgressCard';
 import TrainingCenter from './components/TrainingCenter';
 import BadgeShowcase from './components/BadgeShowcase';
 import TacticalCertificate from './components/TacticalCertificate';
+import LoadingScreen from './components/LoadingScreen';
+import LighthouseIndicator from './components/LighthouseIndicator';
+import { parseAttendanceDate } from './utils/dateUtils';
 import {
   fetchAgentsFromSheets,
   updateAgentPoints,
@@ -47,32 +49,14 @@ import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book
 import { getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
-// SpiritualAdvisor removed per user request
 import { initRemoteConfig } from './services/configService';
 
-const OFFICIAL_LOGO = "/logo_white.png"; // Usando asset local para máxima confiabilidad
+// --- Custom Hooks ---
+import { useAuth } from './hooks/useAuth';
+import { useDataSync } from './hooks/useDataSync';
+import { useFirebaseMessaging } from './hooks/useFirebaseMessaging';
 
-const LoadingScreen = ({ message }: { message: string }) => (
-  <div className="min-h-screen bg-[#001f3f] flex flex-col items-center justify-center p-6 space-y-6 animate-in fade-in">
-    <div className="w-24 h-24 flex items-center justify-center relative">
-      <div className="absolute inset-0 bg-[#ffb700]/10 rounded-full animate-ping opacity-20"></div>
-      <img
-        src={formatDriveUrl(OFFICIAL_LOGO)}
-        alt="Consagrados Logo"
-        className="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(255,183,0,0.3)] animate-pulse"
-      />
-    </div>
-    <div className="space-y-2 text-center">
-      <p className="text-[#ffb700] text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">{message}</p>
-      <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden mx-auto">
-        <div className="w-1/2 h-full bg-[#ffb700] animate-[shimmer_2s_infinite] shadow-[0_0_10px_rgba(255,183,0,0.5)]"></div>
-      </div>
-    </div>
-    <style>{`
-      @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-    `}</style>
-  </div>
-);
+const OFFICIAL_LOGO = "/logo_white.png";
 
 const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClick: () => void, disabled: boolean, icon: any }) => (
   <button
@@ -88,174 +72,50 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
   </button>
 );
 
-/**
- * Robust date parser for Google Sheets data.
- * Handles: serial numbers (46067), DD/MM/YYYY strings, ISO strings, Date objects.
- * Returns a valid Date or null.
- */
-const parseAttendanceDate = (value: any): Date | null => {
-  if (!value || value === 'N/A' || value === '') return null;
-
-  // 0. Handle native Date object (if passed directly)
-  if (value instanceof Date) {
-    return isNaN(value.getTime()) ? null : value;
-  }
-
-  // 1. Google Sheets serial number (e.g., 46067 = days since 1899-12-30)
-  const numVal = typeof value === 'number' ? value : parseFloat(String(value));
-  if (!isNaN(numVal) && numVal > 1000 && numVal < 100000 && !String(value).includes('/') && !String(value).includes('-')) {
-    // Google Sheets epoch: Dec 30, 1899
-    const sheetsEpoch = new Date(1899, 11, 30);
-    const result = new Date(sheetsEpoch.getTime() + numVal * 86400000);
-    if (!isNaN(result.getTime()) && result.getFullYear() >= 2020 && result.getFullYear() <= 2030) return result;
-  }
-
-  const strVal = String(value).trim();
-
-  // 2. DD/MM/YYYY or DD-MM-YYYY format
-  const parts = strVal.split(/[\/\-]/);
-  if (parts.length === 3) {
-    const [p1, p2, p3] = parts.map(p => parseInt(p, 10));
-    // Determine if DD/MM/YYYY or MM/DD/YYYY (assume DD/MM/YYYY if day > 12)
-    let d: Date;
-    if (p1 > 12) {
-      d = new Date(p3, p2 - 1, p1); // DD/MM/YYYY
-    } else if (p2 > 12) {
-      d = new Date(p3, p1 - 1, p2); // MM/DD/YYYY
-    } else {
-      d = new Date(p3, p2 - 1, p1); // Default DD/MM/YYYY
-    }
-    if (!isNaN(d.getTime()) && d.getFullYear() >= 2020) return d;
-  }
-
-  // 3. Robust parsing for strings with potential extra text (regex extraction)
-  // Extracts YYYY-MM-DD or DD/MM/YYYY even if there's trash around it
-  const dateMatch = strVal.match(/(\d{4}-\d{1,2}-\d{1,2})|(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/);
-  if (dateMatch) {
-    const rawMatch = dateMatch[0];
-    const fallback = new Date(rawMatch);
-    if (!isNaN(fallback.getTime()) && fallback.getFullYear() >= 2020 && fallback.getFullYear() <= 2030) return fallback;
-
-    // If simple new Date fails, try our custom slash parser on the match
-    const parts = rawMatch.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const [p1, p2, p3] = parts.map(p => parseInt(p, 10));
-      let d: Date;
-      if (p1 > 2000) d = new Date(p1, p2 - 1, p3); // YYYY-MM-DD
-      else if (p3 > 2000) d = new Date(p3, p2 - 1, p1); // DD/MM/YYYY
-      else d = new Date(rawMatch);
-
-      if (!isNaN(d.getTime()) && d.getFullYear() >= 2020) return d;
-    }
-  }
-
-  // 4. ISO string or other parseable format (original fallback)
-  const fallback = new Date(strVal);
-  if (!isNaN(fallback.getTime()) && fallback.getFullYear() >= 2020 && fallback.getFullYear() <= 2030) return fallback;
-
-  return null;
-};
-
-/**
- * Indicador de Conexión "Faro de Consagrados"
- * Estética Premium con animaciones de haz de luz rotativo.
- */
-const LighthouseIndicator: React.FC<{ status: 'online' | 'offline'; size?: 'xs' | 'sm' | 'md' }> = ({ status, size = 'md' }) => {
-  const isOnline = status === 'online';
-  const color = isOnline ? '#ffb700' : '#ef4444';
-  const isXs = size === 'xs';
-  const isSm = size === 'sm' || isXs;
-
-  return (
-    <div className={`flex flex-col items-center ${isXs ? 'gap-0.5' : isSm ? 'gap-1' : 'gap-3'}`}>
-      <div className={`relative ${isXs ? 'w-16 h-16' : isSm ? 'w-20 h-20' : 'w-36 h-36'} flex items-center justify-center`}>
-        {/* Capa de Fondo (Silueta Blanca Original) */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.95)',
-            maskImage: 'url(/logo_white.png)',
-            WebkitMaskImage: 'url(/logo_white.png)',
-            maskSize: 'contain',
-            WebkitMaskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            WebkitMaskRepeat: 'no-repeat',
-            maskPosition: 'center',
-            WebkitMaskPosition: 'center'
-          }}
-        />
-
-        {/* Capa de Animación (Barrido de Color Táctico) */}
-        <div
-          className="absolute inset-0 overflow-hidden"
-          style={{
-            maskImage: 'url(/logo_white.png)',
-            WebkitMaskImage: 'url(/logo_white.png)',
-            maskSize: 'contain',
-            WebkitMaskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            WebkitMaskRepeat: 'no-repeat',
-            maskPosition: 'center',
-            WebkitMaskPosition: 'center'
-          }}
-        >
-          <div
-            className={`absolute inset-y-0 ${isSm ? 'w-20' : 'w-32'} -skew-x-12 opacity-90 blur-sm`}
-            style={{
-              background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
-              animation: 'tactical-sweep 4s ease-in-out infinite',
-              filter: 'brightness(1.5)'
-            }}
-          />
-        </div>
-
-        {/* Resplandor Maestro (Solo Online) */}
-        {isOnline && (
-          <div
-            className="absolute inset-0 blur-2xl opacity-20 animate-pulse pointer-events-none"
-            style={{ backgroundColor: color }}
-          />
-        )}
-      </div>
-
-      {/* Etiquetas de Estado */}
-      <div className="flex flex-col items-center">
-        <span className={`text-white font-bebas ${isXs ? 'text-sm tracking-[0.15em]' : isSm ? 'text-lg tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
-          CONSAGRADOS <span className="text-[#ffb700]">2026</span>
-        </span>
-        <div className={`flex items-center gap-2 ${isSm ? 'mt-1 py-0.5' : 'mt-2 py-1'} px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm`}>
-          <div className={`${isSm ? 'w-1.5 h-1.5' : 'w-2 h-2'} rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
-          <span className={`${isSm ? 'text-[6px]' : 'text-[10px]'} uppercase font-montserrat font-black tracking-[0.2em]`} style={{ color }}>
-            {isOnline ? 'CONECTADO' : 'DESCONECTADO'}
-          </span>
-        </div>
-      </div>
-
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes tactical-sweep {
-          0% { left: -150%; }
-          30% { left: -150%; }
-          70% { left: 150%; }
-          100% { left: 150%; }
-        }
-      ` }} />
-    </div>
-  );
-};
-
 const App: React.FC = () => {
   const APP_VERSION = "1.9.1"; // Academia & Ranking Correction v1.9.1
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Agent | null>(null);
-  const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
-  const [loginPin, setLoginPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  const [loginError, setLoginError] = useState<{ field: 'id' | 'pin' | 'both' | null, message: string | null }>({ field: null, message: null });
 
+  // --- Custom Hooks: Auth, Data Sync, Firebase ---
+  const auth = useAuth();
+  const dataSync = useDataSync(auth.currentUser, auth.isLoggedIn);
+  const firebase = useFirebaseMessaging(auth.currentUser, auth.isLoggedIn, dataSync.checkHeadlines);
+
+  // Keep the auth hook's agents ref in sync with the latest fetched agents
+  useEffect(() => { auth.agentsRef.current = dataSync.agents; }, [dataSync.agents]);
+
+  // Destructure for convenience (backward compatible with existing render code)
+  const {
+    isLoggedIn, currentUser, loginId, loginPin, showPin, loginError,
+    showForgotPassword, forgotPasswordStep, securityAnswerInput, resetError, revealedPin,
+    isMustChangeFlow, newPinInput, confirmPinInput, newQuestionInput, newAnswerInput, isUpdatingPin,
+    biometricAvailable, isAuthenticatingBio, isRegisteringBio,
+    lastActiveTime, showSessionWarning, sessionIp,
+    rememberedUser, showQuickLogin,
+    setLoginId, setLoginPin, setShowPin, setLoginError,
+    setShowForgotPassword, setForgotPasswordStep, setSecurityAnswerInput, setResetError, setRevealedPin,
+    setIsMustChangeFlow, setNewPinInput, setConfirmPinInput, setNewQuestionInput, setNewAnswerInput, setIsUpdatingPin,
+    setIsRegisteringBio, setRememberedUser,
+    setCurrentUser, setIsLoggedIn, setShowSessionWarning, setShowQuickLogin,
+    handleLogin, handleBiometricLogin, handleLogout, handleHardReset,
+    resetSessionTimer, refreshCurrentUser,
+  } = auth;
+
+  const {
+    agents, setAgents,
+    isSyncing,
+    visitorRadar, setVisitorRadar,
+    activeEvents, setActiveEvents,
+    badges, setBadges,
+    headlines,
+    unreadNotifications, setUnreadNotifications,
+    syncData,
+    checkHeadlines,
+  } = dataSync;
+
+  const { notificationPermission, setNotificationPermission, initFirebaseMessaging } = firebase;
+
+  // --- Remaining local state (view-specific, not worth extracting) ---
   const [view, setView] = useState<AppView>(AppView.HOME);
-  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [intelReport, setIntelReport] = useState<string>('SISTEMAS EN LÍNEA...');
   const [scanStatus, setScanStatus] = useState<'IDLE' | 'SCANNING' | 'SUCCESS'>('IDLE');
   const [scannedId, setScannedId] = useState('');
@@ -266,48 +126,16 @@ const App: React.FC = () => {
   const [logoError, setLogoError] = useState(false);
   const [scannedAgentForPoints, setScannedAgentForPoints] = useState<Agent | null>(null);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
-  const [visitorRadar, setVisitorRadar] = useState<Visitor[]>([]);
-
-  // Estados de Seguridad y Sesión
-  const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
-  const [showSessionWarning, setShowSessionWarning] = useState(false);
-  const [sessionIp, setSessionIp] = useState<string>(localStorage.getItem('consagrados_ip') || '');
-
-  // Estados de Seguridad Avanzada 
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotPasswordStep, setForgotPasswordStep] = useState<'ID' | 'QUESTION' | 'SUCCESS'>('ID');
-  const [securityAnswerInput, setSecurityAnswerInput] = useState('');
-  const [resetError, setResetError] = useState('');
-  const [revealedPin, setRevealedPin] = useState('');
-  const [isMustChangeFlow, setIsMustChangeFlow] = useState(false);
-  const [newPinInput, setNewPinInput] = useState('');
-  const [confirmPinInput, setConfirmPinInput] = useState('');
-  const [newQuestionInput, setNewQuestionInput] = useState('');
-  const [newAnswerInput, setNewAnswerInput] = useState('');
-  const [isUpdatingPin, setIsUpdatingPin] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [isAuthenticatingBio, setIsAuthenticatingBio] = useState(false);
-  const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isRegisteringBio, setIsRegisteringBio] = useState(false);
-  const [rememberedUser, setRememberedUser] = useState<{ id: string; name: string; photoUrl: string } | null>(null);
   const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [showQuickLogin, setShowQuickLogin] = useState(true);
   const [directorySearch, setDirectorySearch] = useState('');
   const [showInbox, setShowInbox] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  // Consejero táctico eliminado
-  const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [isConfirmingEvent, setIsConfirmingEvent] = useState<string | null>(null);
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-  );
+  const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [headlines, setHeadlines] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -370,162 +198,14 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // --- BOOSTER DE PERSISTENCIA (SINCRONIZAR PREFS DESDE NUBE AL LOGUEAR) ---
-  useEffect(() => {
-    if (isLoggedIn && currentUser && currentUser.id) {
-      const agentId = currentUser.id;
-      const READ_KEY = `read_notifications_${agentId}`;
-      const DELETED_KEY = `deleted_notifications_${agentId}`;
-
-      // Si local está vacío pero nube tiene data, hidratar
-      if (currentUser.notifPrefs) {
-        const localRead = localStorage.getItem(READ_KEY);
-        const localDeleted = localStorage.getItem(DELETED_KEY);
-
-        if (!localRead && currentUser.notifPrefs.read?.length > 0) {
-          localStorage.setItem(READ_KEY, JSON.stringify(currentUser.notifPrefs.read));
-        }
-        if (!localDeleted && currentUser.notifPrefs.deleted?.length > 0) {
-          localStorage.setItem(DELETED_KEY, JSON.stringify(currentUser.notifPrefs.deleted));
-        }
-      }
-    }
-  }, [isLoggedIn, currentUser]);
-
-  const handleLogout = useCallback((fullPurge = false) => {
-    // Preserve important keys for quick re-entry if not a full purge
-    const backupKeys = fullPurge ? ['app_version', 'pwa_banner_dismissed'] : ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id'];
-    const backup: Record<string, string> = {};
-
-    backupKeys.forEach(k => {
-      const v = localStorage.getItem(k);
-      if (v) backup[k] = v;
-    });
-
-    if (!fullPurge) {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('read_notifications_') || key.startsWith('deleted_notifications_'))) {
-          const v = localStorage.getItem(key);
-          if (v) backup[key] = v;
-        }
-      }
-    }
-
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Restore backups
-    Object.entries(backup).forEach(([k, v]) => localStorage.setItem(k, v));
-
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    setFoundAgent(null);
-    setLoginId('');
-    setLoginPin('');
-    setView(AppView.HOME);
-    setShowSessionWarning(false);
-    setIsMustChangeFlow(false);
-    setShowForgotPassword(false);
-    setViewingAsRole(null);
-    setShowQuickLogin(fullPurge ? false : true);
-
-    setTimeout(() => {
-      window.location.replace(window.location.origin + window.location.pathname + "?logout=" + (fullPurge ? 'full' : 'soft') + "_" + Date.now());
-    }, 50);
-  }, []);
-
-  const handleHardReset = useCallback(async () => {
-    if (!window.confirm("⚠️ ¿EJECUTAR REINICIO MAESTRO TÁCTICO?\n\nEsto borrará TODA la memoria local, cachés y cerrará la sesión por completo. Úsalo si no ves las actualizaciones o tienes errores persistentes.")) return;
-
-    try {
-      // 1. Clear Storage
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // 2. Clear Caches
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
-
-      // 3. Unregister SWs
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(reg => reg.unregister()));
-      }
-
-      // 4. Force Reload
-      window.location.href = window.location.origin + window.location.pathname + "?reset=" + Date.now();
-    } catch (e) {
-      console.error("Fallo en hard reset:", e);
-      window.location.reload();
-    }
-  }, []);
-
-  const resetSessionTimer = useCallback(() => {
-    if (isLoggedIn) {
-      const now = Date.now();
-      setLastActiveTime(now);
-      localStorage.setItem('last_active_time', String(now));
-      if (showSessionWarning) setShowSessionWarning(false);
-    }
-  }, [isLoggedIn, showSessionWarning]);
-
+  // --- Init: Remote config, daily verse, PWA install (not extracted — App-specific) ---
   useEffect(() => {
     initRemoteConfig();
-    const storedUser = sessionStorage.getItem('consagrados_session');
-    const storedLastActive = localStorage.getItem('last_active_time');
-    const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-
-    if (storedUser) {
-      try {
-        const agent = JSON.parse(storedUser);
-        const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
-        const now = Date.now();
-
-        // Timeout 30 minutos, pero NO aplica en PWA instalada
-        if (!isPwa && now - lastActive > 1800000 && lastActive !== 0) {
-          handleLogout();
-        } else {
-          setIsLoggedIn(true);
-          setCurrentUser(agent);
-          setLastActiveTime(now);
-        }
-      } catch (e) {
-        sessionStorage.removeItem('consagrados_session');
-      }
-    }
-
-    fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(data => {
-        if (data.ip) {
-          setSessionIp(data.ip);
-          localStorage.setItem('consagrados_ip', data.ip);
-        }
-      })
-      .catch(err => console.error("Error obteniendo IP:", err));
-
-    isBiometricAvailable().then(setBiometricAvailable);
-
-    const storedLastId = localStorage.getItem('last_login_id');
-    if (storedLastId) setLoginId(storedLastId);
-
-    const storedRemembered = localStorage.getItem('remembered_user');
-    if (storedRemembered) {
-      try {
-        setRememberedUser(JSON.parse(storedRemembered));
-      } catch (e) {
-        localStorage.removeItem('remembered_user');
-      }
-    }
 
     fetchDailyVerse().then(res => {
       if (res.success && res.data) {
         setDailyVerse(res.data);
       } else {
-        // Fallback para que siempre se muestre un versículo
         setDailyVerse({ verse: 'Porque donde están dos o tres congregados en mi nombre, allí estoy yo en medio de ellos.', reference: 'Mateo 18:20' });
       }
     }).catch(() => {
@@ -541,220 +221,22 @@ const App: React.FC = () => {
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Check if already installed
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     if (!isInstalled && !localStorage.getItem('pwa_banner_dismissed')) {
       setShowInstallBanner(true);
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, [handleLogout]);
+  }, []);
 
+  // --- Sync user data when syncData fetches new agents ---
   useEffect(() => {
-    if (isLoggedIn) {
-      const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-
-      const interval = setInterval(() => {
-        const now = Date.now();
-        const diff = now - lastActiveTime;
-
-        // El auto-logout por inactividad se desactiva en modo PWA
-        if (!isPwa) {
-          if (diff >= 1800000) {
-            handleLogout();
-          } else if (diff >= 1500000) { // Aviso a los 25 min
-            setShowSessionWarning(true);
-          }
-        }
-
-        // Detección de offline prolongado
-        if (!navigator.onLine) {
-          const offlineStart = parseInt(localStorage.getItem('offline_start_time') || '0');
-          if (offlineStart === 0) {
-            localStorage.setItem('offline_start_time', String(now));
-          } else if (now - offlineStart > 300000) { // 5 minutos offline
-            handleLogout();
-          }
-        } else {
-          localStorage.removeItem('offline_start_time');
-        }
-      }, 10000);
-      return () => clearInterval(interval);
+    if (dataSync.agents.length > 0) {
+      refreshCurrentUser(dataSync.agents);
     }
-  }, [isLoggedIn, lastActiveTime, handleLogout]);
+  }, [dataSync.agents, refreshCurrentUser]);
 
-  const resetTimerOnActivity = useCallback(() => {
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    events.forEach(e => window.addEventListener(e, resetSessionTimer));
-    return () => events.forEach(e => window.removeEventListener(e, resetSessionTimer));
-  }, [resetSessionTimer]);
-
-  // Firebase Cloud Messaging Integration (ejecutar solo 1 vez por sesión)
-  const fcmInitialized = useRef(false);
-  const initFirebaseMessaging = useCallback(async () => {
-    if (fcmInitialized.current) return; // Evitar múltiples inicializaciones
-    fcmInitialized.current = true;
-    try {
-      const token = await requestForToken();
-      if (token) {
-        console.log("✅ FCM Token sincronizado.");
-        setNotificationPermission('granted'); // Update state immediately on success
-        // Sincronizar con servidor usando el ID actual
-        const session = sessionStorage.getItem('consagrados_session');
-        const userId = session ? JSON.parse(session).id : null;
-        if (userId) {
-          syncFcmToken(userId, token).then(res => {
-            if (res.success) console.log("✅ Token registrado en servidor.");
-          });
-        }
-      }
-
-      onMessageListener().then((payload: any) => {
-        console.log("📩 Push recibido:", payload?.notification?.title);
-
-        // --- DISPARADOR DE ALERTA DE SISTEMA (SUEÑA Y MUESTRA BANNER) ---
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          const title = payload.notification?.title || '📢 CENTRO DE OPERACIÓN';
-          const options = {
-            body: payload.notification?.body || 'Nuevo despliegue táctico disponible.',
-            icon: 'https://lh3.googleusercontent.com/d/1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
-            badge: 'https://lh3.googleusercontent.com/d/1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f',
-            silent: false, // Asegurar sonoridad
-            tag: 'foreground-push'
-          };
-          new Notification(title, options);
-        }
-
-        setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
-        // Gatillo de actualización unificada para el Ticker
-        checkHeadlines();
-      });
-    } catch (e) {
-      console.warn("⚠️ Firebase Messaging no inicializado.");
-      fcmInitialized.current = false; // Permitir reintentar si falló
-    }
-  }, []); // Sin dependencias — ejecutar solo 1 vez
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      initFirebaseMessaging();
-    } else {
-      fcmInitialized.current = false; // Reset al hacer logout
-    }
-  }, [isLoggedIn, initFirebaseMessaging]);
-
-  // --- SISTEMA DE PRESENCIA (FIRESTORE) CON THROTTLING ---
-  const lastPresenceUpdate = useRef<number>(0);
-  const lastPresenceStatus = useRef<string>('');
-
-  useEffect(() => {
-    if (currentUser && isLoggedIn) {
-      const updatePresence = async (status: 'online' | 'offline') => {
-        const now = Date.now();
-        // Solo actualizar si pasaron más de 5 minutos o si el status cambió (online <-> offline)
-        if (status === 'online' && lastPresenceStatus.current === 'online' && (now - lastPresenceUpdate.current < 300000)) {
-          return;
-        }
-
-        try {
-          await setDoc(doc(db, 'presence', currentUser.id), {
-            status,
-            lastSeen: serverTimestamp(),
-            agentName: currentUser.name
-          }, { merge: true });
-          lastPresenceUpdate.current = now;
-          lastPresenceStatus.current = status;
-        } catch (e) {
-          // Silenciar errores de presencia (Firestore backoff)
-        }
-      };
-
-      updatePresence('online');
-
-      // Limpieza al cerrar o cambiar de usuario
-      const handleBeforeUnload = () => updatePresence('offline');
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      return () => {
-        updatePresence('offline');
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-      };
-    }
-  }, [currentUser?.id, isLoggedIn]); // Solo depender del ID, no del objeto completo (XP, etc)
-
-  // Verificación periódica de datos (Notifications + Ranking)
-  const checkHeadlines = useCallback(async () => {
-    try {
-      // 1. Notificaciones
-      const notifs = await fetchNotifications();
-      const agentId = currentUser?.id;
-      const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
-      const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
-
-      const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
-      const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
-
-      const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
-      setUnreadNotifications(unreadNotifs.length);
-
-      const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
-
-      // 2. Ranking & Rachas (Excluir Lideres y Directores)
-      const allAgents = await fetchAgentsFromSheets();
-      const agents = allAgents.filter(a => {
-        const isLeaderRank = a.rank === 'LÍDER' || a.rank === 'LIDER';
-        const isLeaderRole = a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
-        return !isLeaderRank && !isLeaderRole;
-      });
-
-      const topXp = [...agents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
-      const topBible = [...agents].sort((a, b) => (b.bible || 0) - (a.bible || 0)).slice(0, 3);
-      const topNotes = [...agents].sort((a, b) => (b.notes || 0) - (a.notes || 0)).slice(0, 3);
-      const topLeadership = [...agents].sort((a, b) => (b.leadership || 0) - (a.leadership || 0)).slice(0, 3);
-      const topStreaks = [...agents].sort((a, b) => (b.streakCount || 0) - (a.streakCount || 0)).slice(0, 3);
-
-      const rankHeadlines = topXp.map((a, i) => `🔥 TOP ${i + 1} XP: ${a.name} (${a.xp} XP)`);
-      const bibleHeadlines = topBible.map((a, i) => `📖 TOP ${i + 1} BIBLIA: ${a.name} (${a.bible} PTS)`);
-      const notesHeadlines = topNotes.map((a, i) => `📑 TOP ${i + 1} APUNTES: ${a.name} (${a.notes} PTS)`);
-      const leadershipHeadlines = topLeadership.map((a, i) => `🎖️ TOP ${i + 1} LIDERAZGO: ${a.name} (${a.leadership} PTS)`);
-      const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
-
-      // 3. Insignias del Mes (Novedades)
-      const badgeData = await fetchBadges();
-      const badgeHeadlines = badgeData.slice(0, 5).map(b => `🎖️ LOGRO: ${b.agentName} ganó ${b.label} (${b.value})`);
-
-      // Combinar todo
-      const finalHeadlines = [
-        ...notifHeadlines,
-        ...badgeHeadlines,
-        ...rankHeadlines,
-        ...bibleHeadlines,
-        ...notesHeadlines,
-        ...leadershipHeadlines,
-        ...streakHeadlines,
-        "🚀 BIENVENIDO AL CENTRO DE OPERACIÓN CONSAGRADOS 2026",
-        "🎯 CUMPLE TUS MISIONES DIARIAS PARA SUBIR EN EL RANKING"
-      ];
-
-      setHeadlines(finalHeadlines);
-      setNotificationPermission(typeof Notification !== 'undefined' ? Notification.permission : 'default');
-    } catch (e) {
-      console.error("Error en pulso de datos para ticker:", e);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      checkHeadlines();
-      const interval = setInterval(checkHeadlines, 120000); // Cada 2 minutos
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn, checkHeadlines]);
-
-  useEffect(() => {
-    resetTimerOnActivity();
-  }, [resetTimerOnActivity]);
-
+  // --- QR Scanner ---
   useEffect(() => {
     if (view === AppView.SCANNER && scanStatus === 'SCANNING') {
       let active = true;
@@ -819,12 +301,8 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isLoggedIn && currentUser?.userRole === UserRole.STUDENT) {
       const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-      const handleBlur = () => {
-        document.body.classList.add('tactical-blackout');
-      };
-      const handleFocus = () => {
-        document.body.classList.remove('tactical-blackout');
-      };
+      const handleBlur = () => { document.body.classList.add('tactical-blackout'); };
+      const handleFocus = () => { document.body.classList.remove('tactical-blackout'); };
 
       document.addEventListener('contextmenu', handleContextMenu);
       window.addEventListener('blur', handleBlur);
@@ -842,132 +320,6 @@ const App: React.FC = () => {
     }
   }, [isLoggedIn, currentUser]);
 
-  const syncData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setIsSyncing(true);
-    try {
-      const sheetAgents = await fetchAgentsFromSheets();
-      if (sheetAgents) {
-        setAgents(sheetAgents);
-
-        // Obtener usuario actual de la sesión para evitar dependencia circular
-        const session = sessionStorage.getItem('consagrados_session');
-        const sessionUser = session ? JSON.parse(session) : null;
-
-        if (sessionUser) {
-          const updatedSelf = sheetAgents.find(a => String(a.id).toUpperCase() === String(sessionUser.id).toUpperCase());
-          if (updatedSelf) {
-            // Solo actualizar si algo relevante cambió para evitar bucles de renderizado
-            if (JSON.stringify(updatedSelf) !== JSON.stringify(sessionUser)) {
-              setCurrentUser(updatedSelf);
-              sessionStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
-            }
-          }
-        }
-      }
-      const radar = await fetchVisitorRadar();
-      setVisitorRadar(radar || []);
-
-      const events = await fetchActiveEvents();
-      setActiveEvents(events || []);
-
-      const badgeData = await fetchBadges();
-      setBadges(badgeData || []);
-    } catch (err) { } finally {
-      if (!isSilent) setIsSyncing(false);
-    }
-  }, []); // Sin dependencias externas
-
-  useEffect(() => {
-    syncData();
-    const interval = setInterval(() => syncData(true), 60000);
-    return () => clearInterval(interval);
-  }, [syncData]);
-
-  const handleLogin = (e?: React.FormEvent, overrideId?: string) => {
-    if (e) e.preventDefault();
-    const rawId = (overrideId || loginId).trim();
-    const effectiveId = rawId.toUpperCase();
-    const numericInput = rawId.replace(/[^0-9]/g, '');
-
-    // 1. Buscar el agente con estrategia de prioridad
-    // P1: Match exacto (case insensitive)
-    // P2: Match numérico (solo si el input tiene números significativos)
-    let user = agents.find(a => String(a.id).trim().toUpperCase() === effectiveId);
-
-    if (!user && numericInput.length > 3) {
-      user = agents.find(a => {
-        const agentNumeric = String(a.id).replace(/[^0-9]/g, '');
-        return agentNumeric.length > 0 && agentNumeric === numericInput;
-      });
-    }
-
-    if (!user) {
-      setLoginError({ field: 'id', message: 'ID DE AGENTE NO ENCONTRADO' });
-      trackEvent('login_fail', { id: effectiveId, reason: 'id_not_found' });
-      return;
-    }
-
-    // 2. Verificar el PIN
-    if (String(user.pin).trim() === loginPin.trim()) {
-      sessionStorage.setItem('consagrados_session', JSON.stringify(user));
-      localStorage.setItem('last_login_id', user.id);
-      const now = Date.now();
-      localStorage.setItem('last_active_time', String(now));
-
-      const summary = { id: user.id, name: user.name, photoUrl: user.photoUrl };
-      localStorage.setItem('remembered_user', JSON.stringify(summary));
-      setRememberedUser(summary);
-
-      setLastActiveTime(now);
-      setCurrentUser(user);
-      setIsLoggedIn(true);
-      trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'password' });
-      setView(AppView.HOME);
-      setLoginError({ field: null, message: null });
-      setLoginPin('');
-    } else {
-      setLoginError({ field: 'pin', message: 'PIN DE SEGURIDAD INCORRECTO' });
-      trackEvent('login_fail', { id: user.id, reason: 'wrong_pin' });
-    }
-  };
-
-  const handleBiometricLogin = async (overrideId?: string) => {
-    const effectiveId = overrideId || loginId;
-    if (!effectiveId) {
-      alert("INGRESA TU ID PRIMERO");
-      return;
-    }
-    const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
-    if (!user || !user.biometricCredential) {
-      alert("BIOMETRÍA NO CONFIGURADA PARA ESTE ID.\n\nPor favor, ingresa con tu PIN primero y regístrala en 'Mi Perfil'.");
-      return;
-    }
-
-    setIsAuthenticatingBio(true);
-    try {
-      const success = await authenticateBiometric(user.biometricCredential);
-      if (success) {
-        sessionStorage.setItem('consagrados_session', JSON.stringify(user));
-        localStorage.setItem('last_login_id', user.id);
-        const now = Date.now();
-        localStorage.setItem('last_active_time', String(now));
-
-        const summary = { id: user.id, name: user.name, photoUrl: user.photoUrl };
-        localStorage.setItem('remembered_user', JSON.stringify(summary));
-        setRememberedUser(summary);
-
-        setLastActiveTime(now);
-        setCurrentUser(user);
-        setIsLoggedIn(true);
-        trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'biometric' });
-        setView(AppView.HOME);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAuthenticatingBio(false);
-    }
-  };
 
   const processScan = async (idToProcess?: string) => {
     const id = idToProcess || scannedId;
@@ -1559,8 +911,7 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
-                    setIsSyncing(true);
-                    syncData().finally(() => setIsSyncing(false));
+                    syncData();
                   }}
                   className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/40 border border-white/10"
                 >

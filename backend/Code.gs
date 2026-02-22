@@ -2178,7 +2178,7 @@ function resetStudentAttempts(data) {
   const values = range.getValues();
   let deletedCount = 0;
   
-  let lessonIdsToDelete: string[] = [];
+  let lessonIdsToDelete = [];
   if (data.lessonId) {
     lessonIdsToDelete = [String(data.lessonId).trim()];
   } else if (data.courseId) {

@@ -88,7 +88,7 @@ function setupTelegramCredentials() {
   
   // → REEMPLAZA ESTOS VALORES CON TUS CREDENCIALES REALES:
   var BOT_TOKEN = '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA';
-  var CHAT_ID   = 'REPLACE_ME'; // ← Corre getChatIdFromBot() primero para obtener este valor
+  var CHAT_ID   = '1009537014'; // ← Chat ID obtenido del bot
 
   if (CHAT_ID === 'REPLACE_ME') {
     Logger.log('⚠️  AUN NECESITAS PEGAR EL CHAT_ID. Corre getChatIdFromBot() primero.');

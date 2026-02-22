@@ -2179,7 +2179,9 @@ function resetStudentAttempts(data) {
   let deletedCount = 0;
   
   let lessonIdsToDelete: string[] = [];
-  if (data.courseId) {
+  if (data.lessonId) {
+    lessonIdsToDelete = [String(data.lessonId).trim()];
+  } else if (data.courseId) {
     const lessonsSheet = ss.getSheetByName(CONFIG.ACADEMY_LESSONS_SHEET);
     if (lessonsSheet) {
       const lessonsData = lessonsSheet.getDataRange().getValues();

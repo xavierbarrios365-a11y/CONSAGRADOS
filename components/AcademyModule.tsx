@@ -170,15 +170,20 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         });
     };
 
-    const handleResetAttempts = async (aId: string, courseId?: string) => {
-        const confirmMsg = courseId
-            ? `¿Estás seguro de resetear los intentos de este curso para el agente ${aId}?`
-            : `¿Estás seguro de resetear TODOS los intentos para el agente ${aId}?`;
+    const handleResetAttempts = async (aId: string, courseId?: string, lessonId?: string) => {
+        let confirmMsg = "";
+        if (lessonId) {
+            confirmMsg = `¿Estás seguro de resetear los intentos de esta LECCIÓN para el agente ${aId}?`;
+        } else if (courseId) {
+            confirmMsg = `¿Estás seguro de resetear los intentos de este CURSO para el agente ${aId}?`;
+        } else {
+            confirmMsg = `¿Estás seguro de resetear TODOS los intentos para el agente ${aId}?`;
+        }
 
         if (!confirm(confirmMsg)) return;
         setIsLoading(true);
         try {
-            const res = await resetStudentAttempts(aId, courseId);
+            const res = await resetStudentAttempts(aId, courseId, lessonId);
             if (res.success) {
                 alert("Reseteo exitoso. El agente puede re-intentar las evaluaciones.");
                 // Refrescar tanto la auditoría como el progreso actual (si es el mismo usuario)
@@ -578,13 +583,24 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                                         <span className="text-[7px] text-white font-black uppercase truncate">{lesson.title}</span>
                                                                         <span className="text-[6px] text-gray-500 font-bold uppercase">Intentos: {prog?.attempts || 0}</span>
                                                                     </div>
-                                                                    {prog?.status === 'COMPLETADO' ? (
-                                                                        <CheckCircle size={10} className="text-green-500" />
-                                                                    ) : prog?.status === 'FALLIDO' ? (
-                                                                        <AlertCircle size={10} className="text-red-500" />
-                                                                    ) : (
-                                                                        <div className="w-2.5 h-2.5 rounded-full border border-white/10" />
-                                                                    )}
+                                                                    <div className="flex items-center gap-2">
+                                                                        {prog?.status === 'COMPLETADO' ? (
+                                                                            <CheckCircle size={10} className="text-green-500" />
+                                                                        ) : prog?.status === 'FALLIDO' ? (
+                                                                            <AlertCircle size={10} className="text-red-500" />
+                                                                        ) : (
+                                                                            <div className="w-2.5 h-2.5 rounded-full border border-white/10" />
+                                                                        )}
+                                                                        {(prog?.status === 'COMPLETADO' || prog?.status === 'FALLIDO') && (
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); handleResetAttempts(agent.id, undefined, lesson.id); }}
+                                                                                className="p-1 hover:bg-red-500/20 text-red-500/50 hover:text-red-500 rounded transition-colors"
+                                                                                title="Resetear esta lección"
+                                                                            >
+                                                                                <Trash2 size={10} />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })}
@@ -902,6 +918,29 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                                 <div className="text-[12px] font-bold uppercase leading-relaxed prose prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
                                                             </div>
                                                         )}
+                                                    </div>
+                                                )}
+
+                                                {/* Botón Volver a Intentar (Solo si falló y quedan intentos) */}
+                                                {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
+                                                    <div className="pt-4">
+                                                        <button
+                                                            onClick={async () => {
+                                                                // Solo reseteamos estado local para que pueda re-hacerlo
+                                                                setQuizState('IDLE');
+                                                                setCurrentQuestionIndex(0);
+                                                                setSelectedAnswer(null);
+                                                                setTextAnswer("");
+                                                                setQuizResult(null);
+                                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                            }}
+                                                            className="w-full py-4 bg-black text-white font-black uppercase text-[11px] tracking-widest rounded-sm hover:bg-gray-900 transition-all border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,0.2)] active:translate-y-1 active:shadow-none mb-4"
+                                                        >
+                                                            VOLVER A INTENTAR EVALUACIÓN
+                                                        </button>
+                                                        <p className="text-[9px] text-gray-500 font-bold uppercase text-center tracking-widest">
+                                                            PUNTAJE MÍNIMO REQUERIDO: 75%
+                                                        </p>
                                                     </div>
                                                 )}
 

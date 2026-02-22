@@ -1992,7 +1992,7 @@ function submitQuizResult(data) {
     }
   }
 
-  const isCorrect = data.score >= 60;
+  const isCorrect = data.score >= 75;
   const xpReward = isCorrect ? (parseInt(lesson[12]) || 10) : 0;
   attempts += 1;
 

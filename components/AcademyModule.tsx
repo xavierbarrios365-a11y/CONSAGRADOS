@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
-import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts } from '../services/sheetsService';
-import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, LayoutGrid, Trash2, BrainCircuit, Info, Sparkles, Users, Search, Award, Flame, Star, Target } from 'lucide-react';
+import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts, uploadImage, saveBulkAcademyData } from '../services/sheetsService';
+import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, LayoutGrid, Trash2, BrainCircuit, Info, Sparkles, Users, Search, Award, Flame, Star, Target, Image as ImageIcon } from 'lucide-react';
 import { processAssessmentAI, getDeepTestAnalysis } from '../services/geminiService';
 import { fetchAgentsFromSheets } from '../services/sheetsService';
 import AcademyStudio from './AcademyStudio';
@@ -41,6 +41,8 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const [deepAnalysis, setDeepAnalysis] = useState<string | null>(null);
     const [isAnalyzingDeeply, setIsAnalyzingDeeply] = useState(false);
     const [isVideoWatched, setIsVideoWatched] = useState(false);
+    const [uploadingCourseId, setUploadingCourseId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         loadAcademy();
@@ -114,6 +116,38 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             alert(`Error: ${result.error}`);
         }
         setIsLoading(false);
+    };
+
+    const handleEditCourseImage = async (e: React.ChangeEvent<HTMLInputElement>, courseId: string) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingCourseId(courseId);
+        try {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const res = await uploadImage(reader.result as string, file);
+                if (res.success && res.url) {
+                    const course = courses.find(c => c.id === courseId);
+                    if (course) {
+                        const updatedCourse = { ...course, imageUrl: res.url };
+                        const updateRes = await saveBulkAcademyData({ courses: [updatedCourse], lessons: [] });
+                        if (updateRes.success) {
+                            setCourses(prev => prev.map(c => c.id === courseId ? updatedCourse : c));
+                        } else {
+                            alert("Error al actualizar metadatos del curso: " + updateRes.error);
+                        }
+                    }
+                } else {
+                    alert("Error al subir imagen: " + res.error);
+                }
+                setUploadingCourseId(null);
+            };
+            reader.readAsDataURL(file);
+        } catch (err: any) {
+            alert("Error: " + err.message);
+            setUploadingCourseId(null);
+        }
     };
 
     const isLessonCompleted = (lessonId: string) => progress.some(p => p.lessonId === lessonId && p.status === 'COMPLETADO');
@@ -410,6 +444,17 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     )}
                 </div>
 
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                        const cId = fileInputRef.current?.getAttribute('data-course-id');
+                        if (cId) handleEditCourseImage(e, cId);
+                    }}
+                />
+
                 {showStudio && userRole === UserRole.DIRECTOR ? (
                     <AcademyStudio
                         onSuccess={() => { setShowStudio(false); loadAcademy(); }}
@@ -551,13 +596,27 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                         </div>
                                     </div>
                                     {userRole === UserRole.DIRECTOR && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
-                                            className="absolute top-4 right-4 p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                                            title="Eliminar Curso"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    fileInputRef.current?.setAttribute('data-course-id', course.id);
+                                                    fileInputRef.current?.click();
+                                                }}
+                                                className="p-2 bg-[#ffb700]/20 hover:bg-[#ffb700]/40 border border-[#ffb700]/30 rounded-xl text-[#ffb700] transition-all"
+                                                title="Cambiar Portada"
+                                                disabled={uploadingCourseId === course.id}
+                                            >
+                                                {uploadingCourseId === course.id ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
+                                                className="p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all"
+                                                title="Eliminar Curso"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             ))
@@ -729,7 +788,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         {quizResult.isCorrect ? <CheckCircle className="text-green-700" size={60} /> : <AlertCircle className="text-red-700" size={60} />}
                                                         <div>
                                                             <h4 className="text-3xl font-black text-black uppercase tracking-tighter leading-none mb-1">
-                                                                {quizResult.title || (quizResult.isCorrect ? 'APROBADO' : 'FALLIDO')}
+                                                                {quizResult.title || (quizResult.isCorrect ? 'CERTIFICADO APROBADO (CONSAGRADO)' : 'CERTIFICADO RECHAZADO')}
                                                             </h4>
                                                             <div className="text-[12px] font-bold uppercase text-gray-500">
                                                                 PUNTAJE: {Math.round(quizResult.score)}% | RECOMPENSA: +{quizResult.xpAwarded} XP
@@ -741,7 +800,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         {quizResult.content ? (
                                                             <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
                                                         ) : (
-                                                            <p>{quizResult.isCorrect ? 'SE HAN VALIDADOS SUS APTITUDES PARA ESTA UNIDAD.' : 'SE REQUIERE REVISIÓN ADICIONAL DE LOS CONCEPTOS OPERATIVOS.'}</p>
+                                                            <p>{quizResult.isCorrect ? 'SUS APTITUDES HAN SIDO VALIDADAS. HA ALCANZADO EL GRADO DE CONSAGRADO.' : 'PUNTAJE INSUFICIENTE. SE REQUIERE REVISIÓN ADICIONAL DE LOS CONCEPTOS OPERATIVOS.'}</p>
                                                         )}
                                                     </div>
                                                 </div>

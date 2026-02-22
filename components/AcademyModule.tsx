@@ -574,30 +574,30 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                                                         {courseLessons.map(lesson => {
                                                             const prog = studentProgress.find(p => p.lessonId === lesson.id);
                                                             return (
-                                                                <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-white/5">
+                                                                <div key={lesson.id} className="flex items-center justify-between p-3 rounded-2xl bg-black/30 border border-white/5 group/lesson">
                                                                     <div className="flex flex-col min-w-0">
-                                                                        <span className="text-[7px] text-white font-black uppercase truncate">{lesson.title}</span>
-                                                                        <span className="text-[6px] text-gray-500 font-bold uppercase">Intentos: {prog?.attempts || 0}</span>
+                                                                        <span className="text-[9px] text-white font-black uppercase truncate tracking-wide">{lesson.title}</span>
+                                                                        <span className="text-[7px] text-gray-500 font-bold uppercase">Intentos: {prog?.attempts || 0}</span>
                                                                     </div>
-                                                                    <div className="flex items-center gap-2">
+                                                                    <div className="flex items-center gap-3">
                                                                         {prog?.status === 'COMPLETADO' ? (
-                                                                            <CheckCircle size={10} className="text-green-500" />
+                                                                            <CheckCircle size={14} className="text-green-500" />
                                                                         ) : prog?.status === 'FALLIDO' ? (
-                                                                            <AlertCircle size={10} className="text-red-500" />
+                                                                            <AlertCircle size={14} className="text-red-500" />
                                                                         ) : (
-                                                                            <div className="w-2.5 h-2.5 rounded-full border border-white/10" />
+                                                                            <div className="w-3.5 h-3.5 rounded-full border border-white/10" />
                                                                         )}
                                                                         {(prog?.status === 'COMPLETADO' || prog?.status === 'FALLIDO') && (
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); handleResetAttempts(agent.id, undefined, lesson.id); }}
-                                                                                className="p-1 hover:bg-red-500/20 text-red-500/50 hover:text-red-500 rounded transition-colors"
+                                                                                className="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-500 rounded-xl transition-all"
                                                                                 title="Resetear esta lección"
                                                                             >
-                                                                                <Trash2 size={10} />
+                                                                                <Trash2 size={12} />
                                                                             </button>
                                                                         )}
                                                                     </div>
@@ -606,12 +606,14 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         })}
                                                     </div>
 
-                                                    <button
-                                                        onClick={() => handleResetAttempts(agent.id, selectedAuditCourseId!)}
-                                                        className="mt-4 w-full py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[8px] font-black uppercase hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
-                                                    >
-                                                        <Trash2 size={10} /> Resetear Curso
-                                                    </button>
+                                                    <div className="pt-4 border-t border-white/5 mt-4">
+                                                        <button
+                                                            onClick={() => handleResetAttempts(agent.id, selectedAuditCourseId!)}
+                                                            className="w-full py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 text-[8px] font-black uppercase hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <Trash2 size={12} /> Resetear TODO el Curso
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             );
                                         })}

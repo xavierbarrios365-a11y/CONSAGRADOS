@@ -115,52 +115,62 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 bg-black/98 backdrop-blur-xl animate-in fade-in overflow-hidden">
+        <div className="fixed inset-0 z-[200] flex flex-col bg-black/98 backdrop-blur-xl animate-in fade-in">
 
-            {/* Action Bar - GitHub Quality Pro */}
-            <div className="w-full max-w-[842px] flex flex-wrap justify-between items-center gap-4 mb-6 print:hidden">
-                <div className="flex items-center gap-3">
-                    <Shield className="text-[#FFB700] rotate-12" size={28} />
+            {/* ── ACTION BAR – always visible at the top ── */}
+            <div className="w-full flex-shrink-0 flex flex-wrap justify-between items-center gap-3 px-4 py-3 print:hidden border-b border-white/5 bg-black/40">
+                {/* Brand */}
+                <div className="flex items-center gap-2">
+                    <Shield className="text-[#FFB700] rotate-12" size={22} />
                     <div className="flex flex-col">
-                        <span className="text-white font-black uppercase tracking-[0.4em] text-[14px] font-bebas leading-none">Acreditación Oficial</span>
-                        <span className="text-[#FFB700] font-black uppercase tracking-[0.2em] text-[9px] font-montserrat mt-1">Soberanía Táctica Original</span>
+                        <span className="text-white font-black uppercase tracking-[0.3em] text-[11px] font-bebas leading-none">Acreditación Oficial</span>
+                        <span className="text-[#FFB700] font-black uppercase tracking-[0.15em] text-[8px] font-montserrat">Soberanía Táctica Original</span>
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-2 sm:gap-4">
+                {/* Buttons */}
+                <div className="flex flex-wrap gap-2">
                     <button
                         onClick={handleShare}
-                        className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-indigo-600/20 text-indigo-400 font-black uppercase text-[12px] tracking-widest rounded-2xl border border-indigo-500/30 hover:bg-indigo-600/30 transition-all font-bebas shadow-xl"
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600/20 text-indigo-400 font-black uppercase text-[10px] tracking-widest rounded-xl border border-indigo-500/30 hover:bg-indigo-600/40 active:scale-95 transition-all font-bebas shadow-lg"
                     >
-                        <Share2 size={18} />
+                        <Share2 size={15} />
                         COMPARTIR
                     </button>
                     <button
                         onClick={handleDownloadImage}
                         disabled={isDownloading}
-                        className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white/5 text-white font-black uppercase text-[12px] tracking-widest rounded-2xl border border-white/10 hover:bg-white/20 transition-all font-bebas disabled:opacity-50 shadow-xl"
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-white/5 text-white font-black uppercase text-[10px] tracking-widest rounded-xl border border-white/10 hover:bg-white/20 active:scale-95 transition-all font-bebas disabled:opacity-50 shadow-lg"
                     >
-                        {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                        HD
+                        {isDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                        DESCARGAR HD
                     </button>
                     <button
                         onClick={() => window.print()}
-                        className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[12px] tracking-widest rounded-2xl hover:scale-105 transition-all shadow-[0_15px_40px_rgba(255,183,0,0.4)] font-bebas"
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FFB700] text-[#001f3f] font-black uppercase text-[10px] tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_8px_20px_rgba(255,183,0,0.4)] font-bebas"
                     >
-                        <Printer size={18} />
-                        A4
+                        <Printer size={15} />
+                        IMPRIMIR
                     </button>
                     <button
                         onClick={onClose}
-                        className="p-3 sm:p-4 bg-red-600/10 text-red-500 rounded-2xl hover:bg-red-600 hover:text-white transition-all border border-red-600/30"
+                        className="p-2.5 bg-red-600/10 text-red-500 rounded-xl hover:bg-red-600 hover:text-white active:scale-95 transition-all border border-red-600/30"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
             </div>
 
-            {/* Original Certificate Layout */}
-            <div className="relative shadow-[0_50px_120px_rgba(0,0,0,1)] rounded-lg overflow-visible scale-[0.3] xs:scale-[0.4] sm:scale-[0.6] md:scale-[0.8] lg:scale-100 origin-center transition-transform">
-                <div
+            {/* ── CERTIFICATE – scales to fill remaining space ── */}
+            <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
+                <div className="relative shadow-[0_40px_100px_rgba(0,0,0,1)] rounded-lg overflow-visible"
+                    style={{
+                        /* Scale to fit: certificate is 842×595, keep aspect ratio */
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        transform: 'scale(var(--cert-scale, 1))',
+                        transformOrigin: 'center center'
+                    }}
+                >
                     ref={certificateRef}
                     id="certificate-content"
                     style={{

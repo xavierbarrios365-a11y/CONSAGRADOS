@@ -3793,3 +3793,134 @@ function computeBadges() {
   return jsonOk({ badges: badges });
 }
 
+
+/**
+ * ============================================================
+ * @function checkRankingChanges
+ * @description Compara el ranking actual de XP contra un snapshot
+ *   guardado en PropertiesService. Si un agente sube o baja de posición,
+ *   le envía una notificación push personalizada.
+ *
+ * 📌 CONFIGURACIÓN: Ejecuta `setupRankingTrigger()` UNA VEZ desde el
+ *   editor de Apps Script para que corra automáticamente cada hora.
+ * ============================================================
+ */
+function checkRankingChanges() {
+  const CONFIG = getGlobalConfig();
+  const ss = getSpreadsheet();
+  const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+  if (!dirSheet) { Logger.log('[RANKING] Hoja DIRECTORIO no encontrada.'); return; }
+
+  const dirData = dirSheet.getDataRange().getValues();
+  const headers = dirData[0].map(h => String(h).trim().toUpperCase());
+
+  const idIdx    = findHeaderIdx(headers, 'ID');
+  const nameIdx  = findHeaderIdx(headers, 'NOMBRE');
+  const xpIdx    = findHeaderIdx(headers, 'XP');
+  const rankIdx  = findHeaderIdx(headers, 'RANGO');
+  const tokenIdx = findHeaderIdx(headers, 'FCM_TOKEN');
+
+  if (idIdx === -1 || xpIdx === -1) {
+    Logger.log('[RANKING] Columnas ID o XP no encontradas.');
+    return;
+  }
+
+  // 1. Construir ranking actual agrupado por RANGO (tier)
+  const agentsByTier = {};
+  for (let i = 1; i < dirData.length; i++) {
+    const row   = dirData[i];
+    const id    = String(row[idIdx] || '').trim();
+    const name  = String(row[nameIdx] || 'Agente').trim();
+    const xp    = parseInt(row[xpIdx]) || 0;
+    const tier  = String(row[rankIdx] || 'RECLUTA').trim().toUpperCase();
+    const token = tokenIdx !== -1 ? String(row[tokenIdx] || '').trim() : '';
+    if (!id) continue;
+    if (!agentsByTier[tier]) agentsByTier[tier] = [];
+    agentsByTier[tier].push({ id, name, xp, token });
+  }
+
+  // 2. Ordenar por XP dentro de cada tier y asignar posición
+  const currentRanking = {}; // { agentId: { pos, tier, name, token } }
+  Object.keys(agentsByTier).forEach(tier => {
+    agentsByTier[tier].sort((a, b) => b.xp - a.xp);
+    agentsByTier[tier].forEach((agent, idx) => {
+      currentRanking[agent.id] = {
+        pos: idx + 1,
+        tier,
+        name: agent.name,
+        token: agent.token
+      };
+    });
+  });
+
+  // 3. Recuperar snapshot anterior de PropertiesService
+  const props = PropertiesService.getScriptProperties();
+  const snapshotRaw = props.getProperty('RANKING_SNAPSHOT');
+  const previousRanking = snapshotRaw ? JSON.parse(snapshotRaw) : {};
+
+  // 4. Guardar snapshot actual para la próxima ejecución
+  props.setProperty('RANKING_SNAPSHOT', JSON.stringify(currentRanking));
+
+  // 5. Si no había snapshot anterior, es primera ejecución → no notificar
+  if (!snapshotRaw) {
+    Logger.log('[RANKING] Primera ejecución. Snapshot guardado. No se envían notificaciones.');
+    return;
+  }
+
+  // 6. Comparar y notificar
+  let notified = 0;
+  const MAX_NOTIFY = 50; // tope de seguridad para evitar abuso de cuota FCM
+
+  for (const agentId of Object.keys(currentRanking)) {
+    if (notified >= MAX_NOTIFY) break;
+
+    const curr = currentRanking[agentId];
+    const prev = previousRanking[agentId];
+
+    if (!prev || prev.tier !== curr.tier) continue; // agente nuevo o cambió de tier
+    if (prev.pos === curr.pos) continue;             // sin cambio
+
+    const moved = prev.pos - curr.pos; // positivo = subió
+    const direction = moved > 0 ? 'subió' : 'bajó';
+    const emoji     = moved > 0 ? '🚀' : '⚠️';
+    const places    = Math.abs(moved);
+
+    const title   = moved > 0 ? '¡SUBISTE EN EL RANKING!' : 'BAJASTE EN EL RANKING';
+    const message = `${emoji} ${curr.name}, ${direction} ${places} lugar${places > 1 ? 'es' : ''} en el Cuadro de Honor.\n`
+                  + `Posición anterior: #${prev.pos} → Posición actual: #${curr.pos} (${curr.tier})`;
+
+    if (curr.token) {
+      try {
+        sendPushNotification(title, message, curr.token);
+        Logger.log(`[RANKING] ✉️  Notificado ${agentId} (${curr.name}): ${prev.pos} → ${curr.pos}`);
+        notified++;
+      } catch (e) {
+        Logger.log(`[RANKING] Error al notificar ${agentId}: ${e.message}`);
+      }
+    }
+  }
+
+  Logger.log(`[RANKING] Chequeo completado. Agentes notificados: ${notified}`);
+}
+
+/**
+ * @description Ejecuta `checkRankingChanges` UNA VEZ desde el editor de
+ *   Apps Script para crear un trigger horario automático.
+ *   Si ya existe un trigger activo, lo elimina antes de crear uno nuevo.
+ */
+function setupRankingTrigger() {
+  // Eliminar triggers previos con el mismo nombre
+  ScriptApp.getProjectTriggers().forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'checkRankingChanges') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Crear nuevo trigger cada hora
+  ScriptApp.newTrigger('checkRankingChanges')
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  Logger.log('[RANKING] ✅ Trigger horario creado exitosamente para checkRankingChanges.');
+}

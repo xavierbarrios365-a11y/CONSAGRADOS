@@ -73,6 +73,50 @@ function setupSecretProperties() {
 }
 
 /**
+ * @description RESTAURAR CREDENCIALES DE FIREBASE (FCM v1)
+ * PASOS:
+ *   1. Abre tu archivo JSON de Service Account descargado desde Firebase Console.
+ *   2. Copia los valores correspondientes abajo.
+ *   3. Ejecuta esta función UNA VEZ.
+ *   4. Borra los valores de este archivo después de ejecutarlos exitosamente.
+ */
+function setupFirebaseFCM() {
+  var props = PropertiesService.getScriptProperties();
+  
+  // → REEMPLAZA ESTOS VALORES:
+  var PROJECT_ID   = 'consagrados-c2d78'; 
+  var CLIENT_EMAIL = 'firebase-adminsdk-fbsvc@consagrados-c2d78.iam.gserviceaccount.com';
+  var PRIVATE_KEY  = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDmAuEFgVoH56H2\nl4RsBF6PM3th0Psw/mkvNb3yeXEc+p81TgoD1aiY4P980jiegalIcq/trZmi5FRD\ntv+OPlJYesaU8bVcHRiGTGmhLeo3cYHgvDNESInUHk4zWsO+RI4Upx/jo1mxTkhA\nxd53mTe0HOPK/FWjhYh9LWkc89VWgpodmLAABjaltTfGEuFITZA3SiV7qHrSXuj7\ngR206GrfwiM4G4zTcx/Ov7SB9zZlcAdzldsGvxlpiYntiFFW8wu8EdtM1pi3shMM\nKKGNPnb5VopMSr5cWdEKxV1n1OK/IGc/vZF1i0c/nb4odhptCKdrdZFyM1mKlsGr\nqf6BDfj/AgMBAAECggEABQFdXeN4OZbP/qVCc5/5YiVifc5F68WFispLxWSLfRrJ\nGdMGbcSZrtCqo/qRJ9s2JgZKOiJefF3P+vSXBW8+wdUo0CHzFTuUMTalenqcz7MP\nz/utzpfDhBMFbExWg86gcZDyJTUvT6fz85Dla/XbcUx1pTuuLhOgVOpcO2M6VRpn\nkubCNPt+L4FH37Inkxk6msoh109DDQXi6AxJaClxkm7pGrlHHEEIAxh303ZCL3Rw\ntlf9IzbkdxHSUjzmvcXSw1p4oheb4J/rqoUfjL5S44QPQejFrWsVqer1Qj4VqPwf\nNtSosw0Kv5NtMFEOCu0RXAziQDzQBrLtStFLYqwiBQKBgQD7+8HGYSMoIZ5muq3i\nBY7eXfSqNQ8Emr9Zc4DGXRkOj9Cmue1ZM1cfO2DhWAUHIzRKBSUjjbTA/lKaiucx\n5EboKl9nY7WyJf2nibpXi6Qr0i2hNhWXg2dXKc5+ZVotq3MZ1+kkBQAvONI4lXRg\nODyac90PrtnVHoTFHrXwIA2kWwKBgQDprXZhfB4Nh3IlJTzcF7rE33RNdA4LJyZ4\nHjXATRi8KJsE80RXEkb5pF3pWE1gC4XBLg18OwRcE1OlJoQbaGY3Zv5LezrQcs6L\nj7EkIBS4YP+qaonUz4k+QPI7cnyjtmemU9aL09q9NQuWInHxBIVlK9jVkZ29l22v\nDTErjdBPLQKBgAm/MDyjLz/zJPRmTimK+37AdaFL0hvkfHhSTm3d1gVJLNH2KScl\nJD6SBmpRBEjFZNVkI46fgZlhfQJ7UvwMD24VjYErSzDr5UbgvfN69Eu5oog01lr4\n+ztU46bh9r4Dfr1GK7937gzljsQfi9PY+Qckai2cHtLujkYtrO3v33c3AoGALcvd\nI4XbrfMZn8YIg2nzJJpWhMd16SGnHGtvRVzWuCmNGA9FGXtvhYV9EjpID8ayVAXe\nhrZaSGFRR1ChG23+emUo+UoRYMDfUeK7aMUQyoHYGWH/2UFDOHwp/RSW8M7SyXos\n1gKTH/nBZ48gnYexTP6m5FRBgeKnkGMZe9uzM5ECgYEAmkbl6gfBi8bs1p29xFng\n7zax4GU8sLovre2FEdZ0o5r9NA8WyqT9jqX6N+tGto6xdsuVet06bVL+0cPQO1Dq\nuoDtAqC9+K88n5zFFR7ABeq1a6Mp4u0xQOTGhhi7ECy8Sk5jra5VOiewU8NhnaC0\nb8nRN8/Ed2fExIbS3FETDIk=\n-----END PRIVATE KEY-----\n';
+  
+  if (PROJECT_ID === 'REPLACE_ME' || PRIVATE_KEY === 'REPLACE_ME') {
+    SpreadsheetApp.getUi().alert('❌ ERROR: Debes ingresar tus credenciales reales en la función setupFirebaseFCM.');
+    return;
+  }
+
+  props.setProperties({
+    'SA_PROJECT_ID': PROJECT_ID,
+    'SA_CLIENT_EMAIL': CLIENT_EMAIL,
+    'SA_PRIVATE_KEY': PRIVATE_KEY
+  });
+
+  Logger.log('✅ CREDENCIALES DE FIREBASE RESTAURADAS.');
+  SpreadsheetApp.getUi().alert('✅ Credenciales de Firebase (FCM) activadas de forma segura.');
+}
+
+/**
+ * @description PRUEBA DE NOTIFICACIÓN PUSH
+ * Ejecuta esto para verificar si el sistema puede emitir mensajes.
+ */
+function testPushNotification() {
+  try {
+    sendPushNotification("PRUEBA DE SISTEMA", "Conexión con Centro de Mando establecida.");
+    Logger.log("✅ Prueba enviada. Verifica el Logger para ver la respuesta de Firebase.");
+  } catch (e) {
+    Logger.log("❌ FALLO EN LA PRUEBA: " + e.message);
+  }
+}
+
+/**
  * @description CONFIGURACIÓN UNIVERSAL: Ejecuta esta función para vincular TODO de una vez.
  */
 function setupAllCredentials() {
@@ -334,8 +378,10 @@ function testTelegramManually() {
  */
 function sendPushNotification(title, message, targetToken) {
   const CONFIG = getGlobalConfig();
-  if (!CONFIG.SERVICE_ACCOUNT || !CONFIG.SERVICE_ACCOUNT.private_key) {
+  if (!CONFIG.SERVICE_ACCOUNT || !CONFIG.SERVICE_ACCOUNT.private_key || CONFIG.SERVICE_ACCOUNT.private_key === 'REPLACE_ME') {
     Logger.log("Service Account no configurada. Saltando envío push.");
+    // Envío por Telegram como fallback inmediato si no hay Firebase
+    sendTelegramNotification(`📢 <b>${title.toUpperCase()}</b>\n\n${message}\n\n<i>(Enviado vía Telegram porque Push no está configurado)</i>`);
     return;
   }
 
@@ -343,7 +389,6 @@ function sendPushNotification(title, message, targetToken) {
     const accessToken = getFcmAccessToken();
     const url = `https://fcm.googleapis.com/v1/projects/${CONFIG.SERVICE_ACCOUNT.project_id}/messages:send`;
     
-    // El payload v1 es más estructurado
     const payload = {
       message: {
         notification: {
@@ -359,7 +404,6 @@ function sendPushNotification(title, message, targetToken) {
       }
     };
 
-    // Si hay token, enviamos directo al agente. Si no, al topic global.
     if (targetToken) {
       payload.message.token = targetToken;
     } else {
@@ -377,9 +421,20 @@ function sendPushNotification(title, message, targetToken) {
     };
 
     const response = UrlFetchApp.fetch(url, options);
-    Logger.log(`Respuesta FCM v1: ${response.getContentText()}`);
+    const responseCode = response.getResponseCode();
+    
+    if (responseCode !== 200) {
+      Logger.log(`❌ ERROR FCM v1: ${response.getContentText()}`);
+      // Fallback a Telegram si falla Firebase
+      sendTelegramNotification(`⚠️ <b>FALLO PUSH (FCM Error ${responseCode}):</b>\n<b>${title}</b>\n${message}`);
+    } else {
+      Logger.log(`✅ ÉXITO FCM v1: Mensaje enviado.`);
+      // Opcional: También enviar a Telegram para registro histórico
+      sendTelegramNotification(`📢 <b>${title.toUpperCase()}</b>\n\n${message}`);
+    }
   } catch (error) {
-    Logger.log(`Error al enviar Push via FCM v1: ${error.message}`);
+    Logger.log(`❌ CRITICAL PUSH ERROR: ${error.message}`);
+    sendTelegramNotification(`⚠️ <b>ERROR CRÍTICO SISTEMA PUSH:</b>\n${error.message}\n\n<b>Contenido:</b> ${title}: ${message}`);
   }
 }
 

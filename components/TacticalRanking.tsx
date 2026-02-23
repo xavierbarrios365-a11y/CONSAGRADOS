@@ -38,25 +38,24 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
     // --- POSITION CHANGE TRACKING ---
-    const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>({});
-    const [snapshotKey, setSnapshotKey] = useState('');
-
-    const currentKey = `${activeCategory}-${activeTier}`;
-
-    React.useEffect(() => {
-        if (snapshotKey !== currentKey) {
-            setSnapshotKey(currentKey);
-            setSnapshotRanks({});
-        }
-    }, [currentKey, snapshotKey]);
+    const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>(() => {
+        try {
+            const saved = localStorage.getItem(`ranking_snapshot_${activeCategory}_${activeTier}`);
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
 
     React.useEffect(() => {
-        if (sortedAgents.length > 0 && Object.keys(snapshotRanks).length === 0 && snapshotKey === currentKey) {
-            const initial: Record<string, number> = {};
-            sortedAgents.forEach(a => { initial[a.id] = a.position; });
-            setSnapshotRanks(initial);
+        if (sortedAgents.length > 0) {
+            const currentRanks: Record<string, number> = {};
+            sortedAgents.forEach((a, idx) => { currentRanks[a.id] = idx + 1; });
+
+            if (Object.keys(snapshotRanks).length === 0) {
+                setSnapshotRanks(currentRanks);
+                localStorage.setItem(`ranking_snapshot_${activeCategory}_${activeTier}`, JSON.stringify(currentRanks));
+            }
         }
-    }, [sortedAgents, snapshotRanks, snapshotKey, currentKey]);
+    }, [sortedAgents, activeCategory, activeTier, snapshotRanks]);
 
     const getPositionChange = (agentId: string, currentPos: number): number => {
         const oldPos = snapshotRanks[agentId];
@@ -66,18 +65,18 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
 
     const RankingIndicator = ({ change }: { change: number }) => {
         if (change > 0) return (
-            <div className="flex flex-col items-center">
-                <ChevronUp size={14} className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                <span className="text-[7px] font-black text-emerald-400 leading-none">+{change}</span>
+            <div className="flex border-emerald-500/20 bg-emerald-500/10 px-1 rounded flex-col items-center">
+                <ChevronUp size={10} className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                <span className="text-[6px] font-black text-emerald-400 leading-none">+{change}</span>
             </div>
         );
         if (change < 0) return (
-            <div className="flex flex-col items-center">
-                <ChevronDown size={14} className="text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
-                <span className="text-[7px] font-black text-red-400 leading-none">{change}</span>
+            <div className="flex border-red-500/20 bg-red-500/10 px-1 rounded flex-col items-center">
+                <ChevronDown size={10} className="text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                <span className="text-[6px] font-black text-red-400 leading-none">{change}</span>
             </div>
         );
-        return <Minus size={10} className="text-white/15" />;
+        return <Minus size={8} className="text-white/10" />;
     };
 
     const topThree = sortedAgents.slice(0, 3);
@@ -201,6 +200,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         <span className="font-bebas text-lg md:text-3xl font-black leading-none">1</span>
                                         <RankingIndicator change={getPositionChange(topThree[0].id, 1)} />
                                     </div>
+                                    {isAptoParaAscenso(topThree[0]) && (
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-500 text-[#001f3f] text-[7px] md:text-[9px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-[#001f3f] animate-bounce z-20 whitespace-nowrap">
+                                            APTO PARA ASCENSO
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="text-center">
                                     <h3 className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase truncate w-24 sm:w-32 md:w-auto drop-shadow-md">{topThree[0].name}</h3>

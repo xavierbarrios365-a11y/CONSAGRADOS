@@ -120,11 +120,16 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose 
                         <div className={`absolute -inset-4 bg-gradient-to-br ${isAtRisk ? 'from-red-500 to-orange-600' : 'from-amber-500 to-yellow-600'} rounded-[3rem] blur-2xl opacity-10 animate-pulse`}></div>
                         <div className="w-44 h-44 rounded-[2.5rem] border-2 border-amber-500/30 p-1.5 bg-[#00101a] shadow-inner relative overflow-hidden group">
                             <img
-                                src={formatDriveUrl(agent.photoUrl)}
+                                src={formatDriveUrl(agent.photoUrl || '')}
+                                alt={agent.name}
                                 className="w-full h-full rounded-[2.25rem] object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110"
+                                loading="lazy"
                                 onError={(e) => {
-                                    e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                                    e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                                    const target = e.currentTarget;
+                                    if (target.src !== "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png") {
+                                        target.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                                        target.className = "w-full h-full object-cover opacity-20";
+                                    }
                                 }}
                             />
                             {/* Overlay de HUD sobre la foto */}

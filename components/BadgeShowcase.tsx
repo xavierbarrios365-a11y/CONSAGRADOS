@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Target, Flame, Swords, GraduationCap, Medal, Sparkles } from 'lucide-react';
 import { Badge } from '../types';
 import { fetchBadges } from '../services/sheetsService';
@@ -96,41 +97,46 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ currentAgentId, currentAg
                 </span>
             </div>
 
-            {/* Badge Cards */}
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {displayBadges.map((badge, idx) => {
-                    const config = BADGE_CONFIG[badge.type] || BADGE_CONFIG['CONSAGRADO_MES'];
-                    return (
-                        <div
-                            key={badge.type + idx}
-                            className={`shrink-0 relative overflow-hidden rounded-2xl ${compact ? 'p-2 w-24' : 'p-4 w-36'} border ${config.border} ${config.glow} bg-gradient-to-br from-white/[0.04] to-white/[0.01] transition-all hover:scale-105 hover:-translate-y-1 cursor-default`}
-                            style={{ animationDelay: `${idx * 100}ms` }}
-                        >
-                            {/* Background Glow */}
-                            <div className={`absolute -top-4 -right-4 ${compact ? 'w-10 h-10' : 'w-16 h-16'} bg-gradient-to-br ${config.gradient} rounded-full blur-2xl opacity-20`} />
+            {/* Badge Cards - Cambiado de flex-nowrap con scroll horizontal a grid/flex-wrap para móvil */}
+            <div className="flex flex-wrap md:flex-nowrap md:overflow-x-auto gap-3 pb-2 scrollbar-hide justify-center md:justify-start">
+                <AnimatePresence>
+                    {displayBadges.map((badge, idx) => {
+                        const config = BADGE_CONFIG[badge.type] || BADGE_CONFIG['CONSAGRADO_MES'];
+                        return (
+                            <motion.div
+                                key={badge.type + idx}
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className={`shrink-0 relative overflow-hidden rounded-2xl ${compact ? 'p-2 w-24' : 'p-4 w-36'} border ${config.border} ${config.glow} bg-gradient-to-br from-white/[0.04] to-white/[0.01] transition-all hover:scale-105 hover:-translate-y-1 cursor-default shadow-lg shadow-black/40`}
+                            >
+                                {/* Background Glow */}
+                                <div className={`absolute -top-4 -right-4 ${compact ? 'w-10 h-10' : 'w-16 h-16'} bg-gradient-to-br ${config.gradient} rounded-full blur-2xl opacity-20`} />
 
-                            <div className={`relative z-10 ${compact ? 'space-y-1' : 'space-y-2'}`}>
-                                <div className={`${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
-                                    {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: compact ? 14 : 20 }) : config.icon}
+                                <div className={`relative z-10 ${compact ? 'space-y-1' : 'space-y-2'}`}>
+                                    <div className={`${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
+                                        {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: compact ? 14 : 20 }) : config.icon}
+                                    </div>
+                                    <div>
+                                        <p className={`${compact ? 'text-[6px]' : 'text-[8px]'} font-black text-white/50 uppercase tracking-wider leading-none`}>{badge.label}</p>
+                                        <p className={`${compact ? 'text-[8px]' : 'text-[10px]'} font-black text-white uppercase truncate mt-0.5 leading-tight`}>{badge.agentName}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className={`${compact ? 'text-[12px]' : 'text-[16px]'} font-bebas font-black text-white leading-none`}>{badge.value}</span>
+                                        <span className="text-[7px] text-white/40 font-bold uppercase">
+                                            {badge.type === 'STREAKER' ? 'días' :
+                                                badge.type === 'RECLUTADOR' ? 'referidos' :
+                                                    badge.type === 'CONSAGRADO_MES' ? 'asistencias' :
+                                                        badge.type === 'MISIONERO_ELITE' ? 'misiones' :
+                                                            'cursos'}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className={`${compact ? 'text-[6px]' : 'text-[8px]'} font-black text-white/50 uppercase tracking-wider leading-none`}>{badge.label}</p>
-                                    <p className={`${compact ? 'text-[8px]' : 'text-[10px]'} font-black text-white uppercase truncate mt-0.5 leading-tight`}>{badge.agentName}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <span className={`${compact ? 'text-[12px]' : 'text-[16px]'} font-bebas font-black text-white leading-none`}>{badge.value}</span>
-                                    <span className="text-[7px] text-white/40 font-bold uppercase">
-                                        {badge.type === 'STREAKER' ? 'días' :
-                                            badge.type === 'RECLUTADOR' ? 'referidos' :
-                                                badge.type === 'CONSAGRADO_MES' ? 'asistencias' :
-                                                    badge.type === 'MISIONERO_ELITE' ? 'misiones' :
-                                                        'cursos'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
             </div>
         </div>
     );

@@ -63,18 +63,20 @@ const LighthouseIndicator: React.FC<LighthouseIndicatorProps> = ({ status, size 
                 )}
             </div>
 
-            {/* Etiquetas de Estado */}
-            <div className="flex flex-col items-center">
-                <span className={`text-white font-bebas ${isXs ? 'text-sm tracking-[0.15em]' : isSm ? 'text-lg tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
-                    CONSAGRADOS <span className="text-[#ffb700]">2026</span>
-                </span>
-                <div className={`flex items-center gap-2 ${isSm ? 'mt-1 py-0.5' : 'mt-2 py-1'} px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm`}>
-                    <div className={`${isSm ? 'w-1.5 h-1.5' : 'w-2 h-2'} rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
-                    <span className={`${isSm ? 'text-[6px]' : 'text-[10px]'} uppercase font-montserrat font-black tracking-[0.2em]`} style={{ color }}>
-                        {isOnline ? 'CONECTADO' : 'DESCONECTADO'}
+            {/* Etiquetas de Estado - Ocultas en XS para ahorrar espacio en el header */}
+            {!isXs && (
+                <div className="flex flex-col items-center">
+                    <span className={`text-white font-bebas ${isSm ? 'text-lg tracking-[0.2em]' : 'text-3xl tracking-[0.4em]'} font-black leading-none drop-shadow-lg`}>
+                        CONSAGRADOS <span className="text-[#ffb700]">2026</span>
                     </span>
+                    <div className={`flex items-center gap-2 ${isSm ? 'mt-1 py-0.5' : 'mt-2 py-1'} px-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm`}>
+                        <div className={`${isSm ? 'w-1.5 h-1.5' : 'w-2 h-2'} rounded-full ${isOnline ? 'animate-pulse' : 'opacity-50'}`} style={{ backgroundColor: color }} />
+                        <span className={`${isSm ? 'text-[6px]' : 'text-[10px]'} uppercase font-montserrat font-black tracking-[0.2em]`} style={{ color }}>
+                            {isOnline ? 'CONECTADO' : 'DESCONECTADO'}
+                        </span>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <style dangerouslySetInnerHTML={{
                 __html: `

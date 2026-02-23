@@ -136,22 +136,22 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     let currentRank = 'RECLUTA';
     let nextRank = 'ACTIVO';
     let targetXp = 300;
-    let level = 0;
 
-    for (let i = 0; i < ranks.length; i++) {
-      if (xp >= ranks[i][1].minXp) {
-        currentRank = ranks[i][0];
-        level = i;
-        if (ranks[i + 1]) {
-          nextRank = ranks[i + 1][0];
-          targetXp = ranks[i + 1][1].minXp;
-        } else {
-          nextRank = 'MAX';
-          targetXp = ranks[i][1].minXp;
-        }
+    // Encontrar el rango actual
+    const rankEntry = [...ranks].reverse().find(([_, config]) => xp >= config.minXp);
+    if (rankEntry) {
+      currentRank = rankEntry[0];
+      const index = ranks.findIndex(r => r[0] === currentRank);
+      if (ranks[index + 1]) {
+        nextRank = ranks[index + 1][0];
+        targetXp = ranks[index + 1][1].minXp;
+      } else {
+        nextRank = 'MAX';
+        targetXp = rankEntry[1].minXp;
       }
     }
-    return { current: currentRank, next: nextRank, target: targetXp, level };
+
+    return { current: currentRank, next: nextRank, target: targetXp };
   };
 
   const levelInfo = getLevelInfo(agent.xp);
@@ -830,9 +830,20 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
                     <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
                   </div>
-                  {isProspectoAscender && (
-                    <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse">Faltan {levelInfo.target - agent.xp} XP para subir de nivel</p>
-                  )}
+                  {(() => {
+                    const rule = PROMOTION_RULES[(agent.rank || 'RECLUTA').toUpperCase()];
+                    const isApto = rule && agent.xp >= rule.requiredXp;
+                    if (isApto) return (
+                      <div className="mt-2 bg-green-500 text-[#001f3f] font-black text-[10px] px-4 py-1.5 rounded-full animate-bounce shadow-lg shadow-green-900/40 font-bebas flex items-center gap-2">
+                        <ArrowUpCircle size={12} />
+                        APTO PARA ASCENSO
+                      </div>
+                    );
+                    if (isProspectoAscender) return (
+                      <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse mt-2">Faltan {levelInfo.target - agent.xp} XP para examen</p>
+                    );
+                    return null;
+                  })()}
                   {(() => {
                     const lastDate = agent.lastAttendance ? new Date(agent.lastAttendance) : null;
                     if (lastDate) {

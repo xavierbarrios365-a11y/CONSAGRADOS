@@ -71,7 +71,7 @@ const extractJSON = (text: string) => {
   }
 };
 
-const DEFAULT_MODEL = 'gemini-1.5-flash'; // More stable for general use cases
+const DEFAULT_MODEL = 'gemini-2.0-flash'; // Optimized for performance and availability
 
 // --- AI CACHING SYSTEM (SAVE TOKENS) ---
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Horas

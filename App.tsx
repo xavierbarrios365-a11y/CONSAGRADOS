@@ -509,21 +509,21 @@ const App: React.FC = () => {
             <div className="p-5 md:p-8 space-y-6 pb-24 max-w-2xl mx-auto font-montserrat">
               {/* ENCABEZADO COMPACTO - Solo Nombre y Estatus (v3.1) */}
               <div className="flex items-center gap-4 mb-2">
-                <div className="flex-shrink-0">
-                  <LighthouseIndicator
-                    status={isOnline && notificationPermission === 'granted' ? 'online' : 'offline'}
-                    size="xs"
-                  />
-                </div>
-
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                        {/* LED de Conexión Minimalista */}
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${isOnline && notificationPermission === 'granted' ? 'bg-[#ffb700] shadow-[0_0_8px_rgba(255,183,0,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} animate-pulse`}
+                          title={isOnline && notificationPermission === 'granted' ? 'CONECTADO' : 'DESCONECTADO'}
+                        />
+                      </div>
                       <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
                         {currentUser?.name
                           ? currentUser.name.split(' ').slice(0, 2).join(' ')
-                          : 'Saúl'}
+                          : 'Agente'}
                       </p>
                     </div>
                     {/* PROGRESO COMPACTO EN EL HEADER */}

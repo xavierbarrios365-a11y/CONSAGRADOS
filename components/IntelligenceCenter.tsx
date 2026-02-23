@@ -650,7 +650,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           if (aptosAgents.length === 0) return null;
 
           return (
-            <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-3xl p-5 mb-4 backdrop-blur-md space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-3xl p-4 mb-3 backdrop-blur-md space-y-3 animate-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
@@ -715,32 +715,27 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         })()}
 
         {/* Header Táctico */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-6 gap-4 font-montserrat">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-4 gap-3 font-montserrat">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-4xl font-bebas font-bold text-white tracking-widest flex items-center gap-4 glitch-hover cursor-default">
+            <h1 className="text-2xl md:text-3xl font-bebas font-bold text-white tracking-widest flex items-center gap-3 glitch-hover cursor-default">
               <div className="p-2 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-lg shadow-[0_0_15px_rgba(255,183,0,0.2)]">
-                <Target className="text-[#ffb700]" size={28} />
+                <Target className="text-[#ffb700]" size={24} />
               </div>
               NODO DE <span className="text-[#ffb700]">INTELIGENCIA</span>
             </h1>
-            <p className="text-[10px] text-[#ffb700]/70 font-black uppercase tracking-[0.5em] opacity-70 flex items-center gap-2">
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+            <p className="text-[9px] text-[#ffb700]/70 font-black uppercase tracking-[0.4em] opacity-70 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
               Live Tactical Feed // Consagrados 2026
             </p>
           </div>
 
-          <div className="w-full lg:w-96">
-            {/* Versículo movido al HOME según requerimiento táctico */}
-          </div>
-
-
-          <div className="flex flex-col md:flex-row items-end gap-3 w-full md:w-auto">
-            <div className="w-full md:w-72">
-              <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
+          <div className="flex flex-col md:flex-row items-end gap-2 w-full md:w-auto">
+            <div className="w-full md:w-64">
+              <p className="text-[7px] text-gray-600 font-black uppercase tracking-widest mb-1 ml-2">Seleccionar Agente</p>
               <select
                 value={selectedAgentId}
                 onChange={(e) => setSelectedAgentId(e.target.value)}
-                className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-5 py-4 text-white font-black text-xs focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
+                className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-xl px-4 py-3 text-white font-black text-[10px] focus:border-[#ffb700] outline-none cursor-pointer hover:bg-[#ffb700]/10 appearance-none font-bebas"
               >
                 {agents.map(a => (
                   <option key={a.id} value={a.id} className="bg-[#001f3f] text-white font-bebas">
@@ -1007,12 +1002,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 })()}
               </div>
 
-              <div className="mt-8 w-full grid grid-cols-2 gap-3">
-                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+              <div className="mt-4 w-full grid grid-cols-2 gap-2">
+                <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
                   <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
                   <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
                 </div>
-                <div className="bg-[#3A3A3A]/20 p-4 rounded-2xl border border-white/5 text-left">
+                <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
                   <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
                   <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
                     {agent.accessLevel || 'ESTUDIANTE'}
@@ -1021,7 +1016,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
 
               {/* RADAR TÁCTICO IN-CENTER */}
-              <div className="mt-8 p-6 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] border border-white/5 w-full flex flex-col items-center">
+              <div className="mt-4 p-4 bg-gradient-to-b from-white/5 to-transparent rounded-[2rem] border border-white/5 w-full flex flex-col items-center">
                 <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
                 {agent.tacticalStats ? (
                   <TacticalRadar stats={agent.tacticalStats} size={180} />
@@ -1036,9 +1031,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
 
           {/* ESTADÍSTICAS Y ACCIONES */}
-          <div className="lg:col-span-8 space-y-8">
+          <div className="lg:col-span-8 space-y-4">
             {/* SELECTOR DE MONTO DE AJUSTE */}
-            <div className="bg-[#001833] border border-[#ffb700]/20 rounded-2xl p-4 flex items-center justify-between gap-4">
+            <div className="bg-[#001833] border border-[#ffb700]/20 rounded-2xl p-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#ffb700]/10 rounded-lg">
                   <Star className="text-[#ffb700]" size={16} />

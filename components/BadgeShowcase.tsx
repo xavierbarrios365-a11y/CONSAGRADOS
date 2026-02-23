@@ -13,33 +13,33 @@ interface BadgeShowcaseProps {
 
 const BADGE_CONFIG: Record<string, { icon: React.ReactNode; gradient: string; glow: string; border: string }> = {
     'CONSAGRADO_MES': {
-        icon: <Trophy size={20} />,
+        icon: <Trophy size={16} />,
         gradient: 'from-amber-400 to-yellow-600',
-        glow: 'shadow-[0_0_25px_rgba(251,191,36,0.4)]',
+        glow: 'shadow-[0_0_15px_rgba(251,191,36,0.3)]',
         border: 'border-amber-500/40'
     },
     'RECLUTADOR': {
-        icon: <Target size={20} />,
+        icon: <Target size={16} />,
         gradient: 'from-cyan-400 to-blue-600',
-        glow: 'shadow-[0_0_25px_rgba(34,211,238,0.4)]',
+        glow: 'shadow-[0_0_15px_rgba(34,211,238,0.3)]',
         border: 'border-cyan-500/40'
     },
     'STREAKER': {
-        icon: <Flame size={20} />,
+        icon: <Flame size={16} />,
         gradient: 'from-red-400 to-orange-600',
-        glow: 'shadow-[0_0_25px_rgba(239,68,68,0.4)]',
+        glow: 'shadow-[0_0_15px_rgba(239,68,68,0.3)]',
         border: 'border-red-500/40'
     },
     'MISIONERO_ELITE': {
-        icon: <Swords size={20} />,
+        icon: <Swords size={16} />,
         gradient: 'from-emerald-400 to-green-600',
-        glow: 'shadow-[0_0_25px_rgba(52,211,153,0.4)]',
+        glow: 'shadow-[0_0_15px_rgba(52,211,153,0.3)]',
         border: 'border-emerald-500/40'
     },
     'ACADEMICO': {
-        icon: <GraduationCap size={20} />,
+        icon: <GraduationCap size={16} />,
         gradient: 'from-purple-400 to-indigo-600',
-        glow: 'shadow-[0_0_25px_rgba(167,139,250,0.4)]',
+        glow: 'shadow-[0_0_15px_rgba(167,139,250,0.3)]',
         border: 'border-purple-500/40'
     }
 };
@@ -109,14 +109,14 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ currentAgentId, currentAg
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.8 }}
                                 transition={{ delay: idx * 0.1 }}
-                                className={`shrink-0 relative overflow-hidden rounded-2xl ${compact ? 'p-2 w-24' : 'p-4 w-36'} border ${config.border} ${config.glow} bg-gradient-to-br from-white/[0.04] to-white/[0.01] transition-all hover:scale-105 hover:-translate-y-1 cursor-default shadow-lg shadow-black/40`}
+                                className={`shrink-0 relative overflow-hidden rounded-2xl ${compact ? 'p-1.5 w-20' : 'p-3 w-28'} border ${config.border} ${config.glow} bg-gradient-to-br from-white/[0.04] to-white/[0.01] transition-all hover:scale-105 hover:-translate-y-1 cursor-default shadow-lg shadow-black/40`}
                             >
                                 {/* Background Glow */}
                                 <div className={`absolute -top-4 -right-4 ${compact ? 'w-10 h-10' : 'w-16 h-16'} bg-gradient-to-br ${config.gradient} rounded-full blur-2xl opacity-20`} />
 
-                                <div className={`relative z-10 ${compact ? 'space-y-1' : 'space-y-2'}`}>
-                                    <div className={`${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
-                                        {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: compact ? 14 : 20 }) : config.icon}
+                                <div className={`relative z-10 ${compact ? 'space-y-0.5' : 'space-y-1'}`}>
+                                    <div className={`${compact ? 'w-6 h-6' : 'w-8 h-8'} rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg`}>
+                                        {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: compact ? 12 : 16 }) : config.icon}
                                     </div>
                                     <div>
                                         <p className={`${compact ? 'text-[6px]' : 'text-[8px]'} font-black text-white/50 uppercase tracking-wider leading-none`}>{badge.label}</p>

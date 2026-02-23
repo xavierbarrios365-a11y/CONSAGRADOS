@@ -71,7 +71,7 @@ const extractJSON = (text: string) => {
   }
 };
 
-const DEFAULT_MODEL = 'gemini-2.0-flash'; // Optimized for performance and availability
+const DEFAULT_MODEL = 'gemini-2.5-flash'; // High performance model for 2026 standards
 
 // --- AI CACHING SYSTEM (SAVE TOKENS) ---
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Horas
@@ -389,3 +389,75 @@ export const getSpiritualCounseling = async (agent: Agent, userMessage: string) 
     return "ERROR DE TRANSMISIÓN EN EL CANAL DE ASESORÍA. SIGA EL PROTOCOLO ESTÁNDAR.";
   }
 };
+
+export const generateCourseFinalReport = async (agent: Agent, course: any, progressData: any[]) => {
+  const ai = getGenAI();
+  if (!ai) return null;
+
+  try {
+    const prompt = `Analiza el expediente de graduación del Agente ${agent.name} para el curso "${course.title}".
+    
+    ESTADÍSTICAS DE DESPLIEGUE:
+    - Agente: ${agent.name} (Rango: ${agent.rank})
+    - Curso: ${course.title}
+    - Datos de Progreso (Lecciones, Intentos, Estados): ${JSON.stringify(progressData)}
+    
+    REQUERIMIENTO TÁCTICO:
+    Genera un "REPORTE DE FINALIZACIÓN DE CUARTEL" que incluya:
+    1. RESUMEN DE PERSISTENCIA: Menciona cuántos intentos totales fueron necesarios y destaca las lecciones que presentaron mayor resistencia (fallos previos).
+    2. ANÁLISIS DE FALLO: Si hubo rechazos previos, identifica el patrón de error (ej: falta de atención al detalle, debilidad en teoría, etc.).
+    3. PERFIL DEL GRADUADO: Una descripción de 30-40 palabras sobre su nueva capacidad operativa tras completar este curso.
+    4. RECOMENDACIÓN DEL COMANDO: Una instrucción directa para su próximo despliegue.
+
+    TONO: Reporte de inteligencia militar de alto nivel. Directo, crudo pero profesional. Máximo 120 palabras.
+    FORMATO: Texto plano con estructura de reporte militar.`;
+
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+
+    return response.text() || "CENTRO DE COMANDO: REPORTE GENERADO EN BLANCO.";
+  } catch (error: any) {
+    console.error("❌ Gemini detailed error (Course Final Report):", error.message);
+    return "ERROR AL CONSOLIDAR REPORTE CRÍTICO. CONTACTE AL COMANDO.";
+  }
+};
+
+export const generateCommunityIntelReport = async (agents: Agent[]) => {
+  const ai = getGenAI();
+  if (!ai) return null;
+
+  try {
+    const stats = {
+      totalAgentes: agents.length,
+      distribucionRangos: agents.reduce((acc: any, curr) => {
+        acc[curr.rank] = (acc[curr.rank] || 0) + 1;
+        return acc;
+      }, {}),
+      xpPromedio: agents.reduce((acc, curr) => acc + curr.xp, 0) / agents.length,
+      topAgentes: agents.sort((a, b) => b.xp - a.xp).slice(0, 3).map(a => ({ nombre: a.name, xp: a.xp, rango: a.rank }))
+    };
+
+    const prompt = `Actúa como el Analista Jefe del comando central. Realiza un REPORTE ESTRATÉGICO DE LA FUERZA BASADO EN ESTOS DATOS:
+    ${JSON.stringify(stats)}
+    
+    REQUERIMIENTO:
+    1. RESUMEN OPERATIVO: Estado actual de la moral y capacidad de la fuerza.
+    2. DESTACADOS: Menciona a los top agentes como "Activos de Alto Valor".
+    3. RECOMENDACIÓN ESTRATÉGICA: ¿Cuál debería ser el siguiente objetivo del comando para fortalecer el equipo?
+    
+    TONO: Inteligencia militar de élite. Conciso, visionario y autoritario. Máximo 150 palabras.
+    FORMATO: HTML limpio (usa tags como <b>, <p>, <br>).`;
+
+    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+
+    return response.text() || "REPORTE ESTRATÉGICO NO DISPONIBLE.";
+  } catch (error: any) {
+    console.error("❌ Gemini detailed error (Community Report):", error.message);
+    return "ERROR EN LA CONSOLIDACIÓN ESTRATÉGICA GLOBAL.";
+  }
+};
+
+

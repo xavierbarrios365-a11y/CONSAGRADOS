@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
-import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts, uploadImage, saveBulkAcademyData } from '../services/sheetsService';
+import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts, uploadImage, saveBulkAcademyData, fetchAgentsFromSheets, updateAgentAiProfile } from '../services/sheetsService';
 import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, LayoutGrid, Trash2, BrainCircuit, Info, Sparkles, Users, Search, Award, Flame, Star, Target, Image as ImageIcon } from 'lucide-react';
-import { processAssessmentAI, getDeepTestAnalysis } from '../services/geminiService';
-import { fetchAgentsFromSheets } from '../services/sheetsService';
+import { processAssessmentAI, getDeepTestAnalysis, generateCourseFinalReport } from '../services/geminiService';
 import AcademyStudio from './AcademyStudio';
 import TacticalCertificate from './TacticalCertificate';
 import TacticalDocument from './TacticalDocument';
@@ -411,6 +410,43 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         }
     };
 
+    const handleCourseFinalReport = async (course: Course) => {
+        if (!course) return;
+        setIsAnalyzingDeeply(true);
+        try {
+            const agent = allAgents.find(a => a.id === agentId);
+            if (!agent) return;
+
+            // Recopilar datos de progreso para todas las lecciones de este curso
+            const courseLessons = lessons.filter(l => l.courseId === course.id);
+            const courseProgress = progress.filter(p => courseLessons.some(cl => cl.id === p.lessonId));
+
+            const detailedProgress = courseLessons.map(l => {
+                const p = courseProgress.find(cp => cp.lessonId === l.id);
+                return {
+                    leccion: l.title,
+                    intentos: p?.attempts || 0,
+                    estado: p?.status || 'PENDIENTE',
+                    score: p?.score || 0
+                };
+            });
+
+            const report = await generateCourseFinalReport(agent, course, detailedProgress);
+            if (report) {
+                setDeepAnalysis(report);
+                // Persistencia: Guardar en el perfil del agente
+                await updateAgentAiProfile(agent.id, agent.tacticalStats || {}, report);
+                alert("✅ REPORTE TÁCTICO INTEGRADO EN TU EXPEDIENTE.");
+            }
+        } catch (err) {
+            console.error("Error al generar reporte final:", err);
+            alert("❌ FALLO EN LA CONSOLIDACIÓN DE INTELIGENCIA.");
+        } finally {
+            setIsAnalyzingDeeply(false);
+        }
+    };
+
+
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -656,12 +692,21 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                             </p>
                                             <div className="flex flex-col gap-3 pt-2">
                                                 {isCourseCompleted(course.id) && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDownloadCertificate(course); }}
-                                                        className="w-full py-2 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center gap-2 text-green-500 text-[8px] font-black uppercase hover:bg-green-500/20 transition-all"
-                                                    >
-                                                        <Trophy size={10} /> Certificado Disponible
-                                                    </button>
+                                                    <div className="flex flex-col gap-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDownloadCertificate(course); }}
+                                                            className="w-full py-2 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center gap-2 text-green-500 text-[8px] font-black uppercase hover:bg-green-500/20 transition-all"
+                                                        >
+                                                            <Trophy size={10} /> Certificado Disponible
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleCourseFinalReport(course); }}
+                                                            className="w-full py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center gap-2 text-indigo-400 text-[8px] font-black uppercase hover:bg-indigo-500/20 transition-all"
+                                                        >
+                                                            {isAnalyzingDeeply ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
+                                                            Generar Reporte de Comando
+                                                        </button>
+                                                    </div>
                                                 )}
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
@@ -902,6 +947,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
                                                 {userRole === UserRole.DIRECTOR && (
                                                     <div className="space-y-4 pt-6">
+                                                        {/* Ocultado por solicitud de reporte consolidado al final del curso
                                                         {!deepAnalysis ? (
                                                             <button
                                                                 onClick={handleDeepAnalysis}
@@ -920,6 +966,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                                 <div className="text-[12px] font-bold uppercase leading-relaxed prose prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
                                                             </div>
                                                         )}
+                                                        */}
                                                     </div>
                                                 )}
 

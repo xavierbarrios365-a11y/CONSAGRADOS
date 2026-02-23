@@ -1,7 +1,8 @@
-
-import React from 'react';
-import { Agent, UserRole } from '../types';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Agent } from '../types';
 import { formatDriveUrl } from './DigitalIdCard';
+import TacticalRadar from './TacticalRadar';
 import {
     X,
     Target,
@@ -17,7 +18,11 @@ import {
     AlertTriangle,
     History,
     TrendingUp,
-    FileText
+    FileText,
+    Activity,
+    Cpu,
+    Sparkles,
+    Lock
 } from 'lucide-react';
 
 interface TacticalExpedienteProps {
@@ -25,11 +30,37 @@ interface TacticalExpedienteProps {
     onClose: () => void;
 }
 
+// Helper para el efecto Typewriter
+const TypewriterText = ({ text, delay = 0.02, onComplete }: { text: string, delay?: number, onComplete?: () => void }) => {
+    const [displayedText, setDisplayedText] = useState('');
+
+    useEffect(() => {
+        let i = 0;
+        const timer = setInterval(() => {
+            setDisplayedText(text.slice(0, i));
+            i++;
+            if (i > text.length) {
+                clearInterval(timer);
+                onComplete?.();
+            }
+        }, delay * 1000);
+        return () => clearInterval(timer);
+    }, [text]);
+
+    return <span className="font-mono tracking-wide">{displayedText}<motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.5 }}>_</motion.span></span>;
+};
+
 const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoaded(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
+
     const isAtRisk = (() => {
         try {
             if (!agent.lastAttendance || agent.lastAttendance === 'N/A') return true;
-            // Handle Date objects directly
             let lastDate: Date;
             const raw = agent.lastAttendance as any;
             if (raw && typeof raw === 'object' && typeof raw.getTime === 'function') {
@@ -54,190 +85,247 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose 
         ? `https://wa.me/${agent.whatsapp.replace(/\D/g, '')}`
         : null;
 
+    const modalVariants = {
+        hidden: { opacity: 0, scale: 0.9, y: 20 },
+        visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 30 } }
+    } as const;
+
     return (
-        <div className="fixed inset-0 z-[100] bg-[#000c19]/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-            <div className="w-full max-w-2xl bg-[#001f3f] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[100] bg-[#000810]/98 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+            {/* Capas de Post-Procesamiento Global */}
+            <div className="absolute inset-0 pointer-events-none z-10 opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
 
-                {/* DECORACIÓN TÁCTICA */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent"></div>
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#ffb700]/5 rounded-full blur-3xl"></div>
-
-                {/* HEADER / CIERRE */}
-                <div className="flex justify-between items-center p-6 border-b border-white/5 relative z-10 bg-[#001f3f]">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-lg">
-                            <FileText className="text-[#ffb700]" size={18} />
-                        </div>
-                        <div>
-                            <h2 className="text-white font-bebas text-2xl tracking-widest uppercase leading-none">Expediente Táctico</h2>
-                            <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Dossier de Inteligencia S-37</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-white/50 hover:text-white transition-all active:scale-95"
-                    >
-                        <X size={20} />
-                    </button>
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={modalVariants}
+                className="w-full max-w-4xl bg-[#00101a] border border-amber-500/20 rounded-[3rem] shadow-[0_0_100px_rgba(255,183,0,0.1)] overflow-hidden relative max-h-[95vh] flex flex-col md:flex-row"
+            >
+                {/* DECORACIÓN CORNER TÁCTICA */}
+                <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-4 -translate-y-4">
+                    <div className="w-20 h-20 border-t-4 border-r-4 border-amber-500 rounded-tr-3xl"></div>
+                </div>
+                <div className="absolute bottom-0 left-0 p-4 opacity-20 transform -translate-x-4 translate-y-4">
+                    <div className="w-20 h-20 border-b-4 border-l-4 border-amber-500 rounded-bl-3xl"></div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 no-scrollbar">
-
-                    {/* SECCIÓN 1: PERFIL PRINCIPAL */}
-                    <div className="flex flex-col md:flex-row items-center gap-8 border-b border-white/5 pb-8">
-                        <div className="relative group">
-                            <div className={`absolute -inset-2 bg-gradient-to-br ${isAtRisk ? 'from-red-500 to-orange-600' : 'from-[#ffb700] to-amber-600'} rounded-[2rem] blur-xl opacity-20 animate-pulse`}></div>
-                            <div className="w-40 h-40 rounded-[2rem] border-2 border-white/10 p-1.5 bg-black/40 shadow-inner relative overflow-hidden">
-                                <img
-                                    src={formatDriveUrl(agent.photoUrl)}
-                                    className="w-full h-full rounded-[1.5rem] object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                                    onError={(e) => {
-                                        e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                                        e.currentTarget.className = "w-full h-full object-cover opacity-20";
-                                    }}
-                                />
-                            </div>
-                            <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full border shadow-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap
-                                ${isAtRisk ? 'bg-red-500 border-red-400 text-white' : 'bg-[#ffb700] border-amber-400 text-[#001f3f]'}`}>
-                                {agent.rank || 'RECLUTA'}
-                            </div>
-                        </div>
-
-                        <div className="flex-1 text-center md:text-left space-y-4">
-                            <div>
-                                <h1 className="text-3xl md:text-4xl font-bebas font-black text-white tracking-wider uppercase leading-none mb-1">{agent.name}</h1>
-                                <p className="text-[10px] text-white/40 font-mono tracking-widest uppercase">ID: {agent.id} | {agent.accessLevel || 'ESTUDIANTE'}</p>
-                            </div>
-
-                            <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                                <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 flex items-center gap-2">
-                                    <Star size={12} className="text-[#ffb700]" />
-                                    <span className="text-[9px] text-white font-black">{agent.xp} XP TOTAL</span>
-                                </div>
-                                <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/5 flex items-center gap-2">
-                                    <TrendingUp size={12} className="text-blue-400" />
-                                    <span className="text-[9px] text-white font-black">{agent.streakCount || 0} DÍAS DE RACHA</span>
-                                </div>
-                                {isAtRisk && (
-                                    <div className="px-4 py-2 bg-red-500/10 rounded-xl border border-red-500/30 flex items-center gap-2 animate-pulse">
-                                        <AlertTriangle size={12} className="text-red-500" />
-                                        <span className="text-[9px] text-red-500 font-black tracking-widest">ALERTA DE DESERCIÓN</span>
-                                    </div>
-                                )}
+                {/* SIDEBAR IZQUIERDO: PERFIL Y RADAR */}
+                <div className="w-full md:w-80 bg-black/40 border-r border-white/5 p-8 flex flex-col items-center gap-6 relative z-10 overflow-y-auto no-scrollbar">
+                    <motion.div
+                        initial={{ opacity: 0, rotateY: 90 }}
+                        animate={{ opacity: 1, rotateY: 0 }}
+                        transition={{ delay: 0.2, duration: 1 }}
+                        className="relative"
+                    >
+                        <div className={`absolute -inset-4 bg-gradient-to-br ${isAtRisk ? 'from-red-500 to-orange-600' : 'from-amber-500 to-yellow-600'} rounded-[3rem] blur-2xl opacity-10 animate-pulse`}></div>
+                        <div className="w-44 h-44 rounded-[2.5rem] border-2 border-amber-500/30 p-1.5 bg-[#00101a] shadow-inner relative overflow-hidden group">
+                            <img
+                                src={formatDriveUrl(agent.photoUrl)}
+                                className="w-full h-full rounded-[2.25rem] object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110"
+                                onError={(e) => {
+                                    e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+                                    e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                                }}
+                            />
+                            {/* Overlay de HUD sobre la foto */}
+                            <div className="absolute inset-0 pointer-events-none border border-white/10 rounded-[2.25rem]"></div>
+                            <div className="absolute top-4 left-4 flex gap-1">
+                                <div className="w-1 h-1 bg-amber-500 rounded-full animate-ping"></div>
+                                <div className="w-1 h-3 bg-amber-500/20 rounded-full"></div>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    {/* SECCIÓN 2: DATOS HISTÓRICOS (EL CORAZÓN DEL EXPEDIENTE) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-black/20 rounded-[2rem] border border-white/5 p-6 space-y-6">
-                            <div className="flex items-center gap-3">
-                                <Calendar size={16} className="text-[#ffb700]" />
-                                <h3 className="text-[10px] text-white font-black uppercase tracking-widest font-bebas">Historial de Registro</h3>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                                    <div className="flex flex-col">
-                                        <span className="text-[7px] text-white/40 font-black uppercase tracking-widest">Ingreso al Sistema</span>
-                                        <span className="text-[11px] text-white font-bold">{agent.joinedDate || 'S/D'}</span>
-                                    </div>
-                                    <Shield size={14} className="text-white/20" />
-                                </div>
-                                <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                                    <div className="flex flex-col">
-                                        <span className="text-[7px] text-white/40 font-black uppercase tracking-widest">Última Presencia</span>
-                                        <span className={`text-[11px] font-bold ${isAtRisk ? 'text-red-500' : 'text-green-500'}`}>
-                                            {agent.lastAttendance || 'SIN REGISTRO'}
-                                        </span>
-                                    </div>
-                                    <Clock size={14} className="text-white/20" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[7px] text-white/40 font-black uppercase tracking-widest mb-2">Estado de Operatividad</span>
-                                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full transition-all duration-1000 shadow-lg ${isAtRisk ? 'bg-red-500 shadow-red-900/50' : 'bg-green-500 shadow-green-900/50'}`}
-                                            style={{ width: isAtRisk ? '30%' : '100%' }}
-                                        />
-                                    </div>
-                                    <p className="text-[8px] text-white/30 mt-2 font-bold uppercase">
-                                        {isAtRisk ? 'Agente en fase de desconexión' : 'Agente plenamente operativo'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-black/20 rounded-[2rem] border border-white/5 p-6 space-y-6">
-                            <div className="flex items-center gap-3">
-                                <Zap size={16} className="text-[#ffb700]" />
-                                <h3 className="text-[10px] text-white font-black uppercase tracking-widest font-bebas">Análisis Académico</h3>
-                            </div>
-
-                            <div className="space-y-4">
-                                {agent.weeklyTasks?.map(task => (
-                                    <div key={task.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                                        {task.completed ? (
-                                            <CheckCircle2 size={16} className="text-green-500" />
-                                        ) : (
-                                            <Circle size={16} className="text-white/20" />
-                                        )}
-                                        <span className={`text-[9px] font-black uppercase tracking-widest ${task.completed ? 'text-white' : 'text-white/40'}`}>
-                                            {task.title}
-                                        </span>
-                                    </div>
-                                ))}
-                                {(!agent.weeklyTasks || agent.weeklyTasks.length === 0) && (
-                                    <div className="py-4 text-center opacity-30">
-                                        <p className="text-[8px] font-black uppercase tracking-widest">Cargando misiones...</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SECCIÓN 3: RESUMEN IA */}
-                    <div className="bg-indigo-600/5 border border-indigo-500/20 rounded-[2rem] p-6 space-y-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-6 opacity-5">
-                            <Target size={120} className="text-indigo-500" />
-                        </div>
-                        <div className="flex items-center gap-3 relative z-10">
-                            <History size={16} className="text-indigo-400" />
-                            <h3 className="text-[10px] text-indigo-400 font-black uppercase tracking-widest font-bebas">Informe Neuronal Táctico</h3>
-                        </div>
-                        <p className="text-[11px] text-indigo-100/70 italic leading-relaxed relative z-10 font-montserrat">
-                            {agent.tacticalSummary || '"Resumen táctico no disponible en esta frecuencia. Requiere actualización mediante el Nodo de Inteligencia."'}
-                        </p>
-                    </div>
-
-                    {/* SECCIÓN 4: ACCIÓN DIRECTA / CONTACTO */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <a
-                            href={whatsappLink || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center justify-center gap-3 p-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${whatsappLink ? 'bg-green-600/10 border border-green-500/30 text-green-500 hover:bg-green-600/20 active:scale-95 shadow-xl shadow-green-900/10' : 'bg-white/5 border border-white/5 text-white/20 cursor-not-allowed'}`}
+                    <div className="text-center space-y-2">
+                        <motion.h1
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="text-3xl font-bebas font-black text-white tracking-widest leading-none"
                         >
-                            <Phone size={16} />
-                            Contactar vía WhatsApp
-                        </a>
+                            {agent.name}
+                        </motion.h1>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.6 }}
+                            className="text-[9px] text-amber-500 font-bold uppercase tracking-[0.4em] font-montserrat"
+                        >
+                            {agent.rank || 'RECLUTA'} // {agent.id}
+                        </motion.div>
+                    </div>
+
+                    <div className="w-full space-y-4">
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 w-full text-center">
+                            <p className="text-[7px] text-white/40 font-black uppercase mb-1 tracking-widest">EXPERIENCIA ACUMULADA</p>
+                            <p className="text-2xl font-bebas font-black text-amber-500 leading-none">{agent.xp} XP</p>
+                        </div>
+
+                        <div className="relative pt-4 flex justify-center">
+                            {agent.tacticalStats ? (
+                                <TacticalRadar stats={agent.tacticalStats} size={180} />
+                            ) : (
+                                <div className="py-10 text-center opacity-20 flex flex-col items-center gap-3">
+                                    <Cpu size={32} className="animate-spin-slow" />
+                                    <p className="text-[8px] font-black uppercase tracking-widest">Calculando Vectores...</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* CONTENIDO PRINCIPAL: DOSSIER */}
+                <div className="flex-1 flex flex-col min-h-0 relative">
+                    {/* Header con Botón Cerrar */}
+                    <div className="p-6 md:p-8 flex justify-between items-start border-b border-white/5 bg-black/20 backdrop-blur-md sticky top-0 z-20">
+                        <div className="space-y-1">
+                            <h2 className="text-white font-bebas text-2xl tracking-widest flex items-center gap-3">
+                                <span className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                                    <Lock className="text-amber-500" size={16} />
+                                </span>
+                                ACCESO CLASIFICADO
+                            </h2>
+                            <p className="text-[9px] text-amber-500 font-black uppercase tracking-[0.4em] opacity-40">Dossier Militar Nivel S-4 // Consagrados 2026</p>
+                        </div>
                         <button
-                            className="flex items-center justify-center gap-3 p-5 bg-white/5 border border-white/5 text-white/60 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95"
+                            onClick={onClose}
+                            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-white/50 hover:text-white transition-all active:scale-95 group"
                         >
-                            <MessageSquare size={16} />
-                            Enviar Misión Directa
+                            <X size={20} className="group-hover:rotate-90 transition-transform" />
                         </button>
                     </div>
 
-                </div>
+                    <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 no-scrollbar">
+                        {/* SECCIÓN IA: EL BRIEFING */}
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="bg-amber-500/5 border border-amber-500/20 rounded-[2.5rem] p-8 space-y-6 relative overflow-hidden group shadow-inner"
+                        >
+                            {/* Efectos de HUD IA */}
+                            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <Activity size={120} className="text-amber-500" />
+                            </div>
+                            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/20 to-transparent"></div>
 
-                {/* FOOTER */}
-                <div className="p-4 bg-black/40 border-t border-white/5 text-center">
-                    <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.4em]">Consagrados Armed Force • Surveillance System 2026</p>
+                            <div className="flex items-center gap-3 relative z-10">
+                                <div className="w-1.5 h-6 bg-amber-500 rounded-full shadow-[0_0_10px_#ffb700]"></div>
+                                <h3 className="text-[12px] text-white font-black uppercase tracking-widest font-bebas flex items-center gap-2">
+                                    <Sparkles size={14} className="text-amber-500" />
+                                    Analítica del Comando IA
+                                </h3>
+                            </div>
+
+                            <div className="text-[13px] text-amber-100/80 leading-relaxed relative z-10 font-mono tracking-tight min-h-[80px]">
+                                {isLoaded ? (
+                                    <TypewriterText text={agent.tacticalSummary || "A la espera de enlace satelital para descargar analítica táctica del activo..."} />
+                                ) : (
+                                    <span className="opacity-20">Procesando transmisión...</span>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* HISTORIAL ESTATICO */}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-[2px] bg-amber-500/30"></div>
+                                    <h3 className="text-[10px] text-white/40 font-black uppercase tracking-widest font-bebas">Registro Operativo</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    <MetricRow label="Última Presencia" value={agent.lastAttendance || 'N/A'} isRisk={isAtRisk} icon={<Clock size={12} />} />
+                                    <MetricRow label="Talento Principal" value={agent.talent || 'SIN ASIGNAR'} icon={<Star size={12} />} />
+                                    <MetricRow label="Estado Actual" value={agent.status || 'ACTIVO'} icon={<Activity size={12} />} />
+                                </div>
+                            </div>
+
+                            {/* MISIONES RECIENTES */}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-[2px] bg-amber-500/30"></div>
+                                    <h3 className="text-[10px] text-white/40 font-black uppercase tracking-widest font-bebas">Progreso de Misiones</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    {agent.weeklyTasks?.slice(0, 3).map((task, i) => (
+                                        <motion.div
+                                            key={task.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.8 + i * 0.1 }}
+                                            className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5"
+                                        >
+                                            <span className="text-[9px] font-black text-white/70 uppercase truncate max-w-[150px]">{task.title}</span>
+                                            {task.completed ? <CheckCircle2 size={14} className="text-green-500" /> : <div className="w-3.5 h-3.5 rounded-full border border-white/20"></div>}
+                                        </motion.div>
+                                    ))}
+                                    {(!agent.weeklyTasks || agent.weeklyTasks.length === 0) && (
+                                        <div className="py-4 text-center opacity-20 italic text-[9px]">Sin misiones en curso</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ACCIONES DE COMANDO */}
+                        <div className="pt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <motion.a
+                                whileHover={{ scale: 1.02, y: -2 }}
+                                whileTap={{ scale: 0.98 }}
+                                href={whatsappLink || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center justify-center gap-3 p-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${whatsappLink ? 'bg-amber-500 text-[#001f3f] shadow-[0_0_30px_rgba(255,183,0,0.2)]' : 'bg-white/5 border border-white/5 text-white/20 cursor-not-allowed'}`}
+                            >
+                                <Phone size={16} />
+                                Iniciar Enlace Seguro
+                            </motion.a>
+                            <motion.button
+                                whileHover={{ scale: 1.02, y: -2 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="flex items-center justify-center gap-3 p-5 bg-[#00101a] border border-white/10 text-white/80 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-amber-500/50 transition-all"
+                            >
+                                <MessageSquare size={16} />
+                                Enviar Orden Directa
+                            </motion.button>
+                        </div>
+                    </div>
+
+                    {/* FOOTER HUD */}
+                    <div className="p-6 bg-black/40 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center gap-4 text-[7px] text-white/20 font-black uppercase tracking-[0.4em]">
+                            <span>SISTEMA DE VIGILANCIA C26</span>
+                            <span className="w-1 h-1 bg-white/20 rounded-full"></span>
+                            <span>NIVEL DE ACCESO: {agent.accessLevel || 'RECLUTA'}</span>
+                        </div>
+                        <div className="flex gap-1 h-2 items-center">
+                            {[1, 2, 3, 4, 5, 6, 7].map(i => (
+                                <div key={i} className="w-1 h-full bg-amber-500/10 rounded-full overflow-hidden">
+                                    <motion.div
+                                        animate={{ height: ["0%", "100%", "0%"] }}
+                                        transition={{ repeat: Infinity, duration: 2, delay: i * 0.2 }}
+                                        className="w-full bg-amber-500/40"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };
 
+const MetricRow = ({ label, value, icon, isRisk }: { label: string, value: string, icon: any, isRisk?: boolean }) => (
+    <div className="flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl group hover:bg-white/[0.05] transition-colors">
+        <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${isRisk ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'} border border-current opacity-60`}>
+                {icon}
+            </div>
+            <span className="text-[8px] text-white/40 font-black uppercase tracking-widest">{label}</span>
+        </div>
+        <span className={`text-[11px] font-black uppercase tracking-tight ${isRisk ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+            {value}
+        </span>
+    </div>
+);
+
 export default TacticalExpediente;
+

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp } from 'lucide-react';
+import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp, Cpu } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
@@ -33,6 +34,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
   const [isReconcilingXP, setIsReconcilingXP] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [isGeneratingGlobalReport, setIsGeneratingGlobalReport] = useState(false);
+  const [globalReport, setGlobalReport] = useState<string | null>(null);
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -196,6 +199,21 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       setIsGeneratingAi(false);
     }
   };
+
+  const handleGenerateGlobalReport = async () => {
+    if (!agents || agents.length === 0) return;
+    setIsGeneratingGlobalReport(true);
+    try {
+      const report = await generateCommunityIntelReport(agents);
+      setGlobalReport(report);
+    } catch (err: any) {
+      console.error("Global AI Report Error:", err);
+      alert("❌ FALLO EN LA CONSOLIDACIÓN ESTRATÉGICA.");
+    } finally {
+      setIsGeneratingGlobalReport(false);
+    }
+  };
+
 
   const handleImportInscriptions = async () => {
     if (!window.confirm("⚠️ ¿RECONSTRUIR BASE DE DATOS?\n\nEsto sincronizará la hoja de cálculo con la base local.")) return;
@@ -803,13 +821,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   <p className="text-[9px] text-slate-300 italic leading-relaxed">
                     {agent.tacticalSummary || '"Sin análisis táctico reciente. Solicite actualización."'}
                   </p>
-                  <button
-                    onClick={handleGenerateAiProfile}
-                    disabled={isGeneratingAi}
-                    className="mt-3 w-full py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar Cerebro IA'}
-                  </button>
+                  {userRole === UserRole.DIRECTOR && (
+                    <button
+                      onClick={handleGenerateAiProfile}
+                      disabled={isGeneratingAi}
+                      className="mt-3 w-full py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar Cerebro IA'}
+                    </button>
+                  )}
                 </div>
 
                 {/* VISUALIZACIÓN DE PROGRESO DE ASCENSO - SOLICITADO POR DIRECTOR */}
@@ -1094,50 +1114,147 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
             )}
             {/* AI COMMAND TERMINAL - NUEVA FUNCIONALIDAD GRATUITA */}
-            <div className="bg-[#000c19] border border-indigo-500/30 rounded-[2.5rem] p-6 shadow-2xl space-y-4 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Sparkles size={120} className="text-indigo-500" />
-              </div>
-
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-indigo-500/20 rounded-lg">
-                  <Activity className="text-indigo-400" size={20} />
+            {userRole === UserRole.DIRECTOR && (
+              <div className="bg-[#000c19] border border-indigo-500/30 rounded-[2.5rem] p-6 shadow-2xl space-y-4 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Sparkles size={120} className="text-indigo-500" />
                 </div>
-                <div>
-                  <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Terminal de Comando IA</h3>
-                  <p className="text-[7px] text-indigo-400/70 font-bold uppercase tracking-widest font-montserrat">Interfase de Inteligencia Táctica Directa</p>
-                </div>
-              </div>
 
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Escriba un comando táctico (ej: 'Analiza el compromiso actual')..."
-                  className="w-full bg-[#000c19] border border-white/10 rounded-xl py-4 pl-6 pr-14 text-white text-[10px] font-bold uppercase outline-none focus:border-indigo-500 transition-all font-mono tracking-wider"
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter') {
-                      const input = e.currentTarget.value;
-                      if (!input.trim()) return;
-                      e.currentTarget.value = 'PROCESANDO COMANDO...';
-                      try {
-                        const response = await getSpiritualCounseling(agent, `[COMANDO TÁCTICO]: ${input}`);
-                        alert(`CENTRO DE MANDO: ${response}`);
-                        e.currentTarget.value = '';
-                      } catch (err) {
-                        alert("ERROR EN LA FRECUENCIA: " + (err.message || "Error desconocido"));
-                        e.currentTarget.value = '';
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <Activity className="text-indigo-400" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Terminal de Comando IA</h3>
+                    <p className="text-[7px] text-indigo-400/70 font-bold uppercase tracking-widest font-montserrat">Interfase de Inteligencia Táctica Directa</p>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Escriba un comando táctico (ej: 'Analiza el compromiso actual')..."
+                    className="w-full bg-[#000c19] border border-white/10 rounded-xl py-4 pl-6 pr-14 text-white text-[10px] font-bold uppercase outline-none focus:border-indigo-500 transition-all font-mono tracking-wider"
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        const input = e.currentTarget.value;
+                        if (!input.trim()) return;
+                        e.currentTarget.value = 'PROCESANDO COMANDO...';
+                        try {
+                          const response = await getSpiritualCounseling(agent, `[COMANDO TÁCTICO]: ${input}`);
+                          if (response) {
+                            // Persistence: Save the AI response to the agent's profile
+                            await updateAgentAiProfile(agent.id, agent.tacticalStats || {}, response);
+                            alert(`CENTRO DE MANDO: ${response}\n\n✅ RESPUESTA GUARDADA EN PERFIL.`);
+                            if (onUpdateNeeded) onUpdateNeeded();
+                          }
+                          e.currentTarget.value = '';
+                        } catch (err: any) {
+                          alert("ERROR EN LA FRECUENCIA: " + (err.message || "Error desconocido"));
+                          e.currentTarget.value = '';
+                        }
                       }
-                    }
-                  }}
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <Zap size={14} className="text-indigo-500 animate-pulse" />
+                    }}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <Zap size={14} className="text-indigo-500 animate-pulse" />
+                  </div>
                 </div>
+                <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest pl-2">
+                  ⚡ Presione ENTER para transmitir el comando al Cerebro IA.
+                </p>
               </div>
-              <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest pl-2">
-                ⚡ Presione ENTER para transmitir el comando al Cerebro IA.
-              </p>
-            </div>
+            )}
+
+            {/* BUREAU OF INTELLIGENCE - NEW STRATEGIC SECTION FOR DIRECTOR */}
+            {userRole === UserRole.DIRECTOR && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="bg-[#050505] border border-amber-500/20 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group mb-8"
+              >
+                {/* Capas HUD de fondo */}
+                <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-amber-500/5 blur-[80px] rounded-full group-hover:bg-amber-500/10 transition-all duration-700"></div>
+
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-amber-500/10 rounded-[1.25rem] border border-amber-500/20">
+                      <Target className="text-amber-500" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-black text-xl uppercase tracking-[0.15em] font-bebas">Buró de Inteligencia</h3>
+                      <p className="text-[8px] text-amber-500/60 font-black uppercase tracking-[0.3em] font-montserrat">Consolidado Estratégico de la Fuerza</p>
+                    </div>
+                  </div>
+                  {!globalReport && (
+                    <button
+                      onClick={handleGenerateGlobalReport}
+                      disabled={isGeneratingGlobalReport}
+                      className="px-6 py-3 bg-amber-600/10 border border-amber-500/30 text-amber-500 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isGeneratingGlobalReport ? <Loader2 size={12} className="animate-spin" /> : <Cpu size={14} />}
+                      Generar Reporte Global
+                    </button>
+                  )}
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {globalReport ? (
+                    <motion.div
+                      key="report"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="space-y-6"
+                    >
+                      <div className="p-8 bg-[#0a0a0a] border border-amber-500/20 rounded-[2rem] relative shadow-inner">
+                        <div className="absolute top-4 right-6 flex gap-2">
+                          <Sparkles size={16} className="text-amber-500/30 animate-pulse" />
+                          <Activity size={16} className="text-amber-500/30" />
+                        </div>
+                        <div className="text-[12px] text-gray-300 font-bold uppercase leading-relaxed prose prose-invert prose-sm max-w-none prose-p:mb-4 prose-b:text-amber-400 font-mono" dangerouslySetInnerHTML={{ __html: globalReport }} />
+
+                        {/* Decoración HUD inferior */}
+                        <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center opacity-20">
+                          <span className="text-[7px] font-black tracking-widest text-amber-500">REPORTE ESTRATÉGICO GENERADO POR IA</span>
+                          <div className="flex gap-1">
+                            {[1, 2, 3].map(i => <div key={i} className="w-1 h-3 bg-amber-500 rounded-full" />)}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setGlobalReport(null)}
+                        className="text-[9px] text-amber-500/40 font-black uppercase tracking-[0.4em] hover:text-amber-500 transition-colors mx-auto block hover:scale-110 active:scale-95 transition-all"
+                      >
+                        [ LIMPIAR REGISTROS ]
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="py-16 flex flex-col items-center justify-center text-center space-y-6 border-2 border-dashed border-white/5 rounded-[2rem] relative overflow-hidden group"
+                    >
+                      <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/[0.02] transition-colors pointer-events-none"></div>
+                      <Cpu className="text-gray-800 opacity-20 group-hover:scale-110 transition-transform duration-700" size={48} />
+                      <div className="space-y-2 relative z-10">
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.4em] max-w-[250px] mx-auto leading-relaxed">
+                          SISTEMA LISTO PARA COMPILACIÓN ESTRATÉGICA GLOBAL. SE REQUIERE INICIAR PROTOCOLO.
+                        </p>
+                        <div className="flex justify-center gap-1 opacity-20">
+                          <div className="w-4 h-1 bg-amber-500 rounded-full"></div>
+                          <div className="w-8 h-1 bg-amber-500 rounded-full"></div>
+                          <div className="w-4 h-1 bg-amber-500 rounded-full"></div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

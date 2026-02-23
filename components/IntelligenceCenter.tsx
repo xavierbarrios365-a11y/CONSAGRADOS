@@ -40,6 +40,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isLoadingPromo, setIsLoadingPromo] = useState(false);
   const [onlineAgencies, setOnlineAgencies] = useState<Record<string, boolean>>({});
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', description: '' });
   const [adjustmentAmount, setAdjustmentAmount] = useState<number>(5);
   const fileInputRef = React.useRef<HTMLInputElement>(null);

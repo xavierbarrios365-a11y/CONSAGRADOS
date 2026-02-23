@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Agent, UserRole } from '../types';
 import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatDriveUrl } from './DigitalIdCard';
 import { PROMOTION_RULES } from '../constants';
 
@@ -14,11 +15,6 @@ const isAptoParaAscenso = (agent: Agent): boolean => {
     const rule = PROMOTION_RULES[agent.rank?.toUpperCase() || ''];
     if (!rule) return false; // Ya es Líder o rango desconocido
     return agent.xp >= rule.requiredXp;
-};
-
-const getNextRankLabel = (rank: string): string => {
-    const rule = PROMOTION_RULES[rank?.toUpperCase() || ''];
-    return rule ? rule.nextRank : '';
 };
 
 const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }) => {
@@ -42,15 +38,12 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
     // --- POSITION CHANGE TRACKING ---
-    // Snapshot is taken the first time data loads in a given category/tier.
-    // When the user refreshes, positions are compared vs this snapshot to show arrows.
     const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>({});
     const [snapshotKey, setSnapshotKey] = useState('');
 
     const currentKey = `${activeCategory}-${activeTier}`;
 
     React.useEffect(() => {
-        // Reset snapshot when the user changes category or tier
         if (snapshotKey !== currentKey) {
             setSnapshotKey(currentKey);
             setSnapshotRanks({});
@@ -58,7 +51,6 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
     }, [currentKey, snapshotKey]);
 
     React.useEffect(() => {
-        // Save initial positions on first load for this view
         if (sortedAgents.length > 0 && Object.keys(snapshotRanks).length === 0 && snapshotKey === currentKey) {
             const initial: Record<string, number> = {};
             sortedAgents.forEach(a => { initial[a.id] = a.position; });
@@ -69,18 +61,18 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
     const getPositionChange = (agentId: string, currentPos: number): number => {
         const oldPos = snapshotRanks[agentId];
         if (oldPos === undefined) return 0;
-        return oldPos - currentPos; // Positive = moved UP (e.g., was 5, now 3 → +2)
+        return oldPos - currentPos;
     };
 
     const RankingIndicator = ({ change }: { change: number }) => {
         if (change > 0) return (
-            <div className="flex flex-col items-center animate-in zoom-in duration-500">
+            <div className="flex flex-col items-center">
                 <ChevronUp size={14} className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
                 <span className="text-[7px] font-black text-emerald-400 leading-none">+{change}</span>
             </div>
         );
         if (change < 0) return (
-            <div className="flex flex-col items-center animate-in zoom-in duration-500">
+            <div className="flex flex-col items-center">
                 <ChevronDown size={14} className="text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
                 <span className="text-[7px] font-black text-red-400 leading-none">{change}</span>
             </div>
@@ -101,17 +93,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         }
     };
 
-    const getPodiumScale = (position: number) => {
-        switch (position) {
-            case 1: return 'scale-110 z-10';
-            case 2: return 'scale-100 z-0 translate-y-4';
-            case 3: return 'scale-90 z-0 translate-y-8';
-            default: return '';
-        }
-    };
-
     return (
-        <div className="p-2 md:p-8 space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-full overflow-x-hidden pb-32 font-montserrat">
+        <div className="p-2 md:p-8 space-y-6 md:space-y-12 max-w-full overflow-x-hidden pb-32 font-montserrat">
             {/* Header Section */}
             <div className="relative overflow-hidden bg-[#001f3f] border border-[#FFB700]/20 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl">
                 <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-[#FFB700]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
@@ -165,112 +148,103 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
 
             {sortedAgents.length > 0 ? (
                 <>
-                    {/* Podium Section - Stepped Horizontal Layout (Now also for Mobile) */}
+                    {/* Podium Section */}
                     <div className="flex items-end justify-center gap-2 md:gap-8 max-w-5xl mx-auto px-1 md:px-4 mt-8 md:mt-12">
-
-                        {/* Second Place - Left Side */}
+                        {/* Second Place */}
                         {topThree[1] && (
-                            <div className="flex flex-col items-center space-y-2 md:space-y-4 w-[28%] md:w-auto transition-all duration-700 animate-in slide-in-from-left-4">
-                                <div className="relative group">
-                                    <div className="absolute -inset-2 bg-gray-400/10 rounded-full blur-xl md:blur-2xl"></div>
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex flex-col items-center space-y-2 md:space-y-4 w-[28%] md:w-auto"
+                            >
+                                <div className="relative shadow-2xl">
                                     <img
                                         src={formatDriveUrl(topThree[1].photoUrl)}
-                                        className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale transition-all shadow-xl"
+                                        className="w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-6 h-6 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-lg md:rounded-xl flex flex-col items-center justify-center text-gray-400 overflow-hidden">
+                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-6 h-6 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-lg flex flex-col items-center justify-center text-gray-400">
                                         <span className="font-bebas text-xs md:text-xl leading-none">2</span>
-                                        <div className="scale-75 origin-bottom">
-                                            <RankingIndicator change={getPositionChange(topThree[1].id, 2)} />
-                                        </div>
+                                        <RankingIndicator change={getPositionChange(topThree[1].id, 2)} />
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase tracking-wider truncate w-20 sm:w-24 md:w-auto">{topThree[1].name}</h3>
-                                    {isAptoParaAscenso(topThree[1]) && (
-                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest animate-pulse mx-auto mb-1">
-                                            <ArrowUpCircle size={7} /> APTO
-                                        </span>
-                                    )}
+                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-20 sm:w-24 md:w-auto">{topThree[1].name}</h3>
                                     <div className="flex items-center justify-center gap-1 text-gray-400">
                                         <Zap size={8} className="md:size-3" fill="currentColor" />
                                         <span className="text-[8px] md:text-[11px] font-black">{topThree[1].xp} </span>
                                     </div>
                                 </div>
-                                <div className="w-full h-12 md:h-32 bg-gradient-to-b from-gray-400/10 via-white/5 to-transparent rounded-t-xl md:rounded-t-3xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-2 md:pb-4">
+                                <div className="w-full h-12 md:h-32 bg-gradient-to-b from-gray-400/10 via-white/5 to-transparent rounded-t-xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-2">
                                     <Medal size={12} className="md:size-6 text-gray-400 opacity-50" />
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
-                        {/* First Place - Center and Elevated */}
+                        {/* First Place */}
                         {topThree[0] && (
-                            <div className="flex flex-col items-center space-y-3 md:space-y-6 w-[36%] md:w-auto scale-105 md:scale-125 z-10 transition-all duration-1000 animate-in zoom-in-95">
-                                <div className="relative mb-0 md:mb-2">
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1.05 }}
+                                className="flex flex-col items-center space-y-3 md:space-y-6 w-[36%] md:w-auto z-10"
+                            >
+                                <div className="relative mb-2">
                                     <Crown className="absolute -top-4 md:-top-10 left-1/2 -translate-x-1/2 text-[#FFB700] w-6 h-6 md:w-16 md:h-16 drop-shadow-[0_0_20px_rgba(255,183,0,0.6)] animate-pulse" />
-                                    <div className="absolute -inset-4 md:-inset-10 bg-[#FFB700]/10 rounded-full blur-[20px] md:blur-[50px] animate-pulse"></div>
                                     <img
                                         src={formatDriveUrl(topThree[0].photoUrl)}
-                                        className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)]"
+                                        className="w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)]"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex flex-col items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl overflow-hidden`}>
+                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex flex-col items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
                                         <span className="font-bebas text-lg md:text-3xl font-black leading-none">1</span>
-                                        <div className="scale-75 origin-center -mt-1">
-                                            <RankingIndicator change={getPositionChange(topThree[0].id, 1)} />
-                                        </div>
+                                        <RankingIndicator change={getPositionChange(topThree[0].id, 1)} />
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <h3 className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase tracking-widest truncate w-24 sm:w-32 md:w-auto drop-shadow-md">{topThree[0].name}</h3>
-                                    {isAptoParaAscenso(topThree[0]) && (
-                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest animate-pulse mx-auto mb-1">
-                                            <ArrowUpCircle size={8} /> APTO PARA ASCENSO
-                                        </span>
-                                    )}
+                                    <h3 className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase truncate w-24 sm:w-32 md:w-auto drop-shadow-md">{topThree[0].name}</h3>
                                     <div className="flex items-center justify-center gap-1 text-[#FFB700]">
-                                        <Flame size={10} className="md:size-5 animate-pulse" fill="currentColor" />
+                                        <Flame size={10} className="md:size-5" fill="currentColor" />
                                         <span className="text-[10px] md:text-xl font-black">{topThree[0].xp} XP</span>
                                     </div>
                                 </div>
-                                <div className={`w-full h-20 md:h-56 bg-gradient-to-b ${activeCategory === 'LEADERS' ? 'from-blue-600/20' : 'from-[#FFB700]/10'} via-black/40 to-transparent rounded-t-xl md:rounded-t-[3rem] border-t border-x ${activeCategory === 'LEADERS' ? 'border-blue-600/40' : 'border-[#FFB700]/30'} flex flex-col items-center justify-end pb-4 md:pb-8 shadow-2xl`}>
-                                    <Star size={14} className={`md:size-8 ${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'} animate-spin-slow`} />
+                                <div className={`w-full h-20 md:h-56 bg-gradient-to-b ${activeCategory === 'LEADERS' ? 'from-blue-600/20' : 'from-[#FFB700]/10'} via-black/40 to-transparent rounded-t-xl md:rounded-t-[3rem] border-t border-x ${activeCategory === 'LEADERS' ? 'border-blue-600/40' : 'border-[#FFB700]/30'} flex flex-col items-center justify-end pb-4 shadow-2xl`}>
+                                    <Star size={14} className={`md:size-8 ${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'}`} />
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
-                        {/* Third Place - Right Side */}
+                        {/* Third Place */}
                         {topThree[2] && (
-                            <div className="flex flex-col items-center space-y-2 md:space-y-4 w-[28%] md:w-auto transition-all duration-700 animate-in slide-in-from-right-4">
-                                <div className="relative group">
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex flex-col items-center space-y-2 md:space-y-4 w-[28%] md:w-auto"
+                            >
+                                <div className="relative shadow-2xl">
                                     <img
                                         src={formatDriveUrl(topThree[2].photoUrl)}
-                                        className="relative w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale transition-all shadow-xl"
+                                        className="w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale"
                                         onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
                                     />
-                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-5 h-5 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-lg md:rounded-xl flex flex-col items-center justify-center text-orange-800 overflow-hidden">
+                                    <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-5 h-5 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-lg flex flex-col items-center justify-center text-orange-800">
                                         <span className="font-bebas text-[10px] md:text-lg leading-none">3</span>
-                                        <div className="scale-75 origin-bottom">
-                                            <RankingIndicator change={getPositionChange(topThree[2].id, 3)} />
-                                        </div>
+                                        <RankingIndicator change={getPositionChange(topThree[2].id, 3)} />
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase tracking-wider truncate w-16 sm:w-20 md:w-auto">{topThree[2].name}</h3>
-                                    {isAptoParaAscenso(topThree[2]) && (
-                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest animate-pulse mx-auto mb-1">
-                                            <ArrowUpCircle size={7} /> APTO
-                                        </span>
-                                    )}
+                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-16 sm:w-20 md:w-auto">{topThree[2].name}</h3>
                                     <div className="flex items-center justify-center gap-1 text-orange-800/60">
                                         <Zap size={8} className="md:size-3" fill="currentColor" />
                                         <span className="text-[8px] md:text-[10px] font-black">{topThree[2].xp} XP</span>
                                     </div>
                                 </div>
-                                <div className="w-full h-8 md:h-24 bg-gradient-to-b from-orange-800/10 via-white/5 to-transparent rounded-t-lg md:rounded-t-2xl border-t border-x border-white/10 flex flex-col items-center justify-end pb-2 md:pb-3">
+                                <div className="w-full h-8 md:h-24 bg-gradient-to-b from-orange-800/10 via-white/5 to-transparent rounded-t-lg border-t border-x border-white/10 flex flex-col items-center justify-end pb-2">
                                     <Medal size={10} className="md:size-5 text-orange-800 opacity-50" />
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
                     </div>
 
@@ -293,59 +267,69 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {restOfAgents.map((agent) => (
-                                            <tr
-                                                key={agent.id}
-                                                className={`group transition-all duration-500 
-                                                    ${agent.id === currentUser?.id
-                                                        ? 'bg-[#FFB700]/10 border-l-4 border-l-[#FFB700]'
-                                                        : getPositionChange(agent.id, agent.position) > 0
-                                                            ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500/50 hover:bg-emerald-500/10'
-                                                            : getPositionChange(agent.id, agent.position) < 0
-                                                                ? 'bg-red-500/5 border-l-2 border-l-red-500/30 hover:bg-red-500/10'
-                                                                : 'hover:bg-[#FFB700]/5'
-                                                    }`}
-                                            >
-                                                <td className="px-4 md:px-8 py-4 md:py-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-bebas text-sm md:text-lg ${getRankColor(agent.position)} bg-white/5 border border-white/10`}>
-                                                            {agent.position}
-                                                        </span>
-                                                        <RankingIndicator change={getPositionChange(agent.id, agent.position)} />
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 md:px-8 py-4 md:py-6">
-                                                    <div className="flex items-center gap-3 md:gap-4">
-                                                        <img
-                                                            src={formatDriveUrl(agent.photoUrl)}
-                                                            className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10"
-                                                            onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
-                                                        />
-                                                        <div className="min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="text-[10px] md:text-[11px] font-black text-white uppercase tracking-wider truncate max-w-[120px] md:max-w-none">{agent.name}</p>
-                                                                {isAptoParaAscenso(agent) && (
-                                                                    <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest whitespace-nowrap animate-pulse">
-                                                                        <ArrowUpCircle size={8} />
-                                                                        APTO
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-[7px] md:text-[8px] text-[#FFB700] font-bold uppercase tracking-widest opacity-60">{agent.id}</p>
+                                        <AnimatePresence mode="popLayout">
+                                            {restOfAgents.map((agent, index) => (
+                                                <motion.tr
+                                                    layout
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        x: 0,
+                                                        transition: { delay: index * 0.05 }
+                                                    }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    key={agent.id}
+                                                    className={`group transition-all duration-500 
+                                                        ${agent.id === currentUser?.id
+                                                            ? 'bg-[#FFB700]/10 border-l-4 border-l-[#FFB700]'
+                                                            : getPositionChange(agent.id, agent.position) > 0
+                                                                ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500/50'
+                                                                : getPositionChange(agent.id, agent.position) < 0
+                                                                    ? 'bg-red-500/5 border-l-2 border-l-red-500/30'
+                                                                    : 'hover:bg-[#FFB700]/5'
+                                                        }`}
+                                                >
+                                                    <td className="px-4 md:px-8 py-4 md:py-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-bebas text-sm md:text-lg ${getRankColor(agent.position)} bg-white/5 border border-white/10`}>
+                                                                {agent.position}
+                                                            </span>
+                                                            <RankingIndicator change={getPositionChange(agent.id, agent.position)} />
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="hidden md:table-cell px-8 py-4 md:py-6 text-center">
-                                                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest font-bebas">{agent.rank || 'AGENTE'}</span>
-                                                </td>
-                                                <td className="px-4 md:px-8 py-4 md:py-6 text-right">
-                                                    <div className="flex items-center justify-end gap-1 md:gap-2">
-                                                        <span className="text-md md:text-xl font-bebas text-white tracking-widest">{agent.xp}</span>
-                                                        <Zap size={14} className="text-[#FFB700]" fill="#FFB700" />
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="px-4 md:px-8 py-4 md:py-6">
+                                                        <div className="flex items-center gap-3 md:gap-4">
+                                                            <img
+                                                                src={formatDriveUrl(agent.photoUrl)}
+                                                                className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10"
+                                                                onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className="text-[10px] md:text-[11px] font-black text-white uppercase truncate max-w-[120px] md:max-w-none">{agent.name}</p>
+                                                                    {isAptoParaAscenso(agent) && (
+                                                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest animate-pulse">
+                                                                            <ArrowUpCircle size={8} />
+                                                                            APTO
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-[7px] md:text-[8px] text-[#FFB700] font-bold uppercase opacity-60">{agent.id}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="hidden md:table-cell px-8 py-4 md:py-6 text-center">
+                                                        <span className="text-[9px] font-black text-white/60 uppercase font-bebas">{agent.rank || 'AGENTE'}</span>
+                                                    </td>
+                                                    <td className="px-4 md:px-8 py-4 md:py-6 text-right">
+                                                        <div className="flex items-center justify-end gap-1 md:gap-2">
+                                                            <span className="text-md md:text-xl font-bebas text-white tracking-widest">{agent.xp}</span>
+                                                            <Zap size={14} className="text-[#FFB700]" fill="#FFB700" />
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </AnimatePresence>
                                     </tbody>
                                 </table>
                             </div>
@@ -353,7 +337,7 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                     </div>
                 </>
             ) : (
-                <div className="py-20 text-center space-y-4 bg-[#001f3f]/50 border border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 animate-in fade-in mx-2">
+                <div className="py-20 text-center space-y-4 bg-[#001f3f]/50 border border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 mx-2">
                     <div className="w-20 h-20 md:w-24 md:h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                         <Users size={32} className="text-white/20" />
                     </div>

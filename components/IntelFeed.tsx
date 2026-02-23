@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
@@ -106,99 +107,112 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 </div>
             </div>
 
-            {/* Tactical Stream */}
             <div className="space-y-2 relative">
                 {/* Decorative side line */}
                 <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-[#ffb700]/40 via-white/5 to-transparent ml-1" />
 
-                {displayedNews.length > 0 ? (
-                    displayedNews.map((item, idx) => {
-                        const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
-                        // REFINAMIENTO: Intentar encontrar al agente por ID o por nombre dentro del mensaje
-                        let agent = agents.find(a => String(a.id) === String(item.agentId));
-                        if (!agent && item.message) {
-                            agent = agents.find(a => item.message.toUpperCase().includes(a.name.toUpperCase()));
-                        }
+                <AnimatePresence mode="popLayout">
+                    {displayedNews.length > 0 ? (
+                        displayedNews.map((item, idx) => {
+                            const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
+                            let agent = agents.find(a => String(a.id) === String(item.agentId));
+                            if (!agent && item.message) {
+                                agent = agents.find(a => item.message.toUpperCase().includes(a.name.toUpperCase()));
+                            }
 
-                        const photoUrl = agent?.photoUrl ? formatDriveUrl(agent.photoUrl) : null;
-                        const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
+                            const photoUrl = agent?.photoUrl ? formatDriveUrl(agent.photoUrl) : null;
+                            const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
 
-                        return (
-                            <div
-                                key={item.id || idx}
-                                className="group relative ml-4 p-4 bg-white/[0.02] hover:bg-[#ffb700]/[0.05] border border-white/5 hover:border-[#ffb700]/20 rounded-2xl transition-all duration-300 overflow-hidden"
-                            >
-                                {/* Scanline Effect on Hover */}
-                                <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 group-hover:animate-scanline pointer-events-none" />
+                            return (
+                                <motion.div
+                                    key={item.id || idx}
+                                    layout
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{
+                                        opacity: 1,
+                                        x: 0,
+                                        transition: { delay: idx * 0.1 }
+                                    }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    whileHover={{ x: 4, backgroundColor: "rgba(255, 183, 0, 0.08)" }}
+                                    className="group relative ml-4 p-4 bg-white/[0.02] border border-white/5 hover:border-[#ffb700]/20 rounded-2xl transition-all duration-300 overflow-hidden"
+                                >
+                                    {/* Scanline Effect on Hover */}
+                                    <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 group-hover:animate-scanline pointer-events-none" />
 
-                                <div className="flex items-start gap-4">
-                                    <div className="relative shrink-0">
-                                        {photoUrl ? (
-                                            <div className="relative">
-                                                <img
-                                                    src={photoUrl}
-                                                    alt={agent?.name || 'Agente'}
-                                                    className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform group-hover:scale-110"
-                                                />
+                                    <div className="flex items-start gap-4">
+                                        <div className="relative shrink-0">
+                                            {photoUrl ? (
+                                                <div className="relative">
+                                                    <img
+                                                        src={photoUrl}
+                                                        alt={agent?.name || 'Agente'}
+                                                        className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform group-hover:scale-110"
+                                                    />
+                                                    <div
+                                                        className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
+                                                        style={{
+                                                            backgroundColor: config.color,
+                                                            color: '#001f3f'
+                                                        }}
+                                                    >
+                                                        {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
+                                                    </div>
+                                                </div>
+                                            ) : (
                                                 <div
-                                                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
+                                                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:scale-110"
                                                     style={{
-                                                        backgroundColor: config.color,
-                                                        color: '#001f3f'
+                                                        backgroundColor: `${config.color}15`,
+                                                        border: `1px solid ${config.color}30`,
+                                                        color: config.color
                                                     }}
                                                 >
-                                                    {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
+                                                    {config.icon}
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div
-                                                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:scale-110"
-                                                style={{
-                                                    backgroundColor: `${config.color}15`,
-                                                    border: `1px solid ${config.color}30`,
-                                                    color: config.color
-                                                }}
-                                            >
-                                                {config.icon}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex-1 min-w-0 pt-0.5">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            {/* PERSONALIZACIÓN: Mostrar nombre del agente en lugar de etiqueta genérica si es posible */}
-                                            <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest">
-                                                {agent ? agentName : config.label}
-                                            </span>
-                                            <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
+                                            )}
                                         </div>
-                                        <p className="text-[11px] text-white/80 font-bold leading-tight line-clamp-2 uppercase tracking-wide font-montserrat group-hover:text-white transition-colors">
-                                            {item.message}
-                                        </p>
-                                    </div>
 
-                                    <button
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            if (['RACHA', 'CURSO_COMPLETADO', 'ASCENSO', 'CERTIFICADO'].includes(item.type)) {
-                                                setSharePreview({ agent, newsItem: item });
-                                                return;
-                                            }
-                                        }}
-                                        className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
-                                        title="Compartir Logro"
-                                    >
-                                        <Share2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })
-                ) : (
-                    <div className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                        <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Sin actividad operativa reciente</p>
-                    </div>
-                )}
+                                        <div className="flex-1 min-w-0 pt-0.5">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {/* PERSONALIZACIÓN: Mostrar nombre del agente en lugar de etiqueta genérica si es posible */}
+                                                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest">
+                                                    {agent ? agentName : config.label}
+                                                </span>
+                                                <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
+                                            </div>
+                                            <p className="text-[11px] text-white/80 font-bold leading-tight line-clamp-2 uppercase tracking-wide font-montserrat group-hover:text-white transition-colors">
+                                                {item.message}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (['RACHA', 'CURSO_COMPLETADO', 'ASCENSO', 'CERTIFICADO'].includes(item.type)) {
+                                                    setSharePreview({ agent, newsItem: item });
+                                                    return;
+                                                }
+                                            }}
+                                            className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
+                                            title="Compartir Logro"
+                                        >
+                                            <Share2 size={16} />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })
+                    ) : (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10"
+                        >
+                            <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Sin actividad operativa reciente</p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Achievement Share Modal */}

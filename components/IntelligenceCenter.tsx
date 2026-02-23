@@ -342,8 +342,41 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   };
 
   return (
-    <div className="min-h-full bg-[#001f3f] p-4 md:p-6 animate-in fade-in duration-700">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-full bg-[#001f3f] p-4 md:p-6 animate-in fade-in duration-700 relative overflow-hidden">
+      {/* Overlay de Scanlines específico para la Terminal */}
+      <div className="absolute inset-0 pointer-events-none z-50 opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,4px_100%]"></div>
+
+      <style>{`
+        @keyframes glitch-tactic {
+          0% { transform: translate(0); text-shadow: none; }
+          20% { transform: translate(-2px, 2px); text-shadow: 2px 0 #ffb700, -2px 0 #00e5ff; }
+          40% { transform: translate(-2px, -2px); text-shadow: -2px 0 #ffb700, 2px 0 #00e5ff; }
+          60% { transform: translate(2px, 2px); text-shadow: 2px 0 #ffb700, -2px 0 #00e5ff; }
+          80% { transform: translate(2px, -2px); text-shadow: -2px 0 #ffb700, 2px 0 #00e5ff; }
+          100% { transform: translate(0); text-shadow: none; }
+        }
+        .glitch-hover:hover {
+          animation: glitch-tactic 0.3s infinite;
+        }
+        .scanline-terminal {
+          width: 100%;
+          height: 2px;
+          background: rgba(255, 183, 0, 0.1);
+          position: absolute;
+          top: 0;
+          left: 0;
+          z-index: 40;
+          animation: scanline-move 8s linear infinite;
+        }
+        @keyframes scanline-move {
+          0% { top: 0; }
+          100% { top: 100%; }
+        }
+      `}</style>
+
+      <div className="scanline-terminal"></div>
+
+      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
 
         {/* PANEL DE CONTROL DE ALTO MANDO */}
         {userRole === UserRole.DIRECTOR && (
@@ -684,13 +717,16 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         {/* Header Táctico */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-6 gap-4 font-montserrat">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-4xl font-bebas font-bold text-white tracking-widest flex items-center gap-4">
-              <div className="p-2 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-lg">
+            <h1 className="text-2xl md:text-4xl font-bebas font-bold text-white tracking-widest flex items-center gap-4 glitch-hover cursor-default">
+              <div className="p-2 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-lg shadow-[0_0_15px_rgba(255,183,0,0.2)]">
                 <Target className="text-[#ffb700]" size={28} />
               </div>
-              NODO DE INTELIGENCIA
+              NODO DE <span className="text-[#ffb700]">INTELIGENCIA</span>
             </h1>
-            <p className="text-[10px] text-[#ffb700]/70 font-black uppercase tracking-[0.5em] opacity-70">Unified Intelligence Center // Consagrados 2026</p>
+            <p className="text-[10px] text-[#ffb700]/70 font-black uppercase tracking-[0.5em] opacity-70 flex items-center gap-2">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+              Live Tactical Feed // Consagrados 2026
+            </p>
           </div>
 
           <div className="w-full lg:w-96">

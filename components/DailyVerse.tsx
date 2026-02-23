@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Calendar, Download } from 'lucide-react';
+import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Calendar, Download, Flame } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DailyVerse as DailyVerseType } from '../types';
 import { generateGoogleCalendarLink, downloadIcsFile } from '../services/calendarService';
 
@@ -147,10 +147,25 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                         {quizCompleted && <CheckCircle2 size={14} className="text-green-500" />}
                     </div>
                     {streakCount > 0 && (
-                        <div className="flex items-center gap-1.5 bg-[#ffb700] text-[#001f3f] px-2.5 py-0.5 rounded-full border border-white/20 shadow-lg animate-in slide-in-from-right-4 duration-500">
-                            <Sparkles size={10} className="animate-pulse" />
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            whileHover={{ scale: 1.05 }}
+                            className="flex items-center gap-1.5 bg-[#ffb700] text-[#001f3f] px-2.5 py-0.5 rounded-full border border-white/20 shadow-lg relative overflow-hidden"
+                        >
+                            <AnimatePresence>
+                                {quizCompleted && (
+                                    <motion.div
+                                        initial={{ scale: 0, opacity: 1 }}
+                                        animate={{ scale: 4, opacity: 0 }}
+                                        transition={{ duration: 0.8, ease: "easeOut" }}
+                                        className="absolute inset-0 bg-white rounded-full"
+                                    />
+                                )}
+                            </AnimatePresence>
+                            <Flame size={10} className={quizCompleted ? "animate-bounce" : "animate-pulse"} />
                             <span className="text-[9px] font-black uppercase tracking-widest font-bebas">RACHA: {streakCount} DÍAS</span>
-                        </div>
+                        </motion.div>
                     )}
                 </div>
 
@@ -175,13 +190,15 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
 
                 {/* Quiz Duolingo-Style */}
                 {!quizCompleted && !showQuiz && (
-                    <button
+                    <motion.button
+                        whileHover={{ scale: 1.05, backgroundColor: "rgba(34, 197, 94, 0.3)" }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => setShowQuiz(true)}
-                        className="mt-4 flex items-center gap-2 bg-green-500/20 border border-green-500/40 px-6 py-3 rounded-2xl text-green-500 text-[10px] font-black uppercase tracking-widest hover:bg-green-500/30 transition-all active:scale-95 shadow-lg shadow-green-900/10"
+                        className="mt-4 flex items-center gap-2 bg-green-500/20 border border-green-500/40 px-6 py-3 rounded-2xl text-green-500 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-green-900/10"
                     >
                         <Sparkles size={14} />
                         Marcar como Leído
-                    </button>
+                    </motion.button>
                 )}
 
                 {showQuiz && !quizCompleted && (

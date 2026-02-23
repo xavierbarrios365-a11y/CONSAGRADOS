@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from './DigitalIdCard';
 
@@ -34,32 +34,54 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
   const filteredNavItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   return (
-    <div className="flex flex-col h-screen bg-[#001f3f] text-[#f4f4f4] overflow-hidden font-montserrat">
-      <header className="min-h-[4rem] h-auto border-b border-white/5 bg-black/50 backdrop-blur-md px-6 py-2 flex items-center justify-between shrink-0 z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col h-screen bg-[#000810] text-[#f4f4f4] overflow-hidden font-montserrat relative">
+
+      {/* CAPA DE FONDO CINEMÁTICO UNIVERSAL */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Gradientes de Profundidad */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 blur-[120px] rounded-full animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-amber-900/5 blur-[100px] rounded-full"></div>
+
+        {/* Grid Táctico Sutil */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#ffffff 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
+
+        {/* Scanlines Effect */}
+        <div className="absolute inset-0 opacity-[0.05] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
+      </div>
+
+      <header className="min-h-[4rem] h-auto border-b border-white/5 bg-black/40 backdrop-blur-xl px-6 py-2 flex items-center justify-between shrink-0 z-30 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-2"
+        >
           <img
             src={logoError ? '/logo_white.png' : formatDriveUrl(OFFICIAL_LOGO)}
             alt="Logo"
-            className="h-6 w-auto object-contain transition-transform active:scale-95"
+            className="h-6 w-auto object-contain transition-transform active:scale-95 cursor-pointer"
+            onClick={() => setView(AppView.HOME)}
             onError={() => setLogoError(true)}
           />
           <div className="flex flex-col">
             <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat">Consagrados</p>
           </div>
-        </div>
+        </motion.div>
+
         <div className="flex items-center gap-4">
-          <div
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
             onClick={onOpenInbox}
             className="relative cursor-pointer group p-2 text-gray-500 hover:text-[#ffb700] transition-colors"
             title="Notificaciones"
           >
             <Bell size={20} className="group-hover:animate-swing" />
             {notificationCount > 0 && (
-              <span className="absolute -top-0 -right-0 h-4 min-w-[1rem] flex items-center justify-center bg-red-600 text-[8px] font-black text-white px-1 rounded-full border-2 border-[#001f3f]">
+              <span className="absolute -top-0 -right-0 h-4 min-w-[1rem] flex items-center justify-center bg-red-600 text-[8px] font-black text-white px-1 rounded-full border-2 border-[#000810] shadow-[0_0_10px_rgba(220,38,38,0.5)]">
                 {notificationCount > 9 ? '+9' : notificationCount}
               </span>
             )}
-          </div>
+          </motion.div>
 
           <div className="text-right hidden xs:block">
             <p className="text-[10px] font-black text-white uppercase leading-none tracking-wider">{userName.split(' ')[0]}</p>
@@ -68,14 +90,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={onHardReset}
-              className="p-2.5 text-gray-500 hover:text-[#ffb700] hover:bg-[#ffb700]/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group"
+              className="p-2.5 text-gray-400 hover:text-[#ffb700] hover:bg-amber-500/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group"
               title="Reinicio Maestro (Limpiar Caché)"
             >
-              <RotateCcw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+              <RotateCcw size={18} className="group-hover:rotate-180 transition-transform duration-700" />
             </button>
             <button
               onClick={onLogout}
-              className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group"
+              className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all bg-white/5 rounded-xl border border-white/5 active:scale-95 group"
               title="Cerrar Sesión"
             >
               <LogOut size={18} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -84,47 +106,63 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative z-10">
         <aside className="hidden md:flex w-64 border-r border-white/5 bg-black/20 flex-col py-6">
           <nav className="flex-1 px-4 space-y-1">
             {filteredNavItems.map((item) => (
-              <button
+              <motion.button
                 key={item.id}
+                whileHover={{ x: 5 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setView(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeView === item.id
-                  ? 'bg-[#ffb700]/10 text-[#ffb700] border-l-4 border-[#ffb700]'
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative overflow-hidden group ${activeView === item.id
+                  ? 'bg-amber-500/10 text-amber-500 border-l-4 border-amber-500 shadow-[0_0_20px_rgba(255,183,0,0.05)]'
                   : 'text-white/40 hover:bg-white/5 hover:text-white'
                   }`}
               >
-                {item.icon}
-                <span className="text-sm font-medium">{item.label}</span>
-              </button>
+                {activeView === item.id && (
+                  <motion.div
+                    layoutId="activeNavBackground"
+                    className="absolute inset-0 bg-amber-500/5 z-0"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">{item.icon}</span>
+                <span className="text-sm font-black uppercase tracking-widest relative z-10 font-bebas">{item.label}</span>
+              </motion.button>
             ))}
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto pb-40 md:pb-0 bg-[#001f3f]">
+        <main className="flex-1 overflow-y-auto pb-40 md:pb-0 bg-transparent custom-scrollbar">
           <div className="max-w-screen-xl mx-auto h-full">
             {children}
           </div>
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/80 backdrop-blur-2xl px-6 py-3 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/60 backdrop-blur-2xl px-6 py-2 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
         {filteredNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setView(item.id)}
-            className={`flex flex-col items-center relative transition-all duration-200 ${activeView === item.id ? 'text-[#ffb700] scale-110' : 'text-gray-500 hover:text-gray-400'
+            className={`flex flex-col items-center relative transition-all duration-300 py-1 ${activeView === item.id ? 'text-[#ffb700] scale-110' : 'text-gray-500'
               }`}
             title={item.label}
           >
-            <div className={`p-2 rounded-xl transition-all duration-200 ${activeView === item.id ? 'bg-[#ffb700]/15 border border-[#ffb700]/30 shadow-[0_0_15px_rgba(255,183,0,0.1)]' : 'bg-transparent border border-transparent'}`}>
+            <div className={`p-2 rounded-xl transition-all duration-300 relative ${activeView === item.id ? 'bg-[#ffb700]/15 border border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.15)]' : 'bg-transparent border border-transparent'}`}>
               {item.icon}
+              {activeView === item.id && (
+                <motion.div
+                  layoutId="mobileNavGlow"
+                  className="absolute inset-[-4px] border border-[#ffb700]/20 rounded-2xl pointer-events-none"
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
             </div>
-            {activeView === item.id && (
-              <div className="absolute -bottom-1 w-1 h-1 bg-[#ffb700] rounded-full shadow-[0_0_8px_#ffb700]"></div>
-            )}
+            <span className={`text-[7px] font-black uppercase tracking-widest mt-1 font-bebas transition-opacity duration-300 ${activeView === item.id ? 'opacity-100' : 'opacity-0'}`}>
+              {item.label}
+            </span>
           </button>
         ))}
       </nav>
@@ -133,3 +171,4 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
 };
 
 export default Layout;
+

@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
 import { AppView, Agent, UserRole, Visitor, Guide, Badge } from './types';
 import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
@@ -57,6 +57,12 @@ import { useDataSync } from './hooks/useDataSync';
 import { useFirebaseMessaging } from './hooks/useFirebaseMessaging';
 
 const OFFICIAL_LOGO = "/logo_white.png";
+
+const viewVariants = {
+  initial: { opacity: 0, y: 15, filter: 'blur(10px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: "circOut" } },
+  exit: { opacity: 0, y: -15, filter: 'blur(10px)', transition: { duration: 0.3, ease: "circIn" } }
+};
 
 const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClick: () => void, disabled: boolean, icon: any }) => (
   <button
@@ -499,67 +505,68 @@ const App: React.FC = () => {
     switch (view) {
       case AppView.HOME:
         return (
-          <div className="p-5 md:p-8 space-y-6 animate-in fade-in pb-24 max-w-2xl mx-auto font-montserrat">
-            {/* ENCABEZADO COMPACTO - Solo Nombre y Estatus (v3.1) */}
-            <div className="flex items-center gap-4 mb-2">
-              <div className="flex-shrink-0">
-                <LighthouseIndicator
-                  status={isOnline && notificationPermission === 'granted' ? 'online' : 'offline'}
-                  size="xs"
-                />
-              </div>
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
+            <div className="p-5 md:p-8 space-y-6 pb-24 max-w-2xl mx-auto font-montserrat">
+              {/* ENCABEZADO COMPACTO - Solo Nombre y Estatus (v3.1) */}
+              <div className="flex items-center gap-4 mb-2">
+                <div className="flex-shrink-0">
+                  <LighthouseIndicator
+                    status={isOnline && notificationPermission === 'granted' ? 'online' : 'offline'}
+                    size="xs"
+                  />
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
-                    <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
-                      {currentUser?.name
-                        ? currentUser.name.split(' ').slice(0, 2).join(' ')
-                        : 'Saúl'}
-                    </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                      <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
+                        {currentUser?.name
+                          ? currentUser.name.split(' ').slice(0, 2).join(' ')
+                          : 'Saúl'}
+                      </p>
+                    </div>
+                    {/* PROGRESO COMPACTO EN EL HEADER */}
+                    {currentUser && (
+                      <div className="hidden xs:block">
+                        <PromotionProgressCard
+                          agentId={currentUser.id}
+                          currentRank={currentUser.rank}
+                          compact={true}
+                        />
+                      </div>
+                    )}
                   </div>
-                  {/* PROGRESO COMPACTO EN EL HEADER */}
-                  {currentUser && (
-                    <div className="hidden xs:block">
-                      <PromotionProgressCard
-                        agentId={currentUser.id}
-                        currentRank={currentUser.rank}
+
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
+                    {/* INSIGNIAS PROPIAS (Solo si tiene) */}
+                    <div className="flex-1">
+                      <BadgeShowcase
+                        currentAgentId={currentUser?.id}
+                        currentAgentName={currentUser?.name}
+                        mode="profile"
                         compact={true}
                       />
                     </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
-                  {/* INSIGNIAS PROPIAS (Solo si tiene) */}
-                  <div className="flex-1">
-                    <BadgeShowcase
-                      currentAgentId={currentUser?.id}
-                      currentAgentName={currentUser?.name}
-                      mode="profile"
-                      compact={true}
-                    />
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* BOTÓN DE ACTIVACIÓN SI ESTÁ OFFLINE */}
-            {notificationPermission !== 'granted' && (
-              <div className="mb-6">
-                <button
-                  onClick={initFirebaseMessaging}
-                  className="w-full py-3 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600/30 transition-all active:scale-95 font-bebas flex items-center justify-center gap-3"
-                >
-                  <Bell size={14} className="animate-swing" />
-                  ACTIVAR CANAL TÁCTICO DE NOTIFICACIONES
-                </button>
-              </div>
-            )}
+              {/* BOTÓN DE ACTIVACIÓN SI ESTÁ OFFLINE */}
+              {notificationPermission !== 'granted' && (
+                <div className="mb-6">
+                  <button
+                    onClick={initFirebaseMessaging}
+                    className="w-full py-3 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600/30 transition-all active:scale-95 font-bebas flex items-center justify-center gap-3"
+                  >
+                    <Bell size={14} className="animate-swing" />
+                    ACTIVAR CANAL TÁCTICO DE NOTIFICACIONES
+                  </button>
+                </div>
+              )}
 
-            <style>{`
+              <style>{`
               @keyframes ticker {
                 0% { transform: translateX(0); }
                 100% { transform: translateX(-50%); }
@@ -574,640 +581,647 @@ const App: React.FC = () => {
               }
             `}</style>
 
-            <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
-              <DailyVerse
-                verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
-                streakCount={currentUser?.streakCount}
-                onQuizComplete={handleVerseQuizComplete}
-              />
-            </div>
+              <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
+                <DailyVerse
+                  verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
+                  streakCount={currentUser?.streakCount}
+                  onQuizComplete={handleVerseQuizComplete}
+                />
+              </div>
 
-            {/* Intel Feed - Posición Primaria (v3.0) */}
-            <IntelFeed headlines={headlines} agents={agents} />
+              {/* Intel Feed - Posición Primaria (v3.0) */}
+              <IntelFeed headlines={headlines} agents={agents} />
 
-            {/* RADAR DE DESERCIÓN RÁPIDO - HOME (PERSONALIZADO POR ROL) */}
-            {(() => {
-              const isCommandRole = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER;
+              {/* RADAR DE DESERCIÓN RÁPIDO - HOME (PERSONALIZADO POR ROL) */}
+              {(() => {
+                const isCommandRole = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER;
 
-              if (isCommandRole) {
-                // DIRECTOR/LÍDER: Ver alerta general de deserción con conteo
-                const dangerCount = agents.filter(a => {
-                  if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
-                  const lastDate = parseAttendanceDate(a.lastAttendance);
-                  if (!lastDate) return false;
-                  const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                  return diffDays >= 21;
-                }).length;
+                if (isCommandRole) {
+                  // DIRECTOR/LÍDER: Ver alerta general de deserción con conteo
+                  const dangerCount = agents.filter(a => {
+                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
+                    const lastDate = parseAttendanceDate(a.lastAttendance);
+                    if (!lastDate) return false;
+                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return diffDays >= 21;
+                  }).length;
 
-                if (dangerCount === 0) return null;
+                  if (dangerCount === 0) return null;
 
-                return (
-                  <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="text-red-500" size={20} />
-                      <div>
-                        <p className="text-[10px] text-white font-black uppercase tracking-widest">COMANDO: ALERTA DE DESERCIÓN</p>
-                        <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
+                  return (
+                    <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="text-red-500" size={20} />
+                        <div>
+                          <p className="text-[10px] text-white font-black uppercase tracking-widest">COMANDO: ALERTA DE DESERCIÓN</p>
+                          <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
+                        </div>
                       </div>
+                      <ChevronRight size={16} className="text-red-500" />
                     </div>
-                    <ChevronRight size={16} className="text-red-500" />
-                  </div>
-                );
-              } else {
-                // ESTUDIANTE: Solo ver alerta personal si ELLOS están en riesgo
-                if (!currentUser?.lastAttendance || currentUser.lastAttendance === 'N/A') return null;
-                const myLastDate = parseAttendanceDate(currentUser.lastAttendance);
-                if (!myLastDate) return null;
-                const myDiffDays = Math.floor((new Date().getTime() - myLastDate.getTime()) / (1000 * 60 * 60 * 24));
+                  );
+                } else {
+                  // ESTUDIANTE: Solo ver alerta personal si ELLOS están en riesgo
+                  if (!currentUser?.lastAttendance || currentUser.lastAttendance === 'N/A') return null;
+                  const myLastDate = parseAttendanceDate(currentUser.lastAttendance);
+                  if (!myLastDate) return null;
+                  const myDiffDays = Math.floor((new Date().getTime() - myLastDate.getTime()) / (1000 * 60 * 60 * 24));
 
-                if (myDiffDays < 14) return null; // No están en riesgo
+                  if (myDiffDays < 14) return null; // No están en riesgo
 
-                return (
-                  <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="text-amber-500" size={20} />
-                      <div>
-                        <p className="text-[10px] text-white font-black uppercase tracking-widest">⚠️ ALERTA PERSONAL</p>
-                        <p className="text-[8px] text-amber-500/80 font-bold uppercase">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            })()}
-
-            {/* EVENTOS ACTIVOS */}
-            {activeEvents.length > 0 && (
-              <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar size={14} className="text-[#ffb700] animate-pulse" />
-                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest font-bebas">Operaciones Próximas</span>
-                </div>
-                {activeEvents.map(evt => (
-                  <div key={evt.id} className="bg-[#001833] border border-white/10 rounded-3xl p-5 space-y-4 shadow-xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                      <Target size={60} className="text-[#ffb700]" />
-                    </div>
-                    <div className="relative z-10">
-                      <h4 className="text-lg font-bebas font-black text-white uppercase tracking-wider">{evt.titulo}</h4>
-                      <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest mb-3 opacity-80">{evt.fecha} @ {evt.hora || 'S/H'}</p>
-                      {evt.descripcion && <p className="text-[9px] text-white/50 mb-4 leading-relaxed font-montserrat">{evt.descripcion}</p>}
-
-                      <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => handleConfirmEventAttendance(evt)}
-                          disabled={isConfirmingEvent === evt.id}
-                          className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas"
-                        >
-                          {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                          Confirmar Mi Asistencia
-                        </button>
-
-                        <div className="flex gap-2">
-                          <a
-                            href={generateGoogleCalendarLink({
-                              title: evt.titulo,
-                              description: evt.descripcion || '',
-                              startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
-                              endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
-                            })}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
-                          >
-                            <Calendar size={12} /> Google
-                          </a>
-                          <button
-                            onClick={() => downloadIcsFile({
-                              title: evt.titulo,
-                              description: evt.descripcion || '',
-                              startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
-                              endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
-                            })}
-                            className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
-                          >
-                            <Download size={12} /> .ICS
-                          </button>
+                  return (
+                    <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="text-amber-500" size={20} />
+                        <div>
+                          <p className="text-[10px] text-white font-black uppercase tracking-widest">⚠️ ALERTA PERSONAL</p>
+                          <p className="text-[8px] text-amber-500/80 font-bold uppercase">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
                         </div>
                       </div>
                     </div>
+                  );
+                }
+              })()}
+
+              {/* EVENTOS ACTIVOS */}
+              {activeEvents.length > 0 && (
+                <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar size={14} className="text-[#ffb700] animate-pulse" />
+                    <span className="text-[10px] font-black text-white/60 uppercase tracking-widest font-bebas">Operaciones Próximas</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  {activeEvents.map(evt => (
+                    <div key={evt.id} className="bg-[#001833] border border-white/10 rounded-3xl p-5 space-y-4 shadow-xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                        <Target size={60} className="text-[#ffb700]" />
+                      </div>
+                      <div className="relative z-10">
+                        <h4 className="text-lg font-bebas font-black text-white uppercase tracking-wider">{evt.titulo}</h4>
+                        <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest mb-3 opacity-80">{evt.fecha} @ {evt.hora || 'S/H'}</p>
+                        {evt.descripcion && <p className="text-[9px] text-white/50 mb-4 leading-relaxed font-montserrat">{evt.descripcion}</p>}
 
-            <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
-              <button onClick={() => setView(AppView.RANKING)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
-                <Trophy size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
-              </button>
-              {currentUser?.userRole !== UserRole.STUDENT && (
-                <button onClick={() => setView(AppView.ENROLLMENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                  <UserPlus size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Reclutar</span>
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      case AppView.SCANNER:
-        return (
-          <div className="fixed inset-0 z-50 bg-[#001f3f] flex flex-col p-6 animate-in fade-in">
-            <div className="flex justify-between items-start mb-6">
-              <div className="space-y-1">
-                <h2 className="text-3xl font-bebas text-white tracking-widest">Escáner Táctico</h2>
-                <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] opacity-60">Consagrados Force 2026</p>
-              </div>
-              <button onClick={() => setView(AppView.HOME)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400"><X size={24} /></button>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden rounded-[3rem] border border-white/5 bg-black/40">
-              <div className="absolute inset-0 z-0">
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-40" />
-              </div>
-              <div className="relative z-10 w-48 h-48 sm:w-64 sm:h-64 border-2 border-[#ffb700]/30 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md scanner-frame shadow-[0_0_30px_rgba(255,183,0,0.1)]">
-                {scanStatus === 'SCANNING' ? (
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#ffb700]/20 to-transparent animate-pulse rounded-[2rem]"></div>
-                    <QrCode size={40} className="text-[#ffb700] animate-bounce mb-3" />
-                    <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.2em] font-bebas">Buscando Agente...</p>
-                  </>
-                ) : scanStatus === 'SUCCESS' ? (
-                  <div className="flex flex-col items-center gap-2 animate-in zoom-in-50 duration-300">
-                    <CheckCircle2 size={48} className="text-green-500" />
-                    <p className="text-[12px] text-green-500 font-black uppercase tracking-widest font-bebas">Verificado</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => { setScanStatus('SCANNING'); }}
-                    className="px-8 py-4 bg-[#ffb700] text-[#001f3f] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all font-bebas"
-                  >
-                    Reactivar Lente
-                  </button>
-                )}
-              </div>
-
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#001f3f] via-[#001f3f]/95 to-transparent p-6 sm:p-10 pb-[env(safe-area-inset-bottom,20px)]">
-                <div className="max-w-sm mx-auto space-y-4">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="BUSCAR NOMBRE O ID..."
-                      value={scannedId}
-                      onChange={(e) => setScannedId(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-8 text-white text-[12px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all text-center placeholder:text-white/20"
-                    />
-                    {scannedId && !agents.find(a => String(a.id) === scannedId) && (
-                      <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#001f3f] border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2 z-50 animate-in slide-in-from-bottom-2 no-scrollbar">
-                        {agents.filter(a => a.name.toLowerCase().includes(scannedId.toLowerCase()) || String(a.id).includes(scannedId)).slice(0, 8).map(a => (
-                          <button key={a.id} onClick={() => { setScannedId(a.id); processScan(a.id); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left">
-                            <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-lg object-cover" />
-                            <div>
-                              <p className="text-[10px] font-black text-white uppercase leading-none">{a.name}</p>
-                              <p className="text-[7px] text-[#ffb700]/60 font-bold">ID: {a.id}</p>
-                            </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => handleConfirmEventAttendance(evt)}
+                            disabled={isConfirmingEvent === evt.id}
+                            className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas"
+                          >
+                            {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                            Confirmar Mi Asistencia
                           </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => scannedId && processScan(scannedId)}
-                    disabled={!scannedId}
-                    className="w-full bg-[#ffb700] py-5 rounded-3xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
-                  >
-                    <CheckCircle2 size={18} /> Confirmar Asistencia
-                  </button>
-                </div>
-              </div>
 
-              {/* BOTÓN DE REFRESCO - ACCESIBLE EN MÓVIL */}
-              <div className="absolute top-6 right-6 z-20">
-                <button
-                  onClick={() => syncData()}
-                  className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl active:scale-95"
-                  title="Actualizar Radar"
-                >
-                  <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
-                </button>
-              </div>
-
-
-            </div>
-          </div>
-        );
-      case AppView.DIRECTORY:
-        return (
-          <div className="p-6 md:p-10 space-y-6 animate-in fade-in pb-24 max-w-4xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-              <div>
-                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Directorio de Agentes</h2>
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Toca un agente para ver su perfil</p>
-              </div>
-              <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
-                <Users className="text-[#ffb700]" size={18} />
-                <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{agents.length} Agentes</span>
-              </div>
-            </div>
-
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="BUSCAR AGENTE..."
-                value={directorySearch}
-                onChange={(e) => setDirectorySearch(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all placeholder:text-white/20"
-              />
-              <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-white/30" />
-            </div>
-
-            {/* Clasificación por Rol */}
-            {(() => {
-              const search = directorySearch.toLowerCase();
-              const matchSearch = (a: any) => !directorySearch || a.name.toLowerCase().includes(search) || String(a.id).includes(directorySearch);
-              const directors = agents.filter(a => a.userRole === UserRole.DIRECTOR && matchSearch(a));
-              const leaders = agents.filter(a => a.userRole === UserRole.LEADER && matchSearch(a)).sort((a, b) => b.xp - a.xp);
-              const students = agents.filter(a => (a.userRole === UserRole.STUDENT || !a.userRole) && matchSearch(a)).sort((a, b) => b.xp - a.xp);
-
-              const renderGrid = (list: typeof agents, borderClass: string, xpColor: string) => (
-                <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
-                  {list.map((a, idx) => (
-                    <div
-                      key={a.id}
-                      onClick={() => setFoundAgent(a)}
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                      className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} animate-view transition-all p-1 active:scale-90 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-1`}
-                    >
-                      <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-700" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
-
-                      {/* Badge Overlays */}
-                      <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
-                        {badges.filter(b => String(b.agentId) === String(a.id) || String(b.agentName) === String(a.name)).map((b, i) => (
-                          <div key={i} className="w-4 h-4 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-[8px] animate-in zoom-in slide-in-from-right-1 shadow-lg" title={b.label}>
-                            {b.emoji}
+                          <div className="flex gap-2">
+                            <a
+                              href={generateGoogleCalendarLink({
+                                title: evt.titulo,
+                                description: evt.descripcion || '',
+                                startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
+                                endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
+                              })}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
+                            >
+                              <Calendar size={12} /> Google
+                            </a>
+                            <button
+                              onClick={() => downloadIcsFile({
+                                title: evt.titulo,
+                                description: evt.descripcion || '',
+                                startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
+                                endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
+                              })}
+                              className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
+                            >
+                              <Download size={12} /> .ICS
+                            </button>
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-2 text-center pointer-events-none">
-                        <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
-                        <p className={`text-[6px] font-bold ${xpColor}`}>{a.xp} XP</p>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              );
+              )}
 
-              return (
-                <div className="space-y-6 pb-10">
-                  {directors.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 px-1">
-                        <Crown size={14} className="text-[#ffb700]" />
-                        <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em]">Directores ({directors.length})</span>
-                      </div>
-                      {renderGrid(directors, "border-[#ffb700]/30 bg-[#ffb700]/5 hover:border-[#ffb700]/50", "text-[#ffb700]")}
+              <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
+                <button onClick={() => setView(AppView.RANKING)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
+                  <Trophy size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
+                </button>
+                {currentUser?.userRole !== UserRole.STUDENT && (
+                  <button onClick={() => setView(AppView.ENROLLMENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                    <UserPlus size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Reclutar</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        );
+      case AppView.SCANNER:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="scanner" className="h-full">
+            <div className="fixed inset-0 z-50 bg-[#001f3f] flex flex-col p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div className="space-y-1">
+                  <h2 className="text-3xl font-bebas text-white tracking-widest">Escáner Táctico</h2>
+                  <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em] opacity-60">Consagrados Force 2026</p>
+                </div>
+                <button onClick={() => setView(AppView.HOME)} className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400"><X size={24} /></button>
+              </div>
+
+              <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden rounded-[3rem] border border-white/5 bg-black/40">
+                <div className="absolute inset-0 z-0">
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-40" />
+                </div>
+                <div className="relative z-10 w-48 h-48 sm:w-64 sm:h-64 border-2 border-[#ffb700]/30 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md scanner-frame shadow-[0_0_30px_rgba(255,183,0,0.1)]">
+                  {scanStatus === 'SCANNING' ? (
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-b from-[#ffb700]/20 to-transparent animate-pulse rounded-[2rem]"></div>
+                      <QrCode size={40} className="text-[#ffb700] animate-bounce mb-3" />
+                      <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.2em] font-bebas">Buscando Agente...</p>
+                    </>
+                  ) : scanStatus === 'SUCCESS' ? (
+                    <div className="flex flex-col items-center gap-2 animate-in zoom-in-50 duration-300">
+                      <CheckCircle2 size={48} className="text-green-500" />
+                      <p className="text-[12px] text-green-500 font-black uppercase tracking-widest font-bebas">Verificado</p>
                     </div>
-                  )}
-                  {leaders.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 px-1">
-                        <Zap size={14} className="text-blue-400" />
-                        <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.3em]">Líderes ({leaders.length})</span>
-                      </div>
-                      {renderGrid(leaders, "border-blue-400/20 bg-blue-400/5 hover:border-blue-400/40", "text-blue-400")}
-                    </div>
-                  )}
-                  {students.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 px-1">
-                        <Users size={14} className="text-white/60" />
-                        <span className="text-[9px] text-white/60 font-black uppercase tracking-[0.3em]">Estudiantes ({students.length})</span>
-                      </div>
-                      {renderGrid(students, "border-white/5 bg-white/5 hover:border-white/20", "text-[#ffb700]")}
-                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setScanStatus('SCANNING'); }}
+                      className="px-8 py-4 bg-[#ffb700] text-[#001f3f] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all font-bebas"
+                    >
+                      Reactivar Lente
+                    </button>
                   )}
                 </div>
-              );
-            })()}
-          </div>
+
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#001f3f] via-[#001f3f]/95 to-transparent p-6 sm:p-10 pb-[env(safe-area-inset-bottom,20px)]">
+                  <div className="max-w-sm mx-auto space-y-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="BUSCAR NOMBRE O ID..."
+                        value={scannedId}
+                        onChange={(e) => setScannedId(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-8 text-white text-[12px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all text-center placeholder:text-white/20"
+                      />
+                      {scannedId && !agents.find(a => String(a.id) === scannedId) && (
+                        <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#001f3f] border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2 z-50 animate-in slide-in-from-bottom-2 no-scrollbar">
+                          {agents.filter(a => a.name.toLowerCase().includes(scannedId.toLowerCase()) || String(a.id).includes(scannedId)).slice(0, 8).map(a => (
+                            <button key={a.id} onClick={() => { setScannedId(a.id); processScan(a.id); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left">
+                              <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-lg object-cover" />
+                              <div>
+                                <p className="text-[10px] font-black text-white uppercase leading-none">{a.name}</p>
+                                <p className="text-[7px] text-[#ffb700]/60 font-bold">ID: {a.id}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => scannedId && processScan(scannedId)}
+                      disabled={!scannedId}
+                      className="w-full bg-[#ffb700] py-5 rounded-3xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
+                    >
+                      <CheckCircle2 size={18} /> Confirmar Asistencia
+                    </button>
+                  </div>
+                </div>
+
+                {/* BOTÓN DE REFRESCO - ACCESIBLE EN MÓVIL */}
+                <div className="absolute top-6 right-6 z-20">
+                  <button
+                    onClick={() => syncData()}
+                    className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl active:scale-95"
+                    title="Actualizar Radar"
+                  >
+                    <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      case AppView.DIRECTORY:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="directory" className="h-full">
+            <div className="p-6 md:p-10 space-y-6 pb-24 max-w-4xl mx-auto">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                <div>
+                  <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Directorio de Agentes</h2>
+                  <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Toca un agente para ver su perfil</p>
+                </div>
+                <div className="bg-[#ffb700]/10 border border-[#ffb700]/20 px-6 py-4 rounded-2xl flex items-center gap-3">
+                  <Users className="text-[#ffb700]" size={18} />
+                  <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">{agents.length} Agentes</span>
+                </div>
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="BUSCAR AGENTE..."
+                  value={directorySearch}
+                  onChange={(e) => setDirectorySearch(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all placeholder:text-white/20"
+                />
+                <Search size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-white/30" />
+              </div>
+
+              {/* Clasificación por Rol */}
+              {(() => {
+                const search = directorySearch.toLowerCase();
+                const matchSearch = (a: any) => !directorySearch || a.name.toLowerCase().includes(search) || String(a.id).includes(directorySearch);
+                const directors = agents.filter(a => a.userRole === UserRole.DIRECTOR && matchSearch(a));
+                const leaders = agents.filter(a => a.userRole === UserRole.LEADER && matchSearch(a)).sort((a, b) => b.xp - a.xp);
+                const students = agents.filter(a => (a.userRole === UserRole.STUDENT || !a.userRole) && matchSearch(a)).sort((a, b) => b.xp - a.xp);
+
+                const renderGrid = (list: typeof agents, borderClass: string, xpColor: string) => (
+                  <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4">
+                    {list.map((a, idx) => (
+                      <div
+                        key={a.id}
+                        onClick={() => setFoundAgent(a)}
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                        className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} animate-view transition-all p-1 active:scale-90 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-1`}
+                      >
+                        <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-700" onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }} />
+
+                        {/* Badge Overlays */}
+                        <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
+                          {badges.filter(b => String(b.agentId) === String(a.id) || String(b.agentName) === String(a.name)).map((b, i) => (
+                            <div key={i} className="w-4 h-4 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-[8px] animate-in zoom-in slide-in-from-right-1 shadow-lg" title={b.label}>
+                              {b.emoji}
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-2 text-center pointer-events-none">
+                          <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{a.name.split(' ')[0]}</p>
+                          <p className={`text-[6px] font-bold ${xpColor}`}>{a.xp} XP</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+
+                return (
+                  <div className="space-y-6 pb-10">
+                    {directors.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                          <Crown size={14} className="text-[#ffb700]" />
+                          <span className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em]">Directores ({directors.length})</span>
+                        </div>
+                        {renderGrid(directors, "border-[#ffb700]/30 bg-[#ffb700]/5 hover:border-[#ffb700]/50", "text-[#ffb700]")}
+                      </div>
+                    )}
+                    {leaders.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                          <Zap size={14} className="text-blue-400" />
+                          <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.3em]">Líderes ({leaders.length})</span>
+                        </div>
+                        {renderGrid(leaders, "border-blue-400/20 bg-blue-400/5 hover:border-blue-400/40", "text-blue-400")}
+                      </div>
+                    )}
+                    {students.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                          <Users size={14} className="text-white/60" />
+                          <span className="text-[9px] text-white/60 font-black uppercase tracking-[0.3em]">Estudiantes ({students.length})</span>
+                        </div>
+                        {renderGrid(students, "border-white/5 bg-white/5 hover:border-white/20", "text-[#ffb700]")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </motion.div>
         );
       case AppView.CIU:
-        return currentUser ? (
-          <CIUModule
-            agents={agents}
-            currentUser={currentUser}
-            onUpdateNeeded={() => syncData()}
-            intelReport={intelReport}
-            setView={setView}
-            visitorCount={visitorRadar.length}
-            onRefreshIntel={handleRefreshIntel}
-            isRefreshingIntel={isRefreshingIntel}
-            onAgentClick={(agent) => { setScannedAgentForPoints(agent); setView(AppView.HOME); }}
-            userRole={effectiveRole}
-            onActivateNotifications={initFirebaseMessaging}
-          />
-        ) : null;
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="ciu" className="h-full">
+            {currentUser ? (
+              <CIUModule
+                agents={agents}
+                currentUser={currentUser}
+                onUpdateNeeded={() => syncData()}
+                intelReport={intelReport}
+                setView={setView}
+                visitorCount={visitorRadar.length}
+                onRefreshIntel={handleRefreshIntel}
+                isRefreshingIntel={isRefreshingIntel}
+                onAgentClick={(agent) => { setScannedAgentForPoints(agent); setView(AppView.HOME); }}
+                userRole={effectiveRole}
+                onActivateNotifications={initFirebaseMessaging}
+              />
+            ) : null}
+          </motion.div>
+        );
       case AppView.VISITOR:
         return (
-          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-4xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-              <div>
-                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Inteligencia</h2>
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">SISTEMA DE ANÁLISIS DE SEÑALES TÁCTICAS</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    syncData();
-                  }}
-                  className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/40 border border-white/10"
-                >
-                  <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                  ESCANEAR DESERCIONES
-                </button>
-                <button
-                  onClick={() => setView(AppView.ENROLLMENT)}
-                  className="bg-green-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-green-900/40 border border-white/10"
-                >
-                  <UserPlus size={16} /> INSCRIPCIÓN DE AGENTE
-                </button>
-                <button
-                  onClick={() => {
-                    const name = prompt("INGRESAR NOMBRE DEL VISITANTE:");
-                    if (name) {
-                      processScan(name.trim().toUpperCase());
-                    }
-                  }}
-                  className="bg-[#ffb700] text-[#001f3f] px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#ffb700]/20 border border-white/20"
-                >
-                  <Plus size={16} /> REGISTRO DE VISITA
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-12">
-              {/* SECCIÓN 1: AGENTES EN RIESGO (INTELIGENCIA INTERNA) */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                  <Activity size={18} className="text-red-500 animate-pulse" />
-                  <h3 className="text-xl font-bebas text-white tracking-widest uppercase">RADAR DE DESERCIÓN</h3>
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="visitor" className="h-full">
+            <div className="p-6 md:p-10 space-y-8 pb-24 max-w-4xl mx-auto">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                <div>
+                  <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Inteligencia</h2>
+                  <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">SISTEMA DE ANÁLISIS DE SEÑALES TÁCTICAS</p>
                 </div>
-                {(() => {
-                  const riskAgents = agents.filter(a => {
-                    // Solo estudiantes que realmente no han asistido
-                    const isStudent = (a.userRole === UserRole.STUDENT || !a.userRole);
-                    if (!isStudent) return false;
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      syncData();
+                    }}
+                    className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/40 border border-white/10"
+                  >
+                    <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                    ESCANEAR DESERCIONES
+                  </button>
+                  <button
+                    onClick={() => setView(AppView.ENROLLMENT)}
+                    className="bg-green-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-green-900/40 border border-white/10"
+                  >
+                    <UserPlus size={16} /> INSCRIPCIÓN DE AGENTE
+                  </button>
+                </div>
+              </div>
 
-                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return true; // Nunca han asistido
+              <div className="space-y-12">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                    <Activity size={18} className="text-red-500 animate-pulse" />
+                    <h3 className="text-xl font-bebas text-white tracking-widest uppercase">RADAR DE DESERCIÓN</h3>
+                  </div>
+                  {(() => {
+                    const riskAgents = agents.filter(a => {
+                      const isStudent = (a.userRole === UserRole.STUDENT || !a.userRole);
+                      if (!isStudent) return false;
+                      if (!a.lastAttendance || a.lastAttendance === 'N/A') return true;
+                      const lastDate = parseAttendanceDate(a.lastAttendance);
+                      if (!lastDate) return true;
+                      const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                      return diffDays >= 14;
+                    }).sort((a, b) => {
+                      const dateA = parseAttendanceDate(a.lastAttendance);
+                      const dateB = parseAttendanceDate(b.lastAttendance);
+                      if (!dateA) return -1;
+                      if (!dateB) return 1;
+                      return dateA.getTime() - dateB.getTime();
+                    });
 
-                    const lastDate = parseAttendanceDate(a.lastAttendance);
-                    if (!lastDate) return true; // Fecha no parseable = riesgo
+                    if (riskAgents.length === 0) return (
+                      <div className="py-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                        <p className="text-[10px] text-white/30 font-black uppercase tracking-widest font-bebas">No se detectan agentes en riesgo crítico</p>
+                      </div>
+                    );
 
-                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                    return diffDays >= 14;
-                  }).sort((a, b) => {
-                    const dateA = parseAttendanceDate(a.lastAttendance);
-                    const dateB = parseAttendanceDate(b.lastAttendance);
-                    if (!dateA) return -1;
-                    if (!dateB) return 1;
-                    return dateA.getTime() - dateB.getTime();
-                  });
-
-                  if (riskAgents.length === 0) return (
-                    <div className="py-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                      <p className="text-[10px] text-white/30 font-black uppercase tracking-widest font-bebas">No se detectan agentes en riesgo crítico</p>
-                    </div>
-                  );
-
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {riskAgents.map(a => {
-                        const lastDate = parseAttendanceDate(a.lastAttendance);
-                        const diffDays = lastDate ? Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-                        const isDanger = diffDays >= 21;
-                        return (
-                          <div key={a.id} onClick={() => { setShowExpedienteFor(a); }} className={`group relative bg-[#001833] border rounded-[2.5rem] p-6 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1 ${isDanger ? 'border-red-500/30' : 'border-amber-500/20'}`}>
-                            <div className="flex items-center gap-4">
-                              <div className="relative w-16 h-16">
-                                <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full rounded-2xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10" />
-                                <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#001833] ${isDanger ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {riskAgents.map(a => {
+                          const lastDate = parseAttendanceDate(a.lastAttendance);
+                          const diffDays = lastDate ? Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+                          const isDanger = diffDays >= 21;
+                          return (
+                            <div key={a.id} onClick={() => { setShowExpedienteFor(a); }} className={`group relative bg-[#001833] border rounded-[2.5rem] p-6 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1 ${isDanger ? 'border-red-500/30' : 'border-amber-500/20'}`}>
+                              <div className="flex items-center gap-4">
+                                <div className="relative w-16 h-16">
+                                  <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full rounded-2xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10" />
+                                  <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#001833] ${isDanger ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                  <p className="text-lg font-bebas text-white uppercase tracking-wider truncate">{a.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${isDanger ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                      {diffDays >= 999 ? 'SIN REGISTRO' : `${diffDays} DÍAS AUSENTE`}
+                                    </span>
+                                  </div>
+                                </div>
+                                {currentUser?.userRole === UserRole.DIRECTOR && (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!window.confirm(`⚠️ ¿ELIMINAR AL AGENTE ${a.name}?`)) return;
+                                      if (!window.confirm(`🚨 CONFIRMACIÓN FINAL: Esta acción es IRREVERSIBLE. ¿Dar de baja a ${a.name} (${a.id})?`)) return;
+                                      try {
+                                        const res = await deleteAgentService(a.id);
+                                        if (res.success) {
+                                          alert(`✅ AGENTE ${a.name} ELIMINADO DEL SISTEMA.`);
+                                          setAgents(prev => prev.filter(ag => ag.id !== a.id));
+                                        } else {
+                                          alert(`❌ ERROR: ${res.error}`);
+                                        }
+                                      } catch (err) {
+                                        alert('❌ FALLO EN PROTOCOLO DE ELIMINACIÓN');
+                                      }
+                                    }}
+                                    className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-all active:scale-90 z-10"
+                                    title="Eliminar Agente"
+                                  >
+                                    <Trash2 size={16} className="text-red-500" />
+                                  </button>
+                                )}
                               </div>
-                              <div className="flex-1 overflow-hidden">
-                                <p className="text-lg font-bebas text-white uppercase tracking-wider truncate">{a.name}</p>
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${isDanger ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                    {diffDays >= 999 ? 'SIN REGISTRO' : `${diffDays} DÍAS AUSENTE`}
-                                  </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                    <Users size={18} className="text-[#ffb700]" />
+                    <h3 className="text-xl font-bebas text-white tracking-widest uppercase">Señales Externas (Visitantes)</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {visitorRadar.length > 0 ? (
+                      visitorRadar.map(v => (
+                        <div key={v.id} onClick={() => { setScannedId(v.id); setView(AppView.SCANNER); }} className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] p-8 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1">
+                          <div className="absolute top-4 right-6">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="p-3 bg-white/5 rounded-2xl w-fit group-hover:bg-[#ffb700]/10 transition-colors">
+                              <Users className="text-[#ffb700]" size={24} />
+                            </div>
+                            <div>
+                              <p className="text-xl font-bebas text-white uppercase tracking-wider group-hover:text-[#ffb700] transition-colors">{v.name}</p>
+                              <div className="flex items-center gap-4 mt-2">
+                                <div className="flex flex-col">
+                                  <span className="text-[7px] text-gray-500 font-black uppercase">Frecuencia</span>
+                                  <span className="text-[10px] text-white font-black uppercase">{v.visits || 0} Visitas</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/10" />
+                                <div className="flex flex-col">
+                                  <span className="text-[7px] text-gray-500 font-black uppercase">ID</span>
+                                  <span className="text-[10px] text-gray-400 font-mono">{v.id}</span>
                                 </div>
                               </div>
-                              {/* Delete button - Director only */}
-                              {currentUser?.userRole === UserRole.DIRECTOR && (
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!window.confirm(`⚠️ ¿ELIMINAR AL AGENTE ${a.name}?`)) return;
-                                    if (!window.confirm(`🚨 CONFIRMACIÓN FINAL: Esta acción es IRREVERSIBLE. ¿Dar de baja a ${a.name} (${a.id})?`)) return;
-                                    try {
-                                      const res = await deleteAgentService(a.id);
-                                      if (res.success) {
-                                        alert(`✅ AGENTE ${a.name} ELIMINADO DEL SISTEMA.`);
-                                        setAgents(prev => prev.filter(ag => ag.id !== a.id));
-                                      } else {
-                                        alert(`❌ ERROR: ${res.error}`);
-                                      }
-                                    } catch (err) {
-                                      alert('❌ FALLO EN PROTOCOLO DE ELIMINACIÓN');
-                                    }
-                                  }}
-                                  className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-all active:scale-90 z-10"
-                                  title="Eliminar Agente"
-                                >
-                                  <Trash2 size={16} className="text-red-500" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* SECCIÓN 2: SEÑALES EXTERNAS (VISITANTES) */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                  <Users size={18} className="text-[#ffb700]" />
-                  <h3 className="text-xl font-bebas text-white tracking-widest uppercase">Señales Externas (Visitantes)</h3>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {visitorRadar.length > 0 ? (
-                    visitorRadar.map(v => (
-                      <div key={v.id} onClick={() => { setScannedId(v.id); setView(AppView.SCANNER); }} className="group relative bg-[#001833] border border-white/5 rounded-[2.5rem] p-8 hover:border-[#ffb700]/30 transition-all cursor-pointer shadow-xl hover:-translate-y-1">
-                        <div className="absolute top-4 right-6">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-                        </div>
-                        <div className="space-y-4">
-                          <div className="p-3 bg-white/5 rounded-2xl w-fit group-hover:bg-[#ffb700]/10 transition-colors">
-                            <Users className="text-[#ffb700]" size={24} />
-                          </div>
-                          <div>
-                            <p className="text-xl font-bebas text-white uppercase tracking-wider group-hover:text-[#ffb700] transition-colors">{v.name}</p>
-                            <div className="flex items-center gap-4 mt-2">
-                              <div className="flex flex-col">
-                                <span className="text-[7px] text-gray-500 font-black uppercase">Frecuencia</span>
-                                <span className="text-[10px] text-white font-black uppercase">{v.visits || 0} Visitas</span>
-                              </div>
-                              <div className="w-px h-6 bg-white/10" />
-                              <div className="flex flex-col">
-                                <span className="text-[7px] text-gray-500 font-black uppercase">ID</span>
-                                <span className="text-[10px] text-gray-400 font-mono">{v.id}</span>
-                              </div>
                             </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                        <Activity className="mx-auto text-gray-800 mb-4 opacity-20" size={48} />
+                        <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">Buscando señales externas tácticas...</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
-                      <Activity className="mx-auto text-gray-800 mb-4 opacity-20" size={48} />
-                      <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">Buscando señales externas tácticas...</p>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-
-
-          </div>
+          </motion.div>
         );
-      case AppView.ACADEMIA: return <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />;
+      case AppView.ACADEMIA:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="academia" className="h-full">
+            <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />
+          </motion.div>
+        );
       case AppView.ASCENSO:
       case AppView.CONTENT:
       case AppView.TAREAS:
-        return currentUser ? (
-          <TrainingCenter
-            currentUser={currentUser}
-            setView={setView}
-            onUpdateNeeded={() => syncData()}
-            initialTab={
-              view === AppView.CONTENT ? 'material' :
-                view === AppView.TAREAS ? 'misiones' : 'ascenso'
-            }
-          />
-        ) : null;
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="training" className="h-full">
+            {currentUser ? (
+              <TrainingCenter
+                currentUser={currentUser}
+                setView={setView}
+                onUpdateNeeded={() => syncData()}
+                initialTab={
+                  view === AppView.CONTENT ? 'material' :
+                    view === AppView.TAREAS ? 'misiones' : 'ascenso'
+                }
+              />
+            ) : null}
+          </motion.div>
+        );
       case AppView.PROFILE:
         return (
-          <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-32 max-w-2xl mx-auto font-montserrat flex flex-col items-center">
-            <div className="w-full flex justify-between items-center mb-4">
-              <h2 className="text-3xl font-bebas text-white tracking-widest uppercase truncate">Expediente de Agente</h2>
-              <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-                <Target className="text-[#ffb700]" size={20} />
-              </div>
-            </div>
-
-            {currentUser && <DigitalIdCard agent={currentUser} onClose={() => setView(AppView.HOME)} />}
-
-            {currentUser?.userRole === UserRole.DIRECTOR && (
-              <div className="w-full space-y-2 mt-6">
-                <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-center">Vista como rol</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.STUDENT ? null : UserRole.STUDENT)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.STUDENT ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Estudiante</button>
-                  <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.LEADER ? null : UserRole.LEADER)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.LEADER ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Líder</button>
-                  <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.DIRECTOR ? null : UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${(!viewingAsRole || viewingAsRole === UserRole.DIRECTOR) ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Director</button>
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="profile" className="h-full">
+            <div className="p-6 md:p-10 space-y-8 pb-32 max-w-2xl mx-auto font-montserrat flex flex-col items-center">
+              <div className="w-full flex justify-between items-center mb-4">
+                <h2 className="text-3xl font-bebas text-white tracking-widest uppercase truncate">Expediente de Agente</h2>
+                <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                  <Target className="text-[#ffb700]" size={20} />
                 </div>
               </div>
-            )}
 
-            <div className="w-full grid grid-cols-1 gap-3 mt-6">
-              <div className="w-full space-y-3">
-                <button
-                  onClick={() => alert("MÓDULO DE SEGURIDAD.")}
-                  className="w-full flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas"
-                >
-                  <div className="flex items-center gap-3">
-                    <Key size={18} className="text-[#ffb700]" />
-                    Cambiar PIN de Acceso
+              {currentUser && <DigitalIdCard agent={currentUser} onClose={() => setView(AppView.HOME)} />}
+
+              {currentUser?.userRole === UserRole.DIRECTOR && (
+                <div className="w-full space-y-2 mt-6">
+                  <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-center">Vista como rol</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.STUDENT ? null : UserRole.STUDENT)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.STUDENT ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Estudiante</button>
+                    <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.LEADER ? null : UserRole.LEADER)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${viewingAsRole === UserRole.LEADER ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Líder</button>
+                    <button onClick={() => setViewingAsRole(viewingAsRole === UserRole.DIRECTOR ? null : UserRole.DIRECTOR)} className={`py-3 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 ${(!viewingAsRole || viewingAsRole === UserRole.DIRECTOR) ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}>Director</button>
                   </div>
-                  <ChevronRight size={14} className="text-gray-500" />
-                </button>
+                </div>
+              )}
 
-                {biometricAvailable ? (
+              <div className="w-full grid grid-cols-1 gap-3 mt-6">
+                <div className="w-full space-y-3">
                   <button
-                    onClick={async () => {
-                      if (!currentUser) return;
-                      setIsRegisteringBio(true);
-                      try {
-                        const credentialId = await registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : []);
-                        if (credentialId) {
-                          const res = await registerBiometrics(currentUser.id, credentialId);
-                          if (res.success) {
-                            alert("✅ BIOMETRÍA REGISTRADA EXITOSAMENTE.");
-                            syncData();
-                          }
-                        }
-                      } catch (err: any) {
-                        alert(err.message || "FALLO EN REGISTRO BIOMÉTRICO.");
-                      } finally {
-                        setIsRegisteringBio(false);
-                      }
-                    }}
-                    disabled={isRegisteringBio}
-                    className="w-full flex items-center justify-between px-6 py-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all font-bebas group"
+                    onClick={() => alert("MÓDULO DE SEGURIDAD.")}
+                    className="w-full flex items-center justify-between px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas"
                   >
                     <div className="flex items-center gap-3">
-                      {isRegisteringBio ? <Loader2 size={18} className="text-blue-400 animate-spin" /> : <Fingerprint size={18} className="text-blue-400 group-hover:scale-110 transition-transform" />}
-                      <div className="flex flex-col items-start">
-                        <span>Configurar Biometría</span>
-                        <span className="text-[7px] text-blue-400/60 font-black tracking-[0.2em]">Huella o FaceID</span>
-                      </div>
+                      <Key size={18} className="text-[#ffb700]" />
+                      Cambiar PIN de Acceso
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[8px] ${currentUser?.biometricCredential ? 'text-green-400' : 'text-red-400'} font-black uppercase tracking-widest`}>
-                        {currentUser?.biometricCredential ? 'ACTIVO' : 'PENDIENTE'}
-                      </span>
-                      <div className={`w-2 h-2 rounded-full ${currentUser?.biometricCredential ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 pulse-red'}`} />
-                    </div>
+                    <ChevronRight size={14} className="text-gray-500" />
                   </button>
-                ) : (
-                  <div className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl opacity-50">
-                    <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-center">Biometría no soportada en este navegador</p>
-                  </div>
-                )}
-              </div>
-              <div className="w-full grid grid-cols-1 gap-3 mt-6">
-                <button
-                  onClick={() => handleLogout(false)}
-                  className="flex items-center justify-center gap-3 px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas shadow-lg active:scale-95"
-                >
-                  <LogOut size={18} />
-                  Cerrar Conexión
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm("🚨 ¿CERRAR SESIÓN POR COMPLETO?\nEsto borrará tu acceso rápido de este dispositivo (ideal si el teléfono no es tuyo o es prestado).")) {
-                      handleLogout(true);
-                    }
-                  }}
-                  className="flex items-center justify-center gap-3 px-6 py-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-red-500/40 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 transition-all font-bebas active:scale-95"
-                >
-                  <Trash2 size={16} />
-                  Limpiar Datos de Sesión y Salir
-                </button>
+
+                  {biometricAvailable ? (
+                    <button
+                      onClick={async () => {
+                        if (!currentUser) return;
+                        setIsRegisteringBio(true);
+                        try {
+                          const credentialId = await registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : []);
+                          if (credentialId) {
+                            const res = await registerBiometrics(currentUser.id, credentialId);
+                            if (res.success) {
+                              alert("✅ BIOMETRÍA REGISTRADA EXITOSAMENTE.");
+                              syncData();
+                            }
+                          }
+                        } catch (err: any) {
+                          alert(err.message || "FALLO EN REGISTRO BIOMÉTRICO.");
+                        } finally {
+                          setIsRegisteringBio(false);
+                        }
+                      }}
+                      disabled={isRegisteringBio}
+                      className="w-full flex items-center justify-between px-6 py-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all font-bebas group"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isRegisteringBio ? <Loader2 size={18} className="text-blue-400 animate-spin" /> : <Fingerprint size={18} className="text-blue-400 group-hover:scale-110 transition-transform" />}
+                        <div className="flex flex-col items-start">
+                          <span>Configurar Biometría</span>
+                          <span className="text-[7px] text-blue-400/60 font-black tracking-[0.2em]">Huella o FaceID</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[8px] ${currentUser?.biometricCredential ? 'text-green-400' : 'text-red-400'} font-black uppercase tracking-widest`}>
+                          {currentUser?.biometricCredential ? 'ACTIVO' : 'PENDIENTE'}
+                        </span>
+                        <div className={`w-2 h-2 rounded-full ${currentUser?.biometricCredential ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 pulse-red'}`} />
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl opacity-50">
+                      <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-center">Biometría no soportada en este navegador</p>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full grid grid-cols-1 gap-3 mt-6">
+                  <button
+                    onClick={() => handleLogout(false)}
+                    className="flex items-center justify-center gap-3 px-6 py-5 bg-white/5 border border-white/10 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-bebas shadow-lg active:scale-95"
+                  >
+                    <LogOut size={18} />
+                    Cerrar Conexión
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm("🚨 ¿CERRAR SESIÓN POR COMPLETO?\nEsto borrará tu acceso rápido de este dispositivo (ideal si el teléfono no es tuyo o es prestado).")) {
+                        handleLogout(true);
+                      }
+                    }}
+                    className="flex items-center justify-center gap-3 px-6 py-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-red-500/40 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 transition-all font-bebas active:scale-95"
+                  >
+                    <Trash2 size={16} />
+                    Limpiar Datos de Sesión y Salir
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         );
       case AppView.RANKING:
         return (
-          <div className="space-y-0 min-h-full">
-            <div className="p-6">
-              <TacticalRanking agents={agents} currentUser={currentUser} />
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="ranking" className="h-full">
+            <div className="space-y-0 min-h-full">
+              <div className="p-6">
+                <TacticalRanking agents={agents} currentUser={currentUser} />
+              </div>
             </div>
-          </div>
+          </motion.div>
         );
-      case AppView.ENROLLMENT: return <EnrollmentForm onSuccess={() => { alert("Inscripción exitosa"); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} agents={agents} />;
+      case AppView.ENROLLMENT:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="enrollment" className="h-full">
+            <EnrollmentForm onSuccess={() => { alert("Inscripción exitosa"); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} agents={agents} />
+          </motion.div>
+        );
       default: return null;
     }
   };
@@ -1414,7 +1428,9 @@ const App: React.FC = () => {
       onOpenInbox={() => setShowInbox(true)}
     >
       <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
-        {renderContent()}
+        <AnimatePresence mode="wait">
+          {renderContent()}
+        </AnimatePresence>
       </div>
 
       {showInbox && (

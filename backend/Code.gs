@@ -60,16 +60,24 @@ function getGlobalConfig() {
 function setupSecretProperties() {
   var props = PropertiesService.getScriptProperties();
   props.setProperties({
-    'SPREADSHEET_ID': 'REPLACE_ME',
-    'DRIVE_FOLDER_ID': 'REPLACE_ME',
-    'TELEGRAM_BOT_TOKEN': 'REPLACE_ME',
-    'TELEGRAM_CHAT_ID': 'REPLACE_ME',
+    'SPREADSHEET_ID': '1Zz4a_Gbom0bSEQNZpc-Dmgaoy0VogCnJFEIHuIee4bo',
+    'DRIVE_FOLDER_ID': '1ZQ71nKMUxI_ckToPQvPDF1oUxMLnf3pB',
+    'TELEGRAM_BOT_TOKEN': '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA',
+    'TELEGRAM_CHAT_ID': '1009537014',
     'SA_PROJECT_ID': 'REPLACE_ME',
     'SA_CLIENT_EMAIL': 'REPLACE_ME',
     'SA_PRIVATE_KEY': 'REPLACE_ME'
   });
   Logger.log('✅ CREDENCIALES GUARDADAS EN PROPERTIES SERVICE.');
   SpreadsheetApp.getUi().alert('✅ Credenciales almacenadas de forma segura.');
+}
+
+/**
+ * @description CONFIGURACIÓN UNIVERSAL: Ejecuta esta función para vincular TODO de una vez.
+ */
+function setupAllCredentials() {
+  setupSecretProperties();
+  Logger.log('🚀 Sistema vinculado: Telegram ✅ | Drive ✅ | Sheets ✅');
 }
 
 /**

@@ -40,8 +40,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isLoadingPromo, setIsLoadingPromo] = useState(false);
   const [onlineAgencies, setOnlineAgencies] = useState<Record<string, boolean>>({});
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', description: '' });
+  const [adjustmentAmount, setAdjustmentAmount] = useState<number>(5);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -969,6 +969,39 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
           {/* ESTADÍSTICAS Y ACCIONES */}
           <div className="lg:col-span-8 space-y-8">
+            {/* SELECTOR DE MONTO DE AJUSTE */}
+            <div className="bg-[#001833] border border-[#ffb700]/20 rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#ffb700]/10 rounded-lg">
+                  <Star className="text-[#ffb700]" size={16} />
+                </div>
+                <div>
+                  <p className="text-[8px] text-white/40 font-black uppercase tracking-widest font-bebas">Monto de Operación</p>
+                  <p className="text-[10px] text-white font-bold uppercase font-montserrat">XP a Sumar/Restar</p>
+                </div>
+              </div>
+              <div className="flex items-center bg-black/40 rounded-xl border border-white/10 p-1">
+                <button
+                  onClick={() => setAdjustmentAmount(Math.max(1, adjustmentAmount - 1))}
+                  className="p-2 text-white/40 hover:text-white transition-colors"
+                >
+                  <Minus size={14} />
+                </button>
+                <input
+                  type="number"
+                  value={adjustmentAmount}
+                  onChange={(e) => setAdjustmentAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-16 bg-transparent text-center text-white font-black font-bebas text-lg outline-none"
+                />
+                <button
+                  onClick={() => setAdjustmentAmount(adjustmentAmount + 1)}
+                  className="p-2 text-white/40 hover:text-white transition-colors"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <MetricCard
                 icon={<Zap className="text-[#ffb700]" size={16} />}
@@ -977,6 +1010,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 color="from-[#ffb700] to-orange-600"
                 onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
                 disabled={isUpdatingPoints}
+                adjustmentAmount={adjustmentAmount}
               />
               <MetricCard
                 icon={<Star className="text-blue-400" size={16} />}
@@ -985,6 +1019,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 color="from-blue-400 to-blue-600"
                 onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
                 disabled={isUpdatingPoints}
+                adjustmentAmount={adjustmentAmount}
               />
             </div>
 
@@ -1109,7 +1144,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   );
 };
 
-const MetricCard = ({ icon, label, value, color, onAdjust, disabled }: { icon: any, label: string, value: number, color: string, onAdjust?: (val: number) => void, disabled?: boolean }) => (
+const MetricCard = ({ icon, label, value, color, onAdjust, disabled, adjustmentAmount = 5 }: { icon: any, label: string, value: number, color: string, onAdjust?: (val: number) => void, disabled?: boolean, adjustmentAmount?: number }) => (
   <div className="bg-[#001833] border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-[#ffb700]/20 transition-colors font-montserrat">
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1128,18 +1163,18 @@ const MetricCard = ({ icon, label, value, color, onAdjust, disabled }: { icon: a
 
       <div className="flex gap-2 pt-1">
         <button
-          onClick={(e) => { e.stopPropagation(); onAdjust?.(-5); }}
+          onClick={(e) => { e.stopPropagation(); onAdjust?.(-adjustmentAmount); }}
           disabled={disabled}
           className="flex-1 py-3 flex items-center justify-center bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 hover:bg-red-500/20 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest gap-2"
         >
-          <Minus size={12} /> Descontar
+          <Minus size={12} /> {adjustmentAmount}
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onAdjust?.(5); }}
+          onClick={(e) => { e.stopPropagation(); onAdjust?.(adjustmentAmount); }}
           disabled={disabled}
           className="flex-1 py-3 flex items-center justify-center bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 hover:bg-green-500/20 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest gap-2"
         >
-          <Plus size={12} /> Sumar
+          <Plus size={12} /> {adjustmentAmount}
         </button>
       </div>
     </div>

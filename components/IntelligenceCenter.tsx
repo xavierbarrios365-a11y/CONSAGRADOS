@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp, Cpu } from 'lucide-react';
+import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp, Cpu, X } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
-import { generateTacticalProfile, getSpiritualCounseling } from '../services/geminiService';
+import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
+import EliteRecruitmentTest from './EliteRecruitmentTest';
 import { applyAbsencePenalties } from '../services/sheetsService';
 import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
 
@@ -36,6 +37,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [isGeneratingGlobalReport, setIsGeneratingGlobalReport] = useState(false);
   const [globalReport, setGlobalReport] = useState<string | null>(null);
+  const [showEliteTest, setShowEliteTest] = useState(false);
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -177,26 +179,53 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     }
   };
 
-  const handleGenerateAiProfile = async () => {
+  const handleGenerateAiProfileWithTest = async (testAnswers: any) => {
     if (!agent) return;
     setIsGeneratingAi(true);
     try {
-      // Obtenemos progreso de academia si existe (por ahora pasamos vacío o mock)
-      const aiProfile = await generateTacticalProfile(agent, []);
+      const { progress } = await fetchAcademyData(agent.id);
+      const aiProfile = await generateTacticalProfile(agent, progress, testAnswers);
       if (aiProfile) {
         const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
         if (res.success) {
-          alert("✅ PERFIL DE INTELIGENCIA ACTUALIZADO");
+          alert("✅ PERFIL PROFUNDO GENERADO CORRECTAMENTE");
+          setShowEliteTest(false);
           if (onUpdateNeeded) onUpdateNeeded();
         } else {
-          alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
+          alert("❌ ERROR AL GUARDAR: " + res.error);
         }
       }
     } catch (err: any) {
-      console.error("AI Error:", err);
-      alert("❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."));
+      alert("❌ FALLO EN NÚCLEO IA: " + err.message);
     } finally {
       setIsGeneratingAi(false);
+    }
+  };
+
+  const handleGenerateAiProfile = async () => {
+    if (!agent) return;
+    if (window.confirm("¿Deseas iniciar una EVALUACIÓN PROFUNDA (Test) o una SINCRONIZACIÓN RÁPIDA? \n\nAceptar = Test de Reclutamiento \nCancelar = Sincronización Rápida IA")) {
+      setShowEliteTest(true);
+    } else {
+      setIsGeneratingAi(true);
+      try {
+        const { progress } = await fetchAcademyData(agent.id);
+        const aiProfile = await generateTacticalProfile(agent, progress);
+        if (aiProfile) {
+          const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
+          if (res.success) {
+            alert("✅ SINCRONIZACIÓN IA COMPLETADA");
+            if (onUpdateNeeded) onUpdateNeeded();
+          } else {
+            alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
+          }
+        }
+      } catch (err: any) {
+        console.error("AI Error:", err);
+        alert("❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."));
+      } finally {
+        setIsGeneratingAi(false);
+      }
     }
   };
 
@@ -864,13 +893,31 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     {agent.tacticalSummary || '"Sin análisis táctico reciente. Solicite actualización."'}
                   </p>
                   {userRole === UserRole.DIRECTOR && (
-                    <button
-                      onClick={handleGenerateAiProfile}
-                      disabled={isGeneratingAi}
-                      className="mt-3 w-full py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar Cerebro IA'}
-                    </button>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={handleGenerateAiProfile}
+                        disabled={isGeneratingAi}
+                        className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar IA'}
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`⚠️ ¿FORZAR EVALUACIÓN ÉLITE A ${agent.name.toUpperCase()}?\n\nEsto borrará el perfil actual y obligará al agente a repetir el test avanzado al entrar.`)) {
+                            const res = await updateAgentAiProfile(agent.id, null, null);
+                            if (res.success) {
+                              alert("✅ PERFIL RESETEADO. TEST REQUERIDO AL ENTRAR.");
+                              if (onUpdateNeeded) onUpdateNeeded();
+                            }
+                          }
+                        }}
+                        className="p-2 bg-red-600/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-600/40 transition-all active:scale-95"
+                        title="Forzar Re-evaluación"
+                      >
+                        <RotateCcw size={12} />
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -1300,6 +1347,32 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {showEliteTest && agent && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-xl relative"
+            >
+              <button
+                onClick={() => setShowEliteTest(false)}
+                className="absolute -top-12 right-0 text-white/50 hover:text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors"
+              >
+                Cerrar Protocolo <X size={16} />
+              </button>
+
+              <EliteRecruitmentTest
+                agentName={agent.name}
+                onComplete={async (answers) => {
+                  await handleGenerateAiProfileWithTest(answers);
+                }}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

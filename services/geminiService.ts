@@ -256,64 +256,58 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
   }
 };
 
-export const generateTacticalProfile = async (agent: Agent, academyProgress: any[]) => {
-  const cacheKey = `profile_${agent.id}_${agent.xp}`;
+export const generateTacticalProfile = async (agent: Agent, academyProgress: any[], testAnswers?: any) => {
+  const cacheKey = `profile_v2_${agent.id}_${agent.xp}_${testAnswers ? JSON.stringify(testAnswers).length : 'no_test'}`;
   const cached = getCachedResponse(cacheKey);
   if (cached) return cached;
 
   const ai = getGenAI();
-  if (!ai) {
-    return null;
-  }
+  if (!ai) return null;
 
   try {
-    const prompt = `Analiza el desempeño de este agente y genera un perfil táctico de videojuego (estilo FIFA/RPG).
+    const prompt = `INFORME DE EVALUACIÓN TÁCTICA DE ÉLITE - CONSAGRADOS 2026
     
-    DATOS DEL AGENTE:
-    - Nombre: ${agent.name}
-    - Rango: ${agent.rank}
-    - XP Total: ${agent.xp}
-    - Progreso Academia: ${JSON.stringify(academyProgress)}
-    - Talento: ${agent.talent}
+    ESTRICTO SENTIDO DE EVALUACIÓN: Eres un evaluador de alto rango del Estado Mayor. Tu análisis debe ser CRÍTICO, FRÍO y TÉCNICO. Evita la inflación de puntuaciones; un 90+ debe ser excepcional.
+    
+    SUJETO:
+    - Identidad: ${agent.name}
+    - Rango: ${agent.rank} | XP: ${agent.xp} | Talento: ${agent.talent}
+    
+    MATERIAL DE EVALUACIÓN:
+    - Progreso Académico: ${JSON.stringify(academyProgress)}
+    - Respuestas Test de Élite (Psicometría y Casos): ${testAnswers ? JSON.stringify(testAnswers) : 'NO SUMINISTRADO (PENALIZAR)'}
 
-    REQUERIMIENTO:
-    1. Calcula 5 estadísticas de 0 a 100: Liderazgo, Servicio, Análisis, Potencial y Adaptabilidad.
-    2. Genera un "Resumen Táctico" de máximo 40 palabras con tono militar de élite.
-    
-    Responde ÚNICAMENTE en este formato JSON:
+    RÚBRICA DE ESTADO MAYOR (0-100):
+    1. LIDERAZGO: Evaluar coherencia entre rango y respuestas de mando en crisis. Si el rango es alto pero la respuesta fue delegar responsabilidad, castigar la nota.
+    2. SERVICIO: Basado en consistencia DISC y participación real en academia. El desinterés en casos situacionales = nota baja.
+    3. ANÁLISIS: Precisión en resolución de dilemas éticos y técnicos. No permitas respuestas tibias.
+    4. POTENCIAL: Proyección basada en velocidad de ascenso y perfil psicológico detectado.
+    5. ADAPTABILIDAD: Respuesta ante cambios de protocolo y diversidad de áreas dominadas.
+
+    FORMATO DE SALIDA (ESTRICTO JSON):
     {
       "stats": {
-        "liderazgo": 85,
-        "servicio": 70,
-        "analisis": 90,
-        "potencial": 95,
-        "adaptabilidad": 80
+        "liderazgo": [VALOR],
+        "servicio": [VALOR],
+        "analisis": [VALOR],
+        "potencial": [VALOR],
+        "adaptabilidad": [VALOR]
       },
-      "summary": "Resumen aquí..."
+      "summary": "[REPORTE DE INTELIGENCIA DE MÁXIMO 45 PALABRAS. TONO SECO, MILITAR Y PROFESIONAL. NO USES ADJETIVOS POSITIVOS SI NO ESTÁN RESPALDADOS POR DATOS.]"
     }`;
 
-    console.log(`📡 generateTacticalProfile: Requesting for agent ${agent.name} (${agent.id})...`);
+    console.log(`📡 generateTacticalProfile V2: Procesando inteligencia para ${agent.name}...`);
     const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
     const result = await model.generateContent(prompt);
-
-    console.log("✅ generateTacticalProfile: Response received.");
     const response = await result.response;
-    const text = response.text() || "";
-    const resultJson = extractJSON(text);
+    const resultJson = extractJSON(response.text());
 
-    if (!resultJson) {
-      console.error("❌ generateTacticalProfile: Failed to extract JSON from text beginning with:", text.substring(0, 50));
-      throw new Error("ERROR DE FORMATO IA: No se pudo extraer datos tácticos válidos.");
-    }
+    if (!resultJson) throw new Error("ERROR DE PARSE EN REPORTE TÁCTICO.");
 
     saveToCache(cacheKey, resultJson);
     return resultJson;
   } catch (error: any) {
-    console.error("❌ Gemini detailed error (Profile):", {
-      status: error.status,
-      message: error.message,
-      stack: error.stack
-    });
+    console.error("❌ generateTacticalProfile Error:", error.message);
     throw error;
   }
 };

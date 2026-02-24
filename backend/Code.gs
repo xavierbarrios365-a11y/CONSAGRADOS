@@ -2817,9 +2817,30 @@ function updateStreaks(data) {
         sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`, fcmToken);
       }
 
-      // Noticia en hitos sociales: 1, 2, 3, 5 y cada 5 días después (v3.1)
-      if (streakCount === 1 || streakCount === 2 || streakCount === 3 || (streakCount >= 5 && streakCount % 5 === 0)) {
-        addNewsItem(ss, 'RACHA', `🔥 CONSAGRACIÓN: ${data.agentName || data.agentId} mantiene una racha invicta de ${streakCount} días.`, data.agentId, data.agentName);
+      // Determinación de rol para frecuencia de noticias (v3.5)
+      let isLeader = false;
+      const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+      if (dirSheet) {
+        const dirData = dirSheet.getDataRange().getValues();
+        const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+        const idCol = dirHeaders.indexOf('ID');
+        const roleCol = dirHeaders.indexOf('USERROLE'); // O CARGO
+        const cargoCol = dirHeaders.indexOf('CARGO');
+        
+        const agentRow = dirData.find(r => String(r[idCol]).trim() === String(data.agentId).trim());
+        if (agentRow) {
+          const roleVal = String(agentRow[roleCol] || agentRow[cargoCol] || '').toUpperCase();
+          isLeader = roleVal.includes('DIRECTOR') || roleVal.includes('LIDER') || roleVal.includes('LÍDER');
+        }
+      }
+
+      // Noticia en hitos sociales: 1, 2, 3, 5 y cada 5 días después.
+      // ESTRATEGIA DE MANDO: Directores y Líderes aparecen CADA DÍA para inspirar a la tropa.
+      const isMilestone = (streakCount === 1 || streakCount === 2 || streakCount === 3 || (streakCount >= 5 && streakCount % 5 === 0));
+      
+      if (isMilestone || isLeader) {
+        const leaderEmoji = isLeader ? '🎖️ [MANDO] ' : '🔥 ';
+        addNewsItem(ss, 'RACHA', `${leaderEmoji}CONSAGRACIÓN: ${data.agentName || data.agentId} mantiene una racha invicta de ${streakCount} días.`, data.agentId, data.agentName);
       }
 
       // Bonos de XP cada 5 días
@@ -3954,10 +3975,16 @@ function addNewsItem(ss, type, message, agentId, agentName) {
     const dirSheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
     if (dirSheet) {
       const dirData = dirSheet.getDataRange().getValues();
-      for (let i = 1; i < dirData.length; i++) { // Búsqueda rápida
-        if (String(dirData[i][0]) === String(agentId)) {
-          agentName = dirData[i][1];
-          break;
+      const dirHeaders = dirData[0].map(h => String(h).trim().toUpperCase());
+      const idIdx = dirHeaders.indexOf('ID');
+      const nameIdx = dirHeaders.indexOf('NOMBRE');
+      
+      if (idIdx !== -1 && nameIdx !== -1) {
+        for (let i = 1; i < dirData.length; i++) {
+          if (String(dirData[i][idIdx]).trim() === String(agentId).trim()) {
+            agentName = dirData[i][nameIdx];
+            break;
+          }
         }
       }
     }

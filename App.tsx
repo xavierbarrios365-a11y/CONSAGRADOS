@@ -613,6 +613,7 @@ const App: React.FC = () => {
                   verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
                   streakCount={currentUser?.streakCount}
                   onQuizComplete={handleVerseQuizComplete}
+                  agent={currentUser || undefined}
                 />
               </div>
 

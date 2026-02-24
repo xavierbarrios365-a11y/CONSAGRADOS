@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Calendar, Download, Flame } from 'lucide-react';
+import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Calendar, Download, Flame, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DailyVerse as DailyVerseType } from '../types';
+import { DailyVerse as DailyVerseType, Agent } from '../types';
 import { generateGoogleCalendarLink, downloadIcsFile } from '../services/calendarService';
+import AchievementShareCard from './AchievementShareCard';
 
 interface DailyVerseProps {
     verse: DailyVerseType | null;
     streakCount?: number;
     onQuizComplete?: () => void;
+    agent?: Agent; // Añadido para compartir
 }
 
-const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizComplete }) => {
+const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizComplete, agent }) => {
     const [showQuiz, setShowQuiz] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [quizCompleted, setQuizCompleted] = useState(false);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [inputValue, setInputValue] = useState('');
@@ -257,9 +260,36 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                                 </div>
                             </div>
                         )}
+                        {quizCompleted && agent && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                onClick={() => setShowShareModal(true)}
+                                className="flex items-center justify-center gap-2 px-6 py-3 bg-[#ffb700] text-[#001f3f] font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-lg active:scale-95 font-bebas w-full mt-4"
+                            >
+                                <Share2 size={16} />
+                                Compartir Victoria Diaria
+                            </motion.button>
+                        )}
                     </div>
                 )}
             </div>
+
+            {/* Modal de Compartir Personalizado para el Versículo */}
+            {showShareModal && agent && (
+                <AchievementShareCard
+                    agent={agent}
+                    newsItem={{
+                        id: 'daily-verse-' + Date.now(),
+                        type: 'RACHA',
+                        message: `¡VICTORIA DIARIA! He completado mi lectura bíblica y mantengo una racha de ${streakCount} días.`,
+                        date: new Date().toLocaleDateString(),
+                        agentId: agent.id,
+                        agentName: agent.name
+                    }}
+                    onClose={() => setShowShareModal(false)}
+                />
+            )}
         </div>
     );
 };

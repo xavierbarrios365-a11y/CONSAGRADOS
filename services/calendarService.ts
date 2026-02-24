@@ -12,6 +12,10 @@ export interface CalendarEvent {
  */
 
 const formatICSTime = (date: Date): string => {
+    if (!date || isNaN(date.getTime())) {
+        console.warn("Invalid date provided to formatICSTime, falling back to empty string.");
+        return "";
+    }
     return date.toISOString().replace(/-|:|\.\d{3}/g, "");
 };
 
@@ -27,7 +31,14 @@ const sanitizeText = (text: string): string => {
 export const generateGoogleCalendarLink = (event: CalendarEvent): string => {
     const baseUrl = "https://www.google.com/calendar/render?action=TEMPLATE";
 
-    const dates = `${formatICSTime(event.startTime)}/${formatICSTime(event.endTime)}`;
+    const startStr = formatICSTime(event.startTime);
+    const endStr = formatICSTime(event.endTime);
+
+    if (!startStr || !endStr) {
+        return ""; // Cannot generate link without valid dates
+    }
+
+    const dates = `${startStr}/${endStr}`;
 
     // Use manual encoding for maximum compatibility across browsers & mobile
     const params = [

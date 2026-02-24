@@ -699,19 +699,27 @@ const App: React.FC = () => {
                           </button>
 
                           <div className="flex gap-2">
-                            <a
-                              href={generateGoogleCalendarLink({
-                                title: evt.titulo,
-                                description: evt.descripcion || '',
-                                startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
-                                endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
-                              })}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => {
+                                const calLink = generateGoogleCalendarLink({
+                                  title: evt.titulo,
+                                  description: evt.descripcion || '',
+                                  startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
+                                  endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
+                                });
+                                if (calLink) {
+                                  window.open(calLink, '_blank', 'noopener,noreferrer');
+                                } else {
+                                  alert("⚠️ NO SE PUDO GENERAR EL ENLACE: FECHA INVÁLIDA.");
+                                }
+                              }}
+
+
+
                               className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
                             >
                               <Calendar size={12} /> Google
-                            </a>
+                            </button>
                             <button
                               onClick={() => downloadIcsFile({
                                 title: evt.titulo,
@@ -744,7 +752,7 @@ const App: React.FC = () => {
                 )}
               </div>
             </div>
-          </motion.div>
+          </motion.div >
         );
       case AppView.SCANNER:
         return (

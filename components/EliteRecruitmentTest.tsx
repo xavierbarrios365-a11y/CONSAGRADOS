@@ -15,58 +15,80 @@ interface Question {
 
 const QUESTIONS: Question[] = [
     {
-        id: 'liderazgo_avanzado_1',
+        id: 'liderazgo_estrat_1',
         type: 'SITUATIONAL',
-        text: 'GESTIÓN DE CRISIS: Un fallo en el protocolo de un subordinado compromete la seguridad de la misión. ¿Cuál es su primera acción?',
+        text: 'PRIORIZACIÓN: Tienes recursos limitados y tres frentes abiertos: una crisis de moral en tu equipo, un fallo técnico en el sistema y una petición urgente de tu superior. ¿Cómo procedes?',
         options: [
-            { id: 'la1_a', text: 'Asumir la responsabilidad total y rectificar el error personalmente.', value: 'D' },
-            { id: 'la1_b', text: 'Reunir al equipo para analizar el fallo y delegar la solución.', value: 'I' },
-            { id: 'la1_c', text: 'Seguir estrictamente el manual de contingencia sin desviaciones.', value: 'C' },
-            { id: 'la1_d', text: 'Proteger la moral del grupo antes de buscar culpables.', value: 'S' }
+            { id: 'le1_a', text: 'Establezco un mando de crisis: atiendo lo técnico y delego la moral.', value: 'D' },
+            { id: 'le1_b', text: 'Reúno al equipo: su unidad resolverá lo técnico y la urgencia después.', value: 'I' },
+            { id: 'le1_c', text: 'Sigo el protocolo de jerarquía: lo que el superior pida es la prioridad.', value: 'C' },
+            { id: 'le1_d', text: 'Mantengo la calma y analizo el impacto a largo plazo de cada fallo.', value: 'S' }
         ]
     },
     {
-        id: 'etica_tactica_1',
+        id: 'integridad_1',
         type: 'SITUATIONAL',
-        text: 'ÉTICA DE MANDO: Se le sugiere omitir un reporte de falla menor para asegurar el éxito de una promoción regional. ¿Su postura?',
+        text: 'INTEGRIDAD: Detectas que un colega de igual rango está manipulando sus reportes de XP para ascender. Se te pide no decir nada por "lealtad".',
         options: [
-            { id: 'et1_a', text: 'La integridad es absoluta; el reporte se envía íntegro.', value: 'C' },
-            { id: 'et1_b', text: 'Evalúo si el beneficio del equipo justifica la omisión.', value: 'D' },
-            { id: 'et1_c', text: 'Busco una tercera vía que no comprometa la promoción.', value: 'I' },
-            { id: 'et1_d', text: 'Consulto con mi superior inmediato para compartir el peso de la decisión.', value: 'S' }
+            { id: 'in1_a', text: 'Lo confronto directamente y le exijo que informe a superiores.', value: 'D' },
+            { id: 'in1_b', text: 'Trato de convencerlo de que el proyecto es más importante que un rango.', value: 'I' },
+            { id: 'in1_c', text: 'Informo de inmediato por los canales oficiales; la regla es la regla.', value: 'C' },
+            { id: 'in1_d', text: 'Busco consejo de un mentor antes de tomar una decisión que afecte al grupo.', value: 'S' }
         ]
     },
     {
-        id: 'vision_2026_1',
+        id: 'adaptabilidad_2',
         type: 'SITUATIONAL',
-        text: 'DESPLIEGUE ESTRATÉGICO: Identifica un talento crítico en un agente que muestra desinterés por el proyecto. ¿Cómo actúa?',
+        text: 'CAMBIO DE RUMBO: El servidor central cambia el protocolo de seguridad de la noche a la mañana, invalidando tu trabajo de un mes.',
         options: [
-            { id: 'v2026_a', text: 'Asignarle una misión de alto impacto que active su sentido de propósito.', value: 'D' },
-            { id: 'v2026_b', text: 'Entablar una relación cercana para entender sus barreras personales.', value: 'I' },
-            { id: 'v2026_c', text: 'Mantenerlo en tareas estándar hasta que demuestre compromiso.', value: 'S' },
-            { id: 'v2026_d', text: 'Aplicar el reglamento de rendimiento de forma estricta.', value: 'C' }
+            { id: 'ad2_a', text: 'Lidero la transición al nuevo sistema antes que nadie.', value: 'D' },
+            { id: 'ad2_b', text: 'Motivo al equipo para ver esto como una oportunidad de mejora.', value: 'I' },
+            { id: 'ad2_c', text: 'Estudio el nuevo manual hasta dominar cada coma del cambio.', value: 'C' },
+            { id: 'ad2_d', text: 'Acepto el cambio con paciencia y sigo el ritmo del grupo.', value: 'S' }
         ]
     },
     {
-        id: 'psicometria_disc_1',
+        id: 'disc_avanzado_1',
         type: 'DISC',
-        text: 'REGLA DE VIDA: Ante un nuevo desafío tecnológico o espiritual, mi tendencia es:',
+        text: 'CUALIDAD DOMINANTE: Si tuvieras que definir tu aporte principal al equipo de Consagrados 2026, sería:',
         options: [
-            { id: 'd1_a', text: 'Dominar la materia lo antes posible para liderar el cambio.', value: 'D' },
-            { id: 'd1_b', text: 'Inspirar a otros para que lo exploremos juntos.', value: 'I' },
-            { id: 'd1_c', text: 'Analizar cada detalle y raíz bíblica antes de proceder.', value: 'C' },
-            { id: 'd1_d', text: 'Asegurarme de que el cambio no altere la paz del equipo.', value: 'S' }
+            { id: 'da1_a', text: 'La ejecución implacable y el cumplimiento de objetivos.', value: 'D' },
+            { id: 'da1_b', text: 'La capacidad de inspirar y conectar a los miembros.', value: 'I' },
+            { id: 'da1_c', text: 'La precisión técnica, el orden y la excelencia bíblica.', value: 'C' },
+            { id: 'da1_d', text: 'La estabilidad, el servicio constante y el apoyo fiel.', value: 'S' }
         ]
     },
     {
-        id: 'resiliencia_1',
+        id: 'etica_lider_2',
         type: 'SITUATIONAL',
-        text: 'RECONSTRUCCIÓN DE MORAL: Tras un fracaso operativo evidente, el equipo está desmotivado. ¿Cómo inicia el lunes?',
+        text: 'GESTIÓN DE TALENTOS: Tienes un agente muy talentoso pero arrogante que genera conflictos. ¿Qué estrategia usas?',
         options: [
-            { id: 'r1_a', text: 'Con un discurso de victoria futura y metas agresivas.', value: 'D' },
-            { id: 'r1_b', text: 'Con una jornada de convivencia para sanar heridas.', value: 'I' },
-            { id: 'r1_c', text: 'Con un análisis técnico de errores para que no se repitan.', value: 'C' },
-            { id: 'r1_d', text: 'Con un tiempo de oración y escucha activa.', value: 'S' }
+            { id: 'el2_a', text: 'Le asigno un reto solitario donde su éxito dependa de otros.', value: 'D' },
+            { id: 'el2_b', text: 'Hago que sea mentor de un recluta para desarrollar su empatía.', value: 'I' },
+            { id: 'el2_c', text: 'Aplico el reglamento de conducta sin excepciones.', value: 'C' },
+            { id: 'el2_d', text: 'Le doy espacio para que él mismo busque la reconciliación con el grupo.', value: 'S' }
+        ]
+    },
+    {
+        id: 'vision_espiritual_1',
+        type: 'SITUATIONAL',
+        text: 'FOCO: Ante una disputa doctrinal técnica en el chat oficial que genera división, tú:',
+        options: [
+            { id: 've1_a', text: 'Corto la discusión y reenfoco al grupo en el objetivo operativo.', value: 'D' },
+            { id: 've1_b', text: 'Trato de mediar con humor y diplomacia para bajar la tensión.', value: 'I' },
+            { id: 've1_c', text: 'Aporto las citas exactas y la base de datos para cerrar el debate.', value: 'C' },
+            { id: 've1_d', text: 'Escucho a ambas partes sin juzgar, buscando la paz.', value: 'S' }
+        ]
+    },
+    {
+        id: 'completitud_1',
+        type: 'DISC',
+        text: 'PRESION: Bajo presión extrema y plazos cortos, tu "yo" real tiende a:',
+        options: [
+            { id: 'c1_a', text: 'Volverse más directo, tajante y enfocado en el "qué".', value: 'D' },
+            { id: 'c1_b', text: 'Volverse más expresivo, persuasivo y enfocado en el "quién".', value: 'I' },
+            { id: 'c1_c', text: 'Volverse más perfeccionista, crítico y enfocado en el "cómo".', value: 'C' },
+            { id: 'c1_d', text: 'Volverse más reservado, paciente y enfocado en el "por qué".', value: 'S' }
         ]
     }
 ];
@@ -77,12 +99,13 @@ interface EliteRecruitmentTestProps {
 }
 
 const EliteRecruitmentTest: React.FC<EliteRecruitmentTestProps> = ({ onComplete, agentName }) => {
+    const [showIntro, setShowIntro] = useState(true);
     const [currentStep, setCurrentStep] = useState(0);
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
 
-    const XP_PER_QUESTION = 5;
+    const TOTAL_XP_REWARD = 15;
 
     const handleSelect = (questionId: string, value: string) => {
         setAnswers(prev => ({ ...prev, [questionId]: value }));
@@ -94,8 +117,7 @@ const EliteRecruitmentTest: React.FC<EliteRecruitmentTestProps> = ({ onComplete,
     const handleSubmit = async () => {
         setIsSubmitting(true);
         try {
-            const awardedXp = Object.keys(answers).length * XP_PER_QUESTION;
-            await onComplete(answers, awardedXp);
+            await onComplete(answers, TOTAL_XP_REWARD);
             setIsFinished(true);
         } catch (err) {
             console.error("Error submitting test:", err);
@@ -105,6 +127,47 @@ const EliteRecruitmentTest: React.FC<EliteRecruitmentTestProps> = ({ onComplete,
     };
 
     const progress = ((currentStep + 1) / QUESTIONS.length) * 100;
+
+    if (showIntro) {
+        return (
+            <div className="w-full max-w-xl mx-auto bg-[#001f3f]/90 backdrop-blur-xl border border-[#ffb700]/30 rounded-[2.5rem] overflow-hidden shadow-2xl p-10 space-y-8 animate-in fade-in zoom-in duration-500">
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-[#ffb700]/20 rounded-full flex items-center justify-center border-2 border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.2)]">
+                        <Shield className="text-[#ffb700]" size={40} />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-3xl font-bebas text-white uppercase tracking-[0.2em]">EVALUACIÓN DE ÉLITE 2026</h3>
+                        <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] font-bebas">Protocolo de Re-perfilado Táctico</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4 text-center">
+                    <p className="text-[12px] text-white/70 font-montserrat leading-relaxed">
+                        Bienvenido, **{agentName}**. Este test de alta precisión utiliza metodología **DISC** y **Escenarios Situacionales** para recalibrar tu perfil en el servidor central.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                            <Zap className="text-blue-400 mx-auto mb-2" size={20} />
+                            <p className="text-[8px] text-white/40 uppercase font-black">Recompensa</p>
+                            <p className="text-sm font-bebas text-white">+15 XP TÁCTICA</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                            <Target className="text-orange-400 mx-auto mb-2" size={20} />
+                            <p className="text-[8px] text-white/40 uppercase font-black">Preguntas</p>
+                            <p className="text-sm font-bebas text-white">7 CASOS ÉLITE</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => setShowIntro(false)}
+                    className="w-full py-5 bg-[#ffb700] text-[#001f3f] font-black uppercase tracking-[0.3em] rounded-2xl shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3 active:scale-95 font-bebas"
+                >
+                    Iniciar Protocolo <ChevronRight size={20} />
+                </button>
+            </div>
+        );
+    }
 
     if (isFinished) {
         return (

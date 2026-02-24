@@ -61,11 +61,9 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
   const [exportComplete, setExportComplete] = useState<string | null>(null);
   const [backTab, setBackTab] = useState<'QR' | 'INTEL'>('QR');
   const [completedCourses, setCompletedCourses] = useState<string[]>([]);
-  const [showEliteTest, setShowEliteTest] = useState(false);
 
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
-
   // Load course badges
   React.useEffect(() => {
     const loadBadges = async () => {
@@ -88,45 +86,19 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
     loadBadges();
   }, [agent.id]);
 
-  // Forzar Test si no tiene perfil táctico (Bloqueo Obligatorio)
-  React.useEffect(() => {
-    if (!agent.tacticalStats && !showEliteTest) {
-      setShowEliteTest(true);
-    }
-  }, [agent.tacticalStats]);
-
-  const handleAIUpdateWithTest = async (testAnswers: any, awardedXp: number = 0) => {
-    setIsUpdating(true);
-    try {
-      const { progress } = await fetchAcademyData(agent.id);
-      const result = await generateTacticalProfile(agent, progress, testAnswers);
-      if (result) {
-        // Enviar actualización a Sheets
-        const res = await updateAgentAiProfile(agent.id, result.stats, result.summary);
-
-        // Otorgar recompensa de XP si aplica (5 XP por respuesta)
-        if (awardedXp > 0) {
-          await updateAgentPoints(agent.id, "LIDERAZGO", awardedXp);
-        }
-
-        if (res.success) {
-          // Actualización de estado local para evitar recarga si es posible (aunque SheetsService suele requerir sync)
-          // Pero para feedback inmediato, cerramos el test
-          setShowEliteTest(false);
-          alert(`✅ PERFIL ACTUALIZADO. RECOMPENSA: +${awardedXp} XP`);
-          setTimeout(() => window.location.reload(), 1000);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to update tactical profile", err);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const handleAIUpdate = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowEliteTest(true);
+    if (window.confirm("⚠️ ¿RE-EVALUACIÓN TÁCTICA?\nSe borrará tu perfil actual y deberás completar el test de élite nuevamente para acceder.")) {
+      setIsUpdating(true);
+      try {
+        await updateAgentAiProfile(agent.id, null, null);
+        window.location.reload(); // Esto activará el bloqueo global al recargar
+      } catch (err) {
+        alert("Fallo al resetear perfil.");
+      } finally {
+        setIsUpdating(false);
+      }
+    }
   };
 
   const handleExport = async (side: 'front' | 'back', mode: 'share' | 'download', e: React.MouseEvent) => {
@@ -452,33 +424,6 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
           </div>
         </div>
       </div>
-      {/* Modal de Test de Reclutamiento de Élite */}
-      <AnimatePresence>
-        {showEliteTest && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-xl relative"
-            >
-              <button
-                onClick={() => setShowEliteTest(false)}
-                className="absolute -top-12 right-0 text-white/50 hover:text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors"
-              >
-                Cerrar Protocolo <X size={16} />
-              </button>
-
-              <EliteRecruitmentTest
-                agentName={agent.name}
-                onComplete={async (answers) => {
-                  await handleAIUpdateWithTest(answers);
-                }}
-              />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

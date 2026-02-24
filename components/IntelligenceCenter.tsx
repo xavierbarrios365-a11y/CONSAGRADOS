@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp, Cpu, X } from 'lucide-react';
+import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp, Cpu, X, CheckCircle2, MessageSquare, Brain } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
@@ -11,7 +11,7 @@ import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
-import EliteRecruitmentTest from './EliteRecruitmentTest';
+import { toPng } from 'html-to-image';
 import { applyAbsencePenalties } from '../services/sheetsService';
 import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
 
@@ -37,7 +37,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [isGeneratingGlobalReport, setIsGeneratingGlobalReport] = useState(false);
   const [globalReport, setGlobalReport] = useState<string | null>(null);
-  const [showEliteTest, setShowEliteTest] = useState(false);
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -179,53 +178,26 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     }
   };
 
-  const handleGenerateAiProfileWithTest = async (testAnswers: any) => {
+  const handleGenerateAiProfile = async () => {
     if (!agent) return;
     setIsGeneratingAi(true);
     try {
       const { progress } = await fetchAcademyData(agent.id);
-      const aiProfile = await generateTacticalProfile(agent, progress, testAnswers);
+      const aiProfile = await generateTacticalProfile(agent, progress);
       if (aiProfile) {
         const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
         if (res.success) {
-          alert("✅ PERFIL PROFUNDO GENERADO CORRECTAMENTE");
-          setShowEliteTest(false);
+          alert("✅ SINCRONIZACIÓN IA COMPLETADA");
           if (onUpdateNeeded) onUpdateNeeded();
         } else {
-          alert("❌ ERROR AL GUARDAR: " + res.error);
+          alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
         }
       }
     } catch (err: any) {
-      alert("❌ FALLO EN NÚCLEO IA: " + err.message);
+      console.error("AI Error:", err);
+      alert("❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."));
     } finally {
       setIsGeneratingAi(false);
-    }
-  };
-
-  const handleGenerateAiProfile = async () => {
-    if (!agent) return;
-    if (window.confirm("¿Deseas iniciar una EVALUACIÓN PROFUNDA (Test) o una SINCRONIZACIÓN RÁPIDA? \n\nAceptar = Test de Reclutamiento \nCancelar = Sincronización Rápida IA")) {
-      setShowEliteTest(true);
-    } else {
-      setIsGeneratingAi(true);
-      try {
-        const { progress } = await fetchAcademyData(agent.id);
-        const aiProfile = await generateTacticalProfile(agent, progress);
-        if (aiProfile) {
-          const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
-          if (res.success) {
-            alert("✅ SINCRONIZACIÓN IA COMPLETADA");
-            if (onUpdateNeeded) onUpdateNeeded();
-          } else {
-            alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
-          }
-        }
-      } catch (err: any) {
-        console.error("AI Error:", err);
-        alert("❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."));
-      } finally {
-        setIsGeneratingAi(false);
-      }
     }
   };
 
@@ -1347,32 +1319,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         </div>
       </div>
-      <AnimatePresence>
-        {showEliteTest && agent && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-xl relative"
-            >
-              <button
-                onClick={() => setShowEliteTest(false)}
-                className="absolute -top-12 right-0 text-white/50 hover:text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors"
-              >
-                Cerrar Protocolo <X size={16} />
-              </button>
-
-              <EliteRecruitmentTest
-                agentName={agent.name}
-                onComplete={async (answers) => {
-                  await handleGenerateAiProfileWithTest(answers);
-                }}
-              />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

@@ -8,6 +8,7 @@ import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
+import EliteRecruitmentTest from './components/EliteRecruitmentTest';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import TacticalExpediente from './components/TacticalExpediente';
 import ContentModule from './components/ContentModule';
@@ -40,13 +41,15 @@ import {
   fetchActiveEvents,
   confirmEventAttendance as confirmEventAttendanceService,
   deleteAgent as deleteAgentService,
-  fetchBadges
+  fetchBadges,
+  updateAgentAiProfile,
+  fetchAcademyData
 } from './services/sheetsService';
 import { generateGoogleCalendarLink, downloadIcsFile } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList, Share2 } from 'lucide-react';
-import { getTacticalAnalysis } from './services/geminiService';
+import { generateTacticalProfile } from './services/geminiService';
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
 import { initRemoteConfig } from './services/configService';
@@ -191,6 +194,29 @@ const App: React.FC = () => {
     };
     checkVersionAndPurge();
   }, []);
+
+  const [isUpdatingAiProfile, setIsUpdatingAiProfile] = useState(false);
+
+  const handleGlobalTestComplete = async (testAnswers: any, awardedXp: number) => {
+    if (!currentUser) return;
+    setIsUpdatingAiProfile(true);
+    try {
+      const { progress } = await fetchAcademyData(currentUser.id);
+      const result = await generateTacticalProfile(currentUser, progress, testAnswers);
+      if (result) {
+        await updateAgentAiProfile(currentUser.id, result.stats, result.summary);
+        if (awardedXp > 0) {
+          await updateAgentPoints(currentUser.id, "LIDERAZGO", awardedXp);
+        }
+        await syncData(); // Refrescar estado global
+      }
+    } catch (err) {
+      console.error("Fallo re-perfilado global", err);
+      alert("⚠️ ERROR TÉCNICO EN RE-PERFILADO. REINTENTE.");
+    } finally {
+      setIsUpdatingAiProfile(false);
+    }
+  };
 
   // Monitor network status
   useEffect(() => {
@@ -1412,6 +1438,31 @@ const App: React.FC = () => {
   }
 
   if (isLoggedIn && !currentUser) return <LoadingScreen message="INICIALIZANDO CONEXIÓN..." />;
+
+  // BLOQUEO GLOBAL DE SEGURIDAD (BIENVENIDA OBLIGATORIA)
+  if (isLoggedIn && currentUser && !currentUser.tacticalStats) {
+    return (
+      <div className="min-h-screen bg-[#000c19] flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Radar Background Decorator */}
+        <div className="absolute inset-0 z-0 opacity-10">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-blue-500/20 rounded-full animate-pulse"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-blue-500/10 rounded-full"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-blue-500/5 rounded-full"></div>
+        </div>
+
+        <div className="relative z-10 w-full max-w-2xl">
+          {isUpdatingAiProfile ? (
+            <LoadingScreen message="PROCESANDO INTELIGENCIA TÁCTICA..." />
+          ) : (
+            <EliteRecruitmentTest
+              agentName={currentUser.name}
+              onComplete={handleGlobalTestComplete}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Layout

@@ -52,7 +52,7 @@ import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './s
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList, Share2 } from 'lucide-react';
-import { generateTacticalProfile } from './services/geminiService';
+import { generateTacticalProfile, getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
 import { initRemoteConfig } from './services/configService';
@@ -370,12 +370,6 @@ const App: React.FC = () => {
         const agent = agents.find(a => String(a.id) === String(id));
         if (agent) {
           setScannedAgentForPoints(agent);
-          // Auto-award +10 XP for attendance
-          try {
-            await updateAgentPoints(agent.id, 'LIDERAZGO', 10);
-          } catch (e) {
-            console.error('Error auto-awarding attendance XP:', e);
-          }
         }
         setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); syncData(true); }, 3000);
       } else {
@@ -771,7 +765,7 @@ const App: React.FC = () => {
                               }}
                               className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
                             >
-                              <Download size={12} /> .ICS
+                              <Download size={12} /> Apple / Sistema
                             </button>
                           </div>
                         </div>

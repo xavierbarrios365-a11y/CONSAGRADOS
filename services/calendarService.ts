@@ -55,26 +55,24 @@ const sanitizeText = (text: string): string => {
 };
 
 export const generateGoogleCalendarLink = (event: CalendarEvent): string => {
-    const baseUrl = "https://www.google.com/calendar/render?action=TEMPLATE";
+    // Usamos el formato preferido por Google para máxima compatibilidad
+    const baseUrl = "https://calendar.google.com/calendar/r/eventedit";
 
     const startStr = formatICSTime(event.startTime);
     const endStr = formatICSTime(event.endTime);
 
     if (!startStr || !endStr) {
-        return ""; // Cannot generate link without valid dates
+        return "";
     }
 
-    const dates = `${startStr}/${endStr}`;
+    const params = new URLSearchParams({
+        text: event.title,
+        details: event.description,
+        location: event.location || "",
+        dates: `${startStr}/${endStr}`
+    });
 
-    // Use manual encoding for maximum compatibility across browsers & mobile
-    const params = [
-        `text=${encodeURIComponent(event.title)}`,
-        `details=${encodeURIComponent(event.description)}`,
-        `location=${encodeURIComponent(event.location || "")}`,
-        `dates=${encodeURIComponent(dates)}`
-    ].join("&");
-
-    return `${baseUrl}&${params}`;
+    return `${baseUrl}?${params.toString()}`;
 };
 
 export const downloadIcsFile = (event: CalendarEvent) => {

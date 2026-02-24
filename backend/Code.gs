@@ -1077,6 +1077,30 @@ function registerIdScan(payload) {
    
    // AUTO-XP: +10 Liderazgo, +10 Biblia, +10 Apuntes, +30 XP total (1 batch write)
    if (agentRowIdx !== -1) {
+     // BONUS: Verificar si confirmó asistencia previamente (1.5x)
+     let multiplier = 1;
+     const confSheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
+     if (confSheet) {
+       const confData = confSheet.getDataRange().getValues();
+       const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
+       for (let j = 1; j < confData.length; j++) {
+         const rowAgentId = String(confData[j][0]).trim();
+         const rowDate = confData[j][3]; 
+         let rowDateStr = "";
+         if (rowDate instanceof Date) {
+            rowDateStr = Utilities.formatDate(rowDate, "GMT-4", "yyyy-MM-dd");
+         } else {
+            rowDateStr = String(rowDate).split(" ")[0]; // yyyy-MM-dd
+         }
+         
+         if (rowAgentId === String(payload.scannedId).trim() && rowDateStr === todayStr) {
+           multiplier = 1.5;
+           break;
+         }
+       }
+     }
+
+     const pointsPerCategory = Math.round(10 * multiplier);
      const leadCol = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
      const bibleCol = findHeaderIdx(dirHeaders, 'PUNTOS_BIBLIA');
      const notesCol = findHeaderIdx(dirHeaders, 'PUNTOS_APUNTES');
@@ -1084,14 +1108,14 @@ function registerIdScan(payload) {
 
      if (leadCol !== -1 || bibleCol !== -1 || notesCol !== -1 || xpCol !== -1) {
        const rowData = directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).getValues()[0];
-       if (leadCol !== -1) rowData[leadCol] = (parseInt(rowData[leadCol]) || 0) + 10;
-       if (bibleCol !== -1) rowData[bibleCol] = (parseInt(rowData[bibleCol]) || 0) + 10;
-       if (notesCol !== -1) rowData[notesCol] = (parseInt(rowData[notesCol]) || 0) + 10;
-       // FIX DEFINITIVO: XP = suma de categorías (no +30 independiente)
+       if (leadCol !== -1) rowData[leadCol] = (parseInt(rowData[leadCol]) || 0) + pointsPerCategory;
+       if (bibleCol !== -1) rowData[bibleCol] = (parseInt(rowData[bibleCol]) || 0) + pointsPerCategory;
+       if (notesCol !== -1) rowData[notesCol] = (parseInt(rowData[notesCol]) || 0) + pointsPerCategory;
+       
        if (xpCol !== -1) {
-         const b = bibleCol !== -1 ? (parseInt(rowData[bibleCol]) || 0) : 0;
-         const a = notesCol !== -1 ? (parseInt(rowData[notesCol]) || 0) : 0;
-         const l = leadCol !== -1 ? (parseInt(rowData[leadCol]) || 0) : 0;
+         const b = (parseInt(rowData[bibleCol]) || 0);
+         const a = (parseInt(rowData[notesCol]) || 0);
+         const l = (parseInt(rowData[leadCol]) || 0);
          rowData[xpCol] = b + a + l;
        }
        directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).setValues([rowData]);
@@ -1099,14 +1123,18 @@ function registerIdScan(payload) {
        // Notificación de XP por asistencia
        const fcmToken = getAgentFcmToken(payload.scannedId);
        if (fcmToken) {
-         sendPushNotification("🛡️ ASISTENCIA REGISTRADA", `¡Buen despliegue, Agente! Has ganado +10 XP por tu asistencia de hoy.`, fcmToken);
+         const totalEarned = pointsPerCategory * 3;
+         const msg = multiplier === 1.5 
+           ? `🛡️ DESPLIEGUE EXITOSO (BONO 1.5x): +${totalEarned} XP totales registrados.` 
+           : `🛡️ DESPLIEGUE EXITOSO: +${totalEarned} XP totales registrados.`;
+         sendPushNotification("ESTATUS TÁCTICO", msg, fcmToken);
        }
      }
     }
    
-   const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}\n\n<b>PUNTOS:</b> +10 Biblia, +10 Apuntes, +10 Liderazgo`;
+   const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}\n\n<b>PUNTOS:</b> +${Math.round(10*multiplier)} Liderazgo, +${Math.round(10*multiplier)} Biblia, +${Math.round(10*multiplier)} Apuntes`;
    sendTelegramNotification(telegramMessage);
-
+}
    // --- VISITANTE RADAR ---
    if (agentRowIdx === -1) {
      let visitorVisits = 0;
@@ -3286,33 +3314,6 @@ function confirmEventAttendance(data) {
     data.eventTitle,
     fechaCompleta
   ]);
-
-  // Sumar 10 XP por confirmar asistencia al evento
-  const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
-  const directoryData = directorySheet.getDataRange().getValues();
-  const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
-  const leadCol = headers.indexOf('PUNTOS LIDERAZGO') + 1;
-  const idCol = headers.indexOf('ID');
-
-  if (leadCol > 0) {
-    let agentRowIdx = -1;
-    for (let i = 1; i < directoryData.length; i++) {
-      if (String(directoryData[i][idCol]).trim() === String(data.agentId).trim()) {
-        agentRowIdx = i + 1;
-        break;
-      }
-    }
-    if (agentRowIdx !== -1) {
-      const currentVal = parseInt(directorySheet.getRange(agentRowIdx, leadCol).getValue()) || 0;
-      directorySheet.getRange(agentRowIdx, leadCol).setValue(currentVal + 10);
-
-      // Notificación de XP por evento
-      const fcmToken = getAgentFcmToken(data.agentId);
-      if (fcmToken) {
-        sendPushNotification("📅 MISIÓN CUMPLIDA", `Asistencia al evento "${data.eventTitle}" registrada. Recompensa: +10 XP.`, fcmToken);
-      }
-    }
-  }
 
   return jsonOk();
 }

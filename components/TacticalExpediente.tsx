@@ -93,15 +93,15 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose 
     } as const;
 
     return (
-        <div className="fixed inset-0 z-[100] bg-[#000810]/98 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+        <div className="fixed inset-0 z-[200] bg-[#020617] flex items-center justify-center p-2 sm:p-6 overflow-hidden">
             {/* Capas de Post-Procesamiento Global */}
-            <div className="absolute inset-0 pointer-events-none z-10 opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
+            <div className="absolute inset-0 pointer-events-none z-10 opacity-30 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
 
             <motion.div
                 initial="hidden"
                 animate="visible"
                 variants={modalVariants}
-                className="w-full max-w-4xl bg-[#00101a] border border-amber-500/20 rounded-[3rem] shadow-[0_0_100px_rgba(255,183,0,0.1)] overflow-hidden relative max-h-[95vh] flex flex-col md:flex-row"
+                className="w-full max-w-4xl bg-[#0a1219] border border-amber-500/30 rounded-[2.5rem] shadow-[0_0_120px_rgba(0,0,0,0.8)] overflow-hidden relative max-h-[92vh] flex flex-col md:flex-row mt-12 mb-4"
             >
                 {/* DECORACIÓN CORNER TÁCTICA */}
                 <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-4 -translate-y-4">
@@ -194,9 +194,9 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose 
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-white/50 hover:text-white transition-all active:scale-95 group"
+                            className="p-4 bg-red-600/10 hover:bg-red-600/20 rounded-2xl border border-red-500/30 text-red-500 transition-all active:scale-95 group shadow-lg"
                         >
-                            <X size={20} className="group-hover:rotate-90 transition-transform" />
+                            <X size={24} className="group-hover:rotate-90 transition-transform" />
                         </button>
                     </div>
 

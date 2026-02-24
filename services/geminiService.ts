@@ -265,9 +265,11 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
   if (!ai) return null;
 
   try {
-    const prompt = `INFORME DE EVALUACIÓN TÁCTICA DE ÉLITE - CONSAGRADOS 2026
+    const prompt = `EXHORTACIÓN ESTRATÉGICA Y PERFIL TÁCTICO - CONSAGRADOS 2026
     
-    ESTRICTO SENTIDO DE EVALUACIÓN: Eres un evaluador de alto rango del Estado Mayor. Tu análisis debe ser CRÍTICO, FRÍO y TÉCNICO. Evita la inflación de puntuaciones; un 90+ debe ser excepcional.
+    ESTILO DE COMUNICACIÓN: Eres un mentor espiritual con mentalidad estratégica ("Mentor Táctico"). Tu tono debe ser EMPÁTICO, MOTIVADOR y HUMANO, pero manteniendo la disciplina del proyecto Consagrados. Habla a los jóvenes (chamos) con energía y visión, como un hermano mayor que ve su potencial en Dios.
+    
+    OBJETIVO: Identificar FORTALEZAS y DEBILIDADES de forma constructiva. Usa el lenguaje del proyecto (misión, servicio, campo de batalla espiritual) pero con amor y esperanza.
     
     SUJETO:
     - Identidad: ${agent.name}
@@ -275,14 +277,14 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     
     MATERIAL DE EVALUACIÓN:
     - Progreso Académico: ${JSON.stringify(academyProgress)}
-    - Respuestas Test de Élite (Psicometría y Casos): ${testAnswers ? JSON.stringify(testAnswers) : 'NO SUMINISTRADO (PENALIZAR)'}
+    - Respuestas Test de Élite (Psicometría y Casos): ${testAnswers ? JSON.stringify(testAnswers) : 'Sincronización rápida (sin test)'}
 
-    RÚBRICA DE ESTADO MAYOR (0-100):
-    1. LIDERAZGO: Evaluar coherencia entre rango y respuestas de mando en crisis. Si el rango es alto pero la respuesta fue delegar responsabilidad, castigar la nota.
-    2. SERVICIO: Basado en consistencia DISC y participación real en academia. El desinterés en casos situacionales = nota baja.
-    3. ANÁLISIS: Precisión en resolución de dilemas éticos y técnicos. No permitas respuestas tibias.
-    4. POTENCIAL: Proyección basada en velocidad de ascenso y perfil psicológico detectado.
-    5. ADAPTABILIDAD: Respuesta ante cambios de protocolo y diversidad de áreas dominadas.
+    CRITERIOS DE VALORACIÓN (0-100):
+    1. LIDERAZGO: Capacidad de guiar a otros con el ejemplo y humildad.
+    2. SERVICIO: Corazón dispuesto a ayudar en lo que se necesite.
+    3. ANÁLISIS: Sabiduría para tomar decisiones según la palabra.
+    4. POTENCIAL: Qué tan lejos puede llegar este activo con mentoría.
+    5. ADAPTABILIDAD: Flexibilidad para servir en distintas misiones.
 
     FORMATO DE SALIDA (ESTRICTO JSON):
     {
@@ -293,7 +295,7 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
         "potencial": [VALOR],
         "adaptabilidad": [VALOR]
       },
-      "summary": "[REPORTE DE INTELIGENCIA DE MÁXIMO 45 PALABRAS. TONO SECO, MILITAR Y PROFESIONAL. NO USES ADJETIVOS POSITIVOS SI NO ESTÁN RESPALDADOS POR DATOS.]"
+      "summary": "[REPORTE MOTIVACIONAL DE MÁXIMO 50 PALABRAS. Identifica algo admirable y un área de crecimiento con sabiduría. Tono: Inspirador, Cristiano, Táctico-Juvenil.]"
     }`;
 
     console.log(`📡 generateTacticalProfile V2: Procesando inteligencia para ${agent.name}...`);

@@ -129,71 +129,49 @@ const TacticalRadar: React.FC<TacticalRadarProps> = ({ stats, size = 260 }) => {
                     className="drop-shadow-[0_0_10px_rgba(255,183,0,0.5)]"
                 />
 
-                {/* Data Nodes and Values */}
+                {/* Data Nodes and Labels */}
                 {categories.map((cat, i) => {
                     const val = (stats as any)[cat.key] || 0;
                     const p = getPoint(i, val, radius);
-                    const labelPos = getPoint(i, 120, radius);
+                    const labelPos = getPoint(i, 110, radius); // Even more compact to stay inside
 
                     return (
                         <g key={`data-${i}`}>
-                            {/* Value Circle */}
-                            <motion.circle
-                                cx={p.x}
-                                cy={p.y}
-                                r="4"
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: 0.8 + i * 0.1, type: "spring" }}
-                                fill="#ffb700"
-                                className="shadow-lg"
-                            />
+                            {/* Value Bubble - Positioned to NOT overlap labels */}
+                            <motion.g
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 1 + i * 0.1 }}
+                                transform={`translate(${p.x}, ${p.y})`}
+                            >
+                                <circle r="10" fill="black" fillOpacity="0.5" stroke="#ffb700" strokeWidth="0.5" />
+                                <text
+                                    y="3"
+                                    fill="#ffb700"
+                                    fontSize="8"
+                                    fontWeight="900"
+                                    textAnchor="middle"
+                                    className="font-bebas"
+                                >
+                                    {val}
+                                </text>
+                            </motion.g>
 
                             {/* Category Label */}
                             <motion.text
                                 x={labelPos.x}
-                                y={i === 2 || i === 3 ? labelPos.y - 18 : labelPos.y - 12}
+                                y={labelPos.y}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 1 + i * 0.1 }}
-                                fill="rgba(255,255,255,0.4)"
-                                fontSize="7"
+                                transition={{ delay: 1.2 + i * 0.1 }}
+                                fill="rgba(255,255,255,0.7)"
+                                fontSize="9"
                                 fontWeight="900"
                                 textAnchor="middle"
-                                className="font-bebas tracking-[0.2em] font-black"
+                                className="font-bebas tracking-widest"
                             >
                                 {cat.label}
                             </motion.text>
-
-                            {/* Precise Value HUD */}
-                            <motion.text
-                                x={labelPos.x}
-                                y={i === 2 || i === 3 ? labelPos.y - 6 : labelPos.y}
-                                initial={{ opacity: 0, y: labelPos.y + 5 }}
-                                animate={{ opacity: 1, y: i === 2 || i === 3 ? labelPos.y - 6 : labelPos.y }}
-                                transition={{ delay: 1.2 + i * 0.1 }}
-                                fill="#ffb700"
-                                fontSize="13"
-                                fontWeight="900"
-                                textAnchor="middle"
-                                className="font-bebas tracking-tighter"
-                            >
-                                {val}
-                            </motion.text>
-
-                            {/* Decorative line to label */}
-                            <motion.line
-                                x1={p.x}
-                                y1={p.y}
-                                x2={labelPos.x}
-                                y2={labelPos.y - 5}
-                                initial={{ pathLength: 0, opacity: 0 }}
-                                animate={{ pathLength: 1, opacity: 0.2 }}
-                                transition={{ delay: 1.1 + i * 0.1 }}
-                                stroke="#ffb700"
-                                strokeWidth="0.5"
-                                strokeDasharray="1 1"
-                            />
                         </g>
                     );
                 })}

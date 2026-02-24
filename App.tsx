@@ -1466,24 +1466,26 @@ const App: React.FC = () => {
   }
 
   return (
-    <Layout
-      activeView={view}
-      setView={(newView) => {
-        trackEvent('view_change', { from: view, to: newView, agent_id: currentUser?.id });
-        setView(newView);
-      }}
-      userRole={effectiveRole}
-      userName={currentUser?.name || 'Agente'}
-      onLogout={handleLogout}
-      onHardReset={handleHardReset}
-      notificationCount={unreadNotifications}
-      onOpenInbox={() => setShowInbox(true)}
-    >
-      <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
-        <AnimatePresence mode="wait">
-          {renderContent()}
-        </AnimatePresence>
-      </div>
+    <>
+      <Layout
+        activeView={view}
+        setView={(newView) => {
+          trackEvent('view_change', { from: view, to: newView, agent_id: currentUser?.id });
+          setView(newView);
+        }}
+        userRole={effectiveRole}
+        userName={currentUser?.name || 'Agente'}
+        onLogout={handleLogout}
+        onHardReset={handleHardReset}
+        notificationCount={unreadNotifications}
+        onOpenInbox={() => setShowInbox(true)}
+      >
+        <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
+          <AnimatePresence mode="wait">
+            {renderContent()}
+          </AnimatePresence>
+        </div>
+      </Layout>
 
       {showInbox && (
         <NotificationInbox
@@ -1531,8 +1533,14 @@ const App: React.FC = () => {
       )}
 
       {foundAgent && (
-        <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center p-6 animate-in fade-in overflow-y-auto no-scrollbar">
-          <div className="mt-4 flex flex-col items-center w-full animate-scale max-w-2xl">
+        <div className="fixed inset-0 z-[500] bg-[#020617] flex flex-col items-center p-6 animate-in fade-in overflow-y-auto no-scrollbar pt-20 pb-10">
+          <div className="flex flex-col items-center w-full animate-scale max-w-2xl relative">
+            <button
+              onClick={() => setFoundAgent(null)}
+              className="absolute -top-16 right-0 p-3 bg-red-600/20 text-red-500 rounded-full border border-red-500/30 shadow-lg active:scale-90 transition-all"
+            >
+              <X size={20} />
+            </button>
             <DigitalIdCard agent={foundAgent} onClose={() => setFoundAgent(null)} />
             <TacticalProfileDetail agent={foundAgent} />
           </div>
@@ -1540,7 +1548,7 @@ const App: React.FC = () => {
       )}
 
       {showExpedienteFor && (
-        <div className="fixed inset-0 z-[120]">
+        <div className="fixed inset-0 z-[600]">
           <TacticalExpediente
             agent={showExpedienteFor}
             onClose={() => setShowExpedienteFor(null)}
@@ -1605,7 +1613,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 };
 

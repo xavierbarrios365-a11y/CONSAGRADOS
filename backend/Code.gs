@@ -1019,139 +1019,122 @@ function updateNotifPrefs(data) {
  * @description Registra una asistencia y notifica por Telegram.
  */
 function registerIdScan(payload) {
-   const CONFIG = getGlobalConfig();
-   const ss = getSpreadsheet();
-   const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
-   if (!attendanceSheet) throw new Error(`Sheet "${CONFIG.ATTENDANCE_SHEET_NAME}" no encontrada.`);
-   
-   // --- VALIDACIÓN: UN ESCANEO POR DÍA ---
-   const attendanceData = attendanceSheet.getDataRange().getValues();
-   const attenHeaders = attendanceData[0].map(h => String(h).trim().toUpperCase());
-   const attenIdIdx = findHeaderIdx(attenHeaders, 'ID');
-   // FIX #4: Dynamic header lookup instead of hardcoded column index
-   let attenDateIdx = findHeaderIdx(attenHeaders, 'FECHA');
-   if (attenDateIdx === -1) attenDateIdx = 3; // fallback
-   
-   const today = new Date();
-   today.setHours(0,0,0,0);
-   
-   for (let i = 1; i < attendanceData.length; i++) {
-     const rowId = attendanceData[i][attenIdIdx !== -1 ? attenIdIdx : 0];
-     const rowDate = new Date(attendanceData[i][attenDateIdx]);
-     rowDate.setHours(0,0,0,0);
-     
-     if (String(rowId).trim() === String(payload.scannedId).trim() && rowDate.getTime() === today.getTime()) {
-       return jsonError("ALERTA: Agente ya registrado el día de hoy.");
-     }
-   }
+  try {
+    const CONFIG = getGlobalConfig();
+    const ss = getSpreadsheet();
+    const attendanceSheet = ss.getSheetByName(CONFIG.ATTENDANCE_SHEET_NAME);
+    if (!attendanceSheet) throw new Error(`Sheet "${CONFIG.ATTENDANCE_SHEET_NAME}" no encontrada.`);
+    
+    const attendanceData = attendanceSheet.getDataRange().getValues();
+    const attenHeaders = attendanceData[0].map(h => String(h).trim().toUpperCase());
+    const attenIdIdx = findHeaderIdx(attenHeaders, 'ID');
+    let attenDateIdx = findHeaderIdx(attenHeaders, 'FECHA');
+    if (attenDateIdx === -1) attenDateIdx = 3; 
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    for (let i = 1; i < attendanceData.length; i++) {
+      const rowId = attendanceData[i][attenIdIdx !== -1 ? attenIdIdx : 0];
+      const rowDate = new Date(attendanceData[i][attenDateIdx]);
+      rowDate.setHours(0,0,0,0);
+      
+      if (String(rowId).trim() === String(payload.scannedId).trim() && rowDate.getTime() === today.getTime()) {
+        return jsonError("ALERTA: Agente ya registrado el día de hoy.");
+      }
+    }
 
-   attendanceSheet.appendRow([payload.scannedId, 'ASISTENCIA', payload.location, new Date(payload.timestamp), payload.referidoPor || '']);
+    attendanceSheet.appendRow([payload.scannedId, 'ASISTENCIA', payload.location, new Date(payload.timestamp), payload.referidoPor || '']);
 
-   // Notificación a Telegram y puntos
-   const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
-   const directoryData = directorySheet.getDataRange().getValues();
-   const dirHeaders = directoryData[0].map(h => String(h).trim().toUpperCase());
-   const dirIdCol = findHeaderIdx(dirHeaders, 'ID');
-   const dirNameCol = findHeaderIdx(dirHeaders, 'NOMBRE');
-   
-   let agentName = "Desconocido";
-   let agentRowIdx = -1;
+    const directorySheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    const directoryData = directorySheet.getDataRange().getValues();
+    const dirHeaders = directoryData[0].map(h => String(h).trim().toUpperCase());
+    const dirIdCol = findHeaderIdx(dirHeaders, 'ID');
+    const dirNameCol = findHeaderIdx(dirHeaders, 'NOMBRE');
+    
+    let agentName = "Desconocido";
+    let agentRowIdx = -1;
 
-   for (let i = 1; i < directoryData.length; i++) {
-     if (String(directoryData[i][dirIdCol !== -1 ? dirIdCol : 0]).trim().toUpperCase() == String(payload.scannedId).trim().toUpperCase()) {
-       agentName = directoryData[i][dirNameCol !== -1 ? dirNameCol : 1]; 
-       agentRowIdx = i + 1;
-       break;
-     }
-   }
-   
-   // Publicar en Intel Feed (Siempré con NOMBRE)
-   if (agentRowIdx !== -1) {
-     addNewsItem(ss, 'DESPLIEGUE', '🛡️ ' + agentName + ' se reportó para el despliegue.', payload.scannedId, agentName);
-   } else {
-     // Si es visitante y tiene referido, acreditar al reclutador
-     if (payload.referidoPor) {
-        addNewsItem(ss, 'OPERACION', '🎯 ' + payload.referidoPor + ' trajo a un nuevo visitante (' + payload.scannedId + ').', '', payload.referidoPor);
-     }
-   }
-   
-   // AUTO-XP: +10 Liderazgo, +10 Biblia, +10 Apuntes, +30 XP total (1 batch write)
-   if (agentRowIdx !== -1) {
-     // BONUS: Verificar si confirmó asistencia previamente (1.5x)
-     let multiplier = 1;
-     const confSheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
-     if (confSheet) {
-       const confData = confSheet.getDataRange().getValues();
-       const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
-       for (let j = 1; j < confData.length; j++) {
-         const rowAgentId = String(confData[j][0]).trim();
-         const rowDate = confData[j][3]; 
-         let rowDateStr = "";
-         if (rowDate instanceof Date) {
-            rowDateStr = Utilities.formatDate(rowDate, "GMT-4", "yyyy-MM-dd");
-         } else {
-            rowDateStr = String(rowDate).split(" ")[0]; // yyyy-MM-dd
-         }
-         
-         if (rowAgentId === String(payload.scannedId).trim() && rowDateStr === todayStr) {
-           multiplier = 1.5;
-           break;
-         }
-       }
-     }
+    for (let i = 1; i < directoryData.length; i++) {
+      if (String(directoryData[i][dirIdCol !== -1 ? dirIdCol : 0]).trim().toUpperCase() == String(payload.scannedId).trim().toUpperCase()) {
+        agentName = directoryData[i][dirNameCol !== -1 ? dirNameCol : 1]; 
+        agentRowIdx = i + 1;
+        break;
+      }
+    }
+    
+    if (agentRowIdx !== -1) {
+      addNewsItem(ss, 'DESPLIEGUE', '🛡️ ' + agentName + ' se reportó para el despliegue.', payload.scannedId, agentName);
+    } else if (payload.referidoPor) {
+      addNewsItem(ss, 'OPERACION', '🎯 ' + payload.referidoPor + ' trajo a un nuevo visitante (' + payload.scannedId + ').', '', payload.referidoPor);
+    }
+    
+    let multiplier = 1;
+    if (agentRowIdx !== -1) {
+      const confSheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
+      if (confSheet) {
+        const confData = confSheet.getDataRange().getValues();
+        const todayStr = Utilities.formatDate(today, "GMT-4", "yyyy-MM-dd");
+        for (let j = 1; j < confData.length; j++) {
+          const rowAgentId = String(confData[j][0]).trim();
+          const rowDate = confData[j][3]; 
+          let rowDateStr = (rowDate instanceof Date) ? Utilities.formatDate(rowDate, "GMT-4", "yyyy-MM-dd") : String(rowDate).split(" ")[0];
+          if (rowAgentId === String(payload.scannedId).trim() && rowDateStr === todayStr) {
+            multiplier = 1.5;
+            break;
+          }
+        }
+      }
 
-     const pointsPerCategory = Math.round(10 * multiplier);
-     const leadCol = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
-     const bibleCol = findHeaderIdx(dirHeaders, 'PUNTOS_BIBLIA');
-     const notesCol = findHeaderIdx(dirHeaders, 'PUNTOS_APUNTES');
-     const xpCol = findHeaderIdx(dirHeaders, 'XP');
+      const pointsPerCategory = Math.round(10 * multiplier);
+      const leadCol = findHeaderIdx(dirHeaders, 'PUNTOS_LIDERAZGO');
+      const bibleCol = findHeaderIdx(dirHeaders, 'PUNTOS_BIBLIA');
+      const notesCol = findHeaderIdx(dirHeaders, 'PUNTOS_APUNTES');
+      const xpCol = findHeaderIdx(dirHeaders, 'XP');
 
-     if (leadCol !== -1 || bibleCol !== -1 || notesCol !== -1 || xpCol !== -1) {
-       const rowData = directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).getValues()[0];
-       if (leadCol !== -1) rowData[leadCol] = (parseInt(rowData[leadCol]) || 0) + pointsPerCategory;
-       if (bibleCol !== -1) rowData[bibleCol] = (parseInt(rowData[bibleCol]) || 0) + pointsPerCategory;
-       if (notesCol !== -1) rowData[notesCol] = (parseInt(rowData[notesCol]) || 0) + pointsPerCategory;
-       
-       if (xpCol !== -1) {
-         const b = (parseInt(rowData[bibleCol]) || 0);
-         const a = (parseInt(rowData[notesCol]) || 0);
-         const l = (parseInt(rowData[leadCol]) || 0);
-         rowData[xpCol] = b + a + l;
-       }
-       directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).setValues([rowData]);
-       
-       // Notificación de XP por asistencia
-       const fcmToken = getAgentFcmToken(payload.scannedId);
-       if (fcmToken) {
-         const totalEarned = pointsPerCategory * 3;
-         const msg = multiplier === 1.5 
-           ? `🛡️ DESPLIEGUE EXITOSO (BONO 1.5x): +${totalEarned} XP totales registrados.` 
-           : `🛡️ DESPLIEGUE EXITOSO: +${totalEarned} XP totales registrados.`;
-         sendPushNotification("ESTATUS TÁCTICO", msg, fcmToken);
-       }
-     }
+      if (leadCol !== -1 || bibleCol !== -1 || notesCol !== -1 || xpCol !== -1) {
+        const rowData = directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).getValues()[0];
+        if (leadCol !== -1) rowData[leadCol] = (parseInt(rowData[leadCol]) || 0) + pointsPerCategory;
+        if (bibleCol !== -1) rowData[bibleCol] = (parseInt(rowData[bibleCol]) || 0) + pointsPerCategory;
+        if (notesCol !== -1) rowData[notesCol] = (parseInt(rowData[notesCol]) || 0) + pointsPerCategory;
+        if (xpCol !== -1) {
+          const b = (parseInt(rowData[bibleCol]) || 0);
+          const a = (parseInt(rowData[notesCol]) || 0);
+          const l = (parseInt(rowData[leadCol]) || 0);
+          rowData[xpCol] = b + a + l;
+        }
+        directorySheet.getRange(agentRowIdx, 1, 1, dirHeaders.length).setValues([rowData]);
+        
+        const fcmToken = getAgentFcmToken(payload.scannedId);
+        if (fcmToken) {
+          const totalEarned = pointsPerCategory * 3;
+          const msg = multiplier === 1.5 ? `🛡️ DESPLIEGUE EXITOSO (BONO 1.5x): +${totalEarned} XP registrados.` : `🛡️ DESPLIEGUE EXITOSO: +${totalEarned} XP registrados.`;
+          sendPushNotification("ESTATUS TÁCTICO", msg, fcmToken);
+        }
+      }
     }
    
-   const telegramMessage = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n<b>• Tipo:</b> ${payload.type}\n<b>• Fecha:</b> ${new Date(payload.timestamp).toLocaleString()}\n\n<b>PUNTOS:</b> +${Math.round(10*multiplier)} Liderazgo, +${Math.round(10*multiplier)} Biblia, +${Math.round(10*multiplier)} Apuntes`;
-   sendTelegramNotification(telegramMessage);
-}
-   // --- VISITANTE RADAR ---
-   if (agentRowIdx === -1) {
-     let visitorVisits = 0;
-     for (let i = 1; i < attendanceData.length; i++) {
-       // Re-usar attenIdIdx o fallback a 0
-       if (String(attendanceData[i][attenIdIdx !== -1 ? attenIdIdx : 0]).trim().toUpperCase() === String(payload.scannedId).trim().toUpperCase()) {
-         visitorVisits++;
-       }
-     }
-     
-     if (visitorVisits >= 2) {
-       const alertMessage = `🚨 <b>ALERTA DE RECLUTAMIENTO</b>\n\nEl visitante con ID <code>${payload.scannedId}</code> ha asistido <b>${visitorVisits + 1} veces</b>.\n\n<b>ESTADO:</b> DEBE SER INSCRITO INMEDIATAMENTE.`;
-       sendTelegramNotification(alertMessage);
-     }
-   }
+    if (agentRowIdx === -1) {
+      let visitorVisits = 0;
+      for (let i = 1; i < attendanceData.length; i++) {
+        if (String(attendanceData[i][attenIdIdx !== -1 ? attenIdIdx : 0]).trim().toUpperCase() === String(payload.scannedId).trim().toUpperCase()) {
+          visitorVisits++;
+        }
+      }
+      if (visitorVisits >= 2) {
+        const alertMessage = `🚨 <b>ALERTA DE RECLUTAMIENTO</b>\n\nEl visitante con ID <code>${payload.scannedId}</code> ha asistido <b>${visitorVisits + 1} veces</b>.`;
+        sendTelegramNotification(alertMessage);
+      }
+    }
 
-  return jsonOk({ agentName: agentName });
+    const telMsg = `🛡️ <b>REGISTRO DE ASISTENCIA</b>\n\n<b>• Agente:</b> ${agentName}\n<b>• ID:</b> <code>${payload.scannedId}</code>\n\n<b>PUNTOS:</b> +${Math.round(10*multiplier)} Biblia, +${Math.round(10*multiplier)} Apuntes, +${Math.round(10*multiplier)} Liderazgo`;
+    sendTelegramNotification(telMsg);
+
+    return jsonOk({ agentName: agentName });
+  } catch (err) {
+    Logger.log(err);
+    return jsonError(err.message);
+  }
 }
 
 /**

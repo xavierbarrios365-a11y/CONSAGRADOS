@@ -287,9 +287,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
                   <p className="text-[7px] text-gray-500 font-black uppercase tracking-widest flex items-center gap-1">
                     <Heart size={10} className="text-red-500" /> DIOS
                   </p>
-                  <p className="text-[10px] text-white/80 font-medium italic leading-[1.3] line-clamp-2">
-                    "{agent.relationshipWithGod || 'PROCESANDO...'}"
-                  </p>
+                  <div className="h-12 overflow-y-auto no-scrollbar pr-1">
+                    <p className="text-[10px] text-white/80 font-medium italic leading-[1.3]">
+                      "{agent.relationshipWithGod || 'PROCESANDO...'}"
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -404,9 +406,11 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
                       <ShieldCheck size={12} className="text-[#ffb700]" />
                       <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.3em]">ANALÍTICA DE CAMPO:</p>
                     </div>
-                    <p className="text-[11px] text-white/90 font-bold leading-relaxed uppercase font-montserrat italic">
-                      {agent.tacticalSummary || "A la espera de sincronización con el servidor central para generar reporte estratégico."}
-                    </p>
+                    <div className="h-24 overflow-y-auto no-scrollbar pr-1">
+                      <p className="text-[11px] text-white/90 font-bold leading-relaxed uppercase font-montserrat italic">
+                        {agent.tacticalSummary || "A la espera de sincronización con el servidor central para generar reporte estratégico."}
+                      </p>
+                    </div>
                   </div>
                 </>
               )}

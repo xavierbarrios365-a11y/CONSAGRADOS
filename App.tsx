@@ -9,6 +9,7 @@ import CIUModule from './components/IntelligenceCenter';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import EliteRecruitmentTest from './components/EliteRecruitmentTest';
+import TacticalProfileDetail from './components/TacticalProfileDetail';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import TacticalExpediente from './components/TacticalExpediente';
 import ContentModule from './components/ContentModule';
@@ -1530,9 +1531,10 @@ const App: React.FC = () => {
       )}
 
       {foundAgent && (
-        <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center p-6 animate-in fade-in overflow-y-auto">
-          <div className="mt-4 flex-1 flex items-center justify-center w-full animate-scale">
+        <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col items-center p-6 animate-in fade-in overflow-y-auto no-scrollbar">
+          <div className="mt-4 flex flex-col items-center w-full animate-scale max-w-2xl">
             <DigitalIdCard agent={foundAgent} onClose={() => setFoundAgent(null)} />
+            <TacticalProfileDetail agent={foundAgent} />
           </div>
         </div>
       )}

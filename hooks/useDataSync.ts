@@ -6,7 +6,8 @@ import {
     fetchVisitorRadar,
     fetchActiveEvents,
     fetchNotifications,
-    fetchBadges
+    fetchBadges,
+    fetchUserEventConfirmations
 } from '../services/sheetsService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
@@ -17,6 +18,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const [badges, setBadges] = useState<Badge[]>([]);
     const [headlines, setHeadlines] = useState<string[]>([]);
     const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [userConfirmations, setUserConfirmations] = useState<string[]>([]);
 
     /**
      * Syncs all data from the backend.
@@ -44,6 +46,11 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             const badgeData = await fetchBadges();
             setBadges(badgeData || []);
+
+            if (currentUser) {
+                const confs = await fetchUserEventConfirmations(currentUser.id);
+                setUserConfirmations(confs || []);
+            }
 
             return sheetAgents;
         } catch (err) {
@@ -140,5 +147,6 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         unreadNotifications, setUnreadNotifications,
         syncData,
         checkHeadlines,
+        userConfirmations, setUserConfirmations,
     };
 }

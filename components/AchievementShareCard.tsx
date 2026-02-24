@@ -241,7 +241,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                                 <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-10 rounded-[40px] relative overflow-hidden">
                                     <div className="absolute left-0 top-0 bottom-0 w-3 bg-[#ffb700]" />
                                     <div className="relative z-10">
-                                        <p className="text-[38px] font-black text-white uppercase leading-[1.3] tracking-tight">
+                                        <p className="text-[38px] font-black text-white uppercase leading-[1.3] tracking-tight whitespace-pre-wrap">
                                             "{newsItem?.message || 'LOGRO OPERATIVO RECONOCIDO POR SUPERIORIDAD'}"
                                         </p>
                                         <div className="flex items-center gap-6 mt-6">

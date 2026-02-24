@@ -12,6 +12,7 @@ import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, 
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
 import { toPng } from 'html-to-image';
+import { useTacticalAlert } from './TacticalAlert';
 import { applyAbsencePenalties } from '../services/sheetsService';
 import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
 
@@ -30,6 +31,7 @@ interface CIUProps {
 }
 
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick, userRole, onActivateNotifications }) => {
+  const { showAlert } = useTacticalAlert();
   const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.id || agents[0]?.id || '');
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [isUpdatingPoints, setIsUpdatingPoints] = useState(false);
@@ -104,27 +106,33 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     try {
       const res = await createEvent(newEvent);
       if (res.success) {
-        alert("✅ EVENTO CREADO EXITOSAMENTE");
+        showAlert({ title: "ÉXITO", message: "✅ EVENTO CREADO EXITOSAMENTE", type: 'SUCCESS' });
         setNewEvent({ title: '', date: '', time: '', description: '' });
         loadEvents();
       }
     } catch (e) {
-      alert("❌ FALLO AL CREAR EVENTO");
+      showAlert({ title: "ERROR", message: "❌ FALLO AL CREAR EVENTO", type: 'ERROR' });
     } finally {
       setIsCreatingEvent(false);
     }
   };
 
   const handleDeleteEvent = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este evento?")) return;
-    try {
-      const res = await deleteEvent(id);
-      if (res.success) {
-        loadEvents();
+    showAlert({
+      title: "ELIMINAR EVENTO",
+      message: "¿Seguro que deseas eliminar este evento?",
+      type: 'CONFIRM',
+      onConfirm: async () => {
+        try {
+          const res = await deleteEvent(id);
+          if (res.success) {
+            loadEvents();
+          }
+        } catch (e) {
+          showAlert({ title: "ERROR", message: "❌ FALLO AL ELIMINAR", type: 'ERROR' });
+        }
       }
-    } catch (e) {
-      alert("❌ FALLO AL ELIMINAR");
-    }
+    });
   };
 
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
@@ -160,22 +168,28 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
   const handleBroadcast = async () => {
     if (!broadcastData.title || !broadcastData.message) return;
-    if (!window.confirm("⚠️ ¿TRANSMITIR COMUNICADO MASIVO?\n\nEsta notificación llegará a todos los agentes vía Push y Telegram.")) return;
 
-    setIsSendingBroadcast(true);
-    try {
-      const res = await broadcastNotification(broadcastData.title, broadcastData.message);
-      if (res.success) {
-        alert("✅ TRANSMISIÓN COMPLETADA");
-        setBroadcastData({ title: '', message: '' });
-      } else {
-        alert("❌ ERROR: " + res.error);
+    showAlert({
+      title: "TRANSMISIÓN MASIVA",
+      message: "⚠️ ¿TRANSMITIR COMUNICADO MASIVO?\n\nEsta notificación llegará a todos los agentes vía Push y Telegram.",
+      type: 'CONFIRM',
+      onConfirm: async () => {
+        setIsSendingBroadcast(true);
+        try {
+          const res = await broadcastNotification(broadcastData.title, broadcastData.message);
+          if (res.success) {
+            showAlert({ title: "ÉXITO", message: "✅ TRANSMISIÓN COMPLETADA", type: 'SUCCESS' });
+            setBroadcastData({ title: '', message: '' });
+          } else {
+            showAlert({ title: "ERROR", message: "❌ ERROR: " + res.error, type: 'ERROR' });
+          }
+        } catch (err) {
+          showAlert({ title: "ERROR", message: "❌ FALLO DE CONEXIÓN", type: 'ERROR' });
+        } finally {
+          setIsSendingBroadcast(false);
+        }
       }
-    } catch (err) {
-      alert("❌ FALLO DE CONEXIÓN");
-    } finally {
-      setIsSendingBroadcast(false);
-    }
+    });
   };
 
   const handleGenerateAiProfile = async () => {
@@ -187,15 +201,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       if (aiProfile) {
         const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
         if (res.success) {
-          alert("✅ SINCRONIZACIÓN IA COMPLETADA");
+          showAlert({ title: "SINCRONIZACIÓN", message: "✅ SINCRONIZACIÓN IA COMPLETADA", type: 'SUCCESS' });
           if (onUpdateNeeded) onUpdateNeeded();
         } else {
-          alert("❌ ERROR AL GUARDAR PERFIL: " + res.error);
+          showAlert({ title: "ERROR", message: "❌ ERROR AL GUARDAR PERFIL: " + res.error, type: 'ERROR' });
         }
       }
     } catch (err: any) {
       console.error("AI Error:", err);
-      alert("❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."));
+      showAlert({ title: "ERROR DE IA", message: "❌ ERROR DE IA: " + (err.message || "Fallo en la conexión con el núcleo neuronal."), type: 'ERROR' });
     } finally {
       setIsGeneratingAi(false);
     }
@@ -209,7 +223,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       setGlobalReport(report);
     } catch (err: any) {
       console.error("Global AI Report Error:", err);
-      alert("❌ FALLO EN LA CONSOLIDACIÓN ESTRATÉGICA.");
+      showAlert({ title: "FALLO ESTRATÉGICO", message: "❌ FALLO EN LA CONSOLIDACIÓN ESTRATÉGICA.", type: 'ERROR' });
     } finally {
       setIsGeneratingGlobalReport(false);
     }
@@ -217,21 +231,27 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
 
   const handleImportInscriptions = async () => {
-    if (!window.confirm("⚠️ ¿RECONSTRUIR BASE DE DATOS?\n\nEsto sincronizará la hoja de cálculo con la base local.")) return;
-    setIsReconstructing(true);
-    try {
-      const res = await reconstructDatabase();
-      if (res.success) {
-        alert("✅ SINCRONIZACIÓN EXITOSA");
-        if (onUpdateNeeded) onUpdateNeeded();
-      } else {
-        alert("❌ ERROR: " + (res.error || "Fallo desconocido"));
+    showAlert({
+      title: "RECONSTRUCCIÓN BASE",
+      message: "⚠️ ¿RECONSTRUIR BASE DE DATOS?\n\nEsto sincronizará la hoja de cálculo con la base local.",
+      type: 'CONFIRM',
+      onConfirm: async () => {
+        setIsReconstructing(true);
+        try {
+          const res = await reconstructDatabase();
+          if (res.success) {
+            showAlert({ title: "SINCRONIZACIÓN", message: "✅ SINCRONIZACIÓN EXITOSA", type: 'SUCCESS' });
+            if (onUpdateNeeded) onUpdateNeeded();
+          } else {
+            showAlert({ title: "ERROR", message: "❌ ERROR: " + (res.error || "Fallo desconocido"), type: 'ERROR' });
+          }
+        } catch (err) {
+          showAlert({ title: "ERROR", message: "❌ FALLO DE COMUNICACIÓN CON EL NÚCLEO", type: 'ERROR' });
+        } finally {
+          setIsReconstructing(false);
+        }
       }
-    } catch (err) {
-      alert("❌ FALLO DE COMUNICACIÓN CON EL NÚCLEO");
-    } finally {
-      setIsReconstructing(false);
-    }
+    });
   };
 
   const handlePhotoUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,7 +276,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         throw new Error(uploadResult.error || "Error al subir imagen");
       }
     } catch (err: any) {
-      alert(`ERROR: ${err.message}`);
+      showAlert({ title: "ERROR DE CARGA", message: `ERROR: ${err.message}`, type: 'ERROR' });
       setPhotoStatus('ERROR');
       setTimeout(() => setPhotoStatus('IDLE'), 3000);
     }
@@ -265,66 +285,91 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const handleUpdatePoints = async (type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO', points: number) => {
     if (!agent) return;
     const absPoints = Math.abs(points);
-    if (points < 0 && !window.confirm(`🚨 ¿APLICAR SANCIÓN DE ${absPoints} PUNTOS A ${agent.name}?`)) return;
 
-    setIsUpdatingPoints(true);
-    try {
-      const res = await updateAgentPoints(agent.id, type, points);
-      if (res.success) {
-        alert(`✅ ${points > 0 ? '+' : ''}${points} PUNTOS REGISTRADOS`);
-        if (onUpdateNeeded) onUpdateNeeded();
-      } else {
-        alert("❌ ERROR: " + (res.error || "Fallo en protocolo de puntos."));
+    const executeUpdate = async () => {
+      setIsUpdatingPoints(true);
+      try {
+        const res = await updateAgentPoints(agent.id, type, points);
+        if (res.success) {
+          showAlert({ title: "PUNTOS ACTUALIZADOS", message: `✅ ${points > 0 ? '+' : ''}${points} PUNTOS REGISTRADOS PARA ${agent.name}`, type: 'SUCCESS' });
+          if (onUpdateNeeded) onUpdateNeeded();
+        } else {
+          showAlert({ title: "ERROR", message: "❌ ERROR: " + (res.error || "Fallo en protocolo de puntos."), type: 'ERROR' });
+        }
+      } catch (err: any) {
+        showAlert({ title: "FALLO DE CONEXIÓN", message: "⚠️ FALLO TÁCTICO DE CONEXIÓN: " + (err.message || "Error desconocido."), type: 'ERROR' });
+      } finally {
+        setIsUpdatingPoints(false);
       }
-    } catch (err: any) {
-      alert("⚠️ FALLO TÁCTICO DE CONEXIÓN: " + (err.message || "Error desconocido."));
-    } finally {
-      setIsUpdatingPoints(false);
+    };
+
+    if (points < 0) {
+      showAlert({
+        title: "SANCIÓN TÁCTICA",
+        message: `🚨 ¿APLICAR SANCIÓN DE ${absPoints} PUNTOS A ${agent.name}?`,
+        type: 'CONFIRM',
+        onConfirm: executeUpdate
+      });
+    } else {
+      executeUpdate();
     }
   };
 
   const handlePercentageDeduction = async (percentage: number) => {
     if (!agent) return;
-    if (!window.confirm(`🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿CONFIRMA LA EXPULSIÓN DE ${agent.name}?\nSe le descontará el ${percentage}% de TODOS sus puntos acumulados.`)) return;
 
-    setIsUpdatingPoints(true);
-    try {
-      const res = await deductPercentagePoints(agent.id, percentage);
-      if (res.success) {
-        alert(`☠️ EXPULSIÓN COMPLETADA: -${percentage}% Puntos.`);
-        if (onUpdateNeeded) onUpdateNeeded();
-      } else {
-        alert("❌ ERROR: " + (res.error || "Fallo en protocolo de expulsión."));
+    showAlert({
+      title: "ALERTA DE SEGURIDAD",
+      message: `🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿CONFIRMA LA EXPULSIÓN DE ${agent.name}?\nSe le descontará el ${percentage}% de TODOS sus puntos acumulados.`,
+      type: 'CONFIRM',
+      onConfirm: async () => {
+        setIsUpdatingPoints(true);
+        try {
+          const res = await deductPercentagePoints(agent.id, percentage);
+          if (res.success) {
+            showAlert({ title: "EXPULSIÓN COMPLETADA", message: `☠️ EXPULSIÓN COMPLETADA: -${percentage}% Puntos.`, type: 'SUCCESS' });
+            if (onUpdateNeeded) onUpdateNeeded();
+          } else {
+            showAlert({ title: "ERROR", message: "❌ ERROR: " + (res.error || "Fallo en protocolo de expulsión."), type: 'ERROR' });
+          }
+        } catch (err: any) {
+          showAlert({ title: "FALLO DE CONEXIÓN", message: "⚠️ FALLO TÁCTICO DE CONEXIÓN: " + (err.message || "Error desconocido."), type: 'ERROR' });
+        } finally {
+          setIsUpdatingPoints(false);
+        }
       }
-    } catch (err: any) {
-      alert("⚠️ FALLO TÁCTICO DE CONEXIÓN: " + (err.message || "Error desconocido."));
-    } finally {
-      setIsUpdatingPoints(false);
-    }
+    });
   };
 
   const handleReconcileXP = async () => {
-    if (!window.confirm("🚨 ¿CONFIRMAR RECONSTRUCCIÓN DE PUNTOS?\n\nEsta acción buscará la asistencia de hoy y asignará +10 XP en cada categoría a los agentes que no los recibieron.\n\nÚselo solo si el Cuadro de Honor no sumó los puntos automáticamente.")) return;
-
-    setIsReconcilingXP(true);
-    try {
-      const res = await reconcileXP();
-      console.log("📊 RECONCILIATION RESULT:", JSON.stringify(res, null, 2));
-      if (res.success) {
-        const names = res.updatedNames?.length > 0 ? res.updatedNames.join(', ') : 'Ninguno';
-        const ids = res.foundIds?.length || 0;
-        const errs = res.errors?.length > 0 ? `\n\n⚠️ Errores: ${res.errors.join(', ')}` : '';
-        alert(`✅ CONCILIACIÓN EXITOSA\n\n📅 Fecha: ${res.today || 'Hoy'}\n🌐 Zona: ${res.tz || 'N/A'}\n🔍 IDs encontrados: ${ids}\n✅ Agentes actualizados: ${res.count}\n\n📋 Nombres: ${names}${errs}`);
-        resetSyncBackoff();
-        if (onUpdateNeeded) onUpdateNeeded();
-      } else {
-        alert("❌ FALLO EN LA CONCILIACIÓN: " + (res.error || "Error desconocido.") + "\n\nRevisa la consola para más detalles.");
+    showAlert({
+      title: "RECONCILIACIÓN XP",
+      message: "🚨 ¿CONFIRMAR RECONSTRUCCIÓN DE PUNTOS?\n\nEsta acción buscará la asistencia de hoy y asignará +10 XP en cada categoría a los agentes que no los recibieron.",
+      type: 'CONFIRM',
+      onConfirm: async () => {
+        setIsReconcilingXP(true);
+        try {
+          const res = await reconcileXP();
+          if (res.success) {
+            const names = res.updatedNames?.length > 0 ? res.updatedNames.join(', ') : 'Ninguno';
+            const ids = res.foundIds?.length || 0;
+            showAlert({
+              title: "CONCILIACIÓN EXITOSA",
+              message: `✅ CONCILIACIÓN COMPLETADA\n🔍 IDs encontrados: ${ids}\n✅ Agentes actualizados: ${res.count}\n📋 Nombres: ${names}`,
+              type: 'SUCCESS'
+            });
+            resetSyncBackoff();
+            if (onUpdateNeeded) onUpdateNeeded();
+          } else {
+            showAlert({ title: "FALLO DE CONCILIACIÓN", message: "❌ FALLO: " + (res.error || "Error desconocido."), type: 'ERROR' });
+          }
+        } catch (err: any) {
+          showAlert({ title: "ERROR", message: "⚠️ FALLO TÁCTICO DE CONEXIÓN: " + err.message, type: 'ERROR' });
+        } finally {
+          setIsReconcilingXP(false);
+        }
       }
-    } catch (err: any) {
-      alert("⚠️ FALLO TÁCTICO DE CONEXIÓN: " + err.message);
-    } finally {
-      setIsReconcilingXP(false);
-    }
+    });
   };
 
   const handleTestNotification = async () => {
@@ -333,10 +378,10 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     try {
       const res = await broadcastNotification("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
       if (res.success) {
-        alert("✅ PRUEBA ENVIADA. Verifica tu bandeja de notificaciones.");
+        showAlert({ title: "PRUEBA ENVIADA", message: "✅ PRUEBA ENVIADA. Verifica tu bandeja de notificaciones.", type: 'SUCCESS' });
       }
     } catch (err) {
-      alert("❌ FALLO EN EL TEST");
+      showAlert({ title: "ERROR", message: "❌ FALLO EN EL TEST", type: 'ERROR' });
     } finally {
       setIsSendingBroadcast(false);
     }
@@ -421,15 +466,20 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 )}
                 <button
                   onClick={async () => {
-                    if (window.confirm("🚨 ¿APLICAR PENALIZACIONES POR INASISTENCIA?\n\nEsto restará -5 XP a todos los agentes con más de 1 semana sin asistir.")) {
-                      const res = await applyAbsencePenalties();
-                      if (res.success) {
-                        alert(`✅ PROCESO COMPLETADO\n\nSe penalizaron ${res.agentsPenalized} agentes.`);
-                        if (onUpdateNeeded) onUpdateNeeded();
-                      } else {
-                        alert("❌ FALLO EN PENALIZACIÓN: " + res.error);
+                    showAlert({
+                      title: "SANCIONES MASIVAS",
+                      message: "🚨 ¿APLICAR PENALIZACIONES POR INASISTENCIA?\n\nEsto restará -5 XP a todos los agentes con más de 1 semana sin asistir.",
+                      type: 'CONFIRM',
+                      onConfirm: async () => {
+                        const res = await applyAbsencePenalties();
+                        if (res.success) {
+                          showAlert({ title: "PROCESO COMPLETADO", message: `✅ Se penalizaron ${res.agentsPenalized} agentes.`, type: 'SUCCESS' });
+                          if (onUpdateNeeded) onUpdateNeeded();
+                        } else {
+                          showAlert({ title: "ERROR", message: "❌ FALLO EN PENALIZACIÓN: " + res.error, type: 'ERROR' });
+                        }
                       }
-                    }
+                    });
                   }}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-orange-500/20 transition-all shadow-xl active:scale-95 font-bebas"
                 >
@@ -749,12 +799,16 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
             {userRole === UserRole.DIRECTOR && (
               <button
                 onClick={async () => {
-                  const confirmSend = window.confirm("⚠️ TRANSMISIÓN DE SEGURIDAD\n\n¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?");
-                  if (confirmSend) {
-                    const res = await sendAgentCredentials(selectedAgentId);
-                    if (res.success) alert("✅ TRANSMISIÓN EXITOSA");
-                    else alert("❌ FALLO EN TRANSMISIÓN: " + res.error);
-                  }
+                  showAlert({
+                    title: "TRANSMISIÓN DE SEGURIDAD",
+                    message: "⚠️ ¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?",
+                    type: 'CONFIRM',
+                    onConfirm: async () => {
+                      const res = await sendAgentCredentials(selectedAgentId);
+                      if (res.success) showAlert({ title: "ÉXITO", message: "✅ TRANSMISIÓN EXITOSA", type: 'SUCCESS' });
+                      else showAlert({ title: "ERROR", message: "❌ FALLO EN TRANSMISIÓN: " + res.error, type: 'ERROR' });
+                    }
+                  });
                 }}
                 className="bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl border border-blue-400/30 transition-all flex items-center gap-2 group shadow-lg shadow-blue-900/20"
                 title="Enviar Credenciales a Telegram"

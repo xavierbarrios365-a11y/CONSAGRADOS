@@ -14,6 +14,7 @@ import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import TacticalExpediente from './components/TacticalExpediente';
 import ContentModule from './components/ContentModule';
 import NotificationInbox from './components/NotificationInbox';
+import { TacticalAlertProvider, useTacticalAlert } from './components/TacticalAlert';
 import TacticalChat from './components/TacticalChat';
 import TacticalRanking from './components/TacticalRanking';
 import PromotionModule from './components/PromotionModule';
@@ -41,12 +42,13 @@ import {
   confirmDirectorAttendance,
   fetchActiveEvents,
   confirmEventAttendance as confirmEventAttendanceService,
+  fetchUserEventConfirmations,
   deleteAgent as deleteAgentService,
   fetchBadges,
   updateAgentAiProfile,
   fetchAcademyData
 } from './services/sheetsService';
-import { generateGoogleCalendarLink, downloadIcsFile } from './services/calendarService';
+import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList, Share2 } from 'lucide-react';
@@ -120,6 +122,7 @@ const App: React.FC = () => {
     unreadNotifications, setUnreadNotifications,
     syncData,
     checkHeadlines,
+    userConfirmations, setUserConfirmations,
   } = dataSync;
 
   const { notificationPermission, setNotificationPermission, initFirebaseMessaging } = firebase;
@@ -145,7 +148,9 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isConfirmingEvent, setIsConfirmingEvent] = useState<string | null>(null);
   const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
+  const { showAlert } = useTacticalAlert();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [userConfirmations, setUserConfirmations] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -213,7 +218,7 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Fallo re-perfilado global", err);
-      alert("⚠️ ERROR TÉCNICO EN RE-PERFILADO. REINTENTE.");
+      showAlert({ title: "FALLO TÉCNICO", message: "⚠️ ERROR TÉCNICO EN RE-PERFILADO. REINTENTE.", type: 'ERROR' });
     } finally {
       setIsUpdatingAiProfile(false);
     }
@@ -319,7 +324,7 @@ const App: React.FC = () => {
             setTimeout(scan, 200);
           }
         } catch (err) {
-          alert("NO SE PUDO ACTIVAR LA CÁMARA.");
+          showAlert({ title: "FALLO DE SENSOR", message: "NO SE PUDO ACTIVAR LA CÁMARA.", type: 'ERROR' });
         }
       };
       startCamera();
@@ -374,7 +379,7 @@ const App: React.FC = () => {
         }
         setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); syncData(true); }, 3000);
       } else {
-        alert(result.error || "Fallo en registro.");
+        showAlert({ title: "FALLO DE SISTEMA", message: result.error || "Fallo en registro.", type: 'ERROR' });
         setScanStatus('IDLE');
         setScannedId('');
       }
@@ -390,13 +395,13 @@ const App: React.FC = () => {
     try {
       const res = await updateAgentPoints(scannedAgentForPoints.id, type, 10);
       if (res.success) {
-        alert("✅ +10 PUNTOS REGISTRADOS EXITOSAMENTE");
+        showAlert({ title: "PUNTOS ASIGNADOS", message: "✅ +10 PUNTOS REGISTRADOS EXITOSAMENTE", type: 'SUCCESS' });
         syncData();
       } else {
-        alert("❌ ERROR AL REGISTRAR PUNTOS: " + (res.error || "Fallo en el protocolo."));
+        showAlert({ title: "FALLO DE PROTOCOLO", message: "❌ ERROR AL REGISTRAR PUNTOS: " + (res.error || "Fallo en el protocolo."), type: 'ERROR' });
       }
     } catch (err: any) {
-      alert("⚠️ FALLO DE CONEXIÓN CON EL NÚCLEO: " + (err.message || "Error desconocido."));
+      showAlert({ title: "FALLO DE CONEXIÓN", message: "⚠️ FALLO DE CONEXIÓN CON EL NÚCLEO: " + (err.message || "Error desconocido."), type: 'ERROR' });
     } finally {
       setIsUpdatingPoints(false);
     }
@@ -460,25 +465,30 @@ const App: React.FC = () => {
     try {
       const res = await confirmDirectorAttendance(currentUser.id, currentUser.name);
       if (res.alreadyDone) {
-        alert("✅ YA HAS CONFIRMADO TU ASISTENCIA HOY.");
+        showAlert({ title: "ESTATUS NOMINAL", message: "✅ YA HAS CONFIRMADO TU ASISTENCIA HOY.", type: 'INFO' });
       } else if (res.success) {
-        alert("✅ ASISTENCIA CONFIRMADA TÁCTICAMENTE.");
+        showAlert({ title: "ASISTENCIA CONFIRMADA", message: "✅ ASISTENCIA CONFIRMADA TÁCTICAMENTE.", type: 'SUCCESS' });
 
         // Ofrecer añadir al calendario
-        if (window.confirm("📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?")) {
-          const event = {
-            title: "REUNIÓN CONSAGRADOS 2026",
-            description: "Confirmación de asistencia táctica como DIRECTOR.",
-            startTime: new Date(),
-            endTime: new Date(new Date().getTime() + 2 * 60 * 60 * 1000) // +2h
-          };
-          window.open(generateGoogleCalendarLink(event), '_blank');
-        }
+        showAlert({
+          title: "CALENDARIO TÁCTICO",
+          message: "📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?",
+          type: 'CONFIRM',
+          onConfirm: () => {
+            const event = {
+              title: "REUNIÓN CONSAGRADOS 2026",
+              description: "Confirmación de asistencia táctica como DIRECTOR.",
+              startTime: new Date(),
+              endTime: new Date(new Date().getTime() + 2 * 60 * 60 * 1000) // +2h
+            };
+            window.open(generateGoogleCalendarLink(event), '_blank');
+          }
+        });
       } else {
-        alert("❌ FALLO EN PROTOCOLO DE ASISTENCIA");
+        showAlert({ title: "ERROR TÁCTICO", message: "❌ FALLO EN PROTOCOLO DE ASISTENCIA", type: 'ERROR' });
       }
     } catch (e) {
-      alert("❌ FALLO EN PROTOCOLO DE ASISTENCIA");
+      showAlert({ title: "ERROR TÁCTICO", message: "❌ FALLO EN PROTOCOLO DE ASISTENCIA", type: 'ERROR' });
     }
   };
 
@@ -494,35 +504,50 @@ const App: React.FC = () => {
       });
 
       if (res.success) {
-        alert(`✅ ASISTENCIA CONFIRMADA PARA: ${event.titulo}`);
+        showAlert({
+          title: "MISIÓN CONFIRMADA",
+          message: `✅ Has sido registrado exitosamente para: ${event.titulo}`,
+          type: 'SUCCESS'
+        });
 
         // Ofrecer añadir al calendario
-        if (window.confirm("📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?")) {
-          try {
-            const hora = (event.hora || '08:00').replace(/[^0-9:]/g, '');
-            const startStr = `${event.fecha}T${hora.length >= 5 ? hora : '08:00'}:00`;
-            let startDate = new Date(startStr);
-            if (isNaN(startDate.getTime())) startDate = new Date(); // fallback a hoy
-            const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        showAlert({
+          title: "CALENDARIO TÁCTICO",
+          message: "📅 ¿DESEAS AÑADIR ESTE EVENTO A TU CALENDARIO?",
+          type: 'CONFIRM',
+          confirmText: "SÍ, AÑADIR",
+          cancelText: "LUEGO",
+          onConfirm: () => {
+            try {
+              const startDate = parseEventDate(event.fecha, event.hora);
+              const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
-            const calendarEvent = {
-              title: event.titulo || 'Evento Consagrados',
-              description: `Participación en el evento táctico: ${event.titulo}`,
-              startTime: startDate,
-              endTime: endDate
-            };
+              const calendarEvent = {
+                title: event.titulo || 'Evento Consagrados',
+                description: `Participación en el evento táctico: ${event.titulo}`,
+                startTime: startDate,
+                endTime: endDate
+              };
 
-            const calLink = generateGoogleCalendarLink(calendarEvent);
-            window.open(calLink, '_blank', 'noopener,noreferrer');
-          } catch (calError) {
-            console.error('Error creando enlace de calendario:', calError);
-            alert('No se pudo crear el enlace al calendario. Intenta de nuevo.');
+              const calLink = generateGoogleCalendarLink(calendarEvent);
+              if (calLink) {
+                window.open(calLink, '_blank', 'noopener,noreferrer');
+              } else {
+                showAlert({ title: "ERROR", message: "No se pudo generar el enlace.", type: 'ERROR' });
+              }
+            } catch (calError) {
+              console.error('Error creando enlace de calendario:', calError);
+              showAlert({ title: "ERROR", message: "Error en protocolo de calendario.", type: 'ERROR' });
+            }
           }
-        }
+        });
+
+        // Actualizar confirmaciones locales inmediatamente
+        setUserConfirmations(prev => [...prev, String(event.titulo).trim()]);
         syncData(true);
       }
     } catch (e) {
-      alert("❌ FALLO EN PROTOCOLO DE EVENTO");
+      showAlert({ title: "FALLO DE SISTEMA", message: "❌ FALLO EN PROTOCOLO DE EVENTO", type: 'ERROR' });
     } finally {
       setIsConfirmingEvent(null);
     }
@@ -689,44 +714,61 @@ const App: React.FC = () => {
                         {evt.descripcion && <p className="text-[9px] text-white/50 mb-4 leading-relaxed font-montserrat">{evt.descripcion}</p>}
 
                         <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => handleConfirmEventAttendance(evt)}
-                            disabled={isConfirmingEvent === evt.id}
-                            className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas"
-                          >
-                            {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                            Confirmar Mi Asistencia
-                          </button>
+                          {userConfirmations.includes(String(evt.titulo).trim()) ? (
+                            <div className="w-full bg-green-500/10 border border-green-500/30 text-green-500 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 font-bebas">
+                              <ShieldCheck size={14} /> Misión Confirmada
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleConfirmEventAttendance(evt)}
+                              disabled={isConfirmingEvent === evt.id}
+                              className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas shadow-[0_10px_20px_rgba(255,183,0,0.2)]"
+                            >
+                              {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                              Confirmar Mi Asistencia
+                            </button>
+                          )}
 
                           <div className="flex gap-2">
                             <button
                               onClick={() => {
-                                const calLink = generateGoogleCalendarLink({
-                                  title: evt.titulo,
-                                  description: evt.descripcion || '',
-                                  startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
-                                  endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
-                                });
-                                if (calLink) {
-                                  window.open(calLink, '_blank', 'noopener,noreferrer');
-                                } else {
-                                  alert("⚠️ NO SE PUDO GENERAR EL ENLACE: FECHA INVÁLIDA.");
+                                try {
+                                  const startDate = parseEventDate(evt.fecha, evt.hora);
+                                  const endDate = new Date(startDate.getTime() + 2 * 3600000);
+                                  const calLink = generateGoogleCalendarLink({
+                                    title: evt.titulo,
+                                    description: evt.descripcion || '',
+                                    startTime: startDate,
+                                    endTime: endDate
+                                  });
+                                  if (calLink) {
+                                    window.open(calLink, '_blank', 'noopener,noreferrer');
+                                  } else {
+                                    showAlert({ title: "ERROR", message: "No se pudo generar el enlace.", type: 'ERROR' });
+                                  }
+                                } catch (e) {
+                                  showAlert({ title: "ERROR", message: "Fecha inválida.", type: 'ERROR' });
                                 }
                               }}
-
-
-
                               className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
                             >
                               <Calendar size={12} /> Google
                             </button>
                             <button
-                              onClick={() => downloadIcsFile({
-                                title: evt.titulo,
-                                description: evt.descripcion || '',
-                                startTime: new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00'),
-                                endTime: new Date(new Date(evt.fecha + 'T' + (evt.hora || '08:00') + ':00').getTime() + 2 * 3600000)
-                              })}
+                              onClick={() => {
+                                try {
+                                  const startDate = parseEventDate(evt.fecha, evt.hora);
+                                  const endDate = new Date(startDate.getTime() + 2 * 3600000);
+                                  downloadIcsFile({
+                                    title: evt.titulo,
+                                    description: evt.descripcion || '',
+                                    startTime: startDate,
+                                    endTime: endDate
+                                  });
+                                } catch (e) {
+                                  showAlert({ title: "ERROR", message: "Fecha inválida.", type: 'ERROR' });
+                                }
+                              }}
                               className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
                             >
                               <Download size={12} /> .ICS
@@ -1228,9 +1270,14 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => {
-                      if (window.confirm("🚨 ¿CERRAR SESIÓN POR COMPLETO?\nEsto borrará tu acceso rápido de este dispositivo (ideal si el teléfono no es tuyo o es prestado).")) {
-                        handleLogout(true);
-                      }
+                      showAlert({
+                        title: "LIMPIEZA TÁCTICA",
+                        message: "🚨 ¿CERRAR SESIÓN POR COMPLETO?\nEsto borrará tu acceso rápido de este dispositivo (ideal si el teléfono no es tuyo o es prestado).",
+                        type: 'CONFIRM',
+                        confirmText: "CERRAR Y BORRAR",
+                        cancelText: "CANCELAR",
+                        onConfirm: () => handleLogout(true)
+                      });
                     }}
                     className="flex items-center justify-center gap-3 px-6 py-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-red-500/40 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 transition-all font-bebas active:scale-95"
                   >
@@ -1255,7 +1302,7 @@ const App: React.FC = () => {
       case AppView.ENROLLMENT:
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="enrollment" className="h-full">
-            <EnrollmentForm onSuccess={() => { alert("Inscripción exitosa"); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} agents={agents} />
+            <EnrollmentForm onSuccess={() => { showAlert({ title: "ÉXITO", message: "Inscripción exitosa", type: 'SUCCESS' }); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} agents={agents} />
           </motion.div>
         );
       default: return null;
@@ -1626,4 +1673,10 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+const AppWrapper: React.FC = () => (
+  <TacticalAlertProvider>
+    <App />
+  </TacticalAlertProvider>
+);
+
+export default AppWrapper;

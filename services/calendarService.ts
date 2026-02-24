@@ -11,6 +11,32 @@ export interface CalendarEvent {
  * Fixed: proper URL encoding and ICS CRLF line endings to avoid protocol failures.
  */
 
+export const parseEventDate = (dateStr: string, timeStr?: string): Date => {
+    // Intenta manejar formatos DD/MM/YYYY y YYYY-MM-DD
+    let [year, month, day] = [0, 0, 0];
+
+    if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts[0].length === 4) { // YYYY/MM/DD
+            [year, month, day] = parts.map(Number);
+        } else { // DD/MM/YYYY
+            [day, month, year] = parts.map(Number);
+        }
+    } else if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts[0].length === 4) { // YYYY-MM-DD
+            [year, month, day] = parts.map(Number);
+        } else { // DD-MM-YYYY
+            [day, month, year] = parts.map(Number);
+        }
+    }
+
+    const [hour, minute] = (timeStr || '08:00').replace(/[^0-9:]/g, '').split(':').map(Number);
+
+    const date = new Date(year, month - 1, day, hour || 8, minute || 0);
+    return isNaN(date.getTime()) ? new Date() : date;
+};
+
 const formatICSTime = (date: Date): string => {
     if (!date || isNaN(date.getTime())) {
         console.warn("Invalid date provided to formatICSTime, falling back to empty string.");

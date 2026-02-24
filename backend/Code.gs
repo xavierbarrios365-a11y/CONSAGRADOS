@@ -837,6 +837,8 @@ function doPost(e) {
         return getActiveEvents();
       case 'confirm_event_attendance':
         return confirmEventAttendance(request.data);
+      case 'get_user_confirmations':
+        return getUserEventConfirmations(request.data);
       case 'delete_event':
         return deleteEvent(request.data);
       case 'send_broadcast_notification':
@@ -4641,3 +4643,28 @@ function migrateRecoverDuplicatePoints() {
 
   Logger.log('\n🎯 MIGRACIÓN COMPLETA: ' + migratedCount + ' agentes, ' + totalRecovered + ' puntos recuperados.');
 }
+
+/**
+ * @description Obtiene los IDs de eventos que un agente ya ha confirmado.
+ */
+function getUserEventConfirmations(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.EVENT_CONFIRMATIONS_SHEET);
+  if (!sheet) return jsonOk({ confirmations: [] });
+
+  const values = sheet.getDataRange().getValues();
+  const agentId = String(data.agentId).trim().toUpperCase();
+  const confirmedEvents = [];
+
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim().toUpperCase() === agentId) {
+      // Guardamos tanto el título como el ID (o solo el título si el ID no es confiable) 
+      // para mayor seguridad en el match
+      confirmedEvents.push(String(values[i][2]).trim()); 
+    }
+  }
+
+  return jsonOk({ confirmations: confirmedEvents });
+}
+

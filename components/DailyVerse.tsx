@@ -282,7 +282,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                     newsItem={{
                         id: 'daily-verse-' + Date.now(),
                         type: 'RACHA',
-                        message: `¡VICTORIA DIARIA! He completado mi lectura bíblica y mantengo una racha de ${streakCount} días.`,
+                        message: `¡VICTORIA DIARIA!\n\n"${verse?.verse}"\n— ${verse?.reference}\n\nHe completado mi lectura bíblica y mantengo una racha de ${streakCount} días.`,
                         date: new Date().toLocaleDateString(),
                         agentId: agent.id,
                         agentName: agent.name

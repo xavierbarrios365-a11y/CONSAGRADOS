@@ -409,6 +409,11 @@ export const confirmEventAttendance = async (data: { agentId: string; agentName:
   return postToAction('confirm_event_attendance', data);
 };
 
+export const fetchUserEventConfirmations = async (agentId: string) => {
+  const res = await postToAction('get_user_confirmations', { agentId });
+  return res.success ? res.confirmations : [];
+};
+
 export const deleteEvent = async (eventId: string) => {
   return postToAction('delete_event', { eventId });
 };

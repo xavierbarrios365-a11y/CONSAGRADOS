@@ -189,10 +189,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
-                                                if (['RACHA', 'CURSO_COMPLETADO', 'ASCENSO', 'CERTIFICADO'].includes(item.type)) {
-                                                    setSharePreview({ agent, newsItem: item });
-                                                    return;
-                                                }
+                                                // Habilitar compartido para TODOS los tipos de noticia (Modo Social)
+                                                setSharePreview({ agent, newsItem: item });
                                             }}
                                             className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
                                             title="Compartir Logro"

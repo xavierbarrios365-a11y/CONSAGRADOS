@@ -2395,9 +2395,9 @@ function submitQuizResult(data) {
       }
     }
 
-    // Log Tactical Intel — use header-based title index
+    // Log Tactical Intel — use header-based title index (v3.1 Improved)
     const lessonTitle = lesson[lesTitleIdx] || lesson[3] || 'Lección';
-    addNewsItem(ss, 'OPERACION', `🎯 OBJETIVO CUMPLIDO: ${agentName} ha superado la lección "${lessonTitle}".`, data.agentId, agentName);
+    addNewsItem(ss, 'CURSO_COMPLETADO', `🎯 OBJETIVO CUMPLIDO: ${agentName} ha superado con éxito la lección "${lessonTitle}".`, data.agentId, agentName);
 
     // Check for Certificate (Course Completion) — use header-based indices
     try {
@@ -2422,7 +2422,7 @@ function submitQuizResult(data) {
         const course = coursesData.slice(1).find(function(r) { return String(r[courseIdColIdx]) === courseId; });
         const courseTitle = course ? course[courseTitleColIdx] : `CURSO #${courseId}`;
         
-        addNewsItem(ss, 'CERTIFICADO', `🎓 CERTIFICACIÓN: ${agentName} ha obtenido su diploma en "${courseTitle}".`, data.agentId, agentName);
+        addNewsItem(ss, 'CERTIFICADO', `🏆 CERTIFICACIÓN ELITE: ${agentName} ha completado satisfactoriamente el curso "${courseTitle}".`, data.agentId, agentName);
 
         const fcmToken = getAgentFcmToken(data.agentId);
         if (fcmToken) {
@@ -2817,8 +2817,9 @@ function updateStreaks(data) {
         sendPushNotification("🔥 ¡RACHA INCREMENTADA!", `Has completado tus tareas de hoy. ¡Tu racha ahora es de ${streakCount} días!`, fcmToken);
       }
 
-      if (streakCount > 0 && (streakCount === 1 || streakCount % 7 === 0)) {
-        addNewsItem(ss, 'RACHA', `⚡ AGENTE SOCIAL: ${data.agentName || data.agentId} ha alcanzado una racha de ${streakCount} días.`, data.agentId, data.agentName);
+      // Noticia en hitos sociales: 1, 2, 3, 5 y cada 5 días después (v3.1)
+      if (streakCount === 1 || streakCount === 2 || streakCount === 3 || (streakCount >= 5 && streakCount % 5 === 0)) {
+        addNewsItem(ss, 'RACHA', `🔥 CONSAGRACIÓN: ${data.agentName || data.agentId} mantiene una racha invicta de ${streakCount} días.`, data.agentId, data.agentName);
       }
 
       // Bonos de XP cada 5 días
@@ -3926,8 +3927,8 @@ function getNewsFeed() {
   const data = sheet.getDataRange().getValues();
   const headers = data[0].map(h => String(h).trim().toUpperCase());
   const news = [];
-  // Leer de abajo hacia arriba (más reciente primero)
-  for (let i = data.length - 1; i >= 1 && news.length < 20; i--) {
+  // Leer de abajo hacia arriba (más reciente primero) - Límite ampliado a 50 Noticias
+  for (let i = data.length - 1; i >= 1 && news.length < 50; i--) {
     news.push({
       id: String(data[i][headers.indexOf('ID')] || ''),
       type: String(data[i][headers.indexOf('TIPO')] || ''),

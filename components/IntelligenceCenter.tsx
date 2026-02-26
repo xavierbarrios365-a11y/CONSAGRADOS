@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Zap, Book, FileText, Star, Activity, Target, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, AlertTriangle, Plus, Minus, Gavel, Camera, UploadCloud, Loader2, Sparkles, Trophy, Send, ChevronRight, Users, Search, Crown, Radio, Bell, Circle, ArrowUpCircle, ChevronUp, Cpu, X, CheckCircle2, MessageSquare, Brain } from 'lucide-react';
+import { Search, Users, Activity, Target, Zap, TrendingUp, AlertCircle, ChevronRight, ChevronLeft, MoreVertical, X, Filter, Download, UserPlus, Shield, UserCheck, UserX, Award, Star, Mail, Phone, Calendar, Clock, MapPin, RefreshCw, Plus, Minus, Send, Camera, ArrowUpCircle, AlertTriangle, Gavel, Sparkles, Loader2, MessageSquare, BookOpen, Fingerprint, FileText, Settings, RotateCcw, ChevronUp, Cpu, Brain, Bell, Trash2, Radio, Trophy } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, updateAgentAiPendingStatus, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
 import { toPng } from 'html-to-image';
@@ -930,16 +930,32 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
-                          if (window.confirm(`⚠️ ¿FORZAR EVALUACIÓN ÉLITE A ${agent.name.toUpperCase()}?\n\nEsto borrará el perfil actual y obligará al agente a repetir el test avanzado al entrar.`)) {
+                          if (window.confirm(`⚠️ ¿ACTIVAR RE-EVALUACIÓN ÉLITE PARA ${agent.name.toUpperCase()}?\n\nEl agente deberá completar el test táctico la próxima vez que inicie sesión, pero conservará su perfil actual hasta completar el nuevo.`)) {
+                            const res = await updateAgentAiPendingStatus(agent.id, true);
+                            if (res.success) {
+                              showAlert({ title: "ÉXITO", message: "✅ RE-EVALUACIÓN ACTIVADA.", type: 'SUCCESS' });
+                              if (onUpdateNeeded) onUpdateNeeded();
+                            }
+                          }
+                        }}
+                        className="flex-1 py-2 bg-amber-600/20 border border-amber-500/30 text-amber-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-amber-600/40 transition-all active:scale-95"
+                        title="Programar Re-evaluación"
+                      >
+                        <Brain size={12} className="mx-auto" />
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`⚠️ ¿FORZAR RE-INICIO TOTAL DE PERFIL PARA ${agent.name.toUpperCase()}?\n\n¡ALERTA! Esto BORRARÁ el perfil actual de inmediato.`)) {
                             const res = await updateAgentAiProfile(agent.id, null, null);
                             if (res.success) {
-                              alert("✅ PERFIL RESETEADO. TEST REQUERIDO AL ENTRAR.");
+                              alert("✅ PERFIL RESETEADO. TEST REQUERIDO DE INMEDIATO.");
                               if (onUpdateNeeded) onUpdateNeeded();
                             }
                           }
                         }}
                         className="p-2 bg-red-600/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-600/40 transition-all active:scale-95"
-                        title="Forzar Re-evaluación"
+                        title="Borrar Perfil Actual"
                       >
                         <RotateCcw size={12} />
                       </button>

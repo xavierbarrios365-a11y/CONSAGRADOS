@@ -48,6 +48,7 @@ export interface Agent {
   tacticalSummary?: string;
   lastAiUpdate?: string;
   biometricCredential?: string;
+  isAiProfilePending?: boolean;
   streakCount?: number;
   lastStreakDate?: string;
   lastAttendance?: string;
@@ -168,7 +169,7 @@ export interface TaskProgress {
   agentId: string;
   completedDate: string;
   verifiedBy: string;
-  status: 'PENDIENTE' | 'COMPLETADO' | 'VERIFICADO';
+  status: 'SOLICITADO' | 'EN_PROGRESO' | 'ENTREGADO' | 'VERIFICADO' | 'RECHAZADO';
 }
 
 export interface NewsFeedItem {

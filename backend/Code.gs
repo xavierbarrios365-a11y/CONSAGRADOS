@@ -232,6 +232,7 @@ var HEADER_ALIASES = {
   'BIOMETRIC_CREDENTIAL': ['BIOMETRIC_CREDENTIAL'],
   'STREAK_COUNT':       ['STREAK_COUNT'],
   'LAST_COMPLETED_DATE':['LAST_COMPLETED_DATE', 'LAST_COMPLETED_WEEK'],
+  'AI_PENDIENTE':       ['AI_PENDIENTE', 'IS_AI_PROFILE_PENDING', 'PENDING_AI', 'AI_PENDIENTE'],
   'FECHA':              ['FECHA', 'TIMESTAMP', 'DATE', 'FECHA/HORA', 'MOMENTO']
 };
 
@@ -878,6 +879,10 @@ function doPost(e) {
         return getNewsFeed();
       case 'get_badges':
         return computeBadges();
+      case 'update_agent_ai_pending':
+        return updateAgentAiPending(request.data);
+      case 'update_task_status':
+        return updateTaskStatusAction(request.data);
       default:
         throw new Error("Acción no reconocida: " + (request.action || "SIN ACCIÓN"));
     }
@@ -2543,12 +2548,12 @@ function updateTacticalStats(data) {
   const directoryData = sheet.getDataRange().getValues();
   const headers = directoryData[0].map(h => String(h).trim().toUpperCase());
   
-  const idCol = headers.indexOf('ID');
-  const statsCol = headers.indexOf('STATS_JSON') + 1;
-  const summaryCol = headers.indexOf('TACTOR_SUMMARY') + 1;
-  const updateCol = headers.indexOf('LAST_AI_UPDATE') + 1;
+  const idCol = findHeaderIdx(headers, 'ID');
+  const statsCol = findHeaderIdx(headers, 'STATS_JSON') + 1;
+  const summaryCol = findHeaderIdx(headers, 'TACTOR_SUMMARY') + 1;
+  const updateCol = findHeaderIdx(headers, 'LAST_AI_UPDATE') + 1;
   
-  if (statsCol === 0 || summaryCol === 0 || updateCol === 0) throw new Error("Columnas tácticas no encontradas.");
+  if (idCol === -1 || statsCol === 0 || summaryCol === 0 || updateCol === 0) throw new Error("Columnas tácticas no encontradas.");
 
   const rowIdx = directoryData.findIndex(row => String(row[idCol]) === String(data.agentId));
   if (rowIdx === -1) throw new Error("Agente no encontrado.");
@@ -2559,6 +2564,32 @@ function updateTacticalStats(data) {
   sheet.getRange(row, updateCol).setValue(data.lastUpdate);
 
   return jsonOk();
+}
+
+/**
+ * @description Activa o desactiva la bandera de evaluación pendiente para un agente.
+ * Si la columna no existe, la crea dinámicamente.
+ */
+function updateAgentAiPending(data) {
+  try {
+    const CONFIG = getGlobalConfig();
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.DIRECTORY_SHEET_NAME);
+    const lastCol = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim().toUpperCase(); });
+    
+    // Auto-creación de columna si no existe
+    if (findHeaderIdx(headers, 'AI_PENDIENTE') === -1) {
+      sheet.getRange(1, lastCol + 1).setValue('AI_PENDIENTE');
+    }
+
+    const isPendingVal = (data.isPending === true || String(data.isPending).toUpperCase() === 'SI') ? 'SI' : 'NO';
+    findAndUpdateAgent(sheet, data.agentId, { 'AI_PENDIENTE': isPendingVal });
+    
+    return jsonOk();
+  } catch (e) {
+    return jsonError(e.message);
+  }
 }
 
 /**
@@ -3621,7 +3652,7 @@ function submitTaskCompletion(data) {
   }
 
   const fecha = Utilities.formatDate(new Date(), "GMT-4", "dd/MM/yyyy");
-  sheet.appendRow([data.taskId, data.agentId, data.agentName || '', fecha, '', 'PENDIENTE']);
+  sheet.appendRow([data.taskId, data.agentId, data.agentName || '', fecha, '', 'SOLICITADO']);
   
   // Publicar en Intel Feed con cupos restantes
   var taskTitle = taskRow ? String(taskRow[tasksHeaders.indexOf('TITULO')] || data.taskId) : data.taskId;
@@ -3691,6 +3722,47 @@ function verifyTaskAction(data) {
   // 3. Generar noticia
   addNewsItem(ss, 'TAREA', `¡${data.agentName || data.agentId} completó la misión "${data.taskTitle || ''}"! +${xpReward} XP`, data.agentId, data.agentName);
   
+  return jsonOk();
+}
+
+/**
+ * @description Director/Líder actualiza el estado de un recluta en una tarea.
+ */
+function updateTaskStatusAction(data) {
+  const CONFIG = getGlobalConfig();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.TASK_PROGRESS_SHEET);
+  if (!sheet) throw new Error("Hoja PROGRESO_TAREAS no encontrada.");
+
+  const progressData = sheet.getDataRange().getValues();
+  const headers = progressData[0].map(h => String(h).trim().toUpperCase());
+  
+  const taskIdCol = headers.indexOf('TASK_ID');
+  const agentIdCol = headers.indexOf('AGENT_ID');
+  const statusCol = headers.indexOf('STATUS');
+
+  if (taskIdCol === -1 || agentIdCol === -1 || statusCol === -1) throw new Error("Estructura de PROGRESO_TAREAS inválida.");
+
+  let rowIdx = -1;
+  for (let i = 1; i < progressData.length; i++) {
+    if (String(progressData[i][taskIdCol]) === String(data.taskId) &&
+        String(progressData[i][agentIdCol]) === String(data.agentId)) {
+      rowIdx = i + 1;
+      break;
+    }
+  }
+
+  if (rowIdx === -1) throw new Error("Registro de progreso no encontrado.");
+
+  sheet.getRange(rowIdx, statusCol + 1).setValue(data.status);
+  
+  // Notificaciones según el nuevo estado
+  if (data.status === 'EN_PROGRESO') {
+    addNewsItem(ss, 'TAREA', `🛡️ Misión aceptada para ${data.agentName || data.agentId}: "${data.taskTitle || ''}"`, data.agentId, data.agentName);
+  } else if (data.status === 'RECHAZADO') {
+    addNewsItem(ss, 'TAREA', `❌ Misión rechazada para ${data.agentName || data.agentId}: "${data.taskTitle || ''}"`, data.agentId, data.agentName);
+  }
+
   return jsonOk();
 }
 

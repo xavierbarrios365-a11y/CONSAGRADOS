@@ -37,6 +37,7 @@ import {
   updateAgentStreaks,
   registerBiometrics,
   verifyBiometrics,
+  updateAgentAiPendingStatus,
   fetchNotifications,
   syncFcmToken,
   confirmDirectorAttendance,
@@ -51,7 +52,7 @@ import {
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList, Share2 } from 'lucide-react';
+import { Search, QrCode, X, ChevronRight, ChevronUp, Activity, Target, Zap, Book, FileText, Star, RotateCcw, Trash2, Database, AlertCircle, RefreshCw, BookOpen, Eye, EyeOff, Plus, Fingerprint, Flame, CheckCircle2, Circle, Loader2, Bell, Crown, Medal, Trophy, AlertTriangle, LogOut, History, Users, UserPlus, Key, Settings, Sparkles, Download, MessageSquare, Calendar, Radio, GraduationCap, ClipboardList, Share2, ShieldCheck, Brain } from 'lucide-react';
 import { generateTacticalProfile, getTacticalAnalysis } from './services/geminiService';
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
@@ -64,7 +65,7 @@ import { useFirebaseMessaging } from './hooks/useFirebaseMessaging';
 
 const OFFICIAL_LOGO = "/logo_white.png";
 
-const viewVariants = {
+const viewVariants: any = {
   initial: { opacity: 0, y: 15, filter: 'blur(10px)' },
   animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, ease: "circOut" } },
   exit: { opacity: 0, y: -15, filter: 'blur(10px)', transition: { duration: 0.3, ease: "circIn" } }
@@ -150,7 +151,6 @@ const App: React.FC = () => {
   const [dailyVerse, setDailyVerse] = useState<DailyVerseType | null>(null);
   const { showAlert } = useTacticalAlert();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [userConfirmations, setUserConfirmations] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -211,10 +211,16 @@ const App: React.FC = () => {
       const result = await generateTacticalProfile(currentUser, progress, testAnswers);
       if (result) {
         await updateAgentAiProfile(currentUser.id, result.stats, result.summary);
-        if (awardedXp > 0) {
+        // Clear pending flag if it was set
+        await updateAgentAiPendingStatus(currentUser.id, false);
+
+        // Award XP only if it was a required pending evaluation
+        if (awardedXp > 0 && currentUser.isAiProfilePending) {
           await updateAgentPoints(currentUser.id, "LIDERAZGO", awardedXp);
         }
-        await syncData(); // Refrescar estado global
+
+        const freshAgents = await syncData(); // Refrescar estado global
+        if (freshAgents) refreshCurrentUser(freshAgents); // Sincronizar con datos frescos
       }
     } catch (err) {
       console.error("Fallo re-perfilado global", err);
@@ -223,6 +229,13 @@ const App: React.FC = () => {
       setIsUpdatingAiProfile(false);
     }
   };
+
+  // Sincronizar currentUser automáticamente cuando la lista de agentes se actualiza
+  useEffect(() => {
+    if (isLoggedIn && agents.length > 0) {
+      refreshCurrentUser(agents);
+    }
+  }, [agents, isLoggedIn, refreshCurrentUser]);
 
   // Monitor network status
   useEffect(() => {
@@ -1490,8 +1503,8 @@ const App: React.FC = () => {
 
   if (isLoggedIn && !currentUser) return <LoadingScreen message="INICIALIZANDO CONEXIÓN..." />;
 
-  // BLOQUEO GLOBAL DE SEGURIDAD (BIENVENIDA OBLIGATORIA)
-  if (isLoggedIn && currentUser && !currentUser.tacticalStats) {
+  // BLOQUEO GLOBAL DE SEGURIDAD (BIENVENIDA OBLIGATORIA) - DESACTIVADO TEMPORALMENTE POR SOLICITUD DEL USUARIO
+  if (isLoggedIn && currentUser && currentUser.isAiProfilePending && currentUser.userRole === UserRole.STUDENT) {
     return (
       <div className="min-h-screen bg-[#000c19] flex items-center justify-center p-6 relative overflow-hidden">
         {/* Radar Background Decorator */}

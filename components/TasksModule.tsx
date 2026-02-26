@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Check, Clock, Lock, Trash2, Shield, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { UserRole, ServiceTask } from '../types';
 import { TASK_AREAS } from '../constants';
-import { fetchTasks, createTask, deleteTask, submitTaskCompletion, verifyTask, fetchPromotionStatus, fetchTaskRecruits, removeRecruitFromTask } from '../services/sheetsService';
+import { fetchTasks, createTask, deleteTask, submitTaskCompletion, verifyTask, fetchPromotionStatus, fetchTaskRecruits, removeRecruitFromTask, updateTaskStatus } from '../services/sheetsService';
 
 interface TasksModuleProps {
     agentId: string;
@@ -14,17 +14,24 @@ interface TasksModuleProps {
 const RANK_ORDER = ['RECLUTA', 'ACTIVO', 'CONSAGRADO', 'REFERENTE', 'LÍDER'];
 const RANK_COLORS: Record<string, string> = { 'RECLUTA': '#6b7280', 'ACTIVO': '#3b82f6', 'CONSAGRADO': '#f59e0b', 'REFERENTE': '#8b5cf6', 'LÍDER': '#ef4444' };
 
+const STATUS_LABELS: Record<string, string> = {
+    'SOLICITADO': 'Solicitado - Pendiente Aprobación',
+    'EN_PROGRESO': 'En Progreso',
+    'ENTREGADO': 'Entregado - Pendiente Verificación',
+    'VERIFICADO': 'Completado ✓',
+    'RECHAZADO': 'Rechazado ✗'
+};
+
 const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole, onActivity }) => {
     const [tasks, setTasks] = useState<ServiceTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [agentRank, setAgentRank] = useState('RECLUTA');
     const [showCreate, setShowCreate] = useState(false);
     const [creating, setCreating] = useState(false);
-    const [pendingVerifications, setPendingVerifications] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState<string | null>(null);
     const [newTask, setNewTask] = useState({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: '', maxSlots: '' });
     const [filterArea, setFilterArea] = useState('TODAS');
-    const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
+    const [agentProgress, setAgentProgress] = useState<Record<string, string>>({});
     const [taskRecruits, setTaskRecruits] = useState<Record<string, { agentId: string; agentName: string; date: string; status: string }[]>>({});
     const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
@@ -35,24 +42,34 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
         try {
             const promises: Promise<any>[] = [
                 fetchTasks(),
-                fetchPromotionStatus(agentId)
+                fetchPromotionStatus(agentId),
+                fetchTaskRecruits()
             ];
-            if (isDirector) promises.push(fetchTaskRecruits());
 
-            const results = await Promise.all(promises);
-            setTasks(results[0] || []);
-            if (results[1]?.success) {
-                setAgentRank(results[1].rank || 'RECLUTA');
+            const [tasksList, promoStatus, allRecruits] = await Promise.all(promises);
+
+            setTasks(tasksList || []);
+            if (promoStatus?.success) {
+                setAgentRank(promoStatus.rank || 'RECLUTA');
             }
-            // Build recruits map grouped by taskId
-            if (isDirector && results[2]) {
-                const map: Record<string, any[]> = {};
-                for (const r of results[2]) {
-                    if (!map[r.taskId]) map[r.taskId] = [];
-                    map[r.taskId].push(r);
+
+            // Build recruits map and agent progress map
+            const recruitsMap: Record<string, any[]> = {};
+            const progressMap: Record<string, string> = {};
+
+            if (allRecruits) {
+                for (const r of allRecruits) {
+                    if (!recruitsMap[r.taskId]) recruitsMap[r.taskId] = [];
+                    recruitsMap[r.taskId].push(r);
+
+                    if (r.agentId === agentId) {
+                        progressMap[r.taskId] = r.status;
+                    }
                 }
-                setTaskRecruits(map);
             }
+            setTaskRecruits(recruitsMap);
+            setAgentProgress(progressMap);
+
         } catch (e) { console.error(e); }
         setLoading(false);
     };
@@ -93,18 +110,31 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
         onActivity?.();
     };
 
-    const handleComplete = async (task: ServiceTask) => {
+    const handleApply = async (task: ServiceTask) => {
         setSubmitting(task.id);
         try {
             const res = await submitTaskCompletion(task.id, agentId, agentName);
             if (res.success) {
-                setCompletedTaskIds(prev => new Set([...prev, task.id]));
-                loadData(); // Refresh slot counts
+                loadData();
             } else {
-                alert('❌ ' + (res.error || 'No se pudo completar la misión.'));
+                alert('❌ ' + (res.error || 'No se pudo solicitar la misión.'));
             }
         } catch (e) { console.error(e); }
         setSubmitting(null);
+        onActivity?.();
+    };
+
+    const handleUpdateStatus = async (taskId: string, targetAgentId: string, status: any, tName?: string, tTitle?: string) => {
+        try {
+            const res = await updateTaskStatus({
+                taskId,
+                agentId: targetAgentId,
+                agentName: tName,
+                taskTitle: tTitle,
+                status
+            });
+            if (res.success) loadData();
+        } catch (e) { console.error(e); }
         onActivity?.();
     };
 
@@ -117,9 +147,10 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
         });
     };
 
-    const handleVerify = async (item: any) => {
+    const handleVerifyCompletion = async (item: any) => {
+        if (!confirm(`¿Verificar y otorgar +${item.xpReward} XP a ${item.agentName}?`)) return;
         try {
-            await verifyTask({
+            const res = await verifyTask({
                 taskId: item.taskId,
                 agentId: item.agentId,
                 agentName: item.agentName,
@@ -127,15 +158,16 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                 xpReward: item.xpReward || 5,
                 taskTitle: item.taskTitle || ''
             });
-            loadData();
+            if (res.success) loadData();
+            else alert('❌ Fallo al verificar: ' + (res.error || 'Error desconocido'));
         } catch (e) { console.error(e); }
         onActivity?.();
     };
 
-    const handleRemoveRecruit = async (taskId: string, agentId: string) => {
-        if (!confirm(`¿Eliminar al agente ${agentId} de esta misión?`)) return;
+    const handleRemoveRecruit = async (taskId: string, targetAgentId: string) => {
+        if (!confirm(`¿Eliminar al agente de esta misión?`)) return;
         try {
-            await removeRecruitFromTask(taskId, agentId);
+            await removeRecruitFromTask(taskId, targetAgentId);
             loadData();
         } catch (e) { console.error(e); }
         onActivity?.();
@@ -286,7 +318,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredTasks.map(task => {
                         const accessible = canAccessTask(task);
-                        const isCompleted = completedTaskIds.has(task.id);
+                        const status = agentProgress[task.id];
 
                         return (
                             <div
@@ -322,30 +354,49 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                 )}
 
                                 {accessible ? (
-                                    <button
-                                        onClick={() => !isCompleted && handleComplete(task)}
-                                        disabled={isCompleted || submitting === task.id || (task.maxSlots > 0 && task.currentSlots >= task.maxSlots)}
-                                        className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95
-                      ${isCompleted
-                                                ? 'bg-green-500/10 text-green-400 border border-green-500/20 cursor-default'
-                                                : (task.maxSlots > 0 && task.currentSlots >= task.maxSlots)
-                                                    ? 'bg-red-500/10 text-red-500 border border-red-500/20 cursor-not-allowed opacity-50'
-                                                    : 'bg-white/5 text-white hover:bg-[#ffb700]/10 hover:text-[#ffb700] border border-white/10 hover:border-[#ffb700]/30'
-                                            }`}
-                                    >
-                                        {submitting === task.id ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <div className="animate-spin rounded-full h-3 w-3 border-t border-current"></div>
-                                                Enviando...
-                                            </span>
-                                        ) : isCompleted ? (
-                                            <span className="flex items-center justify-center gap-2"><Check size={14} /> Enviado — Pendiente de verificación</span>
-                                        ) : (task.maxSlots > 0 && task.currentSlots >= task.maxSlots) ? (
-                                            <span className="flex items-center justify-center gap-2"><X size={14} /> Misión Completa (Sin Cupos)</span>
+                                    <div className="space-y-2">
+                                        {status ? (
+                                            <div className="space-y-2">
+                                                <div className={`w-full py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider text-center border
+                                                    ${status === 'VERIFICADO' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                                        status === 'RECHAZADO' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                                            'bg-[#ffb700]/10 text-[#ffb700] border-[#ffb700]/20'}`}>
+                                                    {STATUS_LABELS[status] || status}
+                                                </div>
+
+                                                {status === 'EN_PROGRESO' && (
+                                                    <button
+                                                        onClick={() => handleUpdateStatus(task.id, agentId, 'ENTREGADO', agentName, task.title)}
+                                                        disabled={submitting === task.id}
+                                                        className="w-full py-2.5 rounded-xl bg-green-600/20 text-green-400 border border-green-500/30 text-xs font-bold uppercase tracking-wider hover:bg-green-600/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                    >
+                                                        <Check size={14} /> Marcar como Completado
+                                                    </button>
+                                                )}
+                                            </div>
                                         ) : (
-                                            <span className="flex items-center justify-center gap-2"><ClipboardList size={14} /> Completar Misión</span>
+                                            <button
+                                                onClick={() => handleApply(task)}
+                                                disabled={submitting === task.id || (task.maxSlots > 0 && task.currentSlots >= task.maxSlots)}
+                                                className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all active:scale-95
+                                                    ${(task.maxSlots > 0 && task.currentSlots >= task.maxSlots)
+                                                        ? 'bg-red-500/10 text-red-500 border border-red-500/20 cursor-not-allowed opacity-50'
+                                                        : 'bg-white/5 text-white hover:bg-[#ffb700]/10 hover:text-[#ffb700] border border-white/10 hover:border-[#ffb700]/30'
+                                                    }`}
+                                            >
+                                                {submitting === task.id ? (
+                                                    <span className="flex items-center justify-center gap-2">
+                                                        <div className="animate-spin rounded-full h-3 w-3 border-t border-current"></div>
+                                                        Enviando...
+                                                    </span>
+                                                ) : (task.maxSlots > 0 && task.currentSlots >= task.maxSlots) ? (
+                                                    <span className="flex items-center justify-center gap-2"><X size={14} /> Misión Completa</span>
+                                                ) : (
+                                                    <span className="flex items-center justify-center gap-2"><ClipboardList size={14} /> Postularme a la Misión</span>
+                                                )}
+                                            </button>
                                         )}
-                                    </button>
+                                    </div>
                                 ) : (
                                     <div className="flex items-center gap-2 text-gray-600 text-xs py-2">
                                         <Lock size={14} />
@@ -355,7 +406,6 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
 
                                 {isDirector && (
                                     <div className="space-y-2 pt-1 border-t border-white/5">
-                                        {/* Recruits Toggle */}
                                         <button
                                             onClick={() => toggleExpand(task.id)}
                                             className="w-full flex items-center justify-center gap-1.5 py-1.5 text-cyan-400/70 hover:text-cyan-300 text-[10px] uppercase tracking-wider transition-colors"
@@ -365,37 +415,61 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                             {expandedTasks.has(task.id) ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                         </button>
 
-                                        {/* Recruits List */}
                                         {expandedTasks.has(task.id) && (
-                                            <div className="space-y-1 max-h-40 overflow-y-auto">
+                                            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
                                                 {(taskRecruits[task.id] || []).length === 0 ? (
                                                     <p className="text-[9px] text-gray-600 text-center py-2 italic">Sin reclutas inscritos</p>
                                                 ) : (
                                                     (taskRecruits[task.id] || []).map((r, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-1.5">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-2 h-2 rounded-full ${r.status === 'VERIFICADO' ? 'bg-green-500' : r.status === 'PENDIENTE' ? 'bg-yellow-500 animate-pulse' : 'bg-gray-500'}`} />
-                                                                <span className="text-[10px] font-bold text-white">{r.agentName || r.agentId}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`text-[8px] font-black uppercase tracking-wider ${r.status === 'VERIFICADO' ? 'text-green-500' : r.status === 'PENDIENTE' ? 'text-yellow-500' : 'text-gray-500'}`}>
+                                                        <div key={idx} className="bg-white/5 rounded-xl p-3 space-y-2 border border-white/5">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={`w-2 h-2 rounded-full ${r.status === 'VERIFICADO' ? 'bg-green-500' :
+                                                                        r.status === 'RECHAZADO' ? 'bg-red-500' :
+                                                                            'bg-yellow-500 animate-pulse'}`} />
+                                                                    <span className="text-[10px] font-bold text-white">{r.agentName || r.agentId}</span>
+                                                                </div>
+                                                                <span className={`text-[8px] font-black uppercase tracking-wider ${r.status === 'VERIFICADO' ? 'text-green-500' :
+                                                                    r.status === 'RECHAZADO' ? 'text-red-500' :
+                                                                        'text-yellow-500'}`}>
                                                                     {r.status}
                                                                 </span>
-                                                                {r.status === 'PENDIENTE' && (
+                                                            </div>
+
+                                                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                                                {(r.status === 'SOLICITADO' || r.status === 'PENDIENTE') && (
                                                                     <button
-                                                                        onClick={() => handleVerify({ taskId: task.id, agentId: r.agentId, agentName: r.agentName, xpReward: task.xpReward, taskTitle: task.title })}
-                                                                        className="p-1 rounded-full bg-green-500/20 text-green-500 hover:bg-green-500/40 transition-colors"
-                                                                        title="Aprobar Misión"
+                                                                        onClick={() => handleUpdateStatus(task.id, r.agentId, 'EN_PROGRESO', r.agentName, task.title)}
+                                                                        className="flex-1 py-1.5 px-3 rounded-lg bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:bg-blue-600 shadow-lg active:scale-95"
                                                                     >
-                                                                        <Check size={12} />
+                                                                        Aceptar
                                                                     </button>
                                                                 )}
+
+                                                                {(r.status === 'SOLICITADO' || r.status === 'PENDIENTE' || r.status === 'EN_PROGRESO' || r.status === 'ENTREGADO') && (
+                                                                    <button
+                                                                        onClick={() => handleVerifyCompletion({ taskId: task.id, agentId: r.agentId, agentName: r.agentName, xpReward: task.xpReward, taskTitle: task.title })}
+                                                                        className="flex-1 py-1.5 px-3 rounded-lg bg-green-500 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:bg-green-600 shadow-lg active:scale-95 flex items-center justify-center gap-1"
+                                                                    >
+                                                                        <Check size={10} /> {r.status === 'ENTREGADO' ? 'Verificar' : 'Aprobar Ya'}
+                                                                    </button>
+                                                                )}
+
+                                                                {r.status !== 'VERIFICADO' && r.status !== 'RECHAZADO' && (
+                                                                    <button
+                                                                        onClick={() => handleUpdateStatus(task.id, r.agentId, 'RECHAZADO', r.agentName, task.title)}
+                                                                        className="py-1.5 px-3 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] font-black uppercase tracking-widest transition-all hover:bg-red-500/20"
+                                                                    >
+                                                                        Rechazar
+                                                                    </button>
+                                                                )}
+
                                                                 <button
                                                                     onClick={() => handleRemoveRecruit(task.id, r.agentId)}
-                                                                    className="p-1 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500/40 transition-colors"
+                                                                    className="p-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-red-400 transition-colors"
                                                                     title="Eliminar de Misión"
                                                                 >
-                                                                    <X size={12} />
+                                                                    <Trash2 size={12} />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -406,9 +480,9 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
 
                                         <button
                                             onClick={() => handleDelete(task.id)}
-                                            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-red-500/50 hover:text-red-400 text-[10px] uppercase tracking-wider transition-colors"
+                                            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-red-500/40 hover:text-red-400 text-[10px] uppercase tracking-wider transition-colors"
                                         >
-                                            <Trash2 size={12} /> Eliminar
+                                            <Trash2 size={12} /> Eliminar Misión
                                         </button>
                                     </div>
                                 )}

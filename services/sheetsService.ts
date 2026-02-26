@@ -38,7 +38,8 @@ const MAPPINGS: any = {
   'LAST_ATTENDANCE': ['last_attendance', 'última asistencia'],
   'LAST_COURSE': ['last_course', 'último curso'],
   'LAST_STREAK_DATE': ['last_completed_date', 'laststreakdate', 'racha_fecha'],
-  'NOTIF_PREFS': ['notif_prefs', 'notif_prefs_json', 'preferencias_notif', 'notif_prefs']
+  'NOTIF_PREFS': ['notif_prefs', 'notif_prefs_json', 'preferencias_notif', 'notif_prefs'],
+  'PENDING_AI': ['is_ai_profile_pending', 'ai_pendiente', 'pending_ai', 'isAiProfilePending']
 };
 
 /**
@@ -113,7 +114,11 @@ const mapToAgent = (getV: (key: string) => any, id: string): Agent => {
         return prefs ? JSON.parse(prefs) : { read: [], deleted: [] };
       } catch (e) { return { read: [], deleted: [] }; }
     })(),
-    lastCourse: getV('LAST_COURSE') || ""
+    lastCourse: getV('LAST_COURSE') || "",
+    isAiProfilePending: (() => {
+      const val = String(getV('PENDING_AI') || "").toUpperCase().trim();
+      return val === 'SI' || val === 'TRUE';
+    })()
   };
 };
 
@@ -455,6 +460,10 @@ export const verifyTask = async (data: { taskId: string; agentId: string; agentN
   return postToAction('verify_task', data);
 };
 
+export const updateTaskStatus = async (data: { taskId: string; agentId: string; agentName?: string; taskTitle?: string; status: 'SOLICITADO' | 'EN_PROGRESO' | 'ENTREGADO' | 'VERIFICADO' | 'RECHAZADO' }) => {
+  return postToAction('update_task_status', data);
+};
+
 export const fetchPromotionStatus = async (agentId: string) => {
   return postToAction('get_promotion_status', { agentId });
 };
@@ -493,4 +502,13 @@ export const fetchBadges = async () => {
 export const reconcileXP = async () => {
   try { return await postToAction('reconcile_xp', {}); }
   catch (error: any) { return { success: false, error: error.message }; }
+};
+
+export const updateAgentAiPendingStatus = async (agentId: string, isPending: boolean) => {
+  try {
+    return await postToAction('update_agent_ai_pending', {
+      agentId,
+      isPending
+    });
+  } catch (error: any) { return { success: false, error: error.message }; }
 };

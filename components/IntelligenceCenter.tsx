@@ -8,12 +8,13 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from './DigitalIdCard';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentPhoto, updateAgentPoints, deductPercentagePoints, sendAgentCredentials, bulkSendCredentials, broadcastNotification, updateAgentAiProfile, updateAgentAiPendingStatus, createEvent, fetchActiveEvents, deleteEvent, fetchPromotionStatus, promoteAgentAction, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, updateAgentPhotoSupabase as updateAgentPhoto } from '../services/supabaseService';
+import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
 import { toPng } from 'html-to-image';
 import { useTacticalAlert } from './TacticalAlert';
-import { applyAbsencePenalties } from '../services/sheetsService';
 import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
 
 interface CIUProps {
@@ -176,12 +177,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       onConfirm: async () => {
         setIsSendingBroadcast(true);
         try {
-          const res = await broadcastNotification(broadcastData.title, broadcastData.message);
-          if (res.success) {
+          const success = await sendPushBroadcast(broadcastData.title, broadcastData.message);
+          if (success) {
             showAlert({ title: "ÉXITO", message: "✅ TRANSMISIÓN COMPLETADA", type: 'SUCCESS' });
             setBroadcastData({ title: '', message: '' });
           } else {
-            showAlert({ title: "ERROR", message: "❌ ERROR: " + res.error, type: 'ERROR' });
+            showAlert({ title: "ERROR", message: "❌ ERROR AL TRANSMITIR", type: 'ERROR' });
           }
         } catch (err) {
           showAlert({ title: "ERROR", message: "❌ FALLO DE CONEXIÓN", type: 'ERROR' });
@@ -804,9 +805,10 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     message: "⚠️ ¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?",
                     type: 'CONFIRM',
                     onConfirm: async () => {
-                      const res = await sendAgentCredentials(selectedAgentId);
-                      if (res.success) showAlert({ title: "ÉXITO", message: "✅ TRANSMISIÓN EXITOSA", type: 'SUCCESS' });
-                      else showAlert({ title: "ERROR", message: "❌ FALLO EN TRANSMISIÓN: " + res.error, type: 'ERROR' });
+                      const msg = `🔐 <b>CREDENCIALES TÁCTICAS</b>\n\nAgente: <b>${agent.name}</b>\n\n<b>• ID:</b> <code>${agent.id}</code>\n<b>• PIN:</b> <code>${agent.pin}</code>\n\n<i>Entrega esta información al agente para restablecer su acceso al TACTOR.</i>`;
+                      const success = await sendTelegramAlert(msg);
+                      if (success) showAlert({ title: "ÉXITO", message: "✅ CREDENCIALES ENVIADAS A TELEGRAM", type: 'SUCCESS' });
+                      else showAlert({ title: "ERROR", message: "❌ FALLO AL CONECTAR CON TELEGRAM", type: 'ERROR' });
                     }
                   });
                 }}

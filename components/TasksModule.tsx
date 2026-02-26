@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Check, Clock, Lock, Trash2, Shield, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { UserRole, ServiceTask } from '../types';
 import { TASK_AREAS } from '../constants';
-import { fetchTasks, createTask, deleteTask, submitTaskCompletion, verifyTask, fetchPromotionStatus, fetchTaskRecruits, removeRecruitFromTask, updateTaskStatus } from '../services/sheetsService';
+import { fetchPromotionStatus } from '../services/sheetsService';
+import { fetchTasksSupabase as fetchTasks, createTaskSupabase as createTask, deleteTaskSupabase as deleteTask, submitTaskCompletionSupabase as submitTaskCompletion, verifyTaskSupabase as verifyTask, fetchTaskRecruitsSupabase as fetchTaskRecruits, removeRecruitFromTaskSupabase as removeRecruitFromTask, updateTaskStatusSupabase as updateTaskStatus } from '../services/supabaseService';
 
 interface TasksModuleProps {
     agentId: string;

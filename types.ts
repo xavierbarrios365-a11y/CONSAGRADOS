@@ -85,7 +85,8 @@ export enum AppView {
   ASCENSO = 'ASCENSO',
   TAREAS = 'TAREAS',
   CAPACITACION = 'CAPACITACION',
-  HOME = 'home'
+  HOME = 'home',
+  ADMIN = 'admin'
 }
 
 export interface Visitor {

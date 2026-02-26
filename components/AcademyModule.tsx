@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
-import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts, uploadImage, saveBulkAcademyData, fetchAgentsFromSheets, updateAgentAiProfile } from '../services/sheetsService';
+import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts, uploadImage, saveBulkAcademyData, updateAgentAiProfile } from '../services/sheetsService';
+import { fetchAgentsFromSupabase } from '../services/supabaseService';
 import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, LayoutGrid, Trash2, BrainCircuit, Info, Sparkles, Users, Search, Award, Flame, Star, Target, Image as ImageIcon } from 'lucide-react';
 import { processAssessmentAI, getDeepTestAnalysis, generateCourseFinalReport } from '../services/geminiService';
 import AcademyStudio from './AcademyStudio';
@@ -75,7 +76,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
             // Load all agents if missing (needed for certificates and audit)
             if (!allAgents.length) {
-                const agents = await fetchAgentsFromSheets();
+                const agents = await fetchAgentsFromSupabase();
                 if (agents) setAllAgents(agents);
             }
         } catch (err) {

@@ -1,27 +1,22 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Agent } from "../types";
 
-const getApiKey = () => {
-  const key = import.meta.env.VITE_GEMINI_API_KEY || '';
-  if (!key) {
-    console.warn("🚨 VITE_GEMINI_API_KEY no encontrada en .env.local");
-  }
-  return key;
-};
+const getGenAIResult = async (contents: any, modelName?: string): Promise<string> => {
+  // En producción (Vercel) esto apunta a la Serverless Function
+  const baseUrl = import.meta.env.DEV ? 'http://localhost:3000' : '';
 
-let genAIInstance: GoogleGenerativeAI | null = null;
+  const res = await fetch(`${baseUrl}/api/gemini`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents, model: modelName })
+  });
 
-const getGenAI = (): GoogleGenerativeAI | null => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    console.error("❌ getGenAI: No API Key available.");
-    return null;
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.error || 'Error en petición IA al servidor');
+    (err as any).status = res.status;
+    throw err;
   }
-  if (!genAIInstance) {
-    console.log("🤖 Initializing GoogleGenerativeAI instance...");
-    genAIInstance = new GoogleGenerativeAI(apiKey);
-  }
-  return genAIInstance;
+  return data.text || "";
 };
 
 // --- AI ROBUST JSON EXTRACTION ---
@@ -40,7 +35,6 @@ const extractJSON = (text: string) => {
       return JSON.parse(cleanText);
     } catch (e) {
       // 3. Extracción robusta por Regex
-      // Buscamos el primer '{' y el último '}' para capturar el objeto
       const firstBrace = text.indexOf('{');
       const lastBrace = text.lastIndexOf('}');
       if (firstBrace !== -1 && lastBrace !== -1) {
@@ -71,7 +65,7 @@ const extractJSON = (text: string) => {
   }
 };
 
-const DEFAULT_MODEL = 'gemini-2.5-flash'; // High performance model for 2026 standards
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 // --- AI CACHING SYSTEM (SAVE TOKENS) ---
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 Horas
@@ -94,15 +88,6 @@ const saveToCache = (key: string, data: any) => {
 };
 
 export const getTacticalAnalysis = async (agents: Agent[]) => {
-  const cacheKey = `analysis_${agents.length}_${agents.reduce((acc, curr) => acc + curr.xp, 0)}`;
-  const cached = getCachedResponse(cacheKey);
-  if (cached) return cached;
-
-  const ai = getGenAI();
-  if (!ai) {
-    return "TACTICAL ANALYSIS UNAVAILABLE. SISTEMA SIN LLAVE DE ACCESO IA.";
-  }
-
   const stats = {
     totalAgents: agents.length,
     totalXp: agents.reduce((acc, curr) => acc + curr.xp, 0),
@@ -112,16 +97,18 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
     }, {})
   };
 
-  console.log(`📡 getTacticalAnalysis: Requesting for ${agents.length} agents...`);
-  try {
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(`Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
-      Format the response as a short military-style intel report. Keep it under 100 words. 
-      Use a serious, high-tech tone.`);
+  const cacheKey = `analysis_${agents.length}_${stats.totalXp}`;
+  const cached = getCachedResponse(cacheKey);
+  if (cached) return cached;
 
+  console.log(`📡 getTacticalAnalysis: Requesting for ${agents.length} agents via secure backend...`);
+  try {
+    const prompt = `Perform a tactical assessment of the following community status: ${JSON.stringify(stats)}. 
+      Format the response as a short military-style intel report. Keep it under 100 words. 
+      Use a serious, high-tech tone.`;
+
+    const resultText = await getGenAIResult(prompt, DEFAULT_MODEL);
     console.log("✅ getTacticalAnalysis: Response received.");
-    const response = await result.response;
-    const resultText = response.text() || "ANÁLISIS COMPLETADO SIN TEXTO.";
     saveToCache(cacheKey, resultText);
     return resultText;
   } catch (error: any) {
@@ -130,7 +117,6 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
       message: error.message,
       stack: error.stack
     });
-    // ... rest same
     if (error.status === 401 || error.message?.includes('API key')) {
       return "ERROR DE SEGURIDAD: LLAVE IA NO VÁLIDA O EXPIRADA.";
     }
@@ -142,11 +128,6 @@ export const getTacticalAnalysis = async (agents: Agent[]) => {
 };
 
 export const processAssessmentAI = async (input: string, isImage: boolean = false) => {
-  const ai = getGenAI();
-  if (!ai) {
-    throw new Error("SISTEMA IA NO CONFIGURADO. FALTA LLAVE VITE_GEMINI_API_KEY.");
-  }
-
   try {
     let contents: string | any;
 
@@ -168,7 +149,7 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
 
         ESQUEMA REQUERIDO:
         {
-          "courses": [...], // Solo si es un curso completo
+          "courses": [...],
           "lessons": [
             {
               "id": "ID_AUTO",
@@ -179,9 +160,9 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
                 {
                   "type": "TEXT" | "MULTIPLE" | "DISC",
                   "question": "...",
-                  "options": ["...", "..."], // Si aplica
-                  "optionCategories": ["A", "B"...], // Solo para perfiles
-                  "correctAnswer": "A" // Solo para exámenes
+                  "options": ["...", "..."],
+                  "optionCategories": ["A", "B"...],
+                  "correctAnswer": "A"
                 }
               ]
             }
@@ -218,8 +199,8 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
                 "type": "TEXT" | "MULTIPLE" | "DISC",
                 "question": "...",
                 "options": ["...", "..."],
-                "optionCategories": ["A", "B"], // Requerido para perfiles
-                "correctAnswer": "A" // Requerido para exámenes
+                "optionCategories": ["A", "B"],
+                "correctAnswer": "A"
               }
             ]
           }
@@ -229,13 +210,10 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
       Responde ÚNICAMENTE con el objeto JSON puro.`;
     }
 
-    console.log(`📡 processAssessmentAI: Sending request (isImage: ${isImage})...`);
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(contents);
+    console.log(`📡 processAssessmentAI: Sending request via secure backend (isImage: ${isImage})...`);
+    const text = await getGenAIResult(contents, DEFAULT_MODEL);
 
     console.log("✅ processAssessmentAI: Response received.");
-    const response = await result.response;
-    const text = response.text() || "";
     const resultJson = extractJSON(text);
 
     if (!resultJson) {
@@ -246,7 +224,6 @@ export const processAssessmentAI = async (input: string, isImage: boolean = fals
     return resultJson;
   } catch (error: any) {
     console.error("AI Error (processAssessmentAI):", error);
-    // ...
     let msg = "EL CENTRO DE MANDO NO RESPONDE (ERROR DE IA).";
     if (error.message?.includes('401') || error.message?.includes('API key')) msg = "LLAVE DE IA INVÁLIDA.";
     if (error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
@@ -260,9 +237,6 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
   const cacheKey = `profile_v2_${agent.id}_${agent.xp}_${testAnswers ? JSON.stringify(testAnswers).length : 'no_test'}`;
   const cached = getCachedResponse(cacheKey);
   if (cached) return cached;
-
-  const ai = getGenAI();
-  if (!ai) return null;
 
   try {
     const prompt = `EXHORTACIÓN ESTRATÉGICA Y PERFIL TÁCTICO - CONSAGRADOS 2026
@@ -298,11 +272,9 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
       "summary": "[REPORTE MOTIVACIONAL DE MÁXIMO 50 PALABRAS. Identifica algo admirable y un área de crecimiento con sabiduría. Tono: Inspirador, Cristiano, Táctico-Juvenil.]"
     }`;
 
-    console.log(`📡 generateTacticalProfile V2: Procesando inteligencia para ${agent.name}...`);
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const resultJson = extractJSON(response.text());
+    console.log(`📡 generateTacticalProfile V2: Procesando inteligencia para ${agent.name} via backend...`);
+    const text = await getGenAIResult(prompt, DEFAULT_MODEL);
+    const resultJson = extractJSON(text);
 
     if (!resultJson) throw new Error("ERROR DE PARSE EN REPORTE TÁCTICO.");
 
@@ -313,10 +285,8 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
     throw error;
   }
 };
-export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[], resultProfile?: any) => {
-  const ai = getGenAI();
-  if (!ai) return null;
 
+export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[], resultProfile?: any) => {
   try {
     const prompt = `Analiza profundamente los resultados de este agente en la evaluación: "${lessonTitle}".
     
@@ -334,11 +304,8 @@ export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[
     Mantén un tono de inteligencia militar de élite ("The Analyst"). Máximo 150 palabras.
     Formato: HTML limpio (usa tags como <b>, <p>, <br>).`;
 
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-
-    return response.text() || "NO SE PUDO GENERAR EL ANÁLISIS PROFUNDO.";
+    const text = await getGenAIResult(prompt, DEFAULT_MODEL);
+    return text || "NO SE PUDO GENERAR EL ANÁLISIS PROFUNDO.";
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Deep Analysis):", error.message);
     return "ERROR EN EL SISTEMA DE ANÁLISIS PROFUNDO. REINTENTE MÁS TARDE.";
@@ -346,9 +313,6 @@ export const getDeepTestAnalysis = async (lessonTitle: string, userAnswers: any[
 };
 
 export const getSpiritualCounseling = async (agent: Agent, userMessage: string) => {
-  const ai = getGenAI();
-  if (!ai) return null;
-
   try {
     const prompt = `Actúa como el "Consejero Táctico Espiritual" de CONSAGRADOS 2026.
     
@@ -375,11 +339,8 @@ export const getSpiritualCounseling = async (agent: Agent, userMessage: string) 
     
     RESPONDE CON UN MENSAJE DIRECTO QUE INSPIRE A LA ACCIÓN.`;
 
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-
-    return response.text() || "CENTRO DE COMANDO FUERA DE LÍNEA. MANTÉN LA FE.";
+    const text = await getGenAIResult(prompt, DEFAULT_MODEL);
+    return text || "CENTRO DE COMANDO FUERA DE LÍNEA. MANTÉN LA FE.";
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Counseling):", error.message);
     return "ERROR DE TRANSMISIÓN EN EL CANAL DE ASESORÍA. SIGA EL PROTOCOLO ESTÁNDAR.";
@@ -387,9 +348,6 @@ export const getSpiritualCounseling = async (agent: Agent, userMessage: string) 
 };
 
 export const generateCourseFinalReport = async (agent: Agent, course: any, progressData: any[]) => {
-  const ai = getGenAI();
-  if (!ai) return null;
-
   try {
     const prompt = `Analiza el expediente de graduación del Agente ${agent.name} para el curso "${course.title}".
     
@@ -408,11 +366,8 @@ export const generateCourseFinalReport = async (agent: Agent, course: any, progr
     TONO: Reporte de inteligencia militar de alto nivel. Directo, crudo pero profesional. Máximo 120 palabras.
     FORMATO: Texto plano con estructura de reporte militar.`;
 
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-
-    return response.text() || "CENTRO DE COMANDO: REPORTE GENERADO EN BLANCO.";
+    const text = await getGenAIResult(prompt, DEFAULT_MODEL);
+    return text || "CENTRO DE COMANDO: REPORTE GENERADO EN BLANCO.";
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Course Final Report):", error.message);
     return "ERROR AL CONSOLIDAR REPORTE CRÍTICO. CONTACTE AL COMANDO.";
@@ -420,9 +375,6 @@ export const generateCourseFinalReport = async (agent: Agent, course: any, progr
 };
 
 export const generateCommunityIntelReport = async (agents: Agent[]) => {
-  const ai = getGenAI();
-  if (!ai) return null;
-
   try {
     const stats = {
       totalAgentes: agents.length,
@@ -445,15 +397,10 @@ export const generateCommunityIntelReport = async (agents: Agent[]) => {
     TONO: Inteligencia militar de élite. Conciso, visionario y autoritario. Máximo 150 palabras.
     FORMATO: HTML limpio (usa tags como <b>, <p>, <br>).`;
 
-    const model = ai.getGenerativeModel({ model: DEFAULT_MODEL });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-
-    return response.text() || "REPORTE ESTRATÉGICO NO DISPONIBLE.";
+    const text = await getGenAIResult(prompt, DEFAULT_MODEL);
+    return text || "REPORTE ESTRATÉGICO NO DISPONIBLE.";
   } catch (error: any) {
     console.error("❌ Gemini detailed error (Community Report):", error.message);
     return "ERROR EN LA CONSOLIDACIÓN ESTRATÉGICA GLOBAL.";
   }
 };
-
-

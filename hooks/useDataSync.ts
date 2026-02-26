@@ -2,13 +2,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
 import { INITIAL_AGENTS } from '../mockData';
 import {
-    fetchAgentsFromSheets,
     fetchVisitorRadar,
     fetchActiveEvents,
     fetchNotifications,
     fetchBadges,
     fetchUserEventConfirmations
 } from '../services/sheetsService';
+import { fetchAgentsFromSupabase } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
@@ -27,12 +27,12 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const syncData = useCallback(async (isSilent = false): Promise<Agent[] | null> => {
         if (!isSilent) setIsSyncing(true);
         try {
-            const sheetAgents = await fetchAgentsFromSheets();
-            console.log(`🔄 SYNC: Received ${sheetAgents?.length || 0} agents`);
+            const sheetAgents = await fetchAgentsFromSupabase();
+            console.log(`🔄 SYNC (Supabase): Received ${sheetAgents?.length || 0} agents`);
             if (sheetAgents && sheetAgents.length > 0) {
                 // Log first 3 agents' XP for verification
                 sheetAgents.slice(0, 3).forEach(a =>
-                    console.log(`  📊 ${a.name}: XP=${a.xp} B=${a.bible} A=${a.notes} L=${a.leadership}`)
+                    console.log(`  📊 ${a.name}: XP=${a.xp} Rank=${a.rank}`)
                 );
                 setAgents(sheetAgents);
             } else {

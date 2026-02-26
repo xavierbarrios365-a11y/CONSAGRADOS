@@ -25,14 +25,29 @@ import BadgeShowcase from './components/BadgeShowcase';
 import TacticalCertificate from './components/TacticalCertificate';
 import LoadingScreen from './components/LoadingScreen';
 import LighthouseIndicator from './components/LighthouseIndicator';
+import AdminDashboard from './components/AdminDashboard';
 import { parseAttendanceDate } from './utils/dateUtils';
 import {
   fetchAgentsFromSheets,
+  uploadImage,
+  reconstructDatabase,
   updateAgentPoints,
-  submitTransaction,
+  getSecurityQuestion,
   resetPasswordWithAnswer,
   updateAgentPin,
+  fetchGuides,
+  deductPercentagePoints,
+  deleteGuide,
   fetchVisitorRadar,
+  fetchAcademyData,
+  submitQuizResult,
+  deleteAcademyLesson,
+  deleteAcademyCourse,
+  saveBulkAcademyData,
+  updateAgentAiProfile,
+  resetStudentAttempts,
+  updateNotifPrefs,
+  registerLessonProgress,
   fetchDailyVerse,
   updateAgentStreaks,
   registerBiometrics,
@@ -40,15 +55,19 @@ import {
   updateAgentAiPendingStatus,
   fetchNotifications,
   syncFcmToken,
-  confirmDirectorAttendance,
-  fetchActiveEvents,
-  confirmEventAttendance as confirmEventAttendanceService,
-  fetchUserEventConfirmations,
   deleteAgent as deleteAgentService,
-  fetchBadges,
-  updateAgentAiProfile,
-  fetchAcademyData
 } from './services/sheetsService';
+import {
+  syncAllAgentsToSupabase,
+  fetchAgentsFromSupabase,
+  updateAgentPointsSupabase,
+  fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations,
+  fetchActiveEventsSupabase as fetchActiveEvents,
+  confirmEventAttendanceSupabase as confirmEventAttendanceService,
+  updateAgentPhotoSupabase,
+  enrollAgentSupabase,
+  submitTransactionSupabase
+} from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -216,7 +235,7 @@ const App: React.FC = () => {
 
         // Award XP only if it was a required pending evaluation
         if (awardedXp > 0 && currentUser.isAiProfilePending) {
-          await updateAgentPoints(currentUser.id, "LIDERAZGO", awardedXp);
+          await updateAgentPointsSupabase(currentUser.id, "XP", awardedXp);
         }
 
         const freshAgents = await syncData(); // Refrescar estado global
@@ -234,6 +253,14 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isLoggedIn && agents.length > 0) {
       refreshCurrentUser(agents);
+
+      // --- SINCRONIZACIÓN PARALELA A SUPABASE ---
+      // Realizamos una sincronización en segundo plano con un pequeño retraso
+      // para no saturar si hay actualizaciones seguidas.
+      const timer = setTimeout(() => {
+        syncAllAgentsToSupabase(agents);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
   }, [agents, isLoggedIn, refreshCurrentUser]);
 
@@ -377,7 +404,7 @@ const App: React.FC = () => {
     if (!id || scanStatus === 'SUCCESS') return;
     setScanStatus('SCANNING');
     try {
-      const result = await submitTransaction(id, 'ASISTENCIA', currentUser?.name);
+      const result = await submitTransactionSupabase(id, 'ASISTENCIA', currentUser?.name);
       if (result.success) {
         setScanStatus('SUCCESS');
         const agent = agents.find(a => String(a.id) === String(id));
@@ -400,7 +427,7 @@ const App: React.FC = () => {
     if (!scannedAgentForPoints) return;
     setIsUpdatingPoints(true);
     try {
-      const res = await updateAgentPoints(scannedAgentForPoints.id, type, 10);
+      const res = await updateAgentPointsSupabase(scannedAgentForPoints.id, type, 10);
       if (res.success) {
         showAlert({ title: "PUNTOS ASIGNADOS", message: "✅ +10 PUNTOS REGISTRADOS EXITOSAMENTE", type: 'SUCCESS' });
         syncData();
@@ -639,6 +666,18 @@ const App: React.FC = () => {
                 80% { transform: rotate(-5deg); }
               }
             `}</style>
+
+              {/* BOTÓN EXPERIMENTAL DE COMANDO CENTRAL (SOLO DIRECTOR) */}
+              {currentUser?.userRole === UserRole.DIRECTOR && (
+                <div className="mb-6 animate-in slide-in-from-top-4 duration-700">
+                  <button
+                    onClick={() => setView(AppView.ADMIN)}
+                    className="w-full py-4 bg-[#ffb700] text-[#001f3f] font-black uppercase tracking-[0.2em] rounded-2xl shadow-[0_0_30px_rgba(255,183,0,0.3)] hover:scale-[1.02] transform transition-all font-bebas flex items-center justify-center gap-3"
+                  >
+                    <ShieldCheck size={18} /> INICIAR COMANDO CENTRAL
+                  </button>
+                </div>
+              )}
 
               <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
                 <DailyVerse
@@ -1171,6 +1210,17 @@ const App: React.FC = () => {
         );
       case AppView.ASCENSO:
       case AppView.CONTENT:
+      case AppView.ADMIN:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="admin" className="h-full">
+            <AdminDashboard
+              currentUser={currentUser}
+              onClose={() => setView(AppView.HOME)}
+              onRefreshGlobalData={() => syncData(false)}
+            />
+          </motion.div>
+        );
+
       case AppView.TAREAS:
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="training" className="h-full">

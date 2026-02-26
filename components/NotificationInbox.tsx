@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Clock, Info, ShieldAlert, Target, X, Trash2, CheckCheck, Loader2 } from 'lucide-react';
 import { InboxNotification, Agent } from '../types';
-import { fetchNotifications, updateNotifPrefs, fetchAgentsFromSheets } from '../services/sheetsService';
+import { fetchNotifications, updateNotifPrefs } from '../services/sheetsService';
 
 interface NotificationInboxProps {
     onClose: () => void;

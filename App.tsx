@@ -47,7 +47,6 @@ import {
   updateAgentAiProfile,
   resetStudentAttempts,
   updateNotifPrefs,
-  registerLessonProgress,
   fetchDailyVerse,
   updateAgentStreaks,
   registerBiometrics,

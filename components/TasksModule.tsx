@@ -125,14 +125,13 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
         onActivity?.();
     };
 
-    const handleUpdateStatus = async (taskId: string, targetAgentId: string, status: any, tName?: string, tTitle?: string) => {
+    const handleUpdateStatus = async (taskId: string, targetAgentId: string, status: any) => {
         try {
+            const mappedStatus = status === 'PENDIENTE' ? 'SOLICITADO' : status === 'EN PROCESO' ? 'EN_PROGRESO' : status;
             const res = await updateTaskStatus({
                 taskId,
                 agentId: targetAgentId,
-                agentName: tName,
-                taskTitle: tTitle,
-                status
+                status: mappedStatus
             });
             if (res.success) loadData();
         } catch (e) { console.error(e); }
@@ -367,7 +366,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
 
                                                 {status === 'EN_PROGRESO' && (
                                                     <button
-                                                        onClick={() => handleUpdateStatus(task.id, agentId, 'ENTREGADO', agentName, task.title)}
+                                                        onClick={() => handleUpdateStatus(task.id, agentId, 'ENTREGADO')}
                                                         disabled={submitting === task.id}
                                                         className="w-full py-2.5 rounded-xl bg-green-600/20 text-green-400 border border-green-500/30 text-xs font-bold uppercase tracking-wider hover:bg-green-600/40 transition-all active:scale-95 flex items-center justify-center gap-2"
                                                     >
@@ -440,7 +439,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                                                             <div className="flex flex-wrap items-center gap-1.5 pt-1">
                                                                 {(r.status === 'SOLICITADO' || r.status === 'PENDIENTE') && (
                                                                     <button
-                                                                        onClick={() => handleUpdateStatus(task.id, r.agentId, 'EN_PROGRESO', r.agentName, task.title)}
+                                                                        onClick={() => handleUpdateStatus(task.id, r.agentId, 'EN_PROGRESO')}
                                                                         className="flex-1 py-1.5 px-3 rounded-lg bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest transition-all hover:bg-blue-600 shadow-lg active:scale-95"
                                                                     >
                                                                         Aceptar
@@ -458,7 +457,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
 
                                                                 {r.status !== 'VERIFICADO' && r.status !== 'RECHAZADO' && (
                                                                     <button
-                                                                        onClick={() => handleUpdateStatus(task.id, r.agentId, 'RECHAZADO', r.agentName, task.title)}
+                                                                        onClick={() => handleUpdateStatus(task.id, r.agentId, 'RECHAZADO')}
                                                                         className="py-1.5 px-3 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] font-black uppercase tracking-widest transition-all hover:bg-red-500/20"
                                                                     >
                                                                         Rechazar

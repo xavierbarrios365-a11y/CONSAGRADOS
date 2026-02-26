@@ -1222,30 +1222,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
             </div>
 
-            {userRole === UserRole.DIRECTOR && (
-              <div className="p-5 bg-blue-950/10 border border-blue-500/10 rounded-2xl space-y-3 mt-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <Zap className="text-blue-500" size={14} />
-                    <h4 className="text-white font-black uppercase tracking-widest text-[9px] font-bebas">COMANDO DE OPERACIONES</h4>
-                  </div>
-                  <p className="text-[8px] text-blue-400/50 font-bold uppercase tracking-widest">Procedimiento Seguro</p>
-                </div>
-                <button
-                  onClick={async () => {
-                    const safetyKey = prompt("⚠️ PROTOCOLO DE SEGURIDAD\n\nPara iniciar la transmisión masiva, escribe 'TRANSMITIR':");
-                    if (safetyKey === 'TRANSMITIR') {
-                      const res = await bulkSendCredentials();
-                      if (res.success) alert(`✅ TRANSMISIÓN COMPLETADA\n\nSe enviaron ${res.count} credenciales.`);
-                      else alert("❌ FALLO EN TRANSMISIÓN: " + (res.error || "Error desconocido"));
-                    }
-                  }}
-                  className="w-full bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 py-3 rounded-xl font-black uppercase text-[8px] tracking-[0.2em] transition-all flex items-center justify-center gap-2"
-                >
-                  <Send size={12} /> Iniciar Transmisión Masiva
-                </button>
-              </div>
-            )}
+
             {/* AI COMMAND TERMINAL - NUEVA FUNCIONALIDAD GRATUITA */}
             {userRole === UserRole.DIRECTOR && (
               <div className="bg-[#000c19] border border-indigo-500/30 rounded-[2.5rem] p-6 shadow-2xl space-y-4 relative overflow-hidden group">

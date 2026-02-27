@@ -34,6 +34,8 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [timeLeft, setTimeLeft] = useState<number>(0);
     const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
     const [gladiators, setGladiators] = useState<{ a: Agent | null, b: Agent | null }>({ a: null, b: null });
+    const [showVsAnimation, setShowVsAnimation] = useState(false);
+    const prevGladiatorsReady = useRef(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const phaseRef = useRef<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
 
@@ -103,6 +105,18 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             soundsRef.current = {};
         };
     }, []);
+
+    // ✨ VS ANIMATION TRIGGER ✨
+    useEffect(() => {
+        const areReady = !!gladiators.a && !!gladiators.b;
+        if (areReady && !prevGladiatorsReady.current) {
+            // Ambos gladiadores acaban de ser asignados
+            setShowVsAnimation(true);
+            playSound('battle_transition');
+            setTimeout(() => setShowVsAnimation(false), 4500);
+        }
+        prevGladiatorsReady.current = areReady;
+    }, [gladiators]);
 
     useEffect(() => {
         loadSession();
@@ -402,6 +416,76 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 <p className="text-3xl md:text-5xl font-black text-[#ffb700] italic">¡GLORIA AL VENCEDOR!</p>
                             )}
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 🔥 EPIC VS ANIMATION OVERLAY 🔥 */}
+            <AnimatePresence>
+                {showVsAnimation && gladiators.a && gladiators.b && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, scale: 1.5, filter: "blur(20px)" }}
+                        transition={{ duration: 0.5 }}
+                        className="fixed inset-0 z-[300] flex items-center justify-center bg-[#000814]/90 backdrop-blur-2xl overflow-hidden"
+                    >
+                        {/* Rayos de fondo */}
+                        <div className="absolute inset-0 z-0 opacity-30 flex items-center justify-center pointer-events-none">
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                                className="w-[150vw] h-[150vw] bg-[conic-gradient(from_0deg,transparent_0deg,#ffb700_45deg,transparent_90deg,transparent_180deg,#ffb700_225deg,transparent_270deg)]"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-center gap-4 md:gap-20 w-full px-4 md:px-10 z-10 relative">
+                            {/* Alfa */}
+                            <motion.div
+                                initial={{ x: -300, opacity: 0, scale: 0.5 }}
+                                animate={{ x: 0, opacity: 1, scale: 1 }}
+                                transition={{ type: "spring", bounce: 0.5, delay: 0.1 }}
+                                className="flex flex-col items-center gap-6"
+                            >
+                                <div className="w-32 h-32 md:w-64 md:h-64 relative rounded-full p-2 bg-blue-500/20 border-4 border-blue-500 shadow-[0_0_100px_rgba(37,99,235,0.8)]">
+                                    {gladiators.a.photoUrl ? (
+                                        <img src={formatDriveUrl(gladiators.a.photoUrl)} className="w-full h-full object-cover rounded-full" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-blue-500 rounded-full"><Shield size={60} /></div>
+                                    )}
+                                </div>
+                                <h2 className="text-3xl md:text-6xl font-black text-blue-400 uppercase tracking-widest text-center">{formatName(gladiators.a.name)}</h2>
+                                <p className="text-xl md:text-3xl text-blue-200/50 font-bebas tracking-widest -mt-4">ALFA</p>
+                            </motion.div>
+
+                            {/* VS Text */}
+                            <motion.div
+                                initial={{ scale: 0, rotate: -180, opacity: 0 }}
+                                animate={{ scale: [0, 1.5, 1], rotate: 0, opacity: 1 }}
+                                transition={{ type: "spring", bounce: 0.7, delay: 0.5 }}
+                                className="text-8xl md:text-[15rem] font-bebas text-[#ffb700] drop-shadow-[0_0_80px_rgba(255,183,0,1)] z-10 italic"
+                            >
+                                VS
+                            </motion.div>
+
+                            {/* Bravo */}
+                            <motion.div
+                                initial={{ x: 300, opacity: 0, scale: 0.5 }}
+                                animate={{ x: 0, opacity: 1, scale: 1 }}
+                                transition={{ type: "spring", bounce: 0.5, delay: 0.3 }}
+                                className="flex flex-col items-center gap-6"
+                            >
+                                <div className="w-32 h-32 md:w-64 md:h-64 relative rounded-full p-2 bg-teal-500/20 border-4 border-teal-500 shadow-[0_0_100px_rgba(20,184,166,0.8)]">
+                                    {gladiators.b.photoUrl ? (
+                                        <img src={formatDriveUrl(gladiators.b.photoUrl)} className="w-full h-full object-cover rounded-full" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-teal-500 rounded-full"><Target size={60} /></div>
+                                    )}
+                                </div>
+                                <h2 className="text-3xl md:text-6xl font-black text-teal-400 uppercase tracking-widest text-center">{formatName(gladiators.b.name)}</h2>
+                                <p className="text-xl md:text-3xl text-teal-200/50 font-bebas tracking-widest -mt-4">BRAVO</p>
+                            </motion.div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

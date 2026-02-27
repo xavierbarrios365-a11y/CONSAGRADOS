@@ -82,7 +82,15 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
         let myTeamAssignment: 'A' | 'B' | null = null;
         if (sessionData) {
             const currentIdStr = String(currentUser.id).trim().toUpperCase();
-            if (sessionData.gladiator_a_id && String(sessionData.gladiator_a_id).trim().toUpperCase() === currentIdStr) {
+
+            // 🔥 HARDCODE TEST JOYPADS 🔥
+            if (currentIdStr === 'CON-TEST1') {
+                myTeamAssignment = 'A';
+            } else if (currentIdStr === 'CON-TEST2') {
+                myTeamAssignment = 'B';
+            }
+            // ASIGNACIÓN NORMAL
+            else if (sessionData.gladiator_a_id && String(sessionData.gladiator_a_id).trim().toUpperCase() === currentIdStr) {
                 myTeamAssignment = 'A';
             } else if (sessionData.gladiator_b_id && String(sessionData.gladiator_b_id).trim().toUpperCase() === currentIdStr) {
                 myTeamAssignment = 'B';
@@ -107,7 +115,15 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
         // Re-evaluar si sigo siendo gladiador en cada actualización
         const currentIdStr = String(currentUser.id).trim().toUpperCase();
         let currentTeamAssignment: 'A' | 'B' | null = null;
-        if (newState.gladiator_a_id && String(newState.gladiator_a_id).trim().toUpperCase() === currentIdStr) {
+
+        // 🔥 HARDCODE TEST JOYPADS 🔥
+        if (currentIdStr === 'CON-TEST1') {
+            currentTeamAssignment = 'A';
+        } else if (currentIdStr === 'CON-TEST2') {
+            currentTeamAssignment = 'B';
+        }
+        // ASIGNACIÓN NORMAL
+        else if (newState.gladiator_a_id && String(newState.gladiator_a_id).trim().toUpperCase() === currentIdStr) {
             currentTeamAssignment = 'A';
         } else if (newState.gladiator_b_id && String(newState.gladiator_b_id).trim().toUpperCase() === currentIdStr) {
             currentTeamAssignment = 'B';

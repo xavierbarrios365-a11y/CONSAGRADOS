@@ -19,11 +19,11 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        console.log("🛡️ CARGANDO BIBLE WAR STUDENT v2.0.0 (TOUCH-FIX)");
+        console.log("🛡️ CARGANDO BIBLE WAR STUDENT v2.1.5 (SYNC-FIX)");
         loadInitialData();
 
         const sessionChannel = supabase
-            .channel('bible_war_student_realtime')
+            .channel('bible_war_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_sessions' }, (payload) => {
                 handleSessionUpdate(payload.new as BibleWarSession);
             })

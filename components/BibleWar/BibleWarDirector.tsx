@@ -52,8 +52,8 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             })
             .subscribe();
 
-        // 2. Canal de Broadcast (Persistente para evitar recrearlo)
-        const bcChannel = supabase.channel('bible_war_sync').subscribe();
+        // 2. Canal de Broadcast (Unificado)
+        const bcChannel = supabase.channel('bible_war_realtime').subscribe();
         setBroadcastChannel(bcChannel);
 
         return () => {
@@ -80,12 +80,13 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         setGroups(groupsData);
     };
 
-    const broadcastAction = (type: string, payload: any = {}) => {
+    const broadcastAction = (event: string, payload: any = {}) => {
         if (broadcastChannel) {
+            console.log(`📤 Enviando Broadcast: ${event}`, payload);
             broadcastChannel.send({
                 type: 'broadcast',
-                event: 'bible_war_action',
-                payload: { type, ...payload }
+                event: event,
+                payload: payload
             });
         }
     };

@@ -24,7 +24,21 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [prevScores, setPrevScores] = useState({ a: 0, b: 0 });
     const [showTransfer, setShowTransfer] = useState<'A' | 'B' | 'NONE' | 'TIE' | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Motor de Audio v2.6
+    const playSound = (effect: string) => {
+        try {
+            const audioPath = `/sounds/bible-war/${effect}.mp3`;
+            const audio = new Audio(audioPath);
+            audio.volume = 0.6;
+            audio.play().catch(e => console.warn("Audio play blocked or file missing:", effect));
+        } catch (e) {
+            console.error("Audio error:", e);
+        }
+    };
 
     useEffect(() => {
         loadSession();
@@ -51,11 +65,20 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 if (envelope.payload?.question) {
                     setActiveQuestion(envelope.payload.question);
                     setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: envelope.payload.question?.id, show_answer: false, answer_a: null, answer_b: null } : null);
+
+                    // Iniciar Secuencia Cineatográfica v2.6
+                    setDisplayPhase('READING');
+                    playSound('reading_pulse');
+                    startLocalTimer(15, 'READING');
                 }
             })
             .on('broadcast', { event: 'RESOLVE' }, (envelope) => {
                 console.log('⚡ Display: RESOLVE', envelope.payload);
-                setShowTransfer(envelope.payload?.winner);
+                const winner = envelope.payload?.winner;
+                setShowTransfer(winner);
+                if (winner === 'A' || winner === 'B' || winner === 'TIE') playSound('success');
+                else if (winner === 'NONE') playSound('fail');
+
                 setTimeout(() => setShowTransfer(null), 5000);
                 loadSession();
             })
@@ -121,15 +144,31 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
         }
     };
 
-    const startLocalTimer = (seconds: number) => {
+    const startLocalTimer = (seconds: number, phase: 'READING' | 'BATTLE' = 'BATTLE') => {
         if (timerRef.current) clearInterval(timerRef.current);
         setTimeLeft(seconds);
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     if (timerRef.current) clearInterval(timerRef.current);
+
+                    // Transición Automática de Fase
+                    if (phase === 'READING') {
+                        setDisplayPhase('BATTLE');
+                        playSound('battle_transition');
+                        startLocalTimer(30, 'BATTLE');
+                    } else {
+                        playSound('timeout');
+                    }
                     return 0;
                 }
+
+                // Efecto de Ticking en los últimos 30s
+                if (phase === 'BATTLE' && prev <= 31) {
+                    // Quizás play sound cada segundo?
+                    // playSound('tick_tock');
+                }
+
                 return prev - 1;
             });
         }, 1000);
@@ -270,93 +309,113 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                             initial={{ opacity: 0, y: 50, filter: 'blur(20px)' }}
                             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                             exit={{ opacity: 0, y: -50, filter: 'blur(20px)' }}
-                            className="max-w-6xl w-full space-y-12 text-center"
+                            className="max-w-7xl w-full space-y-12 text-center relative"
                         >
-                            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1 rounded-full">
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ffb700]">{activeQuestion.category}</span>
-                                <div className="w-[1px] h-3 bg-white/20" />
-                                <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${getDifficultyColor(activeQuestion.difficulty)}`}>{activeQuestion.difficulty}</span>
-                            </div>
+                            {/* PHASE 1: READING - Pregunta Gigante */}
+                            <AnimatePresence mode="wait">
+                                {displayPhase === 'READING' ? (
+                                    <motion.div
+                                        key="reading"
+                                        initial={{ scale: 0.8, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 1.2, opacity: 0, y: -100 }}
+                                        className="py-10"
+                                    >
+                                        <p className="text-[12px] md:text-[20px] font-black uppercase tracking-[0.5em] text-[#ffb700] mb-8 animate-pulse">PREPARA TU MENTE / PREGUNTA DE NIVEL {activeQuestion.difficulty}</p>
+                                        <h1 className="text-4xl md:text-8xl font-black italic tracking-tighter leading-tight px-10 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                                            {activeQuestion.question}
+                                        </h1>
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="battle"
+                                        initial={{ y: 100, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        className="space-y-8"
+                                    >
+                                        <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1 rounded-full">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ffb700]">{activeQuestion.category}</span>
+                                            <div className="w-[1px] h-3 bg-white/20" />
+                                            <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${getDifficultyColor(activeQuestion.difficulty)}`}>{activeQuestion.difficulty}</span>
+                                        </div>
 
-                            <motion.h1
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.5 }}
-                                className="text-xl md:text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
-                            >
-                                {activeQuestion.question}
-                            </motion.h1>
-
-                            {/* Imagen de la Pregunta (v2.3) */}
-                            {activeQuestion.image_url && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="relative w-full max-h-[35vh] flex justify-center py-2"
-                                >
-                                    <div className="relative group">
-                                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                                        <img
-                                            src={activeQuestion.image_url}
-                                            alt="Pregunta"
-                                            className="relative max-h-[30vh] md:max-h-[32vh] rounded-xl md:rounded-2xl border border-white/10 shadow-2xl object-contain bg-black/40"
-                                        />
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* Indicadores de Respuesta de Equipo */}
-                            <div className="flex justify-center gap-12 pt-4">
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-3 h-3 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-500 ${session?.answer_a ? 'bg-blue-500 scale-125' : 'bg-white/10'}`} />
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${session?.answer_a ? 'text-blue-400' : 'text-white/20'}`}>ALFA {session?.answer_a ? 'LISTO' : ''}</span>
-                                </div>
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-3 h-3 rounded-full shadow-[0_0_15px_rgba(20,184,166,0.5)] transition-all duration-500 ${session?.answer_b ? 'bg-teal-500 scale-125' : 'bg-white/10'}`} />
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${session?.answer_b ? 'text-teal-400' : 'text-white/20'}`}>BRAVO {session?.answer_b ? 'LISTO' : ''}</span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4 mt-2 md:mt-6">
-                                {activeQuestion.options.map((opt: string, i: number) => {
-                                    const isCorrect = opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer;
-                                    const showAnswer = session?.show_answer;
-
-                                    return (
-                                        <motion.div
-                                            key={i}
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ delay: 0.8 + (i * 0.1) }}
-                                            className={`p-3 md:p-6 rounded-xl md:rounded-[1.5rem] border text-sm md:text-2xl font-bebas tracking-wider transition-all duration-500 ${showAnswer && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_30px_rgba(34,197,94,0.3)] scale-[1.02]' : showAnswer ? 'opacity-10 border-white/5 bg-white/2' : 'bg-white/5 border-white/10 text-white/80'}`}
+                                        <motion.h1
+                                            layoutId="question-text"
+                                            className="text-xl md:text-4xl font-bold italic text-white/90 leading-tight px-4 max-w-4xl mx-auto"
                                         >
-                                            <span className="text-xs md:text-lg mr-1 md:mr-2 opacity-30">{i + 1}.</span> {opt}
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
+                                            {activeQuestion.question}
+                                        </motion.h1>
+
+                                        {/* Imagen de la Pregunta (v2.3) */}
+                                        {activeQuestion.image_url && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                className="relative w-full max-h-[25vh] flex justify-center py-2"
+                                            >
+                                                <img
+                                                    src={activeQuestion.image_url}
+                                                    alt="Pregunta"
+                                                    className="relative max-h-[25vh] rounded-2xl border border-white/10 shadow-2xl object-contain bg-black/40"
+                                                />
+                                            </motion.div>
+                                        )}
+
+                                        {/* Indicadores de Respuesta de Equipo */}
+                                        <div className="flex justify-center gap-12 pt-2">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className={`w-3 h-3 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-500 ${session?.answer_a ? 'bg-blue-500 scale-125' : 'bg-white/10'}`} />
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${session?.answer_a ? 'text-blue-400' : 'text-white/20'}`}>ALFA {session?.answer_a ? 'LISTO' : ''}</span>
+                                            </div>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className={`w-3 h-3 rounded-full shadow-[0_0_15px_rgba(20,184,166,0.5)] transition-all duration-500 ${session?.answer_b ? 'bg-teal-500 scale-125' : 'bg-white/10'}`} />
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${session?.answer_b ? 'text-teal-400' : 'text-white/20'}`}>BRAVO {session?.answer_b ? 'LISTO' : ''}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
+                                            {activeQuestion.options.map((opt: string, i: number) => {
+                                                const isCorrect = opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer;
+                                                const showAnswer = session?.show_answer;
+
+                                                return (
+                                                    <motion.div
+                                                        key={i}
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        transition={{ delay: 0.3 + (i * 0.1) }}
+                                                        className={`p-4 md:p-8 rounded-2xl border text-lg md:text-3xl font-bebas tracking-widest transition-all duration-500 ${showAnswer && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_50px_rgba(34,197,94,0.4)] scale-[1.05]' : showAnswer ? 'opacity-20 border-white/5 grayscale' : 'bg-white/5 border-white/10 text-white/90 hover:bg-white/10'}`}
+                                                    >
+                                                        <span className="text-xs md:text-lg mr-2 opacity-30">{i + 1}.</span> {opt}
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {session?.show_answer && (
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="mt-12 space-y-4"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-8 space-y-4"
                                 >
                                     <div className="flex justify-center gap-6 md:gap-12">
                                         <div className="bg-blue-900/30 border border-blue-500/30 p-4 rounded-xl text-center min-w-[150px]">
                                             <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.3em] mb-2">ALFA ELIGIÓ</p>
-                                            <p className="text-sm md:text-lg font-bebas tracking-widest">{session.answer_a || '---'}</p>
+                                            <p className="text-sm md:text-lg font-bebas">{session.answer_a || '---'}</p>
                                         </div>
                                         <div className="bg-teal-900/30 border border-teal-500/30 p-4 rounded-xl text-center min-w-[150px]">
                                             <p className="text-[10px] text-teal-400 font-black uppercase tracking-[0.3em] mb-2">BRAVO ELIGIÓ</p>
-                                            <p className="text-sm md:text-lg font-bebas tracking-widest">{session.answer_b || '---'}</p>
+                                            <p className="text-sm md:text-lg font-bebas">{session.answer_b || '---'}</p>
                                         </div>
                                     </div>
 
                                     {activeQuestion.reference && (
                                         <div className="p-4 bg-white/5 border border-white/10 rounded-2xl inline-block mt-2">
                                             <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mb-1">Referencia Táctica</p>
-                                            <p className="text-xl font-serif italic text-white/60">"{activeQuestion.reference}"</p>
+                                            <p className="text-lg font-serif italic text-white/60">"{activeQuestion.reference}"</p>
                                         </div>
                                     )}
                                 </motion.div>

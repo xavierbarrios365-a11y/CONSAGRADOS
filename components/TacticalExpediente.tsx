@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Agent } from '../types';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import {
     X,

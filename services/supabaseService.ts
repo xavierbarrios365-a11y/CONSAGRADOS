@@ -1068,7 +1068,6 @@ export const registerVisitorSupabase = async (visitorId: string, visitorName: st
             agent_name: visitorName,
             tipo: 'VISITANTE',
             detalle: `Ingreso de invitado. Pasa por: ${reporterName || 'Sistema'}`,
-            tipo_visitante: 'INVITADO',
             registrado_en: new Date().toISOString()
         });
         if (error) throw error;
@@ -1087,7 +1086,7 @@ export const fetchVisitorRadarSupabase = async (): Promise<any[]> => {
         const { data, error } = await supabase
             .from('asistencia_visitas')
             .select('agent_id, agent_name')
-            .eq('tipo_visitante', 'INVITADO')
+            .eq('tipo', 'VISITANTE')
             .order('registrado_en', { ascending: false });
 
         if (error) throw error;

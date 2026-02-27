@@ -5,7 +5,7 @@ import DailyVerse from './DailyVerse';
 import { Search, Users, Activity, Target, Zap, TrendingUp, AlertCircle, ChevronRight, ChevronLeft, MoreVertical, X, Filter, Download, UserPlus, Shield, UserCheck, UserX, Award, Star, Mail, Phone, Calendar, Clock, MapPin, RefreshCw, Plus, Minus, Send, Camera, ArrowUpCircle, AlertTriangle, Gavel, Sparkles, Loader2, MessageSquare, BookOpen, Fingerprint, FileText, Settings, RotateCcw, ChevronUp, Cpu, Brain, Bell, Trash2, Radio, Trophy } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase-config';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
@@ -440,31 +440,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               </div>
 
               <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                <button
-                  onClick={handleImportInscriptions}
-                  disabled={isReconstructing}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-[#ffb700] text-[#001f3f] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-xl active:scale-95 disabled:opacity-50 font-bebas"
-                >
-                  <RefreshCw size={16} className={isReconstructing ? 'animate-spin' : ''} />
-                  Sincronizar Base
-                </button>
-                <button
-                  onClick={handleTestNotification}
-                  disabled={isSendingBroadcast}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/10 active:scale-95 font-bebas"
-                >
-                  <Bell size={16} className="text-indigo-400" />
-                  Probar Push
-                </button>
-                {setView && (
-                  <button
-                    onClick={() => setView(AppView.CONTENT)}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white/5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all border border-white/10 active:scale-95 font-bebas"
-                  >
-                    <BookOpen size={16} className="text-indigo-400" />
-                    Material
-                  </button>
-                )}
                 {setView && (
                   <button
                     onClick={() => setView(AppView.ADMIN)}
@@ -474,33 +449,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     Panel ADMIN
                   </button>
                 )}
-
-                <button
-                  onClick={async () => {
-                    if (window.confirm("🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿Estás seguro de realizar una PURGA TOTAL?")) {
-                      try {
-                        if ('caches' in window) {
-                          const cacheNames = await caches.keys();
-                          await Promise.all(cacheNames.map(name => caches.delete(name)));
-                        }
-                        if ('serviceWorker' in navigator) {
-                          const registrations = await navigator.serviceWorker.getRegistrations();
-                          await Promise.all(registrations.map(reg => reg.unregister()));
-                        }
-                        const remembered = localStorage.getItem('remembered_user');
-                        localStorage.clear();
-                        if (remembered) localStorage.setItem('remembered_user', remembered);
-                        window.location.reload();
-                      } catch (err) {
-                        alert("FALLO EN PURGA: Intente manualmente.");
-                      }
-                    }
-                  }}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all shadow-xl active:scale-95 font-bebas"
-                >
-                  <Trash2 size={16} />
-                  Purga
-                </button>
               </div>
             </div>
 

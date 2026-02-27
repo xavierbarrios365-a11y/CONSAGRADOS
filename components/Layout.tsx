@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield, Settings } from 'lucide-react';
 import { AppView, UserRole } from '../types';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 
 interface LayoutProps {
   children: React.ReactNode;

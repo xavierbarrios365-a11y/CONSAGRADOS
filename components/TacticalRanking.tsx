@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Agent, UserRole } from '../types';
 import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 import { PROMOTION_RULES } from '../constants';
 
 interface TacticalRankingProps {

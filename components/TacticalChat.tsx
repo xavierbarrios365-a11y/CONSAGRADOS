@@ -125,6 +125,19 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             setNewMessage('');
             setShowEmojiPicker(false);
             await addDoc(collection(db, 'messages'), msgData);
+
+            // Disparar Notificación Push Global
+            fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: `NUEVO MENSAJE - ${msgData.senderName.toUpperCase()}`,
+                    body: msgData.type === 'text' ? msgData.text : '📁 Archivo multimedia recibido',
+                    topic: 'all',
+                    data: { url: '/chat' }
+                })
+            }).catch(e => console.log('Push silenciado:', e));
+
         } catch (e) {
             console.error("❌ ERROR EN TRANSMISIÓN:", e);
             alert("FALLO EN ENCRIPTACIÓN DE MENSAJE");
@@ -247,11 +260,11 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     return (
         <div className="fixed bottom-0 right-0 w-full md:bottom-4 md:right-4 md:w-[400px] h-[100dvh] md:h-[600px] bg-[#000c19] border-l md:border border-white/10 md:rounded-[2.5rem] shadow-2xl flex flex-col z-[60] overflow-hidden animate-in slide-in-from-bottom-10 duration-500 ease-out">
             {/* Header: WhatsApp Style with Official Logo */}
-            <div className="p-4 bg-[#001f3f] flex items-center justify-between text-white border-b border-white/5 relative z-10 shadow-lg">
+            <div className="pt-[max(env(safe-area-inset-top),16px)] pb-4 px-4 bg-[#001f3f] flex items-center justify-between text-white border-b border-white/5 relative z-10 shadow-lg">
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        <div className="w-10 h-10 rounded-full border border-[#ffb700]/30 overflow-hidden bg-white/5">
-                            <img src="https://drive.google.com/uc?export=view&id=1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f" className="w-full h-full object-cover" alt="Group" />
+                        <div className="w-10 h-10 rounded-full border border-[#ffb700]/30 overflow-hidden bg-white/5 flex items-center justify-center">
+                            <Shield className="w-6 h-6 text-[#ffb700] opacity-80" />
                         </div>
                         <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#001f3f] animate-pulse"></div>
                     </div>

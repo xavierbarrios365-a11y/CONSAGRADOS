@@ -24,34 +24,34 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
 
     // Sincronizar estado de completado basado en el servidor (lastStreakDate)
     useEffect(() => {
-        if (!verse?.lastStreakDate) {
-            setQuizCompleted(false);
-            return;
-        }
-
         const checkCompletion = () => {
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+            const localToday = localStorage.getItem('verse_completed_date');
+
+            if (!verse?.lastStreakDate && localToday !== todayStr) {
+                setQuizCompleted(false);
+                return;
+            }
             let lastMs = 0;
-            const raw = verse.lastStreakDate!;
+            const raw = verse?.lastStreakDate || '';
             const numVal = Number(raw);
             if (!isNaN(numVal) && numVal > 1000000000000) {
                 lastMs = numVal;
-            } else {
+            } else if (raw !== '') {
                 const pd = new Date(raw);
                 if (!isNaN(pd.getTime())) lastMs = pd.getTime();
             }
 
-            if (lastMs === 0) {
+            if (lastMs === 0 && localToday !== todayStr) {
                 setQuizCompleted(false);
                 return;
             }
 
             // --- LÓGICA DE DÍA CALENDARIO (GMT-4 / Caracas) ---
-            const now = new Date();
-            const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-            const lastDateStr = new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+            const lastDateStr = lastMs > 0 ? new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }) : '';
 
             // Backup local para evitar que se pida de nuevo si la base de datos tarda en llegar
-            const localToday = localStorage.getItem('verse_completed_date');
             const isCompletedToday = (lastDateStr === todayStr) || (localToday === todayStr);
 
             if (isCompletedToday) {

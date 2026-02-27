@@ -42,3 +42,15 @@ export const compressImage = (file: File, maxWidth: number = 1000, quality: numb
         reader.onerror = (error) => reject(error);
     });
 };
+
+/**
+ * Standardizes Google Drive image URLs to use the view endpoint directly.
+ */
+export const formatDriveUrl = (url: string | undefined) => {
+    if (!url) return '';
+    if (url.includes('drive.google.com/file/d/')) {
+        const id = url.split('/d/')[1]?.split('/')[0];
+        return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+    }
+    return url;
+};

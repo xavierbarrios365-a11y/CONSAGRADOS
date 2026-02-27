@@ -7,7 +7,7 @@ import { processAssessmentAI, getDeepTestAnalysis, generateCourseFinalReport } f
 import AcademyStudio from './AcademyStudio';
 import TacticalCertificate from './TacticalCertificate';
 import TacticalDocument from './TacticalDocument';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 
 interface AcademyModuleProps {
     userRole: UserRole;

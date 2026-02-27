@@ -1,9 +1,8 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Agent, NewsFeedItem } from '../types';
 import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 
 interface AchievementShareCardProps {
     agent?: Agent;

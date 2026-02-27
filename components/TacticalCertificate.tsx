@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Shield, CheckCircle, Download, Printer, X, Loader2, Share2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 import { Agent } from '../types';
 
 interface TacticalCertificateProps {
@@ -188,120 +188,135 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
                             fontFamily: "'Roboto', sans-serif",
                         }}
                     >
-                        {/* Inner Border */}
+                        {/* Inner Glowing Border */}
                         <div style={{
-                            position: 'absolute', top: '20px', left: '20px',
-                            right: '20px', bottom: '20px',
-                            border: '1px solid rgba(255, 183, 0, 0.3)', pointerEvents: 'none',
+                            position: 'absolute', top: '15px', left: '15px',
+                            right: '15px', bottom: '15px',
+                            border: '2px solid rgba(255, 183, 0, 0.6)', pointerEvents: 'none',
+                            boxShadow: 'inset 0 0 40px rgba(255,183,0,0.1), 0 0 20px rgba(255,183,0,0.2)',
                         }} />
 
-                        {/* Watermark Shield */}
                         <div style={{
-                            position: 'absolute', top: '50%', left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            fontSize: '400px', opacity: 0.02, pointerEvents: 'none',
-                            fontFamily: 'serif', userSelect: 'none', lineHeight: 1,
-                        }}>⚔️</div>
+                            position: 'absolute', top: '25px', left: '25px',
+                            right: '25px', bottom: '25px',
+                            border: '1px dashed rgba(255, 183, 0, 0.3)', pointerEvents: 'none',
+                        }} />
 
                         {/* Corner decorations */}
                         {[
-                            { top: '30px', left: '30px' },
-                            { top: '30px', right: '30px' },
-                            { bottom: '30px', left: '30px' },
-                            { bottom: '30px', right: '30px' },
+                            { top: '20px', left: '20px' },
+                            { top: '20px', right: '20px' },
+                            { bottom: '20px', left: '20px' },
+                            { bottom: '20px', right: '20px' },
                         ].map((pos, i) => (
                             <div key={i} style={{
-                                position: 'absolute', width: '40px', height: '40px',
-                                borderColor: 'rgba(255, 183, 0, 0.5)', borderStyle: 'solid',
-                                borderWidth: i === 0 ? '2px 0 0 2px' : i === 1 ? '2px 2px 0 0' : i === 2 ? '0 0 2px 2px' : '0 2px 2px 0',
+                                position: 'absolute', width: '60px', height: '60px',
+                                borderColor: '#FFB700', borderStyle: 'solid',
+                                borderWidth: i === 0 ? '4px 0 0 4px' : i === 1 ? '4px 4px 0 0' : i === 2 ? '0 0 4px 4px' : '0 4px 4px 0',
+                                boxShadow: i === 0 ? '-5px -5px 15px rgba(255,183,0,0.3)' : i === 1 ? '5px -5px 15px rgba(255,183,0,0.3)' : i === 2 ? '-5px 5px 15px rgba(255,183,0,0.3)' : '5px 5px 15px rgba(255,183,0,0.3)',
                                 ...pos
                             }} />
                         ))}
 
-                        {/* Main content layout */}
-                        <div style={{ position: 'absolute', inset: '40px', display: 'flex', gap: '30px', alignItems: 'center' }}>
+                        {/* Top Watermark / Logo Faded */}
+                        <div style={{
+                            position: 'absolute', top: '100px', right: '100px',
+                            width: '300px', height: '300px', opacity: 0.03, pointerEvents: 'none',
+                            backgroundImage: `url(${OFFICIAL_LOGO})`,
+                            backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+                            filter: 'drop-shadow(0 0 50px rgba(255,255,255,0.8))'
+                        }} />
 
-                            {/* Left: Photo & Badge */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', minWidth: '160px' }}>
-                                <div style={{
-                                    width: '130px', height: '130px', borderRadius: '50%',
-                                    border: '4px solid #FFB700', overflow: 'hidden',
-                                    boxShadow: '0 0 30px rgba(255,183,0,0.4)',
-                                    background: '#000c1a', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    {photoUrl ? (
-                                        <img src={photoUrl} crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Agent" />
-                                    ) : (
-                                        <span style={{ fontSize: '60px' }}>🎖️</span>
-                                    )}
-                                </div>
-                                <div style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    background: 'rgba(255,183,0,0.1)', border: '1px solid rgba(255,183,0,0.4)',
-                                    padding: '8px 16px', borderRadius: '8px'
-                                }}>
-                                    <CheckCircle style={{ color: '#FFB700' }} size={16} />
-                                    <span style={{ color: '#FFB700', fontFamily: "'Bebas Neue', sans-serif", fontSize: '14px', letterSpacing: '0.2em' }}>CERTIFICADO</span>
+                        {/* Main content layout */}
+                        <div style={{ position: 'absolute', inset: '50px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <img src={OFFICIAL_LOGO} style={{ height: '45px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }} alt="Logo" crossOrigin="anonymous" />
+                                <div>
+                                    <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '28px', letterSpacing: '0.5em', color: '#fff', margin: 0, lineHeight: 1, textShadow: '0 0 15px rgba(255,255,255,0.5)' }}>CONSAGRADOS</p>
+                                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '10px', color: '#FFB700', letterSpacing: '0.4em', margin: 0, fontWeight: 900 }}>COMMAND CENTER 2026</p>
                                 </div>
                             </div>
 
-                            {/* Divider */}
-                            <div style={{ width: '2px', height: '160px', background: 'linear-gradient(to bottom, transparent, rgba(255,183,0,0.6), transparent)', flexShrink: 0 }} />
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '12px', color: 'rgba(255,255,255,0.6)', letterSpacing: '0.5em', textTransform: 'uppercase', margin: '0 0 15px 0' }}>
+                                    CERTIFICADO OFICIAL DE CUMPLIMIENTO TÁCTICO
+                                </p>
 
-                            {/* Right: Text Content */}
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {/* Logo & Org */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <img src={OFFICIAL_LOGO} style={{ height: '36px', objectFit: 'contain' }} alt="Logo" crossOrigin="anonymous" />
-                                    <div>
-                                        <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '20px', letterSpacing: '0.4em', color: '#fff', margin: 0, lineHeight: 1 }}>CONSAGRADOS</p>
-                                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '9px', color: 'rgba(255,183,0,0.8)', letterSpacing: '0.3em', margin: 0 }}>COMMAND CENTER 2026</p>
-                                    </div>
-                                </div>
+                                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '14px', color: '#FFB700', fontStyle: 'italic', margin: '0 0 10px 0' }}>Se otorga y autoriza a:</p>
 
-                                {/* Certificate Title */}
-                                <div>
-                                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '10px', color: 'rgba(255,183,0,0.7)', letterSpacing: '0.4em', textTransform: 'uppercase', margin: '0 0 6px 0' }}>
-                                        ─── Certificado Oficial de Finalización ───
-                                    </p>
-                                    <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '42px', color: '#FFFFFF', letterSpacing: '0.05em', lineHeight: 1.1, margin: 0 }}>
-                                        {resolvedName.toUpperCase()}
-                                    </p>
-                                </div>
+                                <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '64px', color: '#FFFFFF', letterSpacing: '0.08em', lineHeight: 1, margin: '0 0 15px 0', textShadow: '0px 4px 20px rgba(0,0,0,0.8), 0 0 30px rgba(255,255,255,0.2)' }}>
+                                    {resolvedName.toUpperCase()}
+                                </p>
 
-                                {/* Course */}
+                                <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '14px', color: 'rgba(255,255,255,0.8)', margin: '0 0 20px 0', maxWidth: '80%', lineHeight: 1.5 }}>
+                                    Por haber demostrado compromiso excepcional, disciplina táctica y haber completado con honores todos los requisitos para la certificación en:
+                                </p>
+
                                 <div style={{
-                                    background: 'rgba(255,183,0,0.08)', border: '1px solid rgba(255,183,0,0.2)',
-                                    borderLeft: '3px solid #FFB700', padding: '10px 16px', borderRadius: '0 8px 8px 0'
+                                    background: 'linear-gradient(90deg, transparent, rgba(255,183,0,0.15) 20%, rgba(255,183,0,0.15) 80%, transparent)',
+                                    borderTop: '2px solid rgba(255,183,0,0.4)', borderBottom: '2px solid rgba(255,183,0,0.4)',
+                                    padding: '15px 40px', width: '100%', maxWidth: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
-                                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '9px', color: 'rgba(255,183,0,0.6)', letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 4px 0' }}>
-                                        Ha completado satisfactoriamente:
-                                    </p>
-                                    <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '22px', color: '#FFB700', letterSpacing: '0.1em', margin: 0 }}>
+                                    <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '30px', color: '#FFB700', letterSpacing: '0.15em', margin: 0, textShadow: '0 0 10px rgba(255,183,0,0.5)' }}>
                                         {resolvedCourse.toUpperCase()}
                                     </p>
                                 </div>
+                            </div>
 
-                                {/* Date & Rank */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                    <div>
-                                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '8px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 4px 0' }}>
-                                            Fecha de Emisión
-                                        </p>
-                                        <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '16px', color: 'rgba(255,183,0,0.8)', letterSpacing: '0.2em', margin: 0 }}>
+                            {/* Bottom Strip: Photo, Seals, Dates */}
+                            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', padding: '0 20px' }}>
+
+                                {/* Photo & Verification */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                    <div style={{
+                                        width: '90px', height: '90px', borderRadius: '50%',
+                                        border: '3px solid #FFB700', overflow: 'hidden',
+                                        boxShadow: '0 0 25px rgba(255,183,0,0.6)',
+                                        background: '#000c1a', position: 'relative'
+                                    }}>
+                                        {photoUrl ? (
+                                            <img src={photoUrl} crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Agent" />
+                                        ) : (
+                                            <Shield style={{ width: '100%', height: '100%', padding: '20px', color: 'rgba(255,183,0,0.5)' }} />
+                                        )}
+                                        <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)', pointerEvents: 'none' }} />
+                                    </div>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '8px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.3em', margin: '0 0 5px 0' }}>ACREDITACIÓN VALIDA</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <CheckCircle style={{ color: '#00FF00' }} size={14} />
+                                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '18px', color: '#00FF00', letterSpacing: '0.2em' }}>AUTÉNTICO</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Seal / Badge */}
+                                <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <div style={{ width: '80px', height: '80px', border: '2px solid rgba(255,183,0,0.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                        <div style={{ position: 'absolute', inset: '-5px', border: '1px dashed rgba(255,183,0,0.3)', borderRadius: '50%', animation: 'spin 20s linear infinite' }} />
+                                        <Shield style={{ color: 'rgba(255,183,0,0.8)' }} size={35} />
+                                    </div>
+                                    <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '7px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.4em', marginTop: '10px' }}>C26 // SELLO DE EXCELENCIA</p>
+                                </div>
+
+                                {/* Signatures and Dates */}
+                                <div style={{ display: 'flex', gap: '40px', textAlign: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', paddingBottom: '10px' }}>
+                                        <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '18px', color: '#FFFFFF', letterSpacing: '0.2em', margin: 0, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '5px', minWidth: '120px' }}>
                                             {formattedDate}
                                         </p>
+                                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '8px', color: '#FFB700', letterSpacing: '0.3em', margin: 0 }}>
+                                            FECHA DE EMISIÓN
+                                        </p>
                                     </div>
-                                    {agent?.rank && (
-                                        <div style={{ textAlign: 'right' }}>
-                                            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '8px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 4px 0' }}>
-                                                Rango Actual
-                                            </p>
-                                            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '16px', color: '#fff', letterSpacing: '0.2em', margin: 0 }}>
-                                                {agent.rank.toUpperCase()}
-                                            </p>
-                                        </div>
-                                    )}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', paddingBottom: '10px' }}>
+                                        <p style={{ fontFamily: "'Homemade Apple', cursive, serif", fontSize: '20px', color: '#FFFFFF', margin: 0, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '5px', minWidth: '160px', opacity: 0.9 }}>
+                                            Director Sahel
+                                        </p>
+                                        <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '8px', color: '#FFB700', letterSpacing: '0.3em', margin: 0 }}>
+                                            FIRMA AUTORIZADA
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -321,9 +336,10 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
                 </div>
             </div>
 
-            {/* Print styles */}
+            {/* Print styles and Fonts */}
             <style dangerouslySetInnerHTML={{
                 __html: `
+                @import url('https://fonts.googleapis.com/css2?family=Homemade+Apple&display=swap');
                 @media print {
                     @page { size: A4 landscape; margin: 0; }
                     body > * { display: none !important; }

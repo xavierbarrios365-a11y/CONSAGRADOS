@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
 import { AppView, Agent, UserRole, Visitor, Guide, Badge } from './types';
-import DigitalIdCard, { formatDriveUrl } from './components/DigitalIdCard';
+import DigitalIdCard from './components/DigitalIdCard';
+import { formatDriveUrl } from './services/storageUtils';
 import IntelFeed from './components/IntelFeed';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
@@ -66,7 +67,8 @@ import {
   enrollAgentSupabase,
   submitTransactionSupabase,
   updateAgentStreaksSupabase,
-  registerVisitorSupabase
+  registerVisitorSupabase,
+  applyAbsencePenaltiesSupabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';

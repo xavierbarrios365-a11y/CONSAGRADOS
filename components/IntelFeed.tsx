@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
 import { fetchNewsFeed } from '../services/sheetsService';
-import { formatDriveUrl } from './DigitalIdCard';
+import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
 
 interface NewsFeedProps {

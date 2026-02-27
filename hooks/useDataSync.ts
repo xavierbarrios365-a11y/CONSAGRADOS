@@ -86,14 +86,10 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);
 
-            // 2. Rankings (exclude Leaders/Directors)
+            // 2. Rankings (exclude NO ONE from feed so Directors appear)
             // FIX #3: Reuse already-synced agents instead of fetching again (halves API calls)
             const allAgents = agents;
-            const filteredAgents = allAgents.filter(a => {
-                const isLeaderRank = a.rank === 'LÍDER' || a.rank === 'LIDER';
-                const isLeaderRole = a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
-                return !isLeaderRank && !isLeaderRole;
-            });
+            const filteredAgents = allAgents; // Se quitó el filtro que excluía a LÍDER y DIRECTOR
 
             const topXp = [...filteredAgents].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 3);
             const topBible = [...filteredAgents].sort((a, b) => (b.bible || 0) - (a.bible || 0)).slice(0, 3);

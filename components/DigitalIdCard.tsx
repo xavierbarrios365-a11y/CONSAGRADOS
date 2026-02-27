@@ -7,6 +7,7 @@ import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
 import { updateAgentAiProfile, fetchAcademyData, updateAgentPoints } from '../services/sheetsService';
 import { toPng } from 'html-to-image';
+import { formatDriveUrl } from '../services/storageUtils';
 
 import EliteRecruitmentTest from './EliteRecruitmentTest';
 
@@ -14,38 +15,6 @@ interface DigitalIdCardProps {
   agent: Agent;
   onClose?: () => void;
 }
-
-export const formatDriveUrl = (url: string) => {
-  if (!url || typeof url !== 'string' || url.trim() === '' || url === 'N/A' || url === 'PENDIENTE') {
-    return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-  }
-
-  // Si ya es de Supabase Storage o Unsplash o externo no relacionado a google, retornamos tal cual
-  if (url.includes('supabase.co') || url.includes('unsplash.com') || (url.startsWith('http') && !url.includes('google'))) {
-    return url;
-  }
-
-  // Rescatar ID independientemente del formato (drive.google.com, lh3.googleusercontent.com, doc-0g...)
-  const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=|\/file\/d\/|preview\/d\/|open\?id=)([\w-]{25,100})/;
-  const match = url.match(driveRegex);
-
-  let fileId = "";
-  if (match && match[1]) {
-    fileId = match[1];
-  } else if (url.length >= 25 && !url.includes('/') && !url.includes('.') && !url.includes(':')) {
-    fileId = url;
-  }
-
-  if (fileId) {
-    // Endpoints modernos anti-bloqueo:
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
-  }
-
-  // Fallback si no logramos extraer ID pero parece URL válida
-  if (url.startsWith('http') || url.startsWith('/')) return url;
-
-  return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-};
 
 
 
@@ -249,7 +218,6 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
                   src={imgError ? "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" : formatDriveUrl(agent.photoUrl)}
                   alt={agent.name}
                   onError={() => setImgError(true)}
-                  crossOrigin="anonymous"
                   className="relative w-32 h-32 rounded-[2.5rem] object-cover border-2 border-[#ffb700]/30 shadow-2xl grayscale hover:grayscale-0 transition-all duration-700 hover:rotate-2"
                 />
               </div>

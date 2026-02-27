@@ -4,7 +4,7 @@
  */
 
 const getBaseUrl = () => {
-    return import.meta.env.DEV ? 'http://localhost:3000' : '';
+    return import.meta.env.DEV ? 'https://consagrados.vercel.app' : '';
 };
 
 export const sendTelegramAlert = async (message: string): Promise<boolean> => {

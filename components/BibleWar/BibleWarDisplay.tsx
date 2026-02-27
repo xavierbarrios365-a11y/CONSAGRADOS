@@ -17,6 +17,14 @@ interface BibleWarDisplayProps {
     isFullScreen?: boolean;
 }
 
+const formatName = (fullName: string | undefined) => {
+    if (!fullName) return '';
+    const words = fullName.trim().split(/\s+/);
+    if (words.length >= 3) return `${words[0]} ${words[2]}`;
+    if (words.length === 2) return `${words[0]} ${words[1]}`;
+    return words[0];
+};
+
 const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }) => {
     const [session, setSession] = useState<BibleWarSession | null>(null);
     const [activeQuestion, setActiveQuestion] = useState<any>(null);
@@ -285,10 +293,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <p className="text-[10px] md:text-[12px] font-black text-blue-400 uppercase tracking-widest truncate">{gladiators.a?.name || 'ALFA'}</p>
-                            {gladiators.a && <span className="text-[8px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold">{gladiators.a.xp} XP</span>}
+                            <p className="text-xl md:text-3xl font-black text-blue-400 uppercase tracking-widest truncate">{formatName(gladiators.a?.name) || 'ALFA'}</p>
                         </div>
-                        <motion.p key={session?.score_a} className="text-4xl md:text-7xl font-bebas leading-none truncate">{session?.score_a || 0}</motion.p>
+                        <motion.p key={gladiators.a?.xp || session?.score_a} className="text-6xl md:text-8xl font-bebas leading-none truncate text-blue-100">{gladiators.a?.xp ?? (session?.score_a || 0)}</motion.p>
                     </div>
                 </motion.div>
 
@@ -317,10 +324,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-end gap-2">
-                            {gladiators.b && <span className="text-[8px] bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded font-bold">{gladiators.b.xp} XP</span>}
-                            <p className="text-[10px] md:text-[12px] font-black text-teal-400 uppercase tracking-widest truncate">{gladiators.b?.name || 'BRAVO'}</p>
+                            <p className="text-xl md:text-3xl font-black text-teal-400 uppercase tracking-widest truncate">{formatName(gladiators.b?.name) || 'BRAVO'}</p>
                         </div>
-                        <motion.p key={session?.score_b} className="text-4xl md:text-7xl font-bebas leading-none truncate">{session?.score_b || 0}</motion.p>
+                        <motion.p key={gladiators.b?.xp || session?.score_b} className="text-6xl md:text-8xl font-bebas leading-none truncate text-teal-100">{gladiators.b?.xp ?? (session?.score_b || 0)}</motion.p>
                     </div>
                 </motion.div>
             </div>

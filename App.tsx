@@ -109,7 +109,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.9.1"; // Academia & Ranking Correction v1.9.1
+  const APP_VERSION = "1.9.2"; // Force Atomic Purge for Bible War Fix v1.9.2
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
   const auth = useAuth();

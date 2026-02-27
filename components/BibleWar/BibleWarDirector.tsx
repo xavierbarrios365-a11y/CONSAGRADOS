@@ -17,15 +17,25 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
-import { updateBibleWarSession, transferBibleWarXP, fetchBibleWarSession, fetchBibleWarGroups, assignAgentToBibleWarGroup, fetchAgentsFromSupabase, fetchBibleWarQuestions, clearBibleWarQuestions, importBibleWarQuestions } from '../../services/supabaseService';
+import {
+    updateBibleWarSession,
+    transferBibleWarXP,
+    fetchBibleWarSession,
+    fetchBibleWarGroups,
+    assignAgentToBibleWarGroup,
+    fetchAgentsFromSupabase,
+    fetchBibleWarQuestions,
+    clearBibleWarQuestions,
+    importBibleWarQuestions
+} from '../../services/supabaseService';
 import { BibleWarSession, Agent } from '../../types';
-// import questionsData from '../../bible_war_bank.json'; // Ya no usaremos el local
 
 interface BibleWarDirectorProps {
     onClose?: () => void;
 }
 
 const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
+    // 1. ESTADOS
     const [session, setSession] = useState<BibleWarSession | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
@@ -39,30 +49,33 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     const [showQuestionImporter, setShowQuestionImporter] = useState(false);
     const [importJson, setImportJson] = useState('');
 
+    // 2. EFECTOS
     useEffect(() => {
+        console.log("🛠️ BibleWarDirector: COMPONENTE MONTADO");
         loadSession();
 
-        // 1. Canal de base de datos
         const dbChannel = supabase
             .channel('bible_war_director_db')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_sessions' }, (payload) => {
+                console.log("🔄 BibleWarDirector: DB CHANGE DETECTED", payload);
                 setSession(payload.new as BibleWarSession);
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_groups' }, () => {
-                loadGroups(); // Recargar grupos si cambian fuera
+                loadGroups();
             })
-            .subscribe();
+            .subscribe((status) => console.log("📡 Subscripción DB:", status));
 
-        // 2. Canal de Broadcast (Unificado)
-        const bcChannel = supabase.channel('bible_war_realtime').subscribe();
+        const bcChannel = supabase.channel('bible_war_realtime').subscribe((status) => console.log("📡 Subscripción Broadcast:", status));
         setBroadcastChannel(bcChannel);
 
         return () => {
+            console.log("🧹 BibleWarDirector: COMPONENTE DESMONTADO");
             supabase.removeChannel(dbChannel);
             supabase.removeChannel(bcChannel);
         };
     }, []);
 
+    // 3. FUNCIONES DE CARGA Y BROADCAST
     const loadSession = async () => {
         const [sessionData, agentsData, bibleQuestions] = await Promise.all([
             fetchBibleWarSession(),
@@ -92,11 +105,13 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         }
     };
 
+    // 4. FUNCIONES DE LÓGICA DE JUEGO
     const handleLaunchQuestion = async (q: any) => {
+        console.log("🚀 Lanzando pregunta:", q.id);
         const usedIds = session?.used_questions || [];
 
-        // Mapeo de puntos por dificultad solicitado por el usuario
-        let points = 5; // Default Medio
+        // Puntos automáticos por dificultad (v2.5)
+        let points = 5;
         if (q.difficulty === 'EASY') points = 2;
         if (q.difficulty === 'HARD') points = 15;
 
@@ -111,13 +126,14 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             answer_b: null,
             roulette_category: q.category,
             used_questions: Array.from(new Set([...usedIds, q.id])),
-            stakes_xp: points // Asignación automática
+            stakes_xp: points
         };
-        // Actualización optimista
+
         setSession(prev => prev ? { ...prev, ...updates } : null);
         setSelectedQuestion(q);
 
         const res = await updateBibleWarSession(updates);
+        console.log("📦 Resultado Lanzamiento:", res);
         if (res.success) {
             broadcastAction('LAUNCH_QUESTION', { question: q });
         } else {
@@ -127,41 +143,11 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         }
     };
 
-    const handleResetScores = async () => {
-        if (!window.confirm("🏆 ¿Seguro que quieres poner a CERO los marcadores de ambos equipos?")) return;
-
-        const updates = {
-            score_a: 0,
-            score_b: 0
-        };
-
-        const res = await updateBibleWarSession(updates);
+    const handleUpdateStakes = async (val: number) => {
+        setSession(prev => prev ? { ...prev, stakes_xp: val } : null);
+        const res = await updateBibleWarSession({ stakes_xp: val });
         if (res.success) {
-            loadSession();
-            alert("✅ Marcadores reiniciados.");
-        }
-    };
-
-    const handleSpinRoulette = async () => {
-        const categories = [...new Set(questions.map(q => q.category))];
-        if (categories.length === 0) return alert("No hay preguntas cargadas en el banco.");
-
-        const randomCat = categories[Math.floor(Math.random() * categories.length)];
-        const updates = {
-            roulette_category: randomCat,
-            status: 'SPINNING' as const,
-            answer_a: null,
-            answer_b: null,
-            current_question_id: null,
-            show_answer: false
-        };
-        // Optimista
-        setSession(prev => prev ? { ...prev, ...updates } : null);
-        setSearchTerm(randomCat); // Auto-filtrar por categoría
-
-        const res = await updateBibleWarSession(updates);
-        if (res.success) {
-            broadcastAction('SPIN_ROULETTE', { category: randomCat });
+            broadcastAction('UPDATE_STAKES', { stakes: val });
         } else {
             loadSession();
         }
@@ -180,16 +166,14 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             return;
         }
 
-        // 🛡️ Unificación Definitiva de Validación (v2.3)
         const isACorrect = ansA && (ansA === q.correct_answer || ansA === (q as any).correctAnswer);
         const isBCorrect = ansB && (ansB === q.correct_answer || ansB === (q as any).correctAnswer);
 
         let winner: 'A' | 'B' | 'NONE' | 'TIE' = 'NONE';
-
         if (isACorrect && !isBCorrect) winner = 'A';
         else if (isBCorrect && !isACorrect) winner = 'B';
-        else if (isACorrect && isBCorrect) winner = 'TIE'; // Ambos bien -> Empate táctico
-        else winner = 'NONE'; // Ambos mal -> Derrota compartida
+        else if (isACorrect && isBCorrect) winner = 'TIE';
+        else winner = 'NONE';
 
         const stakes = session?.stakes_xp || customStakes;
         await transferBibleWarXP(winner, stakes);
@@ -198,132 +182,54 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         setTimeout(loadSession, 1000);
     };
 
-    const handleUpdateStakes = async (val: number) => {
-        setSession(prev => prev ? { ...prev, stakes_xp: val } : null);
-        const res = await updateBibleWarSession({ stakes_xp: val });
+    const handleSpinRoulette = async () => {
+        const categories = [...new Set(questions.map(q => q.category))];
+        if (categories.length === 0) return alert("No hay preguntas cargadas en el banco.");
+
+        const randomCat = categories[Math.floor(Math.random() * categories.length)];
+        const updates = {
+            roulette_category: randomCat,
+            status: 'SPINNING' as const,
+            answer_a: null,
+            answer_b: null,
+            current_question_id: null,
+            show_answer: false
+        };
+
+        setSession(prev => prev ? { ...prev, ...updates } : null);
+        setSearchTerm(randomCat);
+
+        const res = await updateBibleWarSession(updates);
         if (res.success) {
-            broadcastAction('UPDATE_STAKES', { stakes: val });
+            broadcastAction('SPIN_ROULETTE', { category: randomCat });
         } else {
             loadSession();
         }
     };
 
+    // 5. FUNCIONES DE MANTENIMIENTO Y RESETS
     const handleForceReload = () => {
-        if (!window.confirm("📡 ¿Forzar RECARGA de todos los dispositivos conectados?")) return;
+        alert("🚨 DEP_SYNC: SE EJECUTARÁ LA ACCIÓN DE CARGA");
+        console.log("🚀 Click en FORCE RELOAD");
         broadcastAction('FORCE_RELOAD', {});
         alert("📡 Señal de recarga enviada.");
     };
 
-    const handleAssignGroup = async (agentId: string, team: 'A' | 'B' | null) => {
-        // Actualización optimista local
-        const prevGroups = [...groups];
-        if (!team) {
-            setGroups(groups.filter(g => g.agent_id !== agentId));
-        } else {
-            setGroups(prev => [...prev.filter(g => g.agent_id !== agentId), { agent_id: agentId, team }]);
-        }
-
-        const res = await assignAgentToBibleWarGroup(agentId, team);
-        if (!res.success) {
-            alert("Error: Asegúrate de ejecutar el SQL de grupos.");
-            setGroups(prevGroups); // Rollback
-        }
-    };
-
-    const handleReset = async () => {
-        if (!window.confirm('¿RESETEAR TODA LA GUERRA?')) return;
-        const updates = {
-            score_a: 0,
-            score_b: 0,
-            status: 'WAITING' as const,
-            current_question_id: null,
-            active_team: null,
-            show_answer: false,
-            stakes_xp: 100,
-            timer_status: 'STOPPED' as const,
-            timer_end_at: null,
-            answer_a: null,
-            answer_b: null,
-            accumulated_pot: 0
-        };
-        setSession(prev => prev ? { ...prev, ...updates } : null);
-        setSelectedQuestion(null);
-
+    const handleResetScores = async () => {
+        console.log("🚀 Click en RESET SCORES");
+        const updates = { score_a: 0, score_b: 0 };
         const res = await updateBibleWarSession(updates);
+        console.log("📦 Resultado updateBibleWarSession:", res);
         if (res.success) {
-            broadcastAction('RESET');
-            console.log("✅ Reinicio de sesión exitoso");
-        } else {
-            alert(`❌ Error al reiniciar sesión: ${res.error}\n\nAsegúrate de haber ejecutado el SQL v6.1.`);
-        }
-    };
-
-    const handleStartTimer = async (seconds: number) => {
-        const endAt = new Date(Date.now() + seconds * 1000).toISOString();
-        const updates = {
-            timer_end_at: endAt,
-            timer_status: 'RUNNING' as const
-        };
-        setSession(prev => prev ? { ...prev, ...updates } : null);
-        await updateBibleWarSession(updates);
-        broadcastAction('START_TIMER', { endAt, seconds });
-    };
-
-    const handleCoinFlip = async () => {
-        const teams: ('ALFA' | 'BRAVO')[] = ['ALFA', 'BRAVO'];
-        const winner = teams[Math.floor(Math.random() * teams.length)];
-
-        const updates = { last_coin_flip: winner };
-        setSession(prev => prev ? { ...prev, ...updates } : null);
-
-        const res = await updateBibleWarSession(updates);
-        if (res.success) {
-            broadcastAction('COIN_FLIP', { winner });
-        }
-    };
-
-
-
-    const handleImportQuestions = async () => {
-        console.log("🚀 Iniciando importación de preguntas...");
-        try {
-            if (!importJson.trim()) {
-                alert("⚠️ El campo de texto está vacío.");
-                return;
-            }
-
-            const data = JSON.parse(importJson);
-            console.log("📦 JSON parseado correctamente:", data);
-
-            if (!Array.isArray(data)) throw new Error("El JSON debe ser un array de preguntas.");
-
-            const res = await importBibleWarQuestions(data);
-            if (res.success) {
-                console.log("✅ Importación exitosa");
-                alert("✅ Preguntas importadas con éxito.");
-                setImportJson('');
-                setShowQuestionImporter(false);
-                loadSession();
-            } else {
-                console.error("❌ Error en importBibleWarQuestions:", res.error);
-                alert(`❌ Error al importar: ${res.error}\n\nNota: Asegúrate de haber ejecutado el SQL v6 en Supabase.`);
-            }
-        } catch (e: any) {
-            console.error("⚠️ Error atrapado en handleImportQuestions:", e.message);
-            alert(`⚠️ Error: ${e.message}`);
-        }
-    };
-
-    const handleClearQuestions = async () => {
-        if (!window.confirm("¿Seguro que quieres BORRAR TODO el banco de preguntas actual?")) return;
-        const res = await clearBibleWarQuestions();
-        if (res.success) {
-            alert("✅ Banco de preguntas vaciado.");
             loadSession();
+            alert("✅ Marcadores reiniciados.");
+        } else {
+            alert(`❌ Error al reiniciar marcadores: ${res.error}`);
         }
     };
 
     const handleNukeReset = async () => {
+        console.log("🚀 Click en NUKE RESET");
         if (!window.confirm("☢️ NUCLEAR RESET: ¿Estás seguro? Se borrarán TODAS las respuestas y se reiniciará el proyector y móviles.")) return;
 
         const updates = {
@@ -340,10 +246,11 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             used_questions: [],
             score_a: 0,
             score_b: 0,
-            stakes_xp: 5 // Default Medio tras reset
+            stakes_xp: 5
         };
 
         const res = await updateBibleWarSession(updates);
+        console.log("📦 Resultado NUKE:", res);
         if (res.success) {
             broadcastAction('RESET', updates);
             broadcastAction('FORCE_RELOAD', {});
@@ -351,329 +258,250 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                 loadSession();
                 alert("☢️ Sistema purgado y recargado con éxito.");
             }, 500);
+        } else {
+            alert(`❌ Error en Nuke: ${res.error}`);
         }
     };
 
+    const handleReset = async () => {
+        if (!window.confirm('¿RESETEAR TODA LA GUERRA?')) return;
+        const updates = {
+            score_a: 0,
+            score_b: 0,
+            status: 'WAITING' as const,
+            current_question_id: null,
+            active_team: null,
+            show_answer: false,
+            stakes_xp: 5,
+            timer_status: 'STOPPED' as const,
+            timer_end_at: null,
+            answer_a: null,
+            answer_b: null,
+            accumulated_pot: 0
+        };
+        const res = await updateBibleWarSession(updates);
+        if (res.success) {
+            broadcastAction('RESET');
+            loadSession();
+        }
+    };
+
+    // 6. FUNCIONES DE UTILIDAD (GRUPOS, TIMERS, IMPORTACIÓN)
+    const handleAssignGroup = async (agentId: string, team: 'A' | 'B' | null) => {
+        const prevGroups = [...groups];
+        if (!team) setGroups(groups.filter(g => g.agent_id !== agentId));
+        else setGroups(prev => [...prev.filter(g => g.agent_id !== agentId), { agent_id: agentId, team }]);
+
+        const res = await assignAgentToBibleWarGroup(agentId, team);
+        if (!res.success) {
+            alert("Error al asignar grupo.");
+            setGroups(prevGroups);
+        }
+    };
+
+    const handleStartTimer = async (seconds: number) => {
+        const endAt = new Date(Date.now() + seconds * 1000).toISOString();
+        const updates = { timer_end_at: endAt, timer_status: 'RUNNING' as const };
+        setSession(prev => prev ? { ...prev, ...updates } : null);
+        await updateBibleWarSession(updates);
+        broadcastAction('START_TIMER', { endAt, seconds });
+    };
+
+    const handleCoinFlip = async () => {
+        const teams: ('ALFA' | 'BRAVO')[] = ['ALFA', 'BRAVO'];
+        const winner = teams[Math.floor(Math.random() * teams.length)];
+        const updates = { last_coin_flip: winner };
+        setSession(prev => prev ? { ...prev, ...updates } : null);
+        const res = await updateBibleWarSession(updates);
+        if (res.success) broadcastAction('COIN_FLIP', { winner });
+    };
+
+    const handleClearQuestions = async () => {
+        if (!window.confirm("¿BORRAR TODO el banco de preguntas?")) return;
+        const res = await clearBibleWarQuestions();
+        if (res.success) {
+            alert("✅ Banco vaciado.");
+            loadSession();
+        }
+    };
+
+    const handleImportQuestions = async () => {
+        try {
+            if (!importJson.trim()) return alert("⚠️ JSON vacío.");
+            const data = JSON.parse(importJson);
+            const res = await importBibleWarQuestions(data);
+            if (res.success) {
+                alert("✅ Importado con éxito.");
+                setImportJson('');
+                setShowQuestionImporter(false);
+                loadSession();
+            }
+        } catch (e: any) {
+            alert(`⚠️ Error: ${e.message}`);
+        }
+    };
+
+    // 7. FILTRADO Y RENDERIZADO
     const filteredQuestions = questions.filter(q =>
         q.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
         q.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return <div className="p-10 text-center text-white/50">CONECTANDO A LA ARENA...</div>;
+    if (loading) return <div className="p-10 text-center text-white/50 font-bebas tracking-widest text-2xl animate-pulse">CONECTANDO A LA ARENA...</div>;
 
     return (
-        <div className="flex flex-col h-full bg-[#001f3f] text-white font-montserrat">
-            {/* Header Director */}
+        <div className="flex flex-col h-full bg-[#001f3f] text-white font-montserrat select-none">
+            {/* Header */}
             <div className="p-6 bg-black/20 border-b border-white/10 flex items-center justify-between">
                 <div>
                     <h2 className="text-lg md:text-xl font-bebas tracking-widest uppercase">Panel de Comando: Guerra Bíblica</h2>
-                    <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest opacity-60">Controlador de Eventos Real-time</p>
+                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest animate-pulse">ESTADO: v2.5.4 (DEBUG ACTIVE - SI VES ESTO, EL BOTÓN SYNC DEBERÍA DAR ALERTA)</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setShowQuestionImporter(!showQuestionImporter)}
-                        className={`flex items-center gap-2 px-2 md:px-4 py-2 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${showQuestionImporter ? 'bg-purple-600 text-white' : 'bg-white/5 border border-white/10'}`}
-                    >
-                        <Plus size={14} /> <span className="hidden xs:inline">Banco JSON</span><span className="xs:hidden">JSON</span>
+                    <button onClick={() => setShowQuestionImporter(!showQuestionImporter)} className={`p-2 rounded-xl transition-all ${showQuestionImporter ? 'bg-purple-600' : 'bg-white/5 border border-white/10'}`}>
+                        <Plus size={16} />
                     </button>
-                    <button
-                        onClick={() => setShowGroupManager(!showGroupManager)}
-                        className={`flex items-center gap-2 px-2 md:px-4 py-2 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${showGroupManager ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 border border-white/10'}`}
-                    >
-                        <Users size={14} /> <span className="hidden xs:inline">Grupos</span><span className="xs:hidden">GPS</span>
+                    <button onClick={() => setShowGroupManager(!showGroupManager)} className={`p-2 rounded-xl transition-all ${showGroupManager ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 border border-white/10'}`}>
+                        <Users size={16} />
                     </button>
-                    <button
-                        onClick={() => window.open('?view=bible_war_display', '_blank')}
-                        className="flex items-center gap-2 px-2 md:px-4 py-2 bg-blue-600 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/40"
-                    >
-                        <Eye size={14} /> <span className="hidden xs:inline">Lanzar Arena</span><span className="xs:hidden">ARENA</span>
+                    <button onClick={() => window.open('?view=bible_war_display', '_blank')} className="p-2 bg-blue-600 rounded-xl">
+                        <Eye size={16} />
                     </button>
-                    <button onClick={handleReset} className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 hover:bg-red-500/20 transition-all">
+                    <button onClick={handleReset} className="p-2 bg-red-600/20 border border-red-600/30 rounded-xl text-red-500">
                         <RotateCcw size={16} />
                     </button>
                 </div>
             </div>
 
+            {/* Modales In-line */}
             <AnimatePresence>
                 {showQuestionImporter && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="bg-purple-900/20 border-b border-purple-500/30 overflow-hidden"
-                    >
-                        <div className="p-6 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-purple-400">Importador de Preguntas JSON</h3>
-                                <button onClick={handleClearQuestions} className="text-[8px] bg-red-500/20 text-red-400 px-3 py-1 rounded-lg border border-red-500/30 hover:bg-red-500/40 transition-all font-black uppercase">Vaciar Banco Actual</button>
-                            </div>
-                            <textarea
-                                value={importJson}
-                                onChange={(e) => setImportJson(e.target.value)}
-                                placeholder='Pega aquí tu JSON (ej: [{"id": "q1", "category": "PENTATEUCO", ...}])'
-                                className="w-full h-32 bg-black/40 border border-purple-500/30 rounded-xl p-4 text-[10px] font-mono outline-none focus:border-purple-500 transition-all resize-none"
-                            />
-                            <button
-                                onClick={handleImportQuestions}
-                                disabled={!importJson}
-                                className="w-full py-3 bg-purple-600 rounded-xl text-white font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all disabled:opacity-30"
-                            >
-                                Procesar e Importar Preguntas
-                            </button>
-                        </div>
+                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="bg-purple-900/20 border-b border-purple-500/30 overflow-hidden p-6 space-y-4">
+                        <div className="flex justify-between items-center"><h3 className="text-[10px] font-black uppercase text-purple-400">Importador JSON</h3><button onClick={handleClearQuestions} className="text-[8px] color-red-400">VACÍAR</button></div>
+                        <textarea value={importJson} onChange={e => setImportJson(e.target.value)} className="w-full h-32 bg-black/40 border border-purple-500/30 rounded-xl p-4 text-[10px] font-mono" />
+                        <button onClick={handleImportQuestions} className="w-full py-3 bg-purple-600 rounded-xl font-black uppercase text-[10px]">IMPORTAR</button>
                     </motion.div>
                 )}
-            </AnimatePresence>
-
-            <AnimatePresence>
                 {showGroupManager && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="bg-black/30 border-b border-white/10 overflow-hidden"
-                    >
-                        <div className="p-6 space-y-4">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-[#ffb700]">Gestión de Escuadras (Alfa vs Bravo)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Grupo Alfa */}
-                                <div className="space-y-3">
-                                    <p className="text-[8px] font-black uppercase text-blue-400">Grupo Alfa</p>
-                                    <div className="bg-white/5 rounded-xl p-2 min-h-[100px] space-y-1">
-                                        {agents.filter(a => groups.find(g => g.agent_id === a.id && g.team === 'A')).map(a => (
-                                            <div key={a.id} className="flex items-center justify-between p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                                <span className="text-[8px] font-bold uppercase">{a.name}</span>
-                                                <button onClick={() => handleAssignGroup(a.id, null)} className="text-white/40 hover:text-red-500"><Minus size={12} /></button>
-                                            </div>
+                    <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="bg-black/30 border-b border-white/10 overflow-hidden p-6 space-y-4">
+                        <h3 className="text-[10px] font-black uppercase text-[#ffb700]">Gestión de Escuadras</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            {['A', 'B'].map(t => (
+                                <div key={t} className="space-y-2">
+                                    <p className={`text-[8px] font-black uppercase ${t === 'A' ? 'text-blue-400' : 'text-teal-400'}`}>GRUPO {t === 'A' ? 'ALFA' : 'BRAVO'}</p>
+                                    <div className="bg-white/5 rounded-xl p-2 space-y-1">
+                                        {agents.filter(a => groups.find(g => g.agent_id === a.id && g.team === t)).map(a => (
+                                            <div key={a.id} className="flex justify-between p-2 bg-white/5 rounded-lg border border-white/10"><span className="text-[8px]">{a.name}</span><button onClick={() => handleAssignGroup(a.id, null)}><Minus size={12} /></button></div>
                                         ))}
-                                        <select
-                                            onChange={(e) => {
-                                                if (e.target.value) {
-                                                    handleAssignGroup(e.target.value, 'A');
-                                                    e.target.value = '';
-                                                }
-                                            }}
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-[8px] font-bold uppercase outline-none"
-                                        >
-                                            <option value="">+ AÑADIR ALFA</option>
-                                            {agents.filter(a => !groups.find(g => g.agent_id === a.id)).map(a => (
-                                                <option key={a.id} value={a.id}>{a.name}</option>
-                                            ))}
-                                        </select>
+                                        <select onChange={e => handleAssignGroup(e.target.value, t as 'A' | 'B')} className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-[8px]"><option value="">+ AÑADIR</option>{agents.filter(a => !groups.find(g => g.agent_id === a.id)).map(a => (<option key={a.id} value={a.id}>{a.name}</option>))}</select>
                                     </div>
                                 </div>
-                                {/* Grupo Bravo */}
-                                <div className="space-y-3">
-                                    <p className="text-[8px] font-black uppercase text-teal-400">Grupo Bravo</p>
-                                    <div className="bg-white/5 rounded-xl p-2 min-h-[100px] space-y-1">
-                                        {agents.filter(a => groups.find(g => g.agent_id === a.id && g.team === 'B')).map(a => (
-                                            <div key={a.id} className="flex items-center justify-between p-2 bg-teal-500/10 rounded-lg border border-teal-500/20">
-                                                <span className="text-[8px] font-bold uppercase">{a.name}</span>
-                                                <button onClick={() => handleAssignGroup(a.id, null)} className="text-white/40 hover:text-red-500"><Minus size={12} /></button>
-                                            </div>
-                                        ))}
-                                        <select
-                                            onChange={(e) => {
-                                                if (e.target.value) {
-                                                    handleAssignGroup(e.target.value, 'B');
-                                                    e.target.value = '';
-                                                }
-                                            }}
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-[8px] font-bold uppercase outline-none"
-                                        >
-                                            <option value="">+ AÑADIR BRAVO</option>
-                                            {agents.filter(a => !groups.find(g => g.agent_id === a.id)).map(a => (
-                                                <option key={a.id} value={a.id}>{a.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 md:y-8">
-                {/* 1. Estatus Actual Display */}
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+                {/* Marcadores */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className={`p-4 bg-blue-600/10 border rounded-2xl text-center transition-all ${session?.last_coin_flip === 'ALFA' ? 'border-blue-500 bg-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.3)]' : 'border-blue-500/30'}`}>
-                        <p className="text-[10px] text-blue-400 font-black uppercase mb-1">Grupo Alfa</p>
+                    <div className={`p-4 bg-blue-600/10 border rounded-2xl text-center ${session?.last_coin_flip === 'ALFA' ? 'border-blue-500 bg-blue-500/30 shadow-lg shadow-blue-500/20' : 'border-blue-500/20'}`}>
+                        <p className="text-[10px] text-blue-400 font-black uppercase">ALFA</p>
                         <p className="text-3xl font-bebas">{session?.score_a || 0}</p>
                     </div>
-                    <div className={`p-4 bg-teal-600/10 border rounded-2xl text-center transition-all ${session?.last_coin_flip === 'BRAVO' ? 'border-teal-500 bg-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.3)]' : 'border-teal-500/30'}`}>
-                        <p className="text-[10px] text-teal-400 font-black uppercase mb-1">Grupo Bravo</p>
+                    <div className={`p-4 bg-teal-600/10 border rounded-2xl text-center ${session?.last_coin_flip === 'BRAVO' ? 'border-teal-500 bg-teal-500/30 shadow-lg shadow-teal-500/20' : 'border-teal-500/20'}`}>
+                        <p className="text-[10px] text-teal-400 font-black uppercase">BRAVO</p>
                         <p className="text-3xl font-bebas">{session?.score_b || 0}</p>
                     </div>
                 </div>
 
-                {/* 1.5. Control de Moneda y Temporizador */}
+                {/* Sorteo y Timer */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                        <p className="text-[8px] font-black uppercase text-gray-400">Temporizador de Ronda</p>
-                        <div className="flex gap-2">
-                            <button onClick={() => handleStartTimer(15)} className="flex-1 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black hover:bg-white/10 transition-all">Lector (15s)</button>
-                            <button onClick={() => handleStartTimer(30)} className="flex-1 py-2 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black hover:bg-white/10 transition-all">Respuesta (30s)</button>
-                        </div>
-                    </div>
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <p className="text-[8px] font-black uppercase text-gray-400">Sorteo de Turno</p>
-                            <button
-                                onClick={handleCoinFlip}
-                                className="p-1 px-2 bg-[#ffb700] text-[#001f3f] rounded text-[7px] font-bold uppercase hover:scale-105 transition-transform"
-                            >
-                                Lanzar Moneda
-                            </button>
-                        </div>
-                        <div className="w-full py-2 bg-white/5 border border-white/10 rounded-lg text-lg font-bebas text-white flex items-center justify-center gap-2">
-                            {session?.last_coin_flip ? (
-                                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2 text-[#ffb700]">
-                                    <Zap size={14} /> TURNO: {session.last_coin_flip}
-                                </motion.span>
-                            ) : (
-                                <span className="text-white/20">SIN SORTEAR</span>
-                            )}
-                        </div>
-                    </div>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2"><p className="text-[8px] font-black text-gray-500 uppercase">TIEMPO</p><div className="flex gap-2"><button onClick={() => handleStartTimer(15)} className="flex-1 py-1 bg-white/5 rounded text-[8px] font-black border border-white/10">15s</button><button onClick={() => handleStartTimer(30)} className="flex-1 py-1 bg-white/5 rounded text-[8px] font-black border border-white/10">30s</button></div></div>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2"><div className="flex justify-between"><p className="text-[8px] font-black text-gray-500 uppercase">TURNO</p><button onClick={handleCoinFlip} className="bg-[#ffb700] text-[#001f3f] px-2 py-0.5 rounded text-[7px] font-black">SORTEO</button></div><div className="text-center font-bebas text-[#ffb700] py-1 border border-[#ffb700]/20 rounded bg-[#ffb700]/5">{session?.last_coin_flip || '---'}</div></div>
                 </div>
 
-                {/* 2. Control de Stakes */}
+                {/* Premio (Stakes) */}
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Premio de la Ronda (XP)</label>
-                        <span className="text-[10px] font-black text-[#ffb700] uppercase">{session?.stakes_xp} XP DISPONIBLES</span>
-                    </div>
+                    <div className="flex justify-between items-center"><label className="text-[10px] font-black uppercase text-white/40">Premio de la Ronda</label><span className="text-[#ffb700] font-black text-[10px]">{session?.stakes_xp || 100} XP</span></div>
                     <div className="flex gap-2">
-                        {[2, 5, 15].map(val => (
-                            <button
-                                key={val}
-                                onClick={() => handleUpdateStakes(val)}
-                                className={`flex-1 py-3 rounded-xl border text-[10px] font-black tracking-widest transition-all ${session?.stakes_xp === val ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
-                            >
-                                {val} {val === 2 ? 'FÁCIL' : val === 5 ? 'MEDIO' : 'DIFÍCIL'}
+                        {[2, 5, 15].map(v => (
+                            <button key={v} onClick={() => handleUpdateStakes(v)} className={`flex-1 py-3 border rounded-xl text-[10px] font-black ${session?.stakes_xp === v ? 'bg-[#ffb700] border-[#ffb700] text-[#001f3f]' : 'bg-white/5 border-white/10'}`}>
+                                {v} {v === 2 ? 'FÁCIL' : v === 5 ? 'MEDIO' : 'DIFÍCIL'}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* 3. Selector de Preguntas */}
+                {/* Buscador y Preguntas */}
                 <div className="space-y-4">
-                    <div className="relative">
+                    <div className="relative hover:scale-[1.01] transition-transform">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                        <input
-                            type="text"
-                            placeholder="BUSCAR PREGUNTA O CATEGORÍA..."
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                        <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} type="text" placeholder="BUSCAR PREGUNTA O CATEGORÍA..." className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-12 text-[10px] font-black tracking-widest outline-none focus:border-[#ffb700]" />
                     </div>
-
-                    <div className="grid grid-cols-1 gap-3 max-h-64 md:max-h-96 overflow-y-auto pr-2">
+                    <div className="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto pr-2">
                         {filteredQuestions.map(q => {
                             const isUsed = session?.used_questions?.includes(q.id);
+                            const isActive = session?.current_question_id === q.id;
                             return (
-                                <button
-                                    key={q.id}
-                                    onClick={() => handleLaunchQuestion(q)}
-                                    className={`p-4 rounded-2xl border transition-all text-left flex justify-between items-center group ${session?.current_question_id === q.id ? 'bg-[#ffb700]/10 border-[#ffb700]' : isUsed ? 'bg-black/40 border-white/5 opacity-40 grayscale' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
-                                >
+                                <button key={q.id} onClick={() => handleLaunchQuestion(q)} className={`p-4 border rounded-2xl text-left flex justify-between items-center group transition-all ${isActive ? 'bg-[#ffb700]/10 border-[#ffb700]' : isUsed ? 'opacity-30 grayscale' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
                                     <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            {isUsed && <span className="text-[6px] font-black px-1 py-0.5 bg-gray-500 text-white rounded uppercase">USADA</span>}
-                                            <span className="text-[7px] font-black px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded uppercase">{q.category}</span>
-                                            <span className={`text-[7px] font-black px-1.5 py-0.5 rounded uppercase ${q.difficulty === 'HARD' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{q.difficulty}</span>
-                                        </div>
-                                        <p className="text-[10px] font-bold text-white leading-tight pr-4">{q.question}</p>
+                                        <div className="flex gap-2 items-center"><span className="text-[7px] font-black px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded">{q.category}</span><span className={`text-[7px] font-black px-1.5 py-0.5 rounded ${q.difficulty === 'HARD' ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>{q.difficulty}</span>{isUsed && <span className="text-[6px] font-black bg-gray-600 px-1 rounded">USADA</span>}</div>
+                                        <p className="text-[10px] font-bold text-white line-clamp-2">{q.question}</p>
                                     </div>
-                                    <div className="p-2 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Send size={14} className="text-[#ffb700]" />
-                                    </div>
+                                    <Send size={14} className={`opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'text-[#ffb700]' : 'text-white'}`} />
                                 </button>
                             );
                         })}
                     </div>
                 </div>
 
-                {/* 4. Controles de Resolución (Solo si hay pregunta activa) */}
+                {/* Control de Resolución */}
                 {session?.current_question_id && (
-                    <div className="bg-black/60 border border-[#ffb700]/30 rounded-3xl md:rounded-[2.5rem] p-4 md:p-8 space-y-4 md:space-y-6 animate-in slide-in-from-bottom-4">
-                        <div className="text-center space-y-2">
-                            <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">En Pantalla:</p>
-                            <h3 className="text-lg font-bold italic line-clamp-2">"{questions.find(q => q.id === session.current_question_id)?.question}"</h3>
+                    <div className="bg-black/60 border border-[#ffb700]/30 rounded-[2rem] p-6 space-y-6 animate-in slide-in-from-bottom-4">
+                        <div className="text-center space-y-1">
+                            <p className="text-[10px] font-black text-[#ffb700] uppercase tracking-widest">Pregunta Lanzada</p>
+                            <h3 className="text-sm font-bold italic opacity-90 line-clamp-2">"{questions.find(q => q.id === session.current_question_id)?.question}"</h3>
                         </div>
-
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
-                                <span className="text-[10px] uppercase font-black text-blue-400 block mb-1">Alfa</span>
-                                <span className={`text-xs font-bold ${session.answer_a ? 'text-green-400' : 'text-gray-500'}`}>{session.answer_a ? 'LISTO' : 'PENSANDO...'}</span>
-                            </div>
-                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
-                                <span className="text-[10px] uppercase font-black text-teal-400 block mb-1">Bravo</span>
-                                <span className={`text-xs font-bold ${session.answer_b ? 'text-green-400' : 'text-gray-500'}`}>{session.answer_b ? 'LISTO' : 'PENSANDO...'}</span>
-                            </div>
+                            {['A', 'B'].map(t => {
+                                const ans = t === 'A' ? session.answer_a : session.answer_b;
+                                return (
+                                    <div key={t} className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
+                                        <p className={`text-[8px] font-black uppercase ${t === 'A' ? 'text-blue-400' : 'text-teal-400'}`}>GRUPO {t === 'A' ? 'ALFA' : 'BRAVO'}</p>
+                                        <p className={`text-[10px] font-black ${ans ? 'text-green-500' : 'text-white/20'}`}>{ans ? 'LISTO' : 'PENSANDO...'}</p>
+                                    </div>
+                                );
+                            })}
                         </div>
-
-                        <div className="pt-4">
-                            <button
-                                onClick={handleAutoResolve}
-                                disabled={session.status === 'RESOLVED'}
-                                className="w-full py-5 bg-[#ffb700] rounded-3xl text-[#001f3f] font-black uppercase text-[12px] tracking-widest shadow-lg shadow-[#ffb700]/40 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                            >
-                                <Trophy size={18} /> {session.status === 'RESOLVED' ? 'RONDA RESOLVIDA' : 'RESOLVER RESPUESTAS'}
+                        <div className="space-y-3">
+                            <button onClick={handleAutoResolve} disabled={session.status === 'RESOLVED'} className="w-full py-5 bg-[#ffb700] text-[#001f3f] rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-[#ffb700]/20 active:scale-95 transition-all text-[12px] flex items-center justify-center gap-3 disabled:opacity-50">
+                                <Trophy size={18} /> {session.status === 'RESOLVED' ? 'RESOLVIDA' : 'RESOLVER RESPUESTAS'}
+                            </button>
+                            <button onClick={async () => {
+                                const n = !session.show_answer;
+                                setSession(prev => prev ? { ...prev, show_answer: n } : null);
+                                await updateBibleWarSession({ show_answer: n });
+                                broadcastAction('SHOW_ANSWER', { show: n });
+                            }} className="w-full py-2 text-[10px] font-black uppercase text-[#ffb700] border border-white/5 rounded-xl bg-white/5 flex items-center justify-center gap-2">
+                                <Eye size={14} /> {session.show_answer ? 'OCULTAR RESPUESTA' : 'REVELAR RESPUESTA'}
                             </button>
                         </div>
-
-                        <button
-                            onClick={async () => {
-                                const newShow = !session.show_answer;
-                                setSession(prev => prev ? { ...prev, show_answer: newShow } : null);
-                                await updateBibleWarSession({ show_answer: newShow });
-                                broadcastAction('SHOW_ANSWER', { show: newShow });
-                            }}
-                            className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#ffb700] hover:text-white transition-colors py-2 border border-white/5 rounded-xl bg-white/5"
-                        >
-                            <Eye size={14} /> {session.show_answer ? 'Ocultar Respuesta en Arena' : 'Revelar Respuesta en Arena'}
-                        </button>
                     </div>
                 )}
             </div>
 
-            {/* Footer / Acciones Globales */}
-            <div className="p-6 bg-black/60 border-t border-white/10 flex flex-col gap-4">
-                <button
-                    onClick={handleSpinRoulette}
-                    className="w-full py-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl text-white font-black uppercase text-[14px] tracking-[0.3em] font-bebas shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20"
-                >
-                    <Dice5 size={24} className="animate-bounce" /> Girar Ruleta de Categorías
+            {/* Footer de Emergencia */}
+            <div className="p-6 bg-black/60 border-t border-white/10 space-y-4">
+                <button onClick={handleSpinRoulette} className="w-full py-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl font-black uppercase tracking-[0.3em] font-bebas shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20">
+                    <Dice5 size={24} className="animate-spin-slow" /> GIRAR RULETA
                 </button>
-
                 <div className="grid grid-cols-4 gap-2">
-                    <button
-                        onClick={handleNukeReset}
-                        className="flex flex-col items-center justify-center gap-1 p-3 bg-red-600 border border-red-400 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
-                    >
-                        <Skull size={14} /> <span>NUKE</span>
-                    </button>
-                    <button
-                        onClick={handleResetScores}
-                        className="flex flex-col items-center justify-center gap-1 p-3 bg-orange-500 border border-orange-300 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
-                    >
-                        <Trophy size={14} /> <span>PUNTOS</span>
-                    </button>
-                    <button
-                        onClick={handleForceReload}
-                        className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-600 border border-blue-400 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
-                    >
-                        <RefreshCw size={14} /> <span>SYNC</span>
-                    </button>
-                    <button
-                        onClick={loadSession}
-                        className="flex flex-col items-center justify-center gap-1 p-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
-                    >
-                        <Zap size={14} /> <span>RELOAD</span>
-                    </button>
+                    <button onClick={handleNukeReset} className="flex flex-col items-center justify-center gap-1 p-3 bg-red-600 border border-red-400 rounded-2xl text-[7px] font-black uppercase tracking-widest text-white shadow-lg active:scale-95 transition-all"><Skull size={14} /><span>NUKE</span></button>
+                    <button onClick={handleResetScores} className="flex flex-col items-center justify-center gap-1 p-3 bg-orange-600 border border-orange-400 rounded-2xl text-[7px] font-black uppercase tracking-widest text-white shadow-lg active:scale-95 transition-all"><Trophy size={14} /><span>SCORE</span></button>
+                    <button onClick={handleForceReload} className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-600 border border-blue-400 rounded-2xl text-[7px] font-black uppercase tracking-widest text-white shadow-lg active:scale-95 transition-all"><RefreshCw size={14} /><span>SYNC</span></button>
+                    <button onClick={loadSession} className="flex flex-col items-center justify-center gap-1 p-3 bg-white/10 border border-white/20 rounded-2xl text-[7px] font-black uppercase tracking-widest text-white shadow-lg active:scale-95 transition-all"><Zap size={14} /><span>RELOAD</span></button>
                 </div>
             </div>
         </div>

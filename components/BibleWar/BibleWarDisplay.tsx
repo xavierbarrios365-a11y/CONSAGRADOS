@@ -35,7 +35,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
     const [gladiators, setGladiators] = useState<{ a: Agent | null, b: Agent | null }>({ a: null, b: null });
     const [showVsAnimation, setShowVsAnimation] = useState(false);
-    const prevGladiatorsReady = useRef(false);
+    const prevGladiatorsReady = useRef<string | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const phaseRef = useRef<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
 
@@ -93,7 +93,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
     // Pre-carga de sonidos v3.1 (Persistente)
     useEffect(() => {
-        const effects = ['reading_pulse', 'battle_transition', 'success', 'fail', 'timeout'];
+        const effects = ['reading_pulse', 'battle_transition', 'success', 'fail', 'timeout', 'transicion_2'];
         effects.forEach(eff => {
             const audio = new Audio(`/sounds/bible-war/${eff}.mp3`);
             audio.load();
@@ -109,13 +109,18 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     // ✨ VS ANIMATION TRIGGER ✨
     useEffect(() => {
         const areReady = !!gladiators.a && !!gladiators.b;
-        if (areReady && !prevGladiatorsReady.current) {
-            // Ambos gladiadores acaban de ser asignados
+        const currentPairKey = areReady ? `${gladiators.a?.id}-${gladiators.b?.id}` : null;
+
+        if (areReady && currentPairKey !== prevGladiatorsReady.current) {
+            // Un NUEVO par de gladiadores ha sido asignado por completo
             setShowVsAnimation(true);
-            playSound('battle_transition');
+            playSound('transicion_2');
             setTimeout(() => setShowVsAnimation(false), 4500);
+            prevGladiatorsReady.current = currentPairKey;
+        } else if (!areReady) {
+            // Si desarman el par, reseteamos el key para permitir volver a armarlo
+            prevGladiatorsReady.current = null;
         }
-        prevGladiatorsReady.current = areReady;
     }, [gladiators]);
 
     useEffect(() => {

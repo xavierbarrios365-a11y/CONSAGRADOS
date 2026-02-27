@@ -65,7 +65,8 @@ import {
   updateAgentPhotoSupabase,
   enrollAgentSupabase,
   submitTransactionSupabase,
-  updateAgentStreaksSupabase
+  updateAgentStreaksSupabase,
+  registerVisitorSupabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -143,6 +144,17 @@ const App: React.FC = () => {
     checkHeadlines,
     userConfirmations, setUserConfirmations,
   } = dataSync;
+
+  // --- AUTOMATIC ABSENCE PENALTIES (RUNS ONCE PER SESSION FOR LEADERS) ---
+  useEffect(() => {
+    if (isLoggedIn && (currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER)) {
+      applyAbsencePenaltiesSupabase().then(res => {
+        if (res.success && res.agentsPenalized) {
+          console.log(`[PENALTIES] Se aplicó sanción por inasistencia a ${res.agentsPenalized} agentes.`);
+        }
+      }).catch(console.error);
+    }
+  }, [isLoggedIn, currentUser]);
 
   const { notificationPermission, setNotificationPermission, initFirebaseMessaging } = firebase;
 
@@ -895,11 +907,33 @@ const App: React.FC = () => {
                     </div>
                     <button
                       onClick={() => scannedId && processScan(scannedId)}
-                      disabled={!scannedId}
+                      disabled={!scannedId || !!(scannedId && !agents.find(a => String(a.id) === scannedId))}
                       className="w-full bg-[#ffb700] py-5 rounded-3xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                     >
                       <CheckCircle2 size={18} /> Confirmar Asistencia
                     </button>
+                    {scannedId && !agents.find(a => String(a.id) === scannedId) && (
+                      <button
+                        onClick={async () => {
+                          const visitorName = prompt('Nombre completo del visitante:');
+                          if (!visitorName || visitorName.trim() === '') return;
+
+                          setScanStatus('SCANNING');
+                          const res = await registerVisitorSupabase(scannedId, visitorName, currentUser?.name);
+                          if (res.success) {
+                            setScanStatus('SUCCESS');
+                            showAlert({ title: "VISITANTE REGISTRADO", message: "✅ Acceso concedido.", type: 'SUCCESS' });
+                            setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); syncData(true); }, 3000);
+                          } else {
+                            showAlert({ title: "FALLO DE SISTEMA", message: res.error || "Fallo en registro.", type: 'ERROR' });
+                            setScanStatus('IDLE');
+                          }
+                        }}
+                        className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-400 py-4 rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2 mt-2"
+                      >
+                        <UserPlus size={16} /> Registrar como Visitante
+                      </button>
+                    )}
                   </div>
                 </div>
 

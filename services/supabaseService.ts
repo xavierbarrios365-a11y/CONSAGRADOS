@@ -146,20 +146,36 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
  */
 export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number = 10): Promise<{ success: boolean, error?: string }> => {
     try {
-        // Primero, obtener valores actuales
+        // Primero, obtener valores actuales y racha
         const { data: currentData, error: fetchError } = await supabase
             .from('agentes')
-            .select('xp, bible, notes, leadership')
+            .select('xp, bible, notes, leadership, streak_count')
             .eq('id', agentId)
             .single();
 
         if (fetchError) throw fetchError;
 
-        // Actualizar el campo correspondiente y sumar XP base
-        const updates: any = { xp: (currentData.xp || 0) + amount };
-        if (type === 'BIBLIA') updates.bible = (currentData.bible || 0) + 1;
-        if (type === 'APUNTES') updates.notes = (currentData.notes || 0) + 1;
-        if (type === 'LIDERAZGO') updates.leadership = (currentData.leadership || 0) + 1;
+        // Calcular Multiplicador Bidireccional (basado en streak_count)
+        let multiplier = 1.0;
+        const streak = currentData.streak_count || 0;
+        if (streak >= 30) multiplier = 2.0;
+        else if (streak >= 20) multiplier = 1.75;
+        else if (streak >= 10) multiplier = 1.50;
+        else if (streak >= 5) multiplier = 1.25;
+
+        // Multiplicar el monto de XP
+        const adjustedAmount = Math.round(amount * multiplier);
+
+        // Actualizar el campo correspondiente y sumar/restar XP base
+        // Evitamos que el XP global baje de 0
+        const updates: any = { xp: Math.max(0, (currentData.xp || 0) + adjustedAmount) };
+
+        // Agregar o restar a los contadores específicos según el signo del monto
+        const counterChange = amount > 0 ? 1 : (amount < 0 ? -1 : 0);
+
+        if (type === 'BIBLIA') updates.bible = Math.max(0, (currentData.bible || 0) + counterChange);
+        if (type === 'APUNTES') updates.notes = Math.max(0, (currentData.notes || 0) + counterChange);
+        if (type === 'LIDERAZGO') updates.leadership = Math.max(0, (currentData.leadership || 0) + counterChange);
 
         const { error: updateError } = await supabase
             .from('agentes')
@@ -258,40 +274,100 @@ export const deductPercentagePointsSupabase = async (agentId: string, percentage
 };
 
 /**
- * @description Aplica penalizaciones de 5 XP a todos los agentes con >14 días inactivos
+ * @description Aplica penalizaciones automáticas de -10 XP a los agentes inasistentes 24h después de un día de asistencia global.
  */
 export const applyAbsencePenaltiesSupabase = async (): Promise<{ success: boolean, agentsPenalized?: number, error?: string }> => {
     try {
+        const now = new Date();
+        const localToday = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+        // 1. Obtener el día más reciente en el que HUBO asistencia (ignorar hoy para dar 24h de gracia)
+        const { data: latestAttendance } = await supabase
+            .from('asistencia_visitas')
+            .select('registrado_en')
+            .eq('tipo', 'ASISTENCIA')
+            .lt('registrado_en', localToday + 'T00:00:00-04:00')
+            .order('registrado_en', { ascending: false })
+            .limit(1);
+
+        if (!latestAttendance || latestAttendance.length === 0) {
+            return { success: true, agentsPenalized: 0 }; // No ha habido asistencias previas
+        }
+
+        const lastAttendanceDateISO = latestAttendance[0].registrado_en;
+        const lastAttendanceDay = new Date(lastAttendanceDateISO).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+        // 2. Verificar si ya penalizamos por este día
+        const { data: penaltyCheck } = await supabase
+            .from('asistencia_visitas')
+            .select('id')
+            .eq('tipo', 'SANCION_AUTOMATICA')
+            .like('detalle', `%${lastAttendanceDay}%`)
+            .limit(1);
+
+        if (penaltyCheck && penaltyCheck.length > 0) {
+            return { success: true, agentsPenalized: 0 }; // Ya se corrió la sanción para ese día
+        }
+
+        // 3. Buscar a todos los agentes activos (excluyendo Líderes y Directores)
         const { data: agents, error: fetchError } = await supabase
             .from('agentes')
-            .select('id, xp, last_attendance');
+            .select('id, xp, last_attendance, streak_count, cargo, status')
+            .eq('status', 'ACTIVO');
 
         if (fetchError) throw fetchError;
 
-        const now = new Date();
-        const agentsToUpdate = agents.filter((a: any) => {
-            if (!a.last_attendance || a.last_attendance === 'N/A') return false;
-            let lastDate = new Date(a.last_attendance);
-            if (a.last_attendance.includes('/')) {
-                const parts = a.last_attendance.split('/');
-                if (parts.length === 3) lastDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-            }
-            if (isNaN(lastDate.getTime())) return false;
-            const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-            return diffDays >= 14;
+        const agentsToPenalize = agents.filter((a: any) => {
+            if (a.cargo === 'DIRECTOR' || a.cargo === 'LIDER' || a.cargo === 'LÍDER') return false;
+
+            // Faltaron si su last_attendance es anterior al lastAttendanceDay
+            if (!a.last_attendance || a.last_attendance === 'N/A') return true;
+
+            // Comparación de fechas en formato ISO / YYYY-MM-DD
+            // Si la última asistencia del agente es MENOR a lastAttendanceDay, entonces faltó ese día.
+            return a.last_attendance < lastAttendanceDay;
         });
 
-        if (agentsToUpdate.length === 0) return { success: true, agentsPenalized: 0 };
+        if (agentsToPenalize.length === 0) {
+            // Registrar que se evaluó para evitar recalcular
+            await supabase.from('asistencia_visitas').insert({
+                id: `PEN-${Date.now()}`,
+                agent_id: 'SISTEMA',
+                tipo: 'SANCION_AUTOMATICA',
+                detalle: `Evaluación de inasistencia para ${lastAttendanceDay}: 0 agentes sancionados.`,
+                registrado_en: now.toISOString()
+            });
+            return { success: true, agentsPenalized: 0 };
+        }
 
         let count = 0;
-        for (const agent of agentsToUpdate) {
-            const newXp = Math.max(0, (agent.xp || 0) - 5);
+        // 4. Aplicar penalización de -10 * multiplicador de racha
+        for (const agent of agentsToPenalize) {
+            let multiplier = 1.0;
+            const streak = agent.streak_count || 0;
+            if (streak >= 30) multiplier = 2.0;
+            else if (streak >= 20) multiplier = 1.75;
+            else if (streak >= 10) multiplier = 1.50;
+            else if (streak >= 5) multiplier = 1.25;
+
+            const penaltyAmount = Math.round(10 * multiplier);
+            const newXp = Math.max(0, (agent.xp || 0) - penaltyAmount);
+
             const { error: updateError } = await supabase
                 .from('agentes')
                 .update({ xp: newXp })
                 .eq('id', agent.id);
             if (!updateError) count++;
         }
+
+        // 5. Registrar ejecución de sanción global
+        await supabase.from('asistencia_visitas').insert({
+            id: `PEN-${Date.now()}`,
+            agent_id: 'SISTEMA',
+            tipo: 'SANCION_AUTOMATICA',
+            detalle: `Evaluación de inasistencia para ${lastAttendanceDay}: ${count} agentes sancionados con -10 XP (base).`,
+            registrado_en: now.toISOString()
+        });
 
         return { success: true, agentsPenalized: count };
     } catch (error: any) {
@@ -353,7 +429,12 @@ export const fetchActiveEventsSupabase = async (): Promise<any[]> => {
  */
 export const fetchUserEventConfirmationsSupabase = async (agentId: string): Promise<any[]> => {
     try {
-        const { data, error } = await supabase.from('asistencia_visitas').select('*').eq('agent_id', agentId);
+        const { data, error } = await supabase
+            .from('asistencia_visitas')
+            .select('*')
+            .eq('agent_id', agentId)
+            .eq('tipo', 'EVENTO_CONFIRMADO');
+
         if (error) throw error;
         return data || [];
     } catch { return []; }
@@ -379,17 +460,32 @@ export const confirmEventAttendanceSupabase = async (data: { agentId: string; ag
     try {
         const id = `EVT-${new Date().getTime()}`;
 
+        // 1. Verificar duplicados
+        const { data: duplicates } = await supabase
+            .from('asistencia_visitas')
+            .select('id')
+            .eq('agent_id', data.agentId)
+            .eq('tipo', 'EVENTO_CONFIRMADO')
+            .like('detalle', `%${data.eventTitle}%`);
+
+        if (duplicates && duplicates.length > 0) {
+            return { success: false, error: "Ya estás confirmado para este evento." };
+        }
+
+        // 2. Insertar confirmación
         const { error } = await supabase.from('asistencia_visitas').insert({
             id,
             agent_id: data.agentId,
             agent_name: data.agentName,
-            tipo_visitante: 'AGENTE',
-            fecha_visita: new Date().toISOString()
+            tipo: 'EVENTO_CONFIRMADO',
+            detalle: `Confirmación para evento: ${data.eventTitle}`,
+            registrado_en: new Date().toISOString()
         });
+
         if (error) throw error;
 
-        // Sumar XP por asistir
-        await updateAgentPointsSupabase(data.agentId, 'LIDERAZGO', 30);
+        // Sumar XP por confirmar (recompensa táctica)
+        await updateAgentPointsSupabase(data.agentId, 'XP', 10);
 
         return { success: true };
     } catch (error: any) {
@@ -795,10 +891,9 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
             pregunta_seguridad: data.preguntaSeguridad || '¿Cuál es tu color favorito?',
             respuesta_seguridad: data.respuestaSeguridad || 'Azul',
             must_change_password: true,
-            referido_por: data.referidoPor || '' // Custom field not in DB schema but let's pass it if added
+            referido_por: data.referidoPor || ''
         };
 
-        // Note: We might get an error if column doesn't exist, we will clean it up:
         const { error } = await supabase
             .from('agentes')
             .insert({
@@ -832,20 +927,198 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
     }
 };
 
-export const submitTransactionSupabase = async (rawString: string, type: 'ASISTENCIA' | 'SALIDA' | 'IDENTIFICACION' = 'IDENTIFICACION', referidoPor?: string): Promise<{ success: boolean; error?: string }> => {
+/**
+ * @description Inserta una transacción (Ej. ASISTENCIA) en Supabase 
+ * y ejecuta la lógica de backend (notificaciones, feed, xp).
+ */
+export const submitTransactionSupabase = async (agentId: string, tipo: string, reporterName?: string): Promise<{ success: boolean, error?: string }> => {
     try {
-        const { error } = await supabase
+        const now = new Date();
+        const localToday = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+        // 1. Verificar si el agente existe
+        const { data: agentData, error: agentError } = await supabase
+            .from('agentes')
+            .select('nombre')
+            .eq('id', agentId)
+            .single();
+
+        if (agentError || !agentData) {
+            return { success: false, error: "Agente no encontrado en la base de datos." };
+        }
+
+        const agentName = agentData.nombre;
+
+        // 2. Verificar duplicados en el mismo día
+        if (tipo === 'ASISTENCIA') {
+            const startDate = new Date(localToday + 'T00:00:00-04:00'); // -04:00 Caracas
+            const endDate = new Date(localToday + 'T23:59:59-04:00');
+
+            const { data: duplicates } = await supabase
+                .from('asistencia_visitas')
+                .select('id')
+                .eq('agent_id', agentId)
+                .eq('tipo', 'ASISTENCIA')
+                .gte('registrado_en', startDate.toISOString())
+                .lte('registrado_en', endDate.toISOString());
+
+            if (duplicates && duplicates.length > 0) {
+                return { success: false, error: `Asistencia de ${agentName} ya fue registrada hoy.` };
+            }
+        }
+
+        // 3. Verificar si tiene eventos confirmados HOY para aplicar bono 1.5x (Opcional, de Code.gs)
+        let eventMultiplier = 1.0;
+        const startDate = new Date(localToday + 'T00:00:00-04:00');
+        const endDate = new Date(localToday + 'T23:59:59-04:00');
+        const { data: confirmedEvents } = await supabase
+            .from('asistencia_visitas')
+            .select('id')
+            .eq('agent_id', agentId)
+            .eq('tipo', 'EVENTO_CONFIRMADO')
+            .gte('registrado_en', startDate.toISOString())
+            .lte('registrado_en', endDate.toISOString());
+
+        if (confirmedEvents && confirmedEvents.length > 0) {
+            eventMultiplier = 1.5;
+        }
+
+        // 4. Asignar 10 XP Base de Asistencia * Bono de Evento 
+        // Nota: updateAgentPointsSupabase se encargará de añadir el Multiplicador de Racha adicionalmente.
+        if (tipo === 'ASISTENCIA') {
+            await updateAgentPointsSupabase(agentId, 'XP', 10 * eventMultiplier);
+
+            // Actualizar su última fecha de asistencia
+            await supabase
+                .from('agentes')
+                .update({ last_attendance: localToday })
+                .eq('id', agentId);
+        }
+
+        // 5. Registrar la transacción en el historial
+        const { error: insertError } = await supabase
             .from('asistencia_visitas')
             .insert({
-                agent_id: rawString,
-                type: type,
-                timestamp: new Date().toISOString()
+                id: `TX-${Date.now()}`,
+                agent_id: agentId,
+                agent_name: agentName,
+                tipo: tipo,
+                detalle: `Registrado por escáner.`,
+                registrado_en: now.toISOString()
             });
 
-        if (error) throw error;
+        if (insertError) throw insertError;
+
+        // 6. Publicar "DESPLIEGUE" en el Muro de Noticias si es Asistencia
+        if (tipo === 'ASISTENCIA') {
+            try {
+                await supabase.from('asistencia_visitas').insert({
+                    id: `NEWS-${Date.now()}`,
+                    agent_id: agentId,
+                    agent_name: agentName,
+                    tipo: 'DESPLIEGUE',
+                    detalle: `El agente ${agentName} se ha desplegado en el centro de operaciones.`,
+                    registrado_en: now.toISOString()
+                });
+            } catch (err) {
+                console.error("No se pudo publicar noticia de DESPLIEGUE", err);
+            }
+
+            // 7. Enviar notificaciones de Telegram y Push
+            // Para poder llamar a sendTelegramAlert/sendPushBroadcast deberíamos importar notifyService,
+            // Pero como estamos dentro de supabaseService (en /services), si hacemos import { sendTelegramAlert } ...
+            // lo haremos después de ver que funcione. (Omitir la llamada directa si rompe imports circulares, o mejor
+            // realizar un HTTP request a la API). Lo más seguro es usar fetch directo o permitir que App.tsx dispare la alarma,
+            // pero el usuario pidió que la lógica de Code.gs esté resturada acá centralizada.
+            try {
+                const getBaseUrl = () => import.meta.env?.DEV ? 'http://localhost:3000' : '';
+                await fetch(`${getBaseUrl()}/api/notify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'telegram', message: `✅ <b>NUEVA ASISTENCIA</b>\n\nAgente: <b>${agentName}</b> [<code>${agentId}</code>]\nBono Evento: <b>${eventMultiplier}x</b>\nReportadx por: ${reporterName || 'SISTEMA'}` })
+                });
+
+                await fetch(`${getBaseUrl()}/api/notify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'push', title: `Despliegue Confirmado`, message: `El agente ${agentName} acaba de registrar asistencia.` })
+                });
+            } catch (err) {
+                console.error("Fallo al enviar notificación de asistencia:", err);
+            }
+        }
+
         return { success: true };
     } catch (error: any) {
-        console.error('Error recording transaction in Supabase:', error);
+        console.error('Error en submitTransactionSupabase:', error);
         return { success: false, error: error.message };
     }
 };
+
+/**
+ * @description Registra un nuevo visitante en la base de datos de Supabase.
+ */
+export const registerVisitorSupabase = async (visitorId: string, visitorName: string, reporterName?: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const id = `VISIT-${new Date().getTime()}`;
+
+        const { error } = await supabase.from('asistencia_visitas').insert({
+            id,
+            agent_id: visitorId,
+            agent_name: visitorName,
+            tipo: 'VISITANTE',
+            detalle: `Ingreso de invitado. Pasa por: ${reporterName || 'Sistema'}`,
+            tipo_visitante: 'INVITADO',
+            registrado_en: new Date().toISOString()
+        });
+        if (error) throw error;
+
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * @description Obtiene el radar de visitantes (INVITADOS) agrupando por cantidad de visitas
+ */
+export const fetchVisitorRadarSupabase = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('asistencia_visitas')
+            .select('agent_id, agent_name')
+            .eq('tipo_visitante', 'INVITADO')
+            .order('registrado_en', { ascending: false });
+
+        if (error) throw error;
+
+        // Agrupar por ID para contar visitas
+        const visitorMap = new Map<string, { id: string, name: string, visits: number, status: string }>();
+
+        if (data) {
+            data.forEach((v: any) => {
+                if (visitorMap.has(v.agent_id)) {
+                    visitorMap.get(v.agent_id)!.visits += 1;
+                } else {
+                    visitorMap.set(v.agent_id, {
+                        id: v.agent_id,
+                        name: v.agent_name,
+                        visits: 1,
+                        status: 'NUEVO'
+                    });
+                }
+            });
+        }
+
+        // Determinar status (ACTIVO > 5 visitas, RECURRENTE > 2, NUEVO = 1 o 2)
+        const visitors = Array.from(visitorMap.values()).map(v => {
+            if (v.visits > 5) v.status = 'ACTIVO';
+            else if (v.visits > 2) v.status = 'RECURRENTE';
+            return v;
+        });
+
+        return visitors;
+    } catch { return []; }
+};
+
+

@@ -290,7 +290,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     const executeUpdate = async () => {
       setIsUpdatingPoints(true);
       try {
-        const res = await updateAgentPoints(agent.id, type, points);
+        const res = await updateAgentPointsSupabase(agent.id, type, points);
         if (res.success) {
           showAlert({ title: "PUNTOS ACTUALIZADOS", message: `✅ ${points > 0 ? '+' : ''}${points} PUNTOS REGISTRADOS PARA ${agent.name}`, type: 'SUCCESS' });
           if (onUpdateNeeded) onUpdateNeeded();
@@ -326,7 +326,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       onConfirm: async () => {
         setIsUpdatingPoints(true);
         try {
-          const res = await deductPercentagePoints(agent.id, percentage);
+          const res = await deductPercentagePointsSupabase(agent.id, percentage);
           if (res.success) {
             showAlert({ title: "EXPULSIÓN COMPLETADA", message: `☠️ EXPULSIÓN COMPLETADA: -${percentage}% Puntos.`, type: 'SUCCESS' });
             if (onUpdateNeeded) onUpdateNeeded();
@@ -474,28 +474,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     Panel ADMIN
                   </button>
                 )}
-                <button
-                  onClick={async () => {
-                    showAlert({
-                      title: "SANCIONES MASIVAS",
-                      message: "🚨 ¿APLICAR PENALIZACIONES POR INASISTENCIA?\n\nEsto restará -5 XP a todos los agentes con más de 1 semana sin asistir.",
-                      type: 'CONFIRM',
-                      onConfirm: async () => {
-                        const res = await applyAbsencePenalties();
-                        if (res.success) {
-                          showAlert({ title: "PROCESO COMPLETADO", message: `✅ Se penalizaron ${res.agentsPenalized} agentes.`, type: 'SUCCESS' });
-                          if (onUpdateNeeded) onUpdateNeeded();
-                        } else {
-                          showAlert({ title: "ERROR", message: "❌ FALLO EN PENALIZACIÓN: " + res.error, type: 'ERROR' });
-                        }
-                      }
-                    });
-                  }}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-orange-500/20 transition-all shadow-xl active:scale-95 font-bebas"
-                >
-                  <AlertTriangle size={16} />
-                  Sanción Ausencia
-                </button>
+
                 <button
                   onClick={async () => {
                     if (window.confirm("🚨 ¡ALERTA DE SEGURIDAD! 🚨\n\n¿Estás seguro de realizar una PURGA TOTAL?")) {

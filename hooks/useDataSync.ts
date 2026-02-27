@@ -2,13 +2,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
 import { INITIAL_AGENTS } from '../mockData';
 import {
-    fetchVisitorRadar,
     fetchActiveEvents,
     fetchNotifications,
     fetchBadges,
     fetchUserEventConfirmations
 } from '../services/sheetsService';
-import { fetchAgentsFromSupabase } from '../services/supabaseService';
+import { fetchAgentsFromSupabase, fetchVisitorRadarSupabase as fetchVisitorRadar } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
@@ -49,7 +48,15 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             if (currentUser) {
                 const confs = await fetchUserEventConfirmations(currentUser.id);
-                setUserConfirmations(confs || []);
+                // Extraer los nombres de los eventos del detalle (ej. "Confirmación para evento: Retiro...")
+                // o si es la data antigua de google sheets, viene en otra columna. Pero ahora usamos detalle.
+                const titles = confs.map((c: any) => {
+                    if (c.detalle && c.detalle.includes('Confirmación para evento: ')) {
+                        return c.detalle.replace('Confirmación para evento: ', '').trim();
+                    }
+                    return c.detalle || c.titulo || ''; // fallback
+                });
+                setUserConfirmations(titles.filter(Boolean));
             }
 
             return sheetAgents;

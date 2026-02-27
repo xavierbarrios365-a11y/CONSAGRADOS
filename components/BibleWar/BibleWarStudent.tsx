@@ -122,7 +122,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const myTeamAnswer = myTeam === 'A' ? session?.answer_a : session?.answer_b;
 
     return (
-        <div className="flex flex-col h-full bg-[#000814] text-white overflow-hidden font-montserrat">
+        <div className="flex flex-col h-[100dvh] bg-[#000814] text-white overflow-hidden font-montserrat">
             {/* Cabecera */}
             <div className="p-4 bg-black/40 border-b border-white/10 flex justify-between items-center backdrop-blur-md relative z-20">
                 <button onClick={onClose} className="text-white/50 hover:text-white p-2 text-xs font-black uppercase tracking-widest">
@@ -134,7 +134,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col items-center relative z-10 w-full">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-8 flex flex-col items-center relative z-10 w-full custom-scrollbar">
                 {session?.status === 'WAITING' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-10">
                         <Clock size={48} className="text-[#ffb700]/50 animate-pulse" />
@@ -151,7 +151,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 )}
 
                 {(session?.status === 'ACTIVE' || session?.status === 'RESOLVED') && activeQuestion && (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-6">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-4 md:space-y-6 pb-10">
                         {/* Status Bar */}
                         <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
                             <div className="flex items-center gap-2">
@@ -165,10 +165,9 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                             )}
                         </div>
 
-                        {/* Pregunta */}
-                        <div className="text-center space-y-2 px-2">
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">{activeQuestion.category}</p>
-                            <h3 className="text-lg md:text-2xl font-black italic leading-tight">{activeQuestion.question}</h3>
+                        <div className="text-center space-y-1 md:space-y-2 px-2">
+                            <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-white/40">{activeQuestion.category}</p>
+                            <h3 className="text-base md:text-2xl font-black italic leading-tight">{activeQuestion.question}</h3>
                         </div>
 
                         {/* Estado: Pendiente de responder o ya respondido */}
@@ -209,7 +208,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                                             key={i}
                                             disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED'}
                                             onClick={() => handleSelectOption(opt)}
-                                            className={`p-3 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 relative overflow-hidden ${bgClass} ${!!myTeamAnswer ? 'cursor-default ring-2 ring-[#ffb700] ring-offset-2 ring-offset-[#000814]' : 'hover:border-white/30 active:scale-95'}`}
+                                            className={`p-2.5 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 relative overflow-hidden ${bgClass} ${!!myTeamAnswer ? 'cursor-default ring-2 ring-[#ffb700] ring-offset-2 ring-offset-[#000814]' : 'hover:border-white/30 active:scale-95'}`}
                                         >
                                             {/* Indicador de Selección / Envío */}
                                             {selectedOption === opt && isSubmitting && (

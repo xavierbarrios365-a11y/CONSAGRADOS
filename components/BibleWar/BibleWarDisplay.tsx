@@ -170,10 +170,20 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
         // Cargar gladiadores si cambiaron (v4.0)
         if (newState.gladiator_a_id !== session?.gladiator_a_id || newState.gladiator_b_id !== session?.gladiator_b_id) {
-            const { data: agents } = await supabase.from('agentes').select('*').in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
+            const { data: rawAgents } = await supabase.from('agentes').select('*').in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
+
+            // Mapeo manual de snake_case (DB) a camelCase (Frontend)
+            const mappedAgents = (rawAgents || []).map(d => ({
+                id: d.id,
+                name: d.nombre,
+                photoUrl: d.foto_url,
+                xp: d.xp || 0,
+                rank: d.rango
+            })) as unknown as Agent[];
+
             setGladiators({
-                a: agents?.find(a => a.id === newState.gladiator_a_id) || null,
-                b: agents?.find(a => a.id === newState.gladiator_b_id) || null
+                a: mappedAgents.find(a => a.id === newState.gladiator_a_id) || null,
+                b: mappedAgents.find(a => a.id === newState.gladiator_b_id) || null
             });
         }
 
@@ -274,7 +284,10 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                         )}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[10px] md:text-[12px] font-black text-blue-400 uppercase tracking-widest truncate">{gladiators.a?.name || 'ALFA'}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-[10px] md:text-[12px] font-black text-blue-400 uppercase tracking-widest truncate">{gladiators.a?.name || 'ALFA'}</p>
+                            {gladiators.a && <span className="text-[8px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold">{gladiators.a.xp} XP</span>}
+                        </div>
                         <motion.p key={session?.score_a} className="text-4xl md:text-7xl font-bebas leading-none truncate">{session?.score_a || 0}</motion.p>
                     </div>
                 </motion.div>
@@ -303,7 +316,10 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                         )}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[10px] md:text-[12px] font-black text-teal-400 uppercase tracking-widest truncate">{gladiators.b?.name || 'BRAVO'}</p>
+                        <div className="flex items-center justify-end gap-2">
+                            {gladiators.b && <span className="text-[8px] bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded font-bold">{gladiators.b.xp} XP</span>}
+                            <p className="text-[10px] md:text-[12px] font-black text-teal-400 uppercase tracking-widest truncate">{gladiators.b?.name || 'BRAVO'}</p>
+                        </div>
                         <motion.p key={session?.score_b} className="text-4xl md:text-7xl font-bebas leading-none truncate">{session?.score_b || 0}</motion.p>
                     </div>
                 </motion.div>
@@ -371,8 +387,8 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                         <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center space-y-6">
                             <Trophy size={120} className="mx-auto text-[#ffb700]" />
                             <h2 className="text-7xl md:text-9xl font-bebas tracking-[0.2em] uppercase">
-                                {showTransfer === 'A' ? (gladiators.a?.name || 'ALFA VENCE') :
-                                    showTransfer === 'B' ? (gladiators.b?.name || 'BRAVO VENCE') :
+                                {showTransfer === 'A' ? (gladiators.a?.name ? `${gladiators.a.name} VENCE` : 'ALFA VENCE') :
+                                    showTransfer === 'B' ? (gladiators.b?.name ? `${gladiators.b.name} VENCE` : 'BRAVO VENCE') :
                                         showTransfer === 'TIE' ? 'EMPATE' : 'NINGUNO'}
                             </h2>
                             {(showTransfer === 'A' || showTransfer === 'B') && (

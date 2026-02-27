@@ -111,31 +111,27 @@ async function sendPushNotification(title: string, message: string, targetToken?
     }
 }
 
-export default async function handler(request: Request) {
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    };
+export default async function handler(req: any, res: any) {
+    // Definir cabeceras CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    if (request.method === 'OPTIONS') {
-        return new Response(null, { status: 200, headers: corsHeaders });
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
 
-    if (request.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-            status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     try {
-        const body = await request.json();
-        const { action, title, message, targetToken } = body;
+        // En Vercel Serverless para NodeJS, el body ya viene parseado si el Content-Type es application/json
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const { action, title, message, targetToken } = body || {};
 
         if (!message) {
-            return new Response(JSON.stringify({ error: 'Missing message' }), {
-                status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            return res.status(400).json({ error: 'Missing message' });
         }
 
         if (action === 'telegram') {
@@ -145,19 +141,13 @@ export default async function handler(request: Request) {
             // Notificar a Telegram como backup de la notificación Push global
             await sendTelegramNotification(`📢 <b>${(title || "MANDO CENTRAL").toUpperCase()}</b>\n\n${message}`);
         } else {
-            return new Response(JSON.stringify({ error: 'Invalid action' }), {
-                status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            return res.status(400).json({ error: 'Invalid action' });
         }
 
-        return new Response(JSON.stringify({ success: true }), {
-            status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return res.status(200).json({ success: true });
 
     } catch (error: any) {
         console.error("Notify Endpoint Error:", error.message);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return res.status(500).json({ error: error.message });
     }
 }

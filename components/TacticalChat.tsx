@@ -4,6 +4,7 @@ import { db } from '../firebase-config';
 import { Agent, UserRole } from '../types';
 import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, Check, CheckCheck, Loader2, Download, MoreVertical, Trash2, Pencil, Smile } from 'lucide-react';
 import { uploadFile, uploadImage } from '../services/sheetsService';
+import { sendPushBroadcast } from '../services/notifyService';
 import { compressImage } from '../services/storageUtils';
 
 // Emoji database for reactions
@@ -127,16 +128,10 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             await addDoc(collection(db, 'messages'), msgData);
 
             // Disparar Notificación Push Global
-            fetch('/api/notify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: `NUEVO MENSAJE - ${msgData.senderName.toUpperCase()}`,
-                    body: msgData.type === 'text' ? msgData.text : '📁 Archivo multimedia recibido',
-                    topic: 'all',
-                    data: { url: '/chat' }
-                })
-            }).catch(e => console.log('Push silenciado:', e));
+            sendPushBroadcast(
+                `NUEVO MENSAJE - ${msgData.senderName.toUpperCase()}`,
+                msgData.type === 'text' ? msgData.text : '📁 Archivo multimedia recibido'
+            ).catch(e => console.log('Push silenciado:', e));
 
         } catch (e) {
             console.error("❌ ERROR EN TRANSMISIÓN:", e);

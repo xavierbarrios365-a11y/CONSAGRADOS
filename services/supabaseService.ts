@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { Agent } from '../types';
+import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 
 /**
  * @description Sincroniza un agente desde Google Sheets hacia Supabase.
@@ -1025,24 +1026,9 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
             }
 
             // 7. Enviar notificaciones de Telegram y Push
-            // Para poder llamar a sendTelegramAlert/sendPushBroadcast deberíamos importar notifyService,
-            // Pero como estamos dentro de supabaseService (en /services), si hacemos import { sendTelegramAlert } ...
-            // lo haremos después de ver que funcione. (Omitir la llamada directa si rompe imports circulares, o mejor
-            // realizar un HTTP request a la API). Lo más seguro es usar fetch directo o permitir que App.tsx dispare la alarma,
-            // pero el usuario pidió que la lógica de Code.gs esté resturada acá centralizada.
             try {
-                const getBaseUrl = () => import.meta.env?.DEV ? 'http://localhost:3000' : '';
-                await fetch(`${getBaseUrl()}/api/notify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'telegram', message: `✅ <b>NUEVA ASISTENCIA</b>\n\nAgente: <b>${agentName}</b> [<code>${agentId}</code>]\nBono Evento: <b>${eventMultiplier}x</b>\nReportadx por: ${reporterName || 'SISTEMA'}` })
-                });
-
-                await fetch(`${getBaseUrl()}/api/notify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'push', title: `Despliegue Confirmado`, message: `El agente ${agentName} acaba de registrar asistencia.` })
-                });
+                await sendTelegramAlert(`✅ <b>NUEVA ASISTENCIA</b>\n\nAgente: <b>${agentName}</b> [<code>${agentId}</code>]\nBono Evento: <b>${eventMultiplier}x</b>\nReportadx por: ${reporterName || 'SISTEMA'}`);
+                await sendPushBroadcast(`Despliegue Confirmado`, `El agente ${agentName} acaba de registrar asistencia.`);
             } catch (err) {
                 console.error("Fallo al enviar notificación de asistencia:", err);
             }

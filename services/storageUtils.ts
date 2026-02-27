@@ -47,10 +47,28 @@ export const compressImage = (file: File, maxWidth: number = 1000, quality: numb
  * Standardizes Google Drive image URLs to use the view endpoint directly.
  */
 export const formatDriveUrl = (url: string | undefined) => {
-    if (!url) return '';
-    if (url.includes('drive.google.com/file/d/')) {
-        const id = url.split('/d/')[1]?.split('/')[0];
-        return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+    const DEFAULT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+    if (!url || typeof url !== 'string' || url.trim() === '' || url === 'N/A' || url === 'PENDIENTE') return DEFAULT_AVATAR;
+
+    if (url.includes('supabase.co') || url.includes('unsplash.com') || (url.startsWith('http') && !url.includes('drive.google.com') && !url.includes('docs.google.com'))) {
+        return url;
     }
-    return url;
+
+    const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=|\/file\/d\/|preview\/d\/|open\?id=)([\w-]{25,100})/;
+    const match = url.match(driveRegex);
+
+    let fileId = "";
+    if (match && match[1]) {
+        fileId = match[1];
+    } else if (url.length >= 25 && !url.includes('/') && !url.includes('.') && !url.includes(':')) {
+        fileId = url;
+    }
+
+    if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+    }
+
+    if (url.startsWith('http') || url.startsWith('/')) return url;
+
+    return DEFAULT_AVATAR;
 };

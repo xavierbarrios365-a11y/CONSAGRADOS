@@ -76,19 +76,24 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     }, []);
 
     const loadInitialData = async () => {
-        const [sessionData, groupsData] = await Promise.all([
-            fetchBibleWarSession(),
-            fetchBibleWarGroups()
-        ]);
+        // Fetch session data first
+        const sessionData = await fetchBibleWarSession();
 
-        const currentIdStr = String(currentUser.id).trim().toUpperCase();
-        console.log("🕵️ Buscando equipo para Agente:", currentIdStr);
-        const myGroup = groupsData.find(g => String(g.agent_id).trim().toUpperCase() === currentIdStr);
-        if (myGroup) {
-            console.log("✅ Equipo encontrado:", myGroup.team);
-            setMyTeam(myGroup.team);
+        let myTeamAssignment: 'A' | 'B' | null = null;
+        if (sessionData) {
+            const currentIdStr = String(currentUser.id).trim().toUpperCase();
+            if (sessionData.gladiator_a_id && String(sessionData.gladiator_a_id).trim().toUpperCase() === currentIdStr) {
+                myTeamAssignment = 'A';
+            } else if (sessionData.gladiator_b_id && String(sessionData.gladiator_b_id).trim().toUpperCase() === currentIdStr) {
+                myTeamAssignment = 'B';
+            }
+        }
+
+        if (myTeamAssignment) {
+            console.log("✅ Gladiador asignado a equipo:", myTeamAssignment);
+            setMyTeam(myTeamAssignment);
         } else {
-            console.warn("⚠️ Agente no encontrado en grupos.");
+            console.warn("⚠️ Agente no seleccionado como gladiador en esta ronda.");
             setMyTeam(null);
         }
 
@@ -98,6 +103,16 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
 
     const handleSessionUpdate = async (newState: BibleWarSession) => {
         if (!newState) return;
+
+        // Re-evaluar si sigo siendo gladiador en cada actualización
+        const currentIdStr = String(currentUser.id).trim().toUpperCase();
+        let currentTeamAssignment: 'A' | 'B' | null = null;
+        if (newState.gladiator_a_id && String(newState.gladiator_a_id).trim().toUpperCase() === currentIdStr) {
+            currentTeamAssignment = 'A';
+        } else if (newState.gladiator_b_id && String(newState.gladiator_b_id).trim().toUpperCase() === currentIdStr) {
+            currentTeamAssignment = 'B';
+        }
+        setMyTeam(currentTeamAssignment);
 
         // 🛡️ 1. PURGA ATÓMICA: Si la pregunta cambió, ignoramos cualquier respuesta residual de DB.
         if (session && newState.current_question_id && newState.current_question_id !== session.current_question_id) {
@@ -192,8 +207,8 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 </div>
 
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl w-full max-w-xs">
-                    <p className="text-[8px] font-black uppercase text-red-500 tracking-widest">Estado: Sin Escuadrón</p>
-                    <p className="text-[7px] text-white/50 uppercase mt-1">El comando aún no te ha asignado a Alfa o Bravo.</p>
+                    <p className="text-[8px] font-black uppercase text-red-500 tracking-widest">Estado: Observador</p>
+                    <p className="text-[7px] text-white/50 uppercase mt-1">Espera a que el Comando te llame a la Arena Principal para jugar.</p>
                 </div>
 
                 <div className="pt-6">

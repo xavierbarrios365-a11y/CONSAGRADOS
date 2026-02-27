@@ -176,6 +176,59 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
 };
 
 /**
+ * @description Actualiza la racha de un agente en Supabase
+ */
+export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
+    try {
+        const { data: currentData, error: fetchError } = await supabase
+            .from('agentes')
+            .select('streak_count, last_streak_date, xp')
+            .eq('id', agentId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const now = new Date();
+        const localToday = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+        // Calcular nueva racha
+        const newStreak = (currentData.streak_count || 0) + 1;
+        const newXp = (currentData.xp || 0) + 5; // Recompensa base por racha diaria
+
+        const { error: updateError } = await supabase
+            .from('agentes')
+            .update({
+                streak_count: newStreak,
+                last_streak_date: now.toISOString(),
+                weekly_tasks: tasks,
+                xp: newXp
+            })
+            .eq('id', agentId);
+
+        if (updateError) throw updateError;
+
+        // Generar noticia de racha
+        try {
+            await supabase.from('asistencia_visitas').insert({
+                id: `NEWS-${Date.now()}`,
+                agent_id: agentId,
+                agent_name: agentName || 'Agente',
+                tipo: 'RACHA',
+                detalle: `Ha alcanzado una racha de ${newStreak} días consecutivos.`,
+                registrado_en: now.toISOString()
+            });
+        } catch (e) {
+            console.error("Error al publicar noticia de racha:", e);
+        }
+
+        return { success: true, streak: newStreak, lastStreakDate: now.toISOString() };
+    } catch (error: any) {
+        console.error('❌ Error actualizando racha en Supabase:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
  * @description Deduce un porcentaje de los puntos de un agente (ej. Sanción masiva)
  */
 export const deductPercentagePointsSupabase = async (agentId: string, percentage: number): Promise<{ success: boolean, error?: string }> => {

@@ -48,7 +48,6 @@ import {
   resetStudentAttempts,
   updateNotifPrefs,
   fetchDailyVerse,
-  updateAgentStreaks,
   registerBiometrics,
   verifyBiometrics,
   updateAgentAiPendingStatus,
@@ -65,7 +64,8 @@ import {
   confirmEventAttendanceSupabase as confirmEventAttendanceService,
   updateAgentPhotoSupabase,
   enrollAgentSupabase,
-  submitTransactionSupabase
+  submitTransactionSupabase,
+  updateAgentStreaksSupabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -474,8 +474,8 @@ const App: React.FC = () => {
     localStorage.setItem('verse_completed_date', localToday);
 
     try {
-      console.log("🔥 Sincronizando racha...");
-      const res = await updateAgentStreaks(currentUser.id, false, updatedTasks, currentUser.name);
+      console.log("🔥 Sincronizando racha con Supabase...");
+      const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name);
       if (res.success && res.streak !== undefined) {
         // Siempre confiar en el valor del servidor (es la fuente de verdad)
         const serverUser = {

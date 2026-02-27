@@ -31,6 +31,13 @@ export function useFirebaseMessaging(
                         if (res.success) console.log("✅ Token registrado en servidor.");
                     });
                 }
+
+                // Suscribir oficialmente el token al topic "all_agents" de Vercel (Push Broadcast)
+                fetch(`${import.meta.env.DEV ? 'https://consagrados.vercel.app' : ''}/api/notify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'subscribe', targetToken: token })
+                }).catch(e => console.error("Error al suscribir a push", e));
             }
 
             onMessageListener().then((payload: any) => {

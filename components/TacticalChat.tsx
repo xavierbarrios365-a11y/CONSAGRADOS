@@ -129,8 +129,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
             // Disparar Notificación Push Global
             sendPushBroadcast(
-                `NUEVO MENSAJE - ${msgData.senderName.toUpperCase()}`,
-                msgData.type === 'text' ? msgData.text : '📁 Archivo multimedia recibido'
+                `CHAT GRUPAL: ${msgData.senderName}`,
+                msgData.type === 'text' ? msgData.text : '📁 Ha compartido un archivo multimedia'
             ).catch(e => console.log('Push silenciado:', e));
 
         } catch (e) {

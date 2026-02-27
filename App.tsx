@@ -499,6 +499,12 @@ const App: React.FC = () => {
         };
         setCurrentUser(serverUser);
         sessionStorage.setItem('consagrados_session', JSON.stringify(serverUser));
+
+        // Enviar Notificación de Racha
+        sendPushBroadcast(
+          `RACHA TÁCTICA: ${res.streak} DÍAS`,
+          `¡Agente ${currentUser.name} ha completado su racha de hoy!`
+        ).catch(() => { });
       }
     } catch (e) {
       console.error("Error sincronizando racha con servidor:", e);
@@ -1095,6 +1101,26 @@ const App: React.FC = () => {
                     className="bg-green-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-green-900/40 border border-white/10"
                   >
                     <UserPlus size={16} /> INSCRIPCIÓN DE AGENTE
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const fallbackId = `V-${Math.floor(Math.random() * 1000000)}`;
+                      const visitorName = prompt('Nombre completo del visitante:');
+                      if (!visitorName || visitorName.trim() === '') return;
+
+                      const res = await registerVisitorSupabase(fallbackId, visitorName, currentUser?.name);
+                      if (res.success) {
+                        showAlert({ title: "VISITANTE REGISTRADO", message: "✅ Acceso concedido.", type: 'SUCCESS' });
+                        // Notificación Push Global de Visitante
+                        sendPushBroadcast(`ALERTA DE VISITANTE`, `Un nuevo visitante (${visitorName}) ha ingresado al cuartel.`);
+                        syncData(true);
+                      } else {
+                        showAlert({ title: "FALLO DE SISTEMA", message: res.error || "Fallo en registro.", type: 'ERROR' });
+                      }
+                    }}
+                    className="bg-purple-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-purple-900/40 border border-white/10"
+                  >
+                    <UserPlus size={16} /> REGISTRAR VISITA
                   </button>
                 </div>
               </div>

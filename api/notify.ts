@@ -136,6 +136,21 @@ export default async function handler(req: any, res: any) {
 
         if (action === 'telegram') {
             await sendTelegramNotification(message);
+        } else if (action === 'subscribe' && targetToken) {
+            const accessToken = await getFcmAccessToken();
+            const response = await fetch(`https://iid.googleapis.com/iid/v1/${targetToken}/rel/topics/all_agents`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error("FCM Subscribe Error:", errText);
+                return res.status(500).json({ error: 'Failed to subscribe: ' + errText });
+            }
+            console.log("Token completely subscribed to all_agents:", targetToken);
         } else if (action === 'push') {
             await sendPushNotification(title || "CONSAGRADOS 2026", message, targetToken);
             // Notificar a Telegram como backup de la notificación Push global

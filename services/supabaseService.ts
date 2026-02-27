@@ -1028,7 +1028,7 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
             // 7. Enviar notificaciones de Telegram y Push
             try {
                 await sendTelegramAlert(`✅ <b>NUEVA ASISTENCIA</b>\n\nAgente: <b>${agentName}</b> [<code>${agentId}</code>]\nBono Evento: <b>${eventMultiplier}x</b>\nReportadx por: ${reporterName || 'SISTEMA'}`);
-                await sendPushBroadcast(`Despliegue Confirmado`, `El agente ${agentName} acaba de registrar asistencia.`);
+                await sendPushBroadcast(`REGISTRO TÁCTICO`, `El agente ${agentName} se ha reportado en el centro de operaciones.`);
             } catch (err) {
                 console.error("Fallo al enviar notificación de asistencia:", err);
             }

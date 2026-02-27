@@ -224,6 +224,19 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         broadcastAction('START_TIMER', { endAt, seconds });
     };
 
+    const handleCoinFlip = async () => {
+        const teams: ('ALFA' | 'BRAVO')[] = ['ALFA', 'BRAVO'];
+        const winner = teams[Math.floor(Math.random() * teams.length)];
+
+        const updates = { last_coin_flip: winner };
+        setSession(prev => prev ? { ...prev, ...updates } : null);
+
+        const res = await updateBibleWarSession(updates);
+        if (res.success) {
+            broadcastAction('COIN_FLIP', { winner });
+        }
+    };
+
 
 
     const handleImportQuestions = async () => {
@@ -428,9 +441,23 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                         </div>
                     </div>
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                        <p className="text-[8px] font-black uppercase text-gray-400">POZO ACUMULADO</p>
-                        <div className="w-full py-2 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg text-lg font-bebas text-white flex items-center justify-center gap-2 shadow-lg">
-                            <Zap size={16} /> {session?.accumulated_pot || 0} XP
+                        <div className="flex items-center justify-between">
+                            <p className="text-[8px] font-black uppercase text-gray-400">Sorteo de Turno</p>
+                            <button
+                                onClick={handleCoinFlip}
+                                className="p-1 px-2 bg-[#ffb700] text-[#001f3f] rounded text-[7px] font-bold uppercase hover:scale-105 transition-transform"
+                            >
+                                Lanzar Moneda
+                            </button>
+                        </div>
+                        <div className="w-full py-2 bg-white/5 border border-white/10 rounded-lg text-lg font-bebas text-white flex items-center justify-center gap-2">
+                            {session?.last_coin_flip ? (
+                                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2 text-[#ffb700]">
+                                    <Zap size={14} /> TURNO: {session.last_coin_flip}
+                                </motion.span>
+                            ) : (
+                                <span className="text-white/20">SIN SORTEAR</span>
+                            )}
                         </div>
                     </div>
                 </div>

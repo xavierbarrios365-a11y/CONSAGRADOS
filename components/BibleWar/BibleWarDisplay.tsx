@@ -264,6 +264,18 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 {activeQuestion.question}
                             </motion.h1>
 
+                            {/* Indicadores de Respuesta de Equipo */}
+                            <div className="flex justify-center gap-12 pt-4">
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-500 ${session?.answer_a ? 'bg-blue-500 scale-125' : 'bg-white/10'}`} />
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${session?.answer_a ? 'text-blue-400' : 'text-white/20'}`}>ALFA {session?.answer_a ? 'LISTO' : ''}</span>
+                                </div>
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full shadow-[0_0_15px_rgba(20,184,166,0.5)] transition-all duration-500 ${session?.answer_b ? 'bg-teal-500 scale-125' : 'bg-white/10'}`} />
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${session?.answer_b ? 'text-teal-400' : 'text-white/20'}`}>BRAVO {session?.answer_b ? 'LISTO' : ''}</span>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6 mt-4 md:mt-10">
                                 {activeQuestion.options.map((opt: string, i: number) => {
                                     const isCorrect = opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer;

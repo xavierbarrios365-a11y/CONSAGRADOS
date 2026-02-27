@@ -69,17 +69,36 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const handleSelectOption = async (option: string) => {
         if (!myTeam || session?.status !== 'ACTIVE' || isSubmitting) return;
 
-        // Verificar si mi equipo ya respondió
-        const alreadyAnswered = myTeam === 'A' ? session.answer_a : session.answer_b;
-        if (alreadyAnswered) return;
+        // Verificar si mi equipo ya respondió (evitar envío doble)
+        const myTeamAnswer = myTeam === 'A' ? session.answer_a : session.answer_b;
+        if (myTeamAnswer) return;
 
         setIsSubmitting(true);
         setSelectedOption(option);
+
+        // Actualización optimista del estado local
+        setSession(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                answer_a: myTeam === 'A' ? option : prev.answer_a,
+                answer_b: myTeam === 'B' ? option : prev.answer_b
+            };
+        });
 
         const res = await submitBibleWarAnswer(myTeam, option);
         if (!res.success) {
             alert("Error enviando respuesta.");
             setSelectedOption(null);
+            // Revertir estado optimista si falla
+            setSession(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    answer_a: myTeam === 'A' ? null : prev.answer_a,
+                    answer_b: myTeam === 'B' ? null : prev.answer_b
+                };
+            });
         }
         setIsSubmitting(false);
     };
@@ -190,8 +209,24 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                                             key={i}
                                             disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED'}
                                             onClick={() => handleSelectOption(opt)}
-                                            className={`p-3 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 ${bgClass} ${!!myTeamAnswer ? 'cursor-default' : 'hover:border-white/30 active:scale-95'}`}
+                                            className={`p-3 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 relative overflow-hidden ${bgClass} ${!!myTeamAnswer ? 'cursor-default ring-2 ring-[#ffb700] ring-offset-2 ring-offset-[#000814]' : 'hover:border-white/30 active:scale-95'}`}
                                         >
+                                            {/* Indicador de Selección / Envío */}
+                                            {selectedOption === opt && isSubmitting && (
+                                                <motion.div
+                                                    layoutId="loading-overlay"
+                                                    className="absolute inset-0 bg-white/20 flex items-center justify-center backdrop-blur-sm"
+                                                >
+                                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                </motion.div>
+                                            )}
+
+                                            {myTeamAnswer === opt && (
+                                                <div className="absolute top-2 right-2">
+                                                    <CheckCircle2 size={16} className="text-[#ffb700]" />
+                                                </div>
+                                            )}
+
                                             <p className={`text-xs md:text-base font-bold ${textClass}`}>{opt}</p>
                                         </button>
                                     );

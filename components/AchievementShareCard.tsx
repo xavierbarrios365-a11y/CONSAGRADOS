@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Agent, NewsFeedItem } from '../types';
-import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote } from 'lucide-react';
+import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote, MessageSquare, Send } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -143,15 +143,31 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
             const res = await fetch(dataUrl);
             const blob = await res.blob();
             const file = new File([blob], 'logro-consagrados-hd.png', { type: 'image/png' });
+            const shareText = newsItem?.verse
+                ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
+                : (newsItem?.message || '¡Nivel superado!');
 
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
                 await navigator.share({
                     title: 'Consagrados 2026',
-                    text: newsItem?.verse ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}` : (newsItem?.message || '¡Nivel superado!'),
+                    text: shareText,
                     files: [file],
                 });
             } else {
+                // FALLBACK: Detectar qué quiere hacer el usuario si no hay soporte nativo de archivos
                 const url = URL.createObjectURL(blob);
+
+                // Si estamos en móvil pero no soporta archivos, al menos intentamos compartir texto
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: 'Consagrados 2026',
+                            text: shareText + "\n\n(Descarga tu medalla para compartirla en historias)"
+                        });
+                    } catch (e) { /* ignore */ }
+                }
+
+                // Descarga automática como respaldo seguro
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = 'logro-consagrados-pro.png';
@@ -167,21 +183,51 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
         }
     };
 
+    const shareViaWhatsApp = () => {
+        const text = newsItem?.verse
+            ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
+            : (newsItem?.message || '¡Nivel superado!');
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    };
+
+    const shareViaTelegram = () => {
+        const text = newsItem?.verse
+            ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
+            : (newsItem?.message || '¡Nivel superado!');
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(text)}`, '_blank');
+    };
+
     return (
         <div className="fixed inset-0 z-[9999] bg-black/98 flex flex-col items-center justify-center animate-in fade-in backdrop-blur-3xl overflow-hidden p-4">
 
             {/* Header Controls (Fixed top layout) */}
-            <div className="w-full max-w-4xl flex justify-between items-center px-2 mb-4 shrink-0 relative z-[10000]">
+            <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center px-2 mb-4 shrink-0 relative z-[10000] gap-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#ffb700]/10 flex items-center justify-center border border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.2)]">
                         <Award className="text-[#ffb700]" size={20} />
                     </div>
-                    <div className="hidden xs:block">
+                    <div className="xs:block">
                         <span className="text-white font-black uppercase tracking-[0.4em] text-[10px] md:text-[14px] font-bebas block leading-none">Command Center</span>
                         <span className="text-[#ffb700] font-black uppercase tracking-[0.2em] text-[6px] md:text-[8px] font-montserrat block mt-1">Soberanía Táctica 2026</span>
                     </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+                    <button
+                        onClick={shareViaWhatsApp}
+                        className="p-3 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl border border-[#25D366]/30 transition-all flex items-center gap-2"
+                        title="Compartir en WhatsApp"
+                    >
+                        <MessageSquare size={16} />
+                        <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest font-bebas">WhatsApp</span>
+                    </button>
+                    <button
+                        onClick={shareViaTelegram}
+                        className="p-3 bg-[#0088cc]/10 text-[#0088cc] hover:bg-[#0088cc]/20 rounded-xl border border-[#0088cc]/30 transition-all flex items-center gap-2"
+                        title="Compartir en Telegram"
+                    >
+                        <Send size={16} />
+                        <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest font-bebas">Telegram</span>
+                    </button>
                     <button
                         onClick={handleShare}
                         disabled={isGenerating}

@@ -175,6 +175,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const currentPromotionStatus = getPromotionStatus(agent);
   const isProspectoAscender = currentPromotionStatus === 'PROXIMAMENTE';
   const isAptoTotal = currentPromotionStatus === 'APTO';
+  const levelInfo = getLevelInfo(agent.xp);
 
   const handleBroadcast = async () => {
     if (!broadcastData.title || !broadcastData.message) return;

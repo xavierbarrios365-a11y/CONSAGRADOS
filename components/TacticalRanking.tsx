@@ -50,8 +50,6 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
     // --- POSITION CHANGE TRACKING (ESTABILIZADO) ---
-    // Usamos un snapshot que solo se actualiza cuando el usuario cambia de categoría o cada X tiempo,
-    // para que los cambios de posición sean visibles por más tiempo.
     const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>(() => {
         try {
             const saved = localStorage.getItem(`ranking_snapshot_${activeCategory}_${activeTier}`);
@@ -59,10 +57,11 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         } catch { return {}; }
     });
 
-    // Solo actualizar el snapshot si está vacío o si cambiamos de vista
     React.useEffect(() => {
         const key = `ranking_snapshot_${activeCategory}_${activeTier}`;
         const saved = localStorage.getItem(key);
+
+        // Refrescar snapshot si no existe
         if (!saved && sortedAgents.length > 0) {
             const currentRanks: Record<string, number> = {};
             sortedAgents.forEach((a, idx) => { currentRanks[a.id] = idx + 1; });
@@ -79,18 +78,18 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
 
     const RankingIndicator = ({ change }: { change: number }) => {
         if (change > 0) return (
-            <div className="flex border-emerald-500/20 bg-emerald-500/10 px-1 rounded flex-col items-center animate-in fade-in slide-in-from-bottom-1">
-                <ChevronUp size={10} className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                <span className="text-[6px] font-black text-emerald-400 leading-none">+{change}</span>
+            <div className="flex border-emerald-500/40 bg-emerald-500/20 px-1.5 py-0.5 rounded-lg flex-col items-center animate-bounce-subtle">
+                <ChevronUp size={12} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,1)]" />
+                <span className="text-[7px] font-black text-emerald-400 leading-none">+{change}</span>
             </div>
         );
         if (change < 0) return (
-            <div className="flex border-red-500/20 bg-red-500/10 px-1 rounded flex-col items-center animate-in fade-in slide-in-from-top-1">
-                <ChevronDown size={10} className="text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
-                <span className="text-[6px] font-black text-red-400 leading-none">{change}</span>
+            <div className="flex border-red-500/40 bg-red-500/20 px-1.5 py-0.5 rounded-lg flex-col items-center animate-pulse">
+                <ChevronDown size={12} className="text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,1)]" />
+                <span className="text-[7px] font-black text-red-400 leading-none">{change}</span>
             </div>
         );
-        return <Minus size={8} className="text-white/10" />;
+        return <Minus size={8} className="text-white/5" />;
     };
 
     const topThree = sortedAgents.slice(0, 3);
@@ -291,95 +290,88 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                         )}
                     </div>
 
-                    {/* Global List Section */}
+                    {/* Global List Section - Optimized for Mobile (No Horizontal Scroll) */}
                     <div className="max-w-6xl mx-auto w-full px-2">
-                        <div className="bg-[#001f3f] border border-white/5 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl">
-                            <div className="px-6 md:px-8 py-4 md:py-6 bg-black/20 flex items-center justify-between border-b border-white/5">
-                                <h4 className="text-[8px] md:text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Lista de Escalafón Operativo</h4>
-                                <span className="text-[8px] md:text-[10px] font-black text-white/40 uppercase">Total: {sortedAgents.length}</span>
+                        <div className="bg-[#001f3f]/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                            <div className="px-6 md:px-8 py-5 bg-black/40 flex items-center justify-between border-b border-white/10">
+                                <h4 className="text-[9px] md:text-[11px] font-black text-white/50 uppercase tracking-[0.4em] font-bebas">Escalafón Operativo</h4>
+                                <span className="text-[9px] md:text-[11px] font-black text-[#FFB700] uppercase font-bebas">Total: {sortedAgents.length}</span>
                             </div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="border-b border-white/5 bg-white/5">
-                                            <th className="px-4 md:px-8 py-4 text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-widest">Pos</th>
-                                            <th className="px-4 md:px-8 py-4 text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-widest">Identidad</th>
-                                            <th className="hidden md:table-cell px-8 py-4 text-[9px] font-black text-gray-500 uppercase tracking-widest text-center">Nivel</th>
-                                            <th className="px-4 md:px-8 py-4 text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-widest text-right">XP</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        <AnimatePresence mode="popLayout">
-                                            {restOfAgents.map((agent, index) => (
-                                                <motion.tr
-                                                    layout
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{
-                                                        opacity: 1,
-                                                        x: 0,
-                                                        transition: { delay: index * 0.05 }
-                                                    }}
-                                                    exit={{ opacity: 0, scale: 0.95 }}
-                                                    key={agent.id}
-                                                    className={`group transition-all duration-500 
-                                                        ${agent.id === currentUser?.id
-                                                            ? 'bg-[#FFB700]/10 border-l-4 border-l-[#FFB700]'
-                                                            : getPositionChange(agent.id, agent.position) > 0
-                                                                ? 'bg-emerald-500/5 border-l-2 border-l-emerald-500/50'
-                                                                : getPositionChange(agent.id, agent.position) < 0
-                                                                    ? 'bg-red-500/5 border-l-2 border-l-red-500/30'
-                                                                    : 'hover:bg-[#FFB700]/5'
-                                                        }`}
-                                                >
-                                                    <td className="px-4 md:px-8 py-4 md:py-6">
+                            <div className="divide-y divide-white/5 p-2 md:p-4">
+                                <AnimatePresence mode="popLayout">
+                                    {restOfAgents.map((agent, index) => (
+                                        <motion.div
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.98 }}
+                                            animate={{
+                                                opacity: 1,
+                                                scale: 1,
+                                                transition: { delay: index * 0.03 }
+                                            }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            key={agent.id}
+                                            className={`relative group flex items-center justify-between p-3 md:p-6 rounded-2xl transition-all duration-300 mb-2
+                                                ${agent.id === currentUser?.id
+                                                    ? 'bg-[#FFB700]/15 border border-[#FFB700]/30 shadow-[0_0_20px_rgba(255,183,0,0.1)]'
+                                                    : 'bg-white/5 hover:bg-white/[0.08] border border-transparent hover:border-white/10'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
+                                                {/* Position Badge */}
+                                                <div className="flex flex-col items-center gap-1 shrink-0">
+                                                    <span className={`w-8 h-8 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bebas text-lg md:text-2xl ${getRankColor(agent.position)} bg-black/40 border border-white/10 shadow-inner`}>
+                                                        {agent.position}
+                                                    </span>
+                                                    <RankingIndicator change={getPositionChange(agent.id, agent.position)} />
+                                                </div>
+
+                                                <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                                                    <div className="relative shrink-0">
+                                                        <img
+                                                            src={formatDriveUrl(agent.photoUrl)}
+                                                            className="w-10 h-10 md:w-16 md:h-16 rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/20 shadow-lg"
+                                                            onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                                        />
+                                                        {agent.id === currentUser?.id && (
+                                                            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border border-[#001f3f] bg-[#FFB700] animate-pulse" />
+                                                        )}
+                                                    </div>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-center gap-2 mb-0.5 md:mb-1">
+                                                            <p className="text-[11px] md:text-[14px] font-black text-white uppercase truncate font-montserrat">{agent.name}</p>
+                                                            {getPromotionStatus(agent) === PROMOTION_STATUS.APTO && (
+                                                                <span className="bg-emerald-500 text-[#001f3f] px-1.5 md:px-2 py-0.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest animate-bounce font-bebas">
+                                                                    APTO
+                                                                </span>
+                                                            )}
+                                                            {getPromotionStatus(agent) === PROMOTION_STATUS.PROXIMAMENTE && (
+                                                                <span className="bg-blue-600 text-white px-1.5 md:px-2 py-0.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest animate-pulse font-bebas">
+                                                                    PRÓXIMO
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`w-6 h-6 md:w-8 md:h-8 rounded-lg flex items-center justify-center font-bebas text-sm md:text-lg ${getRankColor(agent.position)} bg-white/5 border border-white/10`}>
-                                                                {agent.position}
-                                                            </span>
-                                                            <RankingIndicator change={getPositionChange(agent.id, agent.position)} />
+                                                            <span className="text-[8px] md:text-[10px] text-white/40 font-black uppercase tracking-widest font-bebas">{agent.rank || 'RECLUTA'}</span>
+                                                            <span className="w-1 h-1 rounded-full bg-white/10" />
+                                                            <span className="text-[7px] md:text-[9px] text-[#FFB700]/60 font-bold uppercase tracking-widest">ID: {agent.id.slice(-6)}</span>
                                                         </div>
-                                                    </td>
-                                                    <td className="px-4 md:px-8 py-4 md:py-6">
-                                                        <div className="flex items-center gap-3 md:gap-4">
-                                                            <img
-                                                                src={formatDriveUrl(agent.photoUrl)}
-                                                                className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/10"
-                                                                onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
-                                                            />
-                                                            <div className="min-w-0">
-                                                                <div className="flex items-center gap-2">
-                                                                    <p className="text-[10px] md:text-[11px] font-black text-white uppercase truncate max-w-[120px] md:max-w-none">{agent.name}</p>
-                                                                    {getPromotionStatus(agent) === PROMOTION_STATUS.APTO && (
-                                                                        <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest animate-pulse">
-                                                                            <ArrowUpCircle size={8} />
-                                                                            APTO
-                                                                        </span>
-                                                                    )}
-                                                                    {getPromotionStatus(agent) === PROMOTION_STATUS.PROXIMAMENTE && (
-                                                                        <span className="inline-flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 text-blue-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest">
-                                                                            PRÓXIMO
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <p className="text-[7px] md:text-[8px] text-[#FFB700] font-bold uppercase opacity-60">{agent.id}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="hidden md:table-cell px-8 py-4 md:py-6 text-center">
-                                                        <span className="text-[9px] font-black text-white/60 uppercase font-bebas">{agent.rank || 'AGENTE'}</span>
-                                                    </td>
-                                                    <td className="px-4 md:px-8 py-4 md:py-6 text-right">
-                                                        <div className="flex items-center justify-end gap-1 md:gap-2">
-                                                            <span className="text-md md:text-xl font-bebas text-white tracking-widest">{agent.xp}</span>
-                                                            <Zap size={14} className="text-[#FFB700]" fill="#FFB700" />
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            ))}
-                                        </AnimatePresence>
-                                    </tbody>
-                                </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* XP Score */}
+                                            <div className="flex flex-col items-end gap-1 md:gap-2 pl-4">
+                                                <div className="flex items-center gap-1.5 md:gap-3 bg-black/40 px-3 py-1.5 md:px-4 md:py-2.5 rounded-xl border border-white/5 shadow-inner">
+                                                    <span className="text-lg md:text-3xl font-bebas text-white tracking-widest leading-none">{agent.xp}</span>
+                                                    <Zap size={14} className="text-[#FFB700] md:size-5" fill="#FFB700" />
+                                                </div>
+                                                <p className="text-[7px] md:text-[8px] text-white/20 font-black uppercase tracking-widest">Puntos de Honor</p>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                             </div>
                         </div>
                     </div>

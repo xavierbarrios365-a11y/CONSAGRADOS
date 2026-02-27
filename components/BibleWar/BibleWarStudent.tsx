@@ -32,12 +32,37 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 loadInitialData();
             })
             .on('broadcast', { event: 'LAUNCH_QUESTION' }, (payload) => {
+                console.log("🚀 LANZAMIENTO DE PREGUNTA RECIBIDO:", payload.payload);
                 if (payload.payload.question) {
                     setActiveQuestion(payload.payload.question);
                     setSelectedOption(null);
-                    // Asegurar que el estado local de la sesión refleje que está activa
-                    setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: payload.payload.question.id, answer_a: null, answer_b: null } : null);
+                    setSession(prev => prev ? {
+                        ...prev,
+                        status: 'ACTIVE',
+                        current_question_id: payload.payload.question.id,
+                        answer_a: null,
+                        answer_b: null,
+                        show_answer: false,
+                        roulette_category: payload.payload.question.category
+                    } : null);
                 }
+            })
+            .on('broadcast', { event: 'SPIN_ROULETTE' }, (payload) => {
+                console.log("🎰 GIRO DE RULETA RECIBIDO:", payload.payload);
+                setSession(prev => prev ? {
+                    ...prev,
+                    status: 'SPINNING',
+                    roulette_category: payload.payload.category,
+                    answer_a: null,
+                    answer_b: null,
+                    current_question_id: null,
+                    show_answer: false
+                } : null);
+                setActiveQuestion(null);
+                setSelectedOption(null);
+            })
+            .on('broadcast', { event: 'RESET' }, () => {
+                loadInitialData();
             })
             .subscribe();
 
@@ -68,7 +93,14 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     };
 
     const handleSessionUpdate = async (newState: BibleWarSession) => {
+        if (!newState) return;
         setSession(newState);
+
+        // Reset local si el status cambió a WAITING o SPINNING
+        if (newState.status === 'WAITING' || newState.status === 'SPINNING') {
+            setSelectedOption(null);
+            if (newState.status === 'WAITING') setActiveQuestion(null);
+        }
 
         // Cargar pregunta si hay una activa
         if (newState.current_question_id) {
@@ -76,12 +108,11 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 const bibleQuestions = await fetchBibleWarQuestions();
                 const q = bibleQuestions.find(q => q.id === newState.current_question_id);
                 setActiveQuestion(q);
-                // Reset mi seleccion si es una nueva pregunta
+                // Reset mi seleccion si es una nueva pregunta detectada por DB
                 setSelectedOption(null);
             }
-        } else {
+        } else if (newState.status !== 'ACTIVE') {
             setActiveQuestion(null);
-            setSelectedOption(null);
         }
     };
 
@@ -211,8 +242,22 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
 
                 {session?.status === 'SPINNING' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-10">
-                        <div className="w-16 h-16 md:w-24 md:h-24 border-4 border-t-[#ffb700] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-                        <h2 className="text-2xl md:text-3xl font-bebas tracking-widest text-[#ffb700]">GIRANDO RULETA...</h2>
+                        <div className="relative">
+                            <div className="w-20 h-20 md:w-32 md:h-32 border-4 border-t-[#ffb700] border-white/5 rounded-full animate-spin" />
+                            <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#ffb700]" size={24} />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-2xl md:text-3xl font-bebas tracking-widest text-[#ffb700]">GIRANDO RULETA...</h2>
+                            {session.roulette_category && (
+                                <motion.p
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="text-lg font-bebas text-white px-4 py-1 bg-white/5 rounded-full border border-white/10"
+                                >
+                                    {session.roulette_category}
+                                </motion.p>
+                            )}
+                        </div>
                     </motion.div>
                 )}
 

@@ -99,7 +99,8 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             timer_status: 'STOPPED' as const,
             timer_end_at: null,
             answer_a: null,
-            answer_b: null
+            answer_b: null,
+            roulette_category: q.category // Mantener la categoría visible
         };
         // Actualización optimista
         setSession(prev => prev ? { ...prev, ...updates } : null);
@@ -107,11 +108,11 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
         const res = await updateBibleWarSession(updates);
         if (res.success) {
-            // Incluir el objeto completo de la pregunta para que los estudiantes no tengan que recargarla
             broadcastAction('LAUNCH_QUESTION', { question: q });
         } else {
-            alert("Error al lanzar pregunta. Verifica la consola.");
-            loadSession(); // Rollback
+            console.error("Error al lanzar pregunta:", res.error);
+            alert("Error al lanzar pregunta. Reintentando...");
+            loadSession();
         }
     };
 
@@ -122,7 +123,11 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         const randomCat = categories[Math.floor(Math.random() * categories.length)];
         const updates = {
             roulette_category: randomCat,
-            status: 'SPINNING' as const
+            status: 'SPINNING' as const,
+            answer_a: null,
+            answer_b: null,
+            current_question_id: null,
+            show_answer: false
         };
         // Optimista
         setSession(prev => prev ? { ...prev, ...updates } : null);
@@ -141,17 +146,20 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         const q = questions.find(qu => qu.id === session.current_question_id);
         if (!q) return;
 
-        const ansA = session.answer_a;
-        const ansB = session.answer_b;
+        if (!ansA && !ansB) {
+            alert("⚠️ Nadie ha respondido. No se puede resolver.");
+            return;
+        }
 
-        const isACorrect = ansA === q.correctAnswer || ansA === q.correct_answer;
-        const isBCorrect = ansB === q.correctAnswer || ansB === q.correct_answer;
+        const isACorrect = ansA && (ansA === q.correctAnswer || ansA === q.correct_answer);
+        const isBCorrect = ansB && (ansB === q.correctAnswer || ansB === q.correct_answer);
 
         let winner: 'A' | 'B' | 'NONE' | 'TIE' = 'NONE';
 
         if (isACorrect && !isBCorrect) winner = 'A';
         else if (isBCorrect && !isACorrect) winner = 'B';
-        else winner = 'TIE'; // Empate (ambos bien o ambos mal) suma al pozo
+        else if (isACorrect && isBCorrect) winner = 'TIE'; // Ambos bien -> Empate táctico
+        else winner = 'NONE'; // Ambos mal -> Derrota compartida
 
         const stakes = session?.stakes_xp || customStakes;
         await transferBibleWarXP(winner, stakes);

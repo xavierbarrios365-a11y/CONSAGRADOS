@@ -65,8 +65,27 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             })
             .subscribe((status) => console.log("📡 Subscripción DB:", status));
 
-        const bcChannel = supabase.channel('bible_war_realtime').subscribe((status) => console.log("📡 Subscripción Broadcast:", status));
-        setBroadcastChannel(bcChannel);
+        const bcChannel = supabase.channel('bible_war_realtime')
+            .on('broadcast', { event: 'TIMER_END' }, (envelope) => {
+                console.log('⚡ Director: TIMER_END', envelope.payload);
+                if (envelope.payload?.phase === 'BATTLE') {
+                    // Esperar 3s para que el display revele y luego resolver
+                    console.log("⏰ El tiempo terminó en el display. Resolviendo en 3s...");
+                    setTimeout(handleAutoResolve, 3000);
+                }
+            })
+            .on('broadcast', { event: 'BOTH_ANSWERED' }, (envelope) => {
+                console.log('⚡ Director: BOTH_ANSWERED', envelope.payload);
+                // Esperar 3s para que los alumnos vean el revelado y luego resolver
+                console.log("🎯 Ambos respondieron. Resolviendo en 3s...");
+                setTimeout(handleAutoResolve, 3000);
+            })
+            .subscribe((status) => {
+                console.log("📡 Subscripción Broadcast:", status);
+                if (status === 'SUBSCRIBED') {
+                    setBroadcastChannel(bcChannel);
+                }
+            });
 
         return () => {
             console.log("🧹 BibleWarDirector: COMPONENTE DESMONTADO");

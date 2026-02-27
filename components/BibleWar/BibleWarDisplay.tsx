@@ -27,50 +27,53 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const soundsRef = useRef<Record<string, HTMLAudioElement>>({});
 
-    // Motor de Audio v2.8 (Gestión de Instancia Única)
+    // Motor de Audio v2.9 (Máxima Compatibilidad)
     const playSound = (effect: string, loop: boolean = false) => {
         try {
-            // Detener sonido previo si existe
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.currentTime = 0;
-            }
-
             const audioPath = `/sounds/bible-war/${effect}.mp3`;
             const audio = new Audio(audioPath);
             audio.volume = 0.6;
             audio.loop = loop;
-            audioRef.current = audio;
+
+            // Si hay un audio sonando, lo pausamos sutilmente
+            if (audioRef.current && !loop) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
 
             audio.play()
-                .then(() => console.log(`✅ Sonando: ${effect}`))
-                .catch(e => {
-                    if (e.name === 'NotAllowedError') {
-                        console.warn("⚠️ Interacción requerida para audio.");
-                    }
-                });
+                .then(() => {
+                    if (loop) audioRef.current = audio;
+                })
+                .catch(e => console.warn(`Audio ${effect} blocked:`, e));
         } catch (e) {
-            console.error("Audio error:", e);
+            console.error("Audio constructor error:", e);
         }
     };
 
     const stopSound = () => {
         if (audioRef.current) {
             audioRef.current.pause();
-            audioRef.current.currentTime = 0;
             audioRef.current = null;
         }
     };
 
-    // Pre-carga de sonidos v2.7.2
+    // Pre-carga de sonidos v3.1 (Persistente)
     useEffect(() => {
         const effects = ['reading_pulse', 'battle_transition', 'success', 'fail', 'timeout'];
         effects.forEach(eff => {
-            const img = new Audio();
-            img.src = `/sounds/bible-war/${eff}.mp3`;
-            img.load();
+            const audio = new Audio(`/sounds/bible-war/${eff}.mp3`);
+            audio.load();
+            soundsRef.current[eff] = audio;
         });
+
+        return () => {
+            // Limpieza al desmontar
+            Object.values(soundsRef.current).forEach(a => a.pause());
+            soundsRef.current = {};
+        };
     }, []);
 
     useEffect(() => {
@@ -151,6 +154,18 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const handleUpdate = async (newState: BibleWarSession) => {
         setSession(newState);
 
+        // v3.0: Auto-revelado si ambos respondieron
+        if (displayPhase === 'BATTLE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
+            console.log("🎯 Ambos equipos listos. Auto-revelado.");
+            setSession(prev => prev ? { ...prev, show_answer: true } : null);
+            // Sincronizar con el director (él hará el transfer de XP)
+            supabase.channel('bible_war_realtime').send({
+                type: 'broadcast',
+                event: 'BOTH_ANSWERED',
+                payload: { answer_a: newState.answer_a, answer_b: newState.answer_b }
+            });
+        }
+
         // Actualizar pregunta activa si cambia el ID
         if (newState.current_question_id) {
             if (activeQuestion?.id !== newState.current_question_id) {
@@ -194,7 +209,16 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                         playSound('battle_transition');
                         startLocalTimer(30, 'BATTLE');
                     } else {
+                        // v3.0: Cuando termina el tiempo de batalla, revelamos
+                        console.log("⏰ Tiempo agotado en BATTLE. Auto-revelado.");
                         playSound('timeout');
+                        setSession(prev => prev ? { ...prev, show_answer: true } : null);
+                        // Emitir evento para que el Director sepa que el tiempo terminó
+                        supabase.channel('bible_war_realtime').send({
+                            type: 'broadcast',
+                            event: 'TIMER_END',
+                            payload: { phase: 'BATTLE' }
+                        });
                     }
                     return 0;
                 }
@@ -321,37 +345,34 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
             {/* Main Stage: Roulette or Question */}
             <div className="relative flex-1 flex flex-col items-center justify-center p-2 md:p-6 z-10 w-full">
-                {/* Temporizador HUD Dinámico (v2.8 - Optimizado) */}
+                {/* Temporizador HUD Dinámico (v2.9 - Reconstruido) */}
                 <AnimatePresence>
-                    {timeLeft > 0 && session?.status === 'ACTIVE' && (
+                    {timeLeft > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.8, y: -20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 1.5, filter: 'blur(20px)' }}
-                            className={`absolute z-[100] ${displayPhase === 'READING' ? 'top-6 right-6 md:top-8 md:right-8 opacity-60' : 'bottom-10 right-10 md:bottom-20 md:right-12'} pointer-events-none transition-all duration-1000`}
+                            key={displayPhase + "-timer"}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: displayPhase === 'READING' ? 0.4 : 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.5 }}
+                            className={`absolute z-[100] transition-all duration-700 pointer-events-none ${displayPhase === 'READING'
+                                ? 'top-10 right-10 md:top-14 md:right-14'
+                                : 'bottom-16 right-10 md:bottom-24 md:right-16'
+                                }`}
                         >
-                            <div className={`relative flex items-center justify-center ${displayPhase === 'READING' ? 'w-16 h-16 md:w-32 md:h-32' : 'w-24 h-24 md:w-48 md:h-48'}`}>
+                            <div className={`relative flex items-center justify-center ${displayPhase === 'READING' ? 'w-24 h-24 md:w-40 md:h-40' : 'w-32 h-32 md:w-56 md:h-56'}`}>
                                 {/* Anillo de Progreso */}
                                 <svg className="absolute inset-0 w-full h-full -rotate-90">
-                                    <circle
-                                        cx="50%" cy="50%" r="45%"
-                                        stroke="white"
-                                        strokeOpacity="0.1"
-                                        strokeWidth="2"
-                                        fill="none"
-                                    />
+                                    <circle cx="50%" cy="50%" r="45%" stroke="white" strokeOpacity="0.1" strokeWidth="2" fill="none" />
                                     <motion.circle
                                         cx="50%" cy="50%" r="45%"
                                         fill="none"
                                         stroke={timeLeft <= 5 ? '#ef4444' : '#ffb700'}
-                                        strokeWidth="3"
-                                        strokeDasharray="100 100"
-                                        initial={{ strokeDashoffset: 100 }}
-                                        animate={{ strokeDashoffset: (timeLeft / (displayPhase === 'READING' ? 15 : 30)) * 100 }}
-                                        transition={{ duration: 1, ease: "linear" }}
+                                        strokeWidth="4"
+                                        strokeDasharray="283"
+                                        initial={{ strokeDashoffset: 283 }}
+                                        animate={{ strokeDashoffset: 283 - (timeLeft / (displayPhase === 'READING' ? 15 : 30)) * 283 }}
                                     />
                                 </svg>
-                                <div className={`font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} ${displayPhase === 'READING' ? 'text-2xl md:text-5xl' : 'text-5xl md:text-9xl'}`}>
+                                <div className={`font-bebas leading-none ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} ${displayPhase === 'READING' ? 'text-4xl md:text-7xl' : 'text-6xl md:text-[8rem]'}`}>
                                     {timeLeft}
                                 </div>
                             </div>
@@ -459,7 +480,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-10 mb-8 px-6">
                                             {activeQuestion.options.map((opt: string, i: number) => {
                                                 const isCorrect = opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer;
                                                 const showAnswer = session?.show_answer;
@@ -569,16 +590,17 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 )}
             </AnimatePresence>
 
-            {/* Bottom Tech Bar */}
-            <div className="relative z-10 p-2 md:p-4 flex justify-center md:justify-between items-center bg-black/60 border-t border-white/5 opacity-40">
-                <div className="hidden md:flex gap-10">
+            {/* Bottom Tech Bar - Pulido v2.9.1 */}
+            <div className="relative z-10 px-8 py-6 flex justify-between items-center bg-black/80 border-t border-white/10 backdrop-blur-md">
+                <div className="flex gap-12 items-center">
                     <div className="flex flex-col">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-white/40">Encryption</span>
-                        <span className="text-[10px] font-mono">ULTRA-LOW-LATENCY-V5</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Operational Link</span>
+                        <span className="text-[12px] font-mono text-blue-400/60 uppercase">Stable Connect // v2.9.1</span>
                     </div>
                 </div>
-                <div className="text-center md:text-right">
-                    <span className="text-[8px] font-black uppercase tracking-[0.5em] text-white/60">© 2026 ARENA TÁCTICA</span>
+                <div className="flex items-center gap-6">
+                    <div className="w-[1px] h-8 bg-white/10 mx-4 hidden md:block" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 italic">© 2026 ARENA TÁCTICA DE ÉLITE</span>
                 </div>
             </div>
         </div>

@@ -161,7 +161,11 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                             showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
                                                             loadNews();
                                                         } else {
-                                                            showAlert({ title: "ERROR", message: "FALLO AL ELIMINAR", type: 'ERROR' });
+                                                            showAlert({
+                                                                title: "FALLO TÁCTICO",
+                                                                message: `ERROR DE PERMISOS: ${res.error || 'Acceso Denegado'}\n\nAplica el parche RLS en Supabase Central.`,
+                                                                type: 'ERROR'
+                                                            });
                                                         }
                                                     }
                                                 });

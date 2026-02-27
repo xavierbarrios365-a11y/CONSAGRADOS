@@ -130,11 +130,8 @@ export default async function handler(req: any, res: any) {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
         const { action, title, message, targetToken } = body || {};
 
-        if (!message) {
-            return res.status(400).json({ error: 'Missing message' });
-        }
-
         if (action === 'telegram') {
+            if (!message) return res.status(400).json({ error: 'Missing message' });
             await sendTelegramNotification(message);
         } else if (action === 'subscribe' && targetToken) {
             const accessToken = await getFcmAccessToken();
@@ -152,6 +149,7 @@ export default async function handler(req: any, res: any) {
             }
             console.log("Token completely subscribed to all_agents:", targetToken);
         } else if (action === 'push') {
+            if (!message) return res.status(400).json({ error: 'Missing message' });
             await sendPushNotification(title || "CONSAGRADOS 2026", message, targetToken);
             // Notificar a Telegram como backup de la notificación Push global
             await sendTelegramNotification(`📢 <b>${(title || "MANDO CENTRAL").toUpperCase()}</b>\n\n${message}`);

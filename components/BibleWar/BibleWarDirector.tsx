@@ -93,6 +93,12 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
     const handleLaunchQuestion = async (q: any) => {
         const usedIds = session?.used_questions || [];
+
+        // Mapeo de puntos por dificultad solicitado por el usuario
+        let points = 5; // Default Medio
+        if (q.difficulty === 'EASY') points = 2;
+        if (q.difficulty === 'HARD') points = 15;
+
         const updates = {
             current_question_id: q.id,
             status: 'ACTIVE' as const,
@@ -103,7 +109,8 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             answer_a: null,
             answer_b: null,
             roulette_category: q.category,
-            used_questions: Array.from(new Set([...usedIds, q.id]))
+            used_questions: Array.from(new Set([...usedIds, q.id])),
+            stakes_xp: points // Asignación automática
         };
         // Actualización optimista
         setSession(prev => prev ? { ...prev, ...updates } : null);
@@ -325,7 +332,8 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             accumulated_pot: 0,
             used_questions: [],
             score_a: 0,
-            score_b: 0
+            score_b: 0,
+            stakes_xp: 5 // Default Medio tras reset
         };
 
         const res = await updateBibleWarSession(updates);
@@ -526,20 +534,17 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                 {/* 2. Control de Stakes */}
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Zap size={16} className="text-[#ffb700]" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">XP en Juego (Stakes)</span>
-                        </div>
-                        <span className="text-xl font-bebas text-[#ffb700]">{session?.stakes_xp || 100} XP</span>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Premio de la Ronda (XP)</label>
+                        <span className="text-[10px] font-black text-[#ffb700] uppercase">{session?.stakes_xp} XP DISPONIBLES</span>
                     </div>
                     <div className="flex gap-2">
-                        {[50, 100, 250, 500].map(val => (
+                        {[2, 5, 15].map(val => (
                             <button
                                 key={val}
                                 onClick={() => handleUpdateStakes(val)}
                                 className={`flex-1 py-3 rounded-xl border text-[10px] font-black tracking-widest transition-all ${session?.stakes_xp === val ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
                             >
-                                {val}
+                                {val} {val === 2 ? 'FÁCIL' : val === 5 ? 'MEDIO' : 'DIFÍCIL'}
                             </button>
                         ))}
                     </div>

@@ -14,6 +14,28 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
     const exportRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0, scale: 0.3 });
+    const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+
+    // Pre-cargar imagen en Base64 para evitar bloqueos de CORS al exportar
+    useEffect(() => {
+        const prepareImage = async () => {
+            if (!agent?.photoUrl) return;
+            const originalUrl = formatDriveUrl(agent.photoUrl);
+            try {
+                const response = await fetch(originalUrl);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setCapturedPhotoUrl(reader.result as string);
+                };
+                reader.readAsDataURL(blob);
+            } catch (err) {
+                console.error("Error al preparar imagen para captura:", err);
+                setCapturedPhotoUrl(originalUrl);
+            }
+        };
+        prepareImage();
+    }, [agent?.photoUrl]);
 
     useEffect(() => {
         const updateScale = () => {
@@ -255,10 +277,9 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                             <div className="mt-auto w-full flex items-center gap-10 bg-white/[0.04] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 shadow-3xl mb-12 shrink-0 transform -translate-y-10">
                                 <div className="relative shrink-0">
                                     <div className="absolute inset-[-12px] border-[4px] border-[#ffb700]/25 rounded-[55px] rotate-3 animate-pulse" />
-                                    {photoUrl ? (
+                                    {capturedPhotoUrl ? (
                                         <img
-                                            src={photoUrl}
-                                            crossOrigin="anonymous"
+                                            src={capturedPhotoUrl}
                                             className="w-[250px] h-[250px] rounded-[45px] object-cover border-4 border-white shadow-2xl relative z-10"
                                             alt="Agent"
                                         />

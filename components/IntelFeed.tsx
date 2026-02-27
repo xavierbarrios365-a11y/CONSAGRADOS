@@ -6,7 +6,7 @@ import {
     GraduationCap, Award, Flame, AlertCircle, Share2
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
-import { fetchNewsFeed } from '../services/sheetsService';
+import { fetchNewsFeedSupabase as fetchNewsFeed } from '../services/supabaseService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
 
@@ -50,7 +50,12 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         setLoading(false);
     };
 
-    useEffect(() => { loadNews(); }, []);
+    useEffect(() => {
+        loadNews();
+        // Latido profesional: Actualizar noticias cada 30 segundos
+        const heartBeat = setInterval(loadNews, 30000);
+        return () => clearInterval(heartBeat);
+    }, []);
 
     if (loading) {
         return (

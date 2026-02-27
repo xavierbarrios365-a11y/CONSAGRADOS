@@ -505,6 +505,9 @@ const App: React.FC = () => {
           `RACHA TÁCTICA: ${res.streak} DÍAS`,
           `¡Agente ${currentUser.name} ha completado su racha de hoy!`
         ).catch(() => { });
+
+        // Forzar sincronización general para refrescar XP y Feed
+        syncData(true);
       }
     } catch (e) {
       console.error("Error sincronizando racha con servidor:", e);

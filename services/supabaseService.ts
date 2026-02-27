@@ -1107,3 +1107,35 @@ export const fetchVisitorRadarSupabase = async (): Promise<any[]> => {
 };
 
 
+/**
+ * @description Obtiene el feed de noticias desde la tabla de actividad asistencia_visitas
+ */
+export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('asistencia_visitas')
+            .select('*')
+            .order('registrado_en', { ascending: false })
+            .limit(50); // Traer las últimas 50 actividades
+
+        if (error) throw error;
+
+        // Mapear de Supabase (snake_case) a NewsFeedItem (camelCase)
+        return (data || []).map(item => ({
+            id: item.id,
+            agentId: item.agent_id,
+            agentName: item.agent_name,
+            type: item.tipo,
+            message: item.detalle,
+            date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).toUpperCase()
+        }));
+    } catch (err) {
+        console.error("Error al obtener NewsFeed de Supabase:", err);
+        return [];
+    }
+};

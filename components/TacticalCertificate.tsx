@@ -23,6 +23,40 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
 }) => {
     const certificateRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+    const [capturedLogoUrl, setCapturedLogoUrl] = useState<string | null>(null);
+
+    // Pre-cargar imágenes en Base64 para evitar bloqueos de CORS al exportar
+    React.useEffect(() => {
+        const prepareImages = async () => {
+            // 1. Preparar Foto Agente
+            if (agent?.photoUrl) {
+                const url = formatDriveUrl(agent.photoUrl);
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onloadend = () => setCapturedPhotoUrl(reader.result as string);
+                    reader.readAsDataURL(blob);
+                } catch (err) {
+                    console.error("Error al preparar foto para certificado:", err);
+                    setCapturedPhotoUrl(url);
+                }
+            }
+
+            // 2. Preparar Logo
+            try {
+                const response = await fetch(OFFICIAL_LOGO);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => setCapturedLogoUrl(reader.result as string);
+                reader.readAsDataURL(blob);
+            } catch (err) {
+                setCapturedLogoUrl(OFFICIAL_LOGO);
+            }
+        };
+        prepareImages();
+    }, [agent?.photoUrl]);
 
     const resolvedName = agentNameProp || agent?.name || 'AGENTE';
     const resolvedCourse = courseTitle || 'OPERACIÓN: TEMPLO BLINDADO';
@@ -230,7 +264,7 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
                         {/* Main content layout */}
                         <div style={{ position: 'absolute', inset: '50px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <img src={OFFICIAL_LOGO} style={{ height: '45px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }} alt="Logo" crossOrigin="anonymous" />
+                                <img src={capturedLogoUrl || OFFICIAL_LOGO} style={{ height: '45px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }} alt="Logo" />
                                 <div>
                                     <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '28px', letterSpacing: '0.5em', color: '#fff', margin: 0, lineHeight: 1, textShadow: '0 0 15px rgba(255,255,255,0.5)' }}>CONSAGRADOS</p>
                                     <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: '10px', color: '#FFB700', letterSpacing: '0.4em', margin: 0, fontWeight: 900 }}>COMMAND CENTER 2026</p>
@@ -274,8 +308,8 @@ const TacticalCertificate: React.FC<TacticalCertificateProps> = ({
                                         boxShadow: '0 0 25px rgba(255,183,0,0.6)',
                                         background: '#000c1a', position: 'relative'
                                     }}>
-                                        {photoUrl ? (
-                                            <img src={photoUrl} crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Agent" />
+                                        {capturedPhotoUrl ? (
+                                            <img src={capturedPhotoUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Agent" />
                                         ) : (
                                             <Shield style={{ width: '100%', height: '100%', padding: '20px', color: 'rgba(255,183,0,0.5)' }} />
                                         )}

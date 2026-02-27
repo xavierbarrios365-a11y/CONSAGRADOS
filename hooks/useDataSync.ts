@@ -2,12 +2,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
 import { INITIAL_AGENTS } from '../mockData';
 import {
-    fetchActiveEvents,
     fetchNotifications,
-    fetchBadges,
-    fetchUserEventConfirmations
+    fetchBadges
 } from '../services/sheetsService';
-import { fetchAgentsFromSupabase, fetchVisitorRadarSupabase as fetchVisitorRadar } from '../services/supabaseService';
+import {
+    fetchAgentsFromSupabase,
+    fetchVisitorRadarSupabase as fetchVisitorRadar,
+    fetchActiveEventsSupabase as fetchActiveEvents,
+    fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations
+} from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);

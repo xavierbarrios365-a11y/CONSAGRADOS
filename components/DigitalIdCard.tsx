@@ -26,6 +26,28 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
   const [exportComplete, setExportComplete] = useState<string | null>(null);
   const [backTab, setBackTab] = useState<'QR' | 'INTEL'>('QR');
   const [completedCourses, setCompletedCourses] = useState<string[]>([]);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+
+  // Pre-cargar imagen en Base64 para evitar bloqueos de CORS al exportar y mostrar
+  React.useEffect(() => {
+    const prepareImage = async () => {
+      if (!agent?.photoUrl) return;
+      const originalUrl = formatDriveUrl(agent.photoUrl);
+      try {
+        const response = await fetch(originalUrl);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setCapturedPhotoUrl(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        console.error("Error al preparar imagen para DigitalIdCard:", err);
+        setCapturedPhotoUrl(originalUrl);
+      }
+    };
+    prepareImage();
+  }, [agent?.photoUrl]);
 
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
@@ -215,7 +237,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
               <div className="relative mb-3">
                 <div className="absolute inset-0 bg-[#ffb700] blur-2xl opacity-10"></div>
                 <img
-                  src={imgError ? "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" : formatDriveUrl(agent.photoUrl)}
+                  src={imgError ? "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" : (capturedPhotoUrl || formatDriveUrl(agent.photoUrl))}
                   alt={agent.name}
                   onError={() => setImgError(true)}
                   className="relative w-32 h-32 rounded-[2.5rem] object-cover border-2 border-[#ffb700]/30 shadow-2xl grayscale hover:grayscale-0 transition-all duration-700 hover:rotate-2"

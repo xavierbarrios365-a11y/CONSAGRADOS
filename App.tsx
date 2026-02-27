@@ -701,7 +701,7 @@ const App: React.FC = () => {
               </div>
 
               {/* Intel Feed - Posición Primaria (v3.0) */}
-              <IntelFeed headlines={headlines} agents={agents} userRole={currentUser?.userRole || UserRole.STUDENT} />
+              <IntelFeed headlines={headlines} agents={agents} userRole={effectiveRole} />
 
               {/* RADAR DE DESERCIÓN RÁPIDO - HOME (PERSONALIZADO POR ROL) */}
               {(() => {

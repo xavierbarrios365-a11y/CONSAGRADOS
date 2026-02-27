@@ -147,10 +147,13 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         key={item.id || idx}
                                         layout
                                         drag={(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) ? "x" : false}
+                                        dragDirectionLock
+                                        dragListener
                                         dragConstraints={{ left: -100, right: 0 }}
                                         dragElastic={0.1}
                                         onDragEnd={(event, info) => {
-                                            if (info.offset.x < -80) {
+                                            // Detección más sensible para móviles (offset o velocidad)
+                                            if (info.offset.x < -60 || info.velocity.x < -500) {
                                                 showAlert({
                                                     title: "ELIMINAR NOTICIA",
                                                     message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
@@ -179,7 +182,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         }}
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         whileHover={{ backgroundColor: "rgba(255, 183, 0, 0.08)" }}
-                                        className="relative p-4 bg-[#001f3f]/40 backdrop-blur-xl border border-white/5 hover:border-[#ffb700]/20 transition-all duration-300 overflow-hidden cursor-grab active:cursor-grabbing"
+                                        className="relative p-4 bg-[#001f3f]/40 backdrop-blur-xl border border-white/5 hover:border-[#ffb700]/20 transition-all duration-300 overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y"
                                     >
                                         {/* Scanline Effect on Hover */}
                                         <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 group-hover:animate-scanline pointer-events-none" />

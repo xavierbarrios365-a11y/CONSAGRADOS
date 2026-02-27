@@ -19,7 +19,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        console.log("🛡️ CARGANDO BIBLE WAR STUDENT v2.1.5 (SYNC-FIX)");
+        console.log("🛡️ CARGANDO BIBLE WAR STUDENT v2.2.0 (ATOMIC-PURGE)");
         loadInitialData();
 
         const sessionChannel = supabase
@@ -94,6 +94,15 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
 
     const handleSessionUpdate = async (newState: BibleWarSession) => {
         if (!newState) return;
+
+        // 🛡️ 1. PURGA ATÓMICA: Si la pregunta cambió, ignoramos cualquier respuesta residual de DB.
+        if (session && newState.current_question_id && newState.current_question_id !== session.current_question_id) {
+            console.warn("⚠️ NUEVA RONDA: PURGANDO ESTADOS LOCALES.");
+            newState.answer_a = null;
+            newState.answer_b = null;
+            setSelectedOption(null);
+        }
+
         setSession(newState);
 
         // Reset local si el status cambió a WAITING o SPINNING
@@ -144,7 +153,8 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
             };
         });
 
-        const res = await submitBibleWarAnswer(myTeam, option);
+        // Aseguramos pasar el ID actual para evitar escrituras tardías en rondas nuevas
+        const res = await submitBibleWarAnswer(myTeam, option, session.current_question_id || '');
         if (!res.success) {
             alert("Error enviando respuesta.");
             setSelectedOption(null);

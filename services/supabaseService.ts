@@ -1255,7 +1255,7 @@ export const updateBibleWarSession = async (updates: any): Promise<{ success: bo
     }
 };
 
-export const submitBibleWarAnswer = async (team: 'A' | 'B', answer: string): Promise<{ success: boolean; error?: string }> => {
+export const submitBibleWarAnswer = async (team: 'A' | 'B', answer: string, currentQuestionId: string): Promise<{ success: boolean; error?: string }> => {
     try {
         const updates: any = {};
         if (team === 'A') updates.answer_a = answer;
@@ -1264,7 +1264,8 @@ export const submitBibleWarAnswer = async (team: 'A' | 'B', answer: string): Pro
         const { error } = await supabase
             .from('bible_war_sessions')
             .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', '00000000-0000-0000-0000-000000000001');
+            .eq('id', '00000000-0000-0000-0000-000000000001')
+            .eq('current_question_id', currentQuestionId); // 🛡️ Protección Atómica: Solo actualiza si la pregunta no ha cambiado
 
         if (error) throw error;
         return { success: true };

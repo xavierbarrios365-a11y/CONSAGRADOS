@@ -147,6 +147,9 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         const q = questions.find(qu => qu.id === session.current_question_id);
         if (!q) return;
 
+        const ansA = session.answer_a;
+        const ansB = session.answer_b;
+
         if (!ansA && !ansB) {
             alert("⚠️ Nadie ha respondido. No se puede resolver.");
             return;

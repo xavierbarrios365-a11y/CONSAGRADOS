@@ -107,6 +107,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
         const res = await updateBibleWarSession(updates);
         if (res.success) {
+            // Incluir el objeto completo de la pregunta para que los estudiantes no tengan que recargarla
             broadcastAction('LAUNCH_QUESTION', { question: q });
         } else {
             alert("Error al lanzar pregunta. Verifica la consola.");

@@ -21,15 +21,27 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     useEffect(() => {
         loadInitialData();
 
-        const dbChannel = supabase
-            .channel('bible_war_student_db')
+        const sessionChannel = supabase
+            .channel('bible_war_student_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_sessions' }, (payload) => {
                 handleSessionUpdate(payload.new as BibleWarSession);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_groups' }, () => {
+                // Re-cargar grupos si hay cambios para detectar mi equipo
+                loadInitialData();
+            })
+            .on('broadcast', { event: 'LAUNCH_QUESTION' }, (payload) => {
+                if (payload.payload.question) {
+                    setActiveQuestion(payload.payload.question);
+                    setSelectedOption(null);
+                    // Asegurar que el estado local de la sesión refleje que está activa
+                    setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: payload.payload.question.id, answer_a: null, answer_b: null } : null);
+                }
             })
             .subscribe();
 
         return () => {
-            supabase.removeChannel(dbChannel);
+            supabase.removeChannel(sessionChannel);
         };
     }, []);
 
@@ -39,9 +51,12 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
             fetchBibleWarGroups()
         ]);
 
-        const myGroup = groupsData.find(g => g.agent_id === currentUser.id);
+        const currentIdStr = String(currentUser.id).trim().toLowerCase();
+        const myGroup = groupsData.find(g => String(g.agent_id).trim().toLowerCase() === currentIdStr);
         if (myGroup) {
             setMyTeam(myGroup.team);
+        } else {
+            setMyTeam(null);
         }
 
         handleSessionUpdate(sessionData);
@@ -109,9 +124,16 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
         return (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-[#000814] text-white space-y-4">
                 <Shield size={64} className="text-white/20 mb-4" />
-                <h2 className="text-3xl font-bebas tracking-widest">FUERA DE COMBATE</h2>
-                <p className="text-[10px] uppercase font-black tracking-widest text-[#ffb700]">No estás asignado a ningún Escuadrón (Alfa/Bravo).</p>
-                <button onClick={onClose} className="mt-8 px-6 py-3 bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest">Regresar a Base</button>
+                <h2 className="text-3xl font-bebas tracking-widest text-blue-400">AGENTE DETECTADO</h2>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                    <p className="text-[10px] font-black uppercase text-white/60">ID: {currentUser.id}</p>
+                    <p className="text-lg font-bebas">{currentUser.name}</p>
+                </div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-[#ffb700] max-w-xs">Esperando despliegue de Escuadrón por parte del Comando...</p>
+                <div className="pt-10">
+                    <div className="w-8 h-8 border-2 border-t-[#ffb700] border-transparent rounded-full animate-spin mx-auto" />
+                </div>
+                <button onClick={onClose} className="mt-8 px-6 py-3 bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-50">Cancelar</button>
             </div>
         );
     }

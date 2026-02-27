@@ -69,16 +69,16 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             .on('broadcast', { event: 'TIMER_END' }, (envelope) => {
                 console.log('⚡ Director: TIMER_END', envelope.payload);
                 if (envelope.payload?.phase === 'BATTLE') {
-                    // Esperar 3s para que el display revele y luego resolver
-                    console.log("⏰ El tiempo terminó en el display. Resolviendo en 3s...");
-                    setTimeout(handleAutoResolve, 3000);
+                    // Resolución rápida v3.2
+                    console.log("⏰ El tiempo terminó. Resolviendo automáticamente...");
+                    setTimeout(handleAutoResolve, 500);
                 }
             })
             .on('broadcast', { event: 'BOTH_ANSWERED' }, (envelope) => {
                 console.log('⚡ Director: BOTH_ANSWERED', envelope.payload);
-                // Esperar 3s para que los alumnos vean el revelado y luego resolver
-                console.log("🎯 Ambos respondieron. Resolviendo en 3s...");
-                setTimeout(handleAutoResolve, 3000);
+                // Resolución rápida v3.2
+                console.log("🎯 Ambos respondieron. Resolviendo automáticamente...");
+                setTimeout(handleAutoResolve, 500);
             })
             .subscribe((status) => {
                 console.log("📡 Subscripción Broadcast:", status);
@@ -181,8 +181,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         const ansB = session.answer_b;
 
         if (!ansA && !ansB) {
-            alert("⚠️ Nadie ha respondido. No se puede resolver.");
-            return;
+            console.log("⚠️ Nadie respondió. Resolviendo como derrota general (NONE).");
         }
 
         const isACorrect = ansA && (ansA === q.correct_answer || ansA === (q as any).correctAnswer);

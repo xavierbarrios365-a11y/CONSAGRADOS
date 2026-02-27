@@ -489,7 +489,7 @@ const App: React.FC = () => {
 
     try {
       console.log("🔥 Sincronizando racha con Supabase...");
-      const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name);
+      const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference);
       if (res.success && res.streak !== undefined) {
         // Siempre confiar en el valor del servidor (es la fuente de verdad)
         const serverUser = {

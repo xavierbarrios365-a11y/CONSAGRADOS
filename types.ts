@@ -180,6 +180,8 @@ export interface NewsFeedItem {
   date: string;
   agentId?: string;
   agentName?: string;
+  verse?: string;
+  reference?: string;
 }
 
 export interface Badge {

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Agent, NewsFeedItem } from '../types';
-import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield } from 'lucide-react';
+import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -147,7 +147,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
                 await navigator.share({
                     title: 'Consagrados 2026',
-                    text: newsItem?.message || '¡Nivel superado!',
+                    text: newsItem?.verse ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}` : (newsItem?.message || '¡Nivel superado!'),
                     files: [file],
                 });
             } else {
@@ -262,7 +262,23 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                                 <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-10 rounded-[40px] relative overflow-hidden">
                                     <div className="absolute left-0 top-0 bottom-0 w-3 bg-[#ffb700]" />
                                     <div className="relative z-10">
-                                        <p className="text-[38px] font-black text-white uppercase leading-[1.3] tracking-tight whitespace-pre-wrap">
+                                        {newsItem?.verse && (
+                                            <div className="mb-8 border-b border-white/5 pb-8">
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <Quote size={24} className="text-[#ffb700]" />
+                                                    <span className="text-[18px] font-black text-[#ffb700] uppercase tracking-[0.4em] font-montserrat">Mensaje del Día</span>
+                                                </div>
+                                                <p className="text-[42px] font-black text-white italic leading-tight mb-4 whitespace-pre-wrap">
+                                                    "{newsItem.verse}"
+                                                </p>
+                                                {newsItem.reference && (
+                                                    <p className="text-[20px] font-black text-[#ffb700] uppercase tracking-[0.2em]">
+                                                        — {newsItem.reference}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                        <p className={`${newsItem?.verse ? 'text-[32px]' : 'text-[38px]'} font-black text-white uppercase leading-[1.3] tracking-tight whitespace-pre-wrap`}>
                                             "{newsItem?.message || 'LOGRO OPERATIVO RECONOCIDO POR SUPERIORIDAD'}"
                                         </p>
                                         <div className="flex items-center gap-6 mt-6">

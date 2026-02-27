@@ -10,11 +10,24 @@ interface TacticalRankingProps {
     currentUser: Agent | null;
 }
 
-// Verifica si un agente cumple los requisitos de XP para su próximo rango
-const isAptoParaAscenso = (agent: Agent): boolean => {
+// Estados de promoción
+const PROMOTION_STATUS = {
+    APTO: 'APTO',
+    PROXIMAMENTE: 'PROXIMAMENTE',
+    NONE: 'NONE'
+};
+
+const getPromotionStatus = (agent: Agent): string => {
     const rule = PROMOTION_RULES[agent.rank?.toUpperCase() || ''];
-    if (!rule) return false; // Ya es Líder o rango desconocido
-    return agent.xp >= rule.requiredXp;
+    if (!rule) return PROMOTION_STATUS.NONE;
+
+    // Si tiene el XP requerido, es APTO
+    if (agent.xp >= rule.requiredXp) return PROMOTION_STATUS.APTO;
+
+    // Si está al 90% del XP requerido, está CERCA
+    if (agent.xp >= rule.requiredXp * 0.9) return PROMOTION_STATUS.PROXIMAMENTE;
+
+    return PROMOTION_STATUS.NONE;
 };
 
 const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }) => {
@@ -27,7 +40,6 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         if (activeCategory === 'LEADERS') {
             return a.role === 'LIDER' || a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
         } else {
-            // Agrupar por RANGO REAL, no por XP calculado
             const agentRank = (a.rank || 'RECLUTA').toUpperCase();
             return agentRank === activeTier && (a.userRole === UserRole.STUDENT || !a.userRole);
         }
@@ -37,7 +49,9 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         .sort((a, b) => b.xp - a.xp)
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
-    // --- POSITION CHANGE TRACKING ---
+    // --- POSITION CHANGE TRACKING (ESTABILIZADO) ---
+    // Usamos un snapshot que solo se actualiza cuando el usuario cambia de categoría o cada X tiempo,
+    // para que los cambios de posición sean visibles por más tiempo.
     const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>(() => {
         try {
             const saved = localStorage.getItem(`ranking_snapshot_${activeCategory}_${activeTier}`);
@@ -45,17 +59,17 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
         } catch { return {}; }
     });
 
+    // Solo actualizar el snapshot si está vacío o si cambiamos de vista
     React.useEffect(() => {
-        if (sortedAgents.length > 0) {
+        const key = `ranking_snapshot_${activeCategory}_${activeTier}`;
+        const saved = localStorage.getItem(key);
+        if (!saved && sortedAgents.length > 0) {
             const currentRanks: Record<string, number> = {};
             sortedAgents.forEach((a, idx) => { currentRanks[a.id] = idx + 1; });
-
-            if (Object.keys(snapshotRanks).length === 0) {
-                setSnapshotRanks(currentRanks);
-                localStorage.setItem(`ranking_snapshot_${activeCategory}_${activeTier}`, JSON.stringify(currentRanks));
-            }
+            setSnapshotRanks(currentRanks);
+            localStorage.setItem(key, JSON.stringify(currentRanks));
         }
-    }, [sortedAgents, activeCategory, activeTier, snapshotRanks]);
+    }, [activeCategory, activeTier, sortedAgents.length]);
 
     const getPositionChange = (agentId: string, currentPos: number): number => {
         const oldPos = snapshotRanks[agentId];
@@ -65,13 +79,13 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
 
     const RankingIndicator = ({ change }: { change: number }) => {
         if (change > 0) return (
-            <div className="flex border-emerald-500/20 bg-emerald-500/10 px-1 rounded flex-col items-center">
+            <div className="flex border-emerald-500/20 bg-emerald-500/10 px-1 rounded flex-col items-center animate-in fade-in slide-in-from-bottom-1">
                 <ChevronUp size={10} className="text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
                 <span className="text-[6px] font-black text-emerald-400 leading-none">+{change}</span>
             </div>
         );
         if (change < 0) return (
-            <div className="flex border-red-500/20 bg-red-500/10 px-1 rounded flex-col items-center">
+            <div className="flex border-red-500/20 bg-red-500/10 px-1 rounded flex-col items-center animate-in fade-in slide-in-from-top-1">
                 <ChevronDown size={10} className="text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
                 <span className="text-[6px] font-black text-red-400 leading-none">{change}</span>
             </div>
@@ -200,9 +214,14 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         <span className="font-bebas text-lg md:text-3xl font-black leading-none">1</span>
                                         <RankingIndicator change={getPositionChange(topThree[0].id, 1)} />
                                     </div>
-                                    {isAptoParaAscenso(topThree[0]) && (
-                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-500 text-[#001f3f] text-[7px] md:text-[9px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-[#001f3f] animate-bounce z-20 whitespace-nowrap">
+                                    {getPromotionStatus(topThree[0]) === PROMOTION_STATUS.APTO && (
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-emerald-500 text-[#001f3f] text-[7px] md:text-[9px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-[#001f3f] animate-bounce z-20 whitespace-nowrap">
                                             APTO PARA ASCENSO
+                                        </div>
+                                    )}
+                                    {getPromotionStatus(topThree[0]) === PROMOTION_STATUS.PROXIMAMENTE && (
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[7px] md:text-[9px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-[#001f3f] animate-pulse z-20 whitespace-nowrap">
+                                            PRÓXIMAMENTE
                                         </div>
                                     )}
                                 </div>
@@ -311,10 +330,15 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                                             <div className="min-w-0">
                                                                 <div className="flex items-center gap-2">
                                                                     <p className="text-[10px] md:text-[11px] font-black text-white uppercase truncate max-w-[120px] md:max-w-none">{agent.name}</p>
-                                                                    {isAptoParaAscenso(agent) && (
+                                                                    {getPromotionStatus(agent) === PROMOTION_STATUS.APTO && (
                                                                         <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest animate-pulse">
                                                                             <ArrowUpCircle size={8} />
                                                                             APTO
+                                                                        </span>
+                                                                    )}
+                                                                    {getPromotionStatus(agent) === PROMOTION_STATUS.PROXIMAMENTE && (
+                                                                        <span className="inline-flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 text-blue-400 px-2 py-0.5 rounded-full text-[6px] md:text-[7px] font-black uppercase tracking-widest">
+                                                                            PRÓXIMO
                                                                         </span>
                                                                     )}
                                                                 </div>

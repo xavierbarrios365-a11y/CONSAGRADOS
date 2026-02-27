@@ -164,8 +164,17 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     return { current: currentRank, next: nextRank, target: targetXp };
   };
 
-  const levelInfo = getLevelInfo(agent.xp);
-  const isProspectoAscender = agent.xp >= levelInfo.target - 50 && agent.xp < levelInfo.target;
+  const getPromotionStatus = (a: Agent): 'APTO' | 'PROXIMAMENTE' | 'NONE' => {
+    const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
+    if (!rule) return 'NONE';
+    if (a.xp >= rule.requiredXp) return 'APTO';
+    if (a.xp >= rule.requiredXp * 0.9) return 'PROXIMAMENTE';
+    return 'NONE';
+  };
+
+  const currentPromotionStatus = getPromotionStatus(agent);
+  const isProspectoAscender = currentPromotionStatus === 'PROXIMAMENTE';
+  const isAptoTotal = currentPromotionStatus === 'APTO';
 
   const handleBroadcast = async () => {
     if (!broadcastData.title || !broadcastData.message) return;
@@ -630,69 +639,126 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         {userRole === UserRole.DIRECTOR && (() => {
           const aptosAgents = agents.filter(a => {
             if (a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR) return false;
-            const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
-            if (!rule) return false;
-            return a.xp >= rule.requiredXp;
+            return getPromotionStatus(a) === 'APTO';
           });
 
-          if (aptosAgents.length === 0) return null;
+          const proximosAgents = agents.filter(a => {
+            if (a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR) return false;
+            return getPromotionStatus(a) === 'PROXIMAMENTE';
+          });
+
+          if (aptosAgents.length === 0 && proximosAgents.length === 0) return null;
 
           return (
             <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-3xl p-4 mb-3 backdrop-blur-md space-y-3 animate-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+                  <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                     <ArrowUpCircle className="text-emerald-400" size={20} />
                   </div>
                   <div>
                     <h3 className="text-white font-black text-sm uppercase tracking-widest leading-none mb-1 font-bebas">Radar de Ascenso</h3>
                     <p className="text-[9px] text-emerald-400/80 font-bold uppercase tracking-[0.2em] font-montserrat">
-                      {aptosAgents.length} agente{aptosAgents.length > 1 ? 's' : ''} listo{aptosAgents.length > 1 ? 's' : ''} para examen de ascenso
+                      {aptosAgents.length} APTOS // {proximosAgents.length} PRÓXIMAMENTE
                     </p>
                   </div>
                 </div>
-                <span className="bg-emerald-500 text-[#001f3f] font-black text-lg px-3 py-1 rounded-xl font-bebas">{aptosAgents.length}</span>
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-500 text-[#001f3f] font-black text-lg px-3 py-1 rounded-xl font-bebas">{aptosAgents.length}</span>
+                  {proximosAgents.length > 0 && <span className="bg-blue-600 text-white font-black text-xs px-2 py-1 rounded-lg font-bebas">{proximosAgents.length}</span>}
+                </div>
               </div>
 
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                {aptosAgents.map(a => {
-                  const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
-                  return (
-                    <div
-                      key={a.id}
-                      className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-emerald-500/10 hover:border-emerald-500/30 transition-all group cursor-pointer"
-                      onClick={() => {
-                        setSelectedAgentId(a.id);
-                        window.scrollTo({ top: 600, behavior: 'smooth' });
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={formatDriveUrl(a.photoUrl)}
-                          className="w-10 h-10 rounded-xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
-                          onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
-                        />
-                        <div>
-                          <p className="text-[11px] font-black text-white uppercase tracking-wider font-bebas">{a.name}</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-bold text-white/40 uppercase">{a.rank || 'RECLUTA'}</span>
-                            <ChevronRight size={8} className="text-emerald-400" />
-                            <span className="text-[8px] font-bold text-emerald-400 uppercase">{rule?.nextRank}</span>
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                {/* APTOS */}
+                {aptosAgents.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[7px] text-emerald-500/60 font-black uppercase tracking-[0.3em] mb-1">Listos para Acción</p>
+                    {aptosAgents.map(a => {
+                      const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
+                      return (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 transition-all group cursor-pointer"
+                          onClick={() => {
+                            setSelectedAgentId(a.id);
+                            window.scrollTo({ top: 600, behavior: 'smooth' });
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={formatDriveUrl(a.photoUrl)}
+                              className="w-10 h-10 rounded-xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
+                              onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                            />
+                            <div>
+                              <p className="text-[11px] font-black text-white uppercase tracking-wider font-bebas">{a.name}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-bold text-white/40 uppercase">{a.rank || 'RECLUTA'}</span>
+                                <ChevronRight size={8} className="text-emerald-400" />
+                                <span className="text-[8px] font-bold text-emerald-400 uppercase">{rule?.nextRank}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-[10px] font-black text-[#ffb700] font-bebas">{a.xp} XP</p>
+                              <p className="text-[7px] text-white/30 font-bold uppercase">Meta: {rule?.requiredXp}</p>
+                            </div>
+                            <div className="bg-emerald-500/20 border border-emerald-500/30 p-2 rounded-lg">
+                              <ArrowUpCircle size={14} className="text-emerald-400" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-[10px] font-black text-[#ffb700] font-bebas">{a.xp} XP</p>
-                          <p className="text-[7px] text-white/30 font-bold uppercase">Req: {rule?.requiredXp} XP</p>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* PROXIMAMENTE */}
+                {proximosAgents.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[7px] text-blue-500/60 font-black uppercase tracking-[0.3em] mb-1">Próximos al Punto Crítico</p>
+                    {proximosAgents.map(a => {
+                      const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
+                      return (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between bg-blue-600/5 p-3 rounded-xl border border-blue-500/10 hover:border-blue-500/30 transition-all group cursor-pointer"
+                          onClick={() => {
+                            setSelectedAgentId(a.id);
+                            window.scrollTo({ top: 600, behavior: 'smooth' });
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={formatDriveUrl(a.photoUrl)}
+                              className="w-10 h-10 rounded-xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all opacity-60"
+                              onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                            />
+                            <div>
+                              <p className="text-[11px] font-black text-white/80 uppercase tracking-wider font-bebas">{a.name}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-bold text-white/30 uppercase">{a.rank || 'RECLUTA'}</span>
+                                <ChevronRight size={8} className="text-blue-400/50" />
+                                <span className="text-[8px] font-bold text-blue-400/50 uppercase">{rule?.nextRank}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-[10px] font-black text-blue-400 font-bebas">{a.xp} XP</p>
+                              <p className="text-[7px] text-white/20 font-bold uppercase">Faltan: {rule ? rule.requiredXp - a.xp : 0}</p>
+                            </div>
+                            <div className="bg-blue-600/10 border border-blue-500/20 p-2 rounded-lg">
+                              <Target size={14} className="text-blue-400" />
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-emerald-500/20 border border-emerald-500/30 p-2 rounded-lg">
-                          <ArrowUpCircle size={14} className="text-emerald-400" />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <p className="text-[8px] text-emerald-400/40 font-bold uppercase tracking-widest text-center mt-2">
@@ -819,16 +885,18 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
                   </div>
                   {(() => {
-                    const rule = PROMOTION_RULES[(agent.rank || 'RECLUTA').toUpperCase()];
-                    const isApto = rule && agent.xp >= rule.requiredXp;
-                    if (isApto) return (
-                      <div className="mt-2 bg-green-500 text-[#001f3f] font-black text-[10px] px-4 py-1.5 rounded-full animate-bounce shadow-lg shadow-green-900/40 font-bebas flex items-center gap-2">
+                    const status = getPromotionStatus(agent);
+                    if (status === 'APTO') return (
+                      <div className="mt-2 bg-emerald-500 text-[#001f3f] font-black text-[10px] px-4 py-1.5 rounded-full animate-bounce shadow-lg shadow-emerald-900/40 font-bebas flex items-center gap-2">
                         <ArrowUpCircle size={12} />
                         APTO PARA ASCENSO
                       </div>
                     );
-                    if (isProspectoAscender) return (
-                      <p className="text-[8px] text-orange-400 font-black uppercase tracking-widest animate-pulse mt-2">Faltan {levelInfo.target - agent.xp} XP para examen</p>
+                    if (status === 'PROXIMAMENTE') return (
+                      <div className="mt-2 bg-blue-600 text-white font-black text-[10px] px-4 py-1.5 rounded-full animate-pulse shadow-lg shadow-blue-900/40 font-bebas flex items-center gap-2 uppercase tracking-widest">
+                        <Target size={12} />
+                        Próximamente al Ascenso
+                      </div>
                     );
                     return null;
                   })()}

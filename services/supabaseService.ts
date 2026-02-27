@@ -195,7 +195,7 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
 /**
  * @description Actualiza la racha de un agente en Supabase
  */
-export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
+export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
     try {
         const { data: currentData, error: fetchError } = await supabase
             .from('agentes')
@@ -226,12 +226,18 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
 
         // Generar noticia de racha
         try {
+            let detalle = `Ha alcanzado una racha de ${newStreak} días consecutivos.`;
+            if (verseText) {
+                detalle += ` [VERSE]: ${verseText}`;
+                if (verseRef) detalle += ` [REF]: ${verseRef}`;
+            }
+
             await supabase.from('asistencia_visitas').insert({
                 id: `NEWS-${Date.now()}`,
                 agent_id: agentId,
                 agent_name: agentName || 'Agente',
                 tipo: 'RACHA',
-                detalle: `Ha alcanzado una racha de ${newStreak} días consecutivos.`,
+                detalle: detalle,
                 registrado_en: now.toISOString()
             });
         } catch (e) {
@@ -1121,19 +1127,41 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
         if (error) throw error;
 
         // Mapear de Supabase (snake_case) a NewsFeedItem (camelCase)
-        return (data || []).map(item => ({
-            id: item.id,
-            agentId: item.agent_id,
-            agentName: item.agent_name,
-            type: item.tipo,
-            message: item.detalle,
-            date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-            }).toUpperCase()
-        }));
+        return (data || []).map(item => {
+            let message = item.detalle || '';
+            let verse = undefined;
+            let reference = undefined;
+
+            if (message.includes('[VERSE]:')) {
+                const parts = message.split(' [VERSE]: ');
+                message = parts[0];
+                if (parts[1]) {
+                    if (parts[1].includes(' [REF]: ')) {
+                        const refParts = parts[1].split(' [REF]: ');
+                        verse = refParts[0];
+                        reference = refParts[1];
+                    } else {
+                        verse = parts[1];
+                    }
+                }
+            }
+
+            return {
+                id: item.id,
+                agentId: item.agent_id,
+                agentName: item.agent_name,
+                type: item.tipo,
+                message: message,
+                verse: verse,
+                reference: reference,
+                date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).toUpperCase()
+            };
+        });
     } catch (err) {
         console.error("Error al obtener NewsFeed de Supabase:", err);
         return [];

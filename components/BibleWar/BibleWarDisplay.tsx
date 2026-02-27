@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { fetchBibleWarSession, fetchBibleWarQuestions } from '../../services/supabaseService';
+import { formatDriveUrl } from '../../services/storageUtils';
 import { BibleWarSession, Agent } from '../../types';
 
 interface BibleWarDisplayProps {
@@ -284,7 +285,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 <motion.div animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-blue-900/40 p-4 rounded-2xl border border-blue-500/30 shadow-2xl overflow-hidden min-w-0">
                     <div className="w-16 h-16 md:w-24 md:h-24 shrink-0 relative">
                         {gladiators.a?.photoUrl ? (
-                            <img src={gladiators.a.photoUrl} className="w-full h-full object-cover rounded-2xl border-2 border-blue-400/50 shadow-[0_0_40px_rgba(37,99,235,0.5)]" />
+                            <img src={formatDriveUrl(gladiators.a.photoUrl)} className="w-full h-full object-cover rounded-2xl border-2 border-blue-400/50 shadow-[0_0_40px_rgba(37,99,235,0.5)]" />
                         ) : (
                             <div className="w-full h-full bg-blue-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.5)]">
                                 <Shield size={40} className="text-white" />
@@ -315,7 +316,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 <motion.div animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-teal-900/40 p-4 rounded-2xl border border-teal-500/30 shadow-2xl flex-row-reverse text-right overflow-hidden min-w-0">
                     <div className="w-16 h-16 md:w-24 md:h-24 shrink-0 relative">
                         {gladiators.b?.photoUrl ? (
-                            <img src={gladiators.b.photoUrl} className="w-full h-full object-cover rounded-2xl border-2 border-teal-400/50 shadow-[0_0_40px_rgba(20,184,166,0.5)]" />
+                            <img src={formatDriveUrl(gladiators.b.photoUrl)} className="w-full h-full object-cover rounded-2xl border-2 border-teal-400/50 shadow-[0_0_40px_rgba(20,184,166,0.5)]" />
                         ) : (
                             <div className="w-full h-full bg-teal-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(20,184,166,0.5)]">
                                 <Target size={40} className="text-white" />

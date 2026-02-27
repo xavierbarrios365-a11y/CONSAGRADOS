@@ -28,22 +28,38 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Motor de Audio v2.6 + Debug v2.7.2
-    const playSound = (effect: string) => {
+    // Motor de Audio v2.8 (Gestión de Instancia Única)
+    const playSound = (effect: string, loop: boolean = false) => {
         try {
+            // Detener sonido previo si existe
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
+
             const audioPath = `/sounds/bible-war/${effect}.mp3`;
             const audio = new Audio(audioPath);
             audio.volume = 0.6;
+            audio.loop = loop;
+            audioRef.current = audio;
+
             audio.play()
                 .then(() => console.log(`✅ Sonando: ${effect}`))
                 .catch(e => {
-                    console.error(`❌ Error de reproducción (${effect}):`, e);
                     if (e.name === 'NotAllowedError') {
                         console.warn("⚠️ Interacción requerida para audio.");
                     }
                 });
         } catch (e) {
-            console.error("Audio constructor error:", e);
+            console.error("Audio error:", e);
+        }
+    };
+
+    const stopSound = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current = null;
         }
     };
 
@@ -85,7 +101,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
                     // Iniciar Secuencia Cineatográfica v2.6
                     setDisplayPhase('READING');
-                    playSound('reading_pulse');
+                    playSound('reading_pulse', true); // Loop sutil mientras leen
                     startLocalTimer(15, 'READING');
                 }
             })
@@ -109,8 +125,10 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 startLocalTimer(envelope.payload?.seconds);
             })
             .on('broadcast', { event: 'RESET' }, () => {
+                stopSound();
                 loadSession();
                 setActiveQuestion(null);
+                setDisplayPhase('IDLE');
             })
             .on('broadcast', { event: 'FORCE_RELOAD' }, () => {
                 window.location.reload();
@@ -172,6 +190,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                     // Transición Automática de Fase
                     if (phase === 'READING') {
                         setDisplayPhase('BATTLE');
+                        stopSound(); // Detener el pulso de lectura
                         playSound('battle_transition');
                         startLocalTimer(30, 'BATTLE');
                     } else {
@@ -302,37 +321,37 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
             {/* Main Stage: Roulette or Question */}
             <div className="relative flex-1 flex flex-col items-center justify-center p-2 md:p-6 z-10 w-full">
-                {/* Temporizador HUD Dinámico (v2.7.1 - Repocisionado) */}
+                {/* Temporizador HUD Dinámico (v2.8 - Optimizado) */}
                 <AnimatePresence>
-                    {timeLeft > 0 && (
+                    {timeLeft > 0 && session?.status === 'ACTIVE' && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.8, y: -20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 2, filter: 'blur(20px)' }}
-                            className={`absolute z-[100] ${displayPhase === 'READING' ? 'top-10 right-10 md:top-20 md:right-12' : 'bottom-10 right-10 md:bottom-20 md:right-12'} pointer-events-none`}
+                            exit={{ opacity: 0, scale: 1.5, filter: 'blur(20px)' }}
+                            className={`absolute z-[100] ${displayPhase === 'READING' ? 'top-6 right-6 md:top-8 md:right-8 opacity-60' : 'bottom-10 right-10 md:bottom-20 md:right-12'} pointer-events-none transition-all duration-1000`}
                         >
-                            <div className={`relative flex items-center justify-center ${displayPhase === 'READING' ? 'w-24 h-24 md:w-48 md:h-48' : 'w-20 h-20 md:w-40 md:h-40'}`}>
+                            <div className={`relative flex items-center justify-center ${displayPhase === 'READING' ? 'w-16 h-16 md:w-32 md:h-32' : 'w-24 h-24 md:w-48 md:h-48'}`}>
                                 {/* Anillo de Progreso */}
                                 <svg className="absolute inset-0 w-full h-full -rotate-90">
                                     <circle
-                                        cx="50%" cy="50%" r="48%"
+                                        cx="50%" cy="50%" r="45%"
                                         stroke="white"
-                                        strokeOpacity="0.05"
-                                        strokeWidth="4"
+                                        strokeOpacity="0.1"
+                                        strokeWidth="2"
                                         fill="none"
                                     />
                                     <motion.circle
-                                        cx="50%" cy="50%" r="48%"
+                                        cx="50%" cy="50%" r="45%"
                                         fill="none"
                                         stroke={timeLeft <= 5 ? '#ef4444' : '#ffb700'}
-                                        strokeWidth="4"
+                                        strokeWidth="3"
                                         strokeDasharray="100 100"
                                         initial={{ strokeDashoffset: 100 }}
                                         animate={{ strokeDashoffset: (timeLeft / (displayPhase === 'READING' ? 15 : 30)) * 100 }}
                                         transition={{ duration: 1, ease: "linear" }}
                                     />
                                 </svg>
-                                <div className={`font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] ${displayPhase === 'READING' ? 'text-5xl md:text-8xl' : 'text-5xl md:text-8xl'}`}>
+                                <div className={`font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} ${displayPhase === 'READING' ? 'text-2xl md:text-5xl' : 'text-5xl md:text-9xl'}`}>
                                     {timeLeft}
                                 </div>
                             </div>

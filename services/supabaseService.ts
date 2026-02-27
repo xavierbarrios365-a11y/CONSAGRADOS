@@ -1410,8 +1410,9 @@ export const importBibleWarQuestions = async (questions: any[]): Promise<{ succe
             difficulty: q.difficulty,
             question: q.question,
             options: q.options,
-            correct_answer: q.correctAnswer,
-            reference: q.reference
+            correct_answer: q.correctAnswer || q.correct_answer,
+            reference: q.reference,
+            image_url: q.image_url || q.imageUrl
         }));
 
         const { error } = await supabase

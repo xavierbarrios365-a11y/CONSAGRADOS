@@ -196,6 +196,18 @@ export interface Badge {
   value: number;
 }
 
+export interface BibleWarQuestion {
+  id: string;
+  category: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  question: string;
+  options: string[];
+  correct_answer: string;
+  reference?: string;
+  image_url?: string;
+  created_at?: string;
+}
+
 export interface BibleWarSession {
   id: string;
   status: 'WAITING' | 'ACTIVE' | 'SPINNING' | 'RESOLVED' | 'FINISHED';
@@ -213,5 +225,6 @@ export interface BibleWarSession {
   timer_status?: 'RUNNING' | 'STOPPED';
   timer_end_at?: string | null;
   last_coin_flip?: string | null;
+  used_questions?: string[];
 }
 

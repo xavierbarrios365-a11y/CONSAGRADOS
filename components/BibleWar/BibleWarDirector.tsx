@@ -92,6 +92,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     };
 
     const handleLaunchQuestion = async (q: any) => {
+        const usedIds = session?.used_questions || [];
         const updates = {
             current_question_id: q.id,
             status: 'ACTIVE' as const,
@@ -101,7 +102,8 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             timer_end_at: null,
             answer_a: null,
             answer_b: null,
-            roulette_category: q.category // Mantener la categoría visible
+            roulette_category: q.category,
+            used_questions: Array.from(new Set([...usedIds, q.id]))
         };
         // Actualización optimista
         setSession(prev => prev ? { ...prev, ...updates } : null);
@@ -114,6 +116,21 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             console.error("Error al lanzar pregunta:", res.error);
             alert("Error al lanzar pregunta. Reintentando...");
             loadSession();
+        }
+    };
+
+    const handleResetScores = async () => {
+        if (!window.confirm("🏆 ¿Seguro que quieres poner a CERO los marcadores de ambos equipos?")) return;
+
+        const updates = {
+            score_a: 0,
+            score_b: 0
+        };
+
+        const res = await updateBibleWarSession(updates);
+        if (res.success) {
+            loadSession();
+            alert("✅ Marcadores reiniciados.");
         }
     };
 
@@ -155,8 +172,9 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             return;
         }
 
-        const isACorrect = ansA && (ansA === q.correctAnswer || ansA === q.correct_answer);
-        const isBCorrect = ansB && (ansB === q.correctAnswer || ansB === q.correct_answer);
+        // 🛡️ Unificación Definitiva de Validación (v2.3)
+        const isACorrect = ansA && (ansA === q.correct_answer || ansA === (q as any).correctAnswer);
+        const isBCorrect = ansB && (ansB === q.correct_answer || ansB === (q as any).correctAnswer);
 
         let winner: 'A' | 'B' | 'NONE' | 'TIE' = 'NONE';
 
@@ -288,6 +306,36 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         if (res.success) {
             alert("✅ Banco de preguntas vaciado.");
             loadSession();
+        }
+    };
+
+    const handleNukeReset = async () => {
+        if (!window.confirm("☢️ NUCLEAR RESET: ¿Estás seguro? Se borrarán TODAS las respuestas y se reiniciará el proyector y móviles.")) return;
+
+        const updates = {
+            current_question_id: null,
+            status: 'WAITING' as const,
+            show_answer: false,
+            active_team: null,
+            timer_status: 'STOPPED' as const,
+            timer_end_at: null,
+            answer_a: null,
+            answer_b: null,
+            roulette_category: null,
+            accumulated_pot: 0,
+            used_questions: [],
+            score_a: 0,
+            score_b: 0
+        };
+
+        const res = await updateBibleWarSession(updates);
+        if (res.success) {
+            broadcastAction('RESET', updates);
+            broadcastAction('FORCE_RELOAD', {});
+            setTimeout(() => {
+                loadSession();
+                alert("☢️ Sistema purgado y recargado con éxito.");
+            }, 500);
         }
     };
 
@@ -511,24 +559,28 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 max-h-64 md:max-h-96 overflow-y-auto pr-2">
-                        {filteredQuestions.map(q => (
-                            <button
-                                key={q.id}
-                                onClick={() => handleLaunchQuestion(q)}
-                                className={`p-4 rounded-2xl border transition-all text-left flex justify-between items-center group ${session?.current_question_id === q.id ? 'bg-[#ffb700]/10 border-[#ffb700]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
-                            >
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[7px] font-black px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded uppercase">{q.category}</span>
-                                        <span className={`text-[7px] font-black px-1.5 py-0.5 rounded uppercase ${q.difficulty === 'HARD' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{q.difficulty}</span>
+                        {filteredQuestions.map(q => {
+                            const isUsed = session?.used_questions?.includes(q.id);
+                            return (
+                                <button
+                                    key={q.id}
+                                    onClick={() => handleLaunchQuestion(q)}
+                                    className={`p-4 rounded-2xl border transition-all text-left flex justify-between items-center group ${session?.current_question_id === q.id ? 'bg-[#ffb700]/10 border-[#ffb700]' : isUsed ? 'bg-black/40 border-white/5 opacity-40 grayscale' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                                >
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            {isUsed && <span className="text-[6px] font-black px-1 py-0.5 bg-gray-500 text-white rounded uppercase">USADA</span>}
+                                            <span className="text-[7px] font-black px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded uppercase">{q.category}</span>
+                                            <span className={`text-[7px] font-black px-1.5 py-0.5 rounded uppercase ${q.difficulty === 'HARD' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{q.difficulty}</span>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-white leading-tight pr-4">{q.question}</p>
                                     </div>
-                                    <p className="text-[10px] font-bold text-white leading-tight pr-4">{q.question}</p>
-                                </div>
-                                <div className="p-2 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Send size={14} className="text-[#ffb700]" />
-                                </div>
-                            </button>
-                        ))}
+                                    <div className="p-2 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Send size={14} className="text-[#ffb700]" />
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -577,13 +629,40 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             </div>
 
             {/* Footer / Acciones Globales */}
-            <div className="p-6 bg-black/40 border-t border-white/5">
+            <div className="p-6 bg-black/60 border-t border-white/10 flex flex-col gap-4">
                 <button
                     onClick={handleSpinRoulette}
-                    className="w-full py-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl text-white font-black uppercase text-[14px] tracking-[0.3em] font-bebas shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4"
+                    className="w-full py-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl text-white font-black uppercase text-[14px] tracking-[0.3em] font-bebas shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20"
                 >
                     <Dice5 size={24} className="animate-bounce" /> Girar Ruleta de Categorías
                 </button>
+
+                <div className="grid grid-cols-4 gap-2">
+                    <button
+                        onClick={handleNukeReset}
+                        className="flex flex-col items-center justify-center gap-1 p-3 bg-red-600 border border-red-400 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
+                    >
+                        <Skull size={14} /> <span>NUKE</span>
+                    </button>
+                    <button
+                        onClick={handleResetScores}
+                        className="flex flex-col items-center justify-center gap-1 p-3 bg-orange-500 border border-orange-300 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
+                    >
+                        <Trophy size={14} /> <span>PUNTOS</span>
+                    </button>
+                    <button
+                        onClick={handleForceReload}
+                        className="flex flex-col items-center justify-center gap-1 p-3 bg-blue-600 border border-blue-400 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
+                    >
+                        <RefreshCw size={14} /> <span>SYNC</span>
+                    </button>
+                    <button
+                        onClick={loadSession}
+                        className="flex flex-col items-center justify-center gap-1 p-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-white font-black uppercase tracking-widest transition-all text-[7px]"
+                    >
+                        <Zap size={14} /> <span>RELOAD</span>
+                    </button>
+                </div>
             </div>
         </div>
     );

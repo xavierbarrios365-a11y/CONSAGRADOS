@@ -72,6 +72,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 loadSession();
                 setActiveQuestion(null);
             })
+            .on('broadcast', { event: 'FORCE_RELOAD' }, () => {
+                window.location.reload();
+            })
             .on('broadcast', { event: 'COIN_FLIP' }, (envelope) => {
                 setSession(prev => prev ? { ...prev, last_coin_flip: envelope.payload?.winner } : null);
             })
@@ -279,10 +282,28 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5 }}
-                                className="text-xl md:text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
+                                className="text-xl md:text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
                             >
                                 {activeQuestion.question}
                             </motion.h1>
+
+                            {/* Imagen de la Pregunta (v2.3) */}
+                            {activeQuestion.image_url && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="relative w-full max-h-[35vh] flex justify-center py-2"
+                                >
+                                    <div className="relative group">
+                                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                                        <img
+                                            src={activeQuestion.image_url}
+                                            alt="Pregunta"
+                                            className="relative max-h-[30vh] md:max-h-[32vh] rounded-xl md:rounded-2xl border border-white/10 shadow-2xl object-contain bg-black/40"
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
 
                             {/* Indicadores de Respuesta de Equipo */}
                             <div className="flex justify-center gap-12 pt-4">

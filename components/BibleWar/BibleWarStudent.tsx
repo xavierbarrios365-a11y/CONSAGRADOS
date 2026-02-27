@@ -62,7 +62,11 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 setSelectedOption(null);
             })
             .on('broadcast', { event: 'RESET' }, () => {
+                setSelectedOption(null);
                 loadInitialData();
+            })
+            .on('broadcast', { event: 'FORCE_RELOAD' }, () => {
+                window.location.reload();
             })
             .subscribe();
 

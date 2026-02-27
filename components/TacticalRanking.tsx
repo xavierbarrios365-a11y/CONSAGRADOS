@@ -181,6 +181,16 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         <span className="font-bebas text-xs md:text-xl leading-none">2</span>
                                         <RankingIndicator change={getPositionChange(topThree[1].id, 2)} />
                                     </div>
+                                    {getPromotionStatus(topThree[1]) === PROMOTION_STATUS.APTO && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-[#001f3f] text-[6px] md:text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-[#1A1A1A] animate-bounce z-20 whitespace-nowrap">
+                                            APTO PARA ASCENSO
+                                        </div>
+                                    )}
+                                    {getPromotionStatus(topThree[1]) === PROMOTION_STATUS.PROXIMAMENTE && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[6px] md:text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-[#1A1A1A] animate-pulse z-20 whitespace-nowrap">
+                                            PRÓXIMAMENTE
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="text-center">
                                     <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-20 sm:w-24 md:w-auto">{topThree[1].name}</h3>
@@ -256,6 +266,16 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         <span className="font-bebas text-[10px] md:text-lg leading-none">3</span>
                                         <RankingIndicator change={getPositionChange(topThree[2].id, 3)} />
                                     </div>
+                                    {getPromotionStatus(topThree[2]) === PROMOTION_STATUS.APTO && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-[#001f3f] text-[6px] md:text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-[#1A1A1A] animate-bounce z-20 whitespace-nowrap">
+                                            APTO PARA ASCENSO
+                                        </div>
+                                    )}
+                                    {getPromotionStatus(topThree[2]) === PROMOTION_STATUS.PROXIMAMENTE && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[6px] md:text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-[#1A1A1A] animate-pulse z-20 whitespace-nowrap">
+                                            PRÓXIMAMENTE
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="text-center">
                                     <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-16 sm:w-20 md:w-auto">{topThree[2].name}</h3>

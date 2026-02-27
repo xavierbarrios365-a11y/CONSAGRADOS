@@ -1167,3 +1167,21 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
         return [];
     }
 };
+
+/**
+ * @description Elimina una noticia del feed
+ */
+export const deleteNewsItemSupabase = async (id: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('asistencia_visitas')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        console.error("Error al eliminar noticia de Supabase:", err);
+        return { success: false, error: err.message };
+    }
+};

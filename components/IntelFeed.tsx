@@ -3,17 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
-    GraduationCap, Award, Flame, AlertCircle, Share2
+    GraduationCap, Award, Flame, AlertCircle, Share2, Trash2
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
-import { fetchNewsFeedSupabase as fetchNewsFeed } from '../services/supabaseService';
+import { fetchNewsFeedSupabase as fetchNewsFeed, deleteNewsItemSupabase } from '../services/supabaseService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
+import { useTacticalAlert } from './TacticalAlert';
 
 interface NewsFeedProps {
     onActivity?: () => void;
     headlines?: string[];
     agents?: Agent[];
+    userRole?: UserRole;
 }
 
 const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -27,7 +29,8 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
     'OPERACION': { icon: <Activity size={16} />, color: '#00ffff', label: 'OPERACIÓN' },
 };
 
-const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [] }) => {
+const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole }) => {
+    const { showAlert } = useTacticalAlert();
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(0);
@@ -191,17 +194,44 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                             </p>
                                         </div>
 
-                                        <button
-                                            onClick={async (e) => {
-                                                e.stopPropagation();
-                                                // Habilitar compartido para TODOS los tipos de noticia (Modo Social)
-                                                setSharePreview({ agent, newsItem: item });
-                                            }}
-                                            className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
-                                            title="Compartir Logro"
-                                        >
-                                            <Share2 size={16} />
-                                        </button>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    setSharePreview({ agent, newsItem: item });
+                                                }}
+                                                className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
+                                                title="Compartir Logro"
+                                            >
+                                                <Share2 size={16} />
+                                            </button>
+
+                                            {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        showAlert({
+                                                            title: "ELIMINAR NOTICIA",
+                                                            message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
+                                                            type: 'CONFIRM',
+                                                            onConfirm: async () => {
+                                                                const res = await deleteNewsItemSupabase(item.id);
+                                                                if (res.success) {
+                                                                    showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
+                                                                    loadNews();
+                                                                } else {
+                                                                    showAlert({ title: "ERROR", message: "FALLO AL ELIMINAR", type: 'ERROR' });
+                                                                }
+                                                            }
+                                                        });
+                                                    }}
+                                                    className="shrink-0 p-2 text-white/10 hover:text-red-500 transition-colors"
+                                                    title="Eliminar Noticia"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </motion.div>
                             );

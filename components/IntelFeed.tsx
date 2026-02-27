@@ -132,108 +132,140 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                             const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
 
                             return (
-                                <motion.div
-                                    key={item.id || idx}
-                                    layout
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{
-                                        opacity: 1,
-                                        x: 0,
-                                        transition: { delay: idx * 0.1 }
-                                    }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    whileHover={{ x: 4, backgroundColor: "rgba(255, 183, 0, 0.08)" }}
-                                    className="group relative ml-4 p-4 bg-white/[0.02] border border-white/5 hover:border-[#ffb700]/20 rounded-2xl transition-all duration-300 overflow-hidden"
-                                >
-                                    {/* Scanline Effect on Hover */}
-                                    <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 group-hover:animate-scanline pointer-events-none" />
+                                <div key={item.id || idx} className="relative ml-4 group/swipe overflow-hidden rounded-2xl">
+                                    {/* Action Background (Red Delete) - Solo para Directores/Líderes */}
+                                    {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
+                                        <div className="absolute inset-0 bg-red-600/20 backdrop-blur-md flex items-center justify-end px-8 border border-red-500/30">
+                                            <div className="flex flex-col items-center gap-1 text-red-500 animate-pulse">
+                                                <Trash2 size={24} />
+                                                <span className="text-[8px] font-black uppercase tracking-widest">Eliminar</span>
+                                            </div>
+                                        </div>
+                                    )}
 
-                                    <div className="flex items-start gap-4">
-                                        <div className="relative shrink-0">
-                                            {photoUrl ? (
-                                                <div className="relative">
-                                                    <img
-                                                        src={photoUrl}
-                                                        alt={agent?.name || 'Agente'}
-                                                        className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform group-hover:scale-110"
-                                                    />
+                                    <motion.div
+                                        key={item.id || idx}
+                                        layout
+                                        drag={(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) ? "x" : false}
+                                        dragConstraints={{ left: -100, right: 0 }}
+                                        dragElastic={0.1}
+                                        onDragEnd={(event, info) => {
+                                            if (info.offset.x < -80) {
+                                                showAlert({
+                                                    title: "ELIMINAR NOTICIA",
+                                                    message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
+                                                    type: 'CONFIRM',
+                                                    onConfirm: async () => {
+                                                        const res = await deleteNewsItemSupabase(item.id);
+                                                        if (res.success) {
+                                                            showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
+                                                            loadNews();
+                                                        } else {
+                                                            showAlert({ title: "ERROR", message: "FALLO AL ELIMINAR", type: 'ERROR' });
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        }}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{
+                                            opacity: 1,
+                                            x: 0,
+                                            transition: { delay: idx * 0.1 }
+                                        }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        whileHover={{ backgroundColor: "rgba(255, 183, 0, 0.08)" }}
+                                        className="relative p-4 bg-[#001f3f]/40 backdrop-blur-xl border border-white/5 hover:border-[#ffb700]/20 transition-all duration-300 overflow-hidden cursor-grab active:cursor-grabbing"
+                                    >
+                                        {/* Scanline Effect on Hover */}
+                                        <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 group-hover:animate-scanline pointer-events-none" />
+
+                                        <div className="flex items-start gap-4">
+                                            <div className="relative shrink-0">
+                                                {photoUrl ? (
+                                                    <div className="relative">
+                                                        <img
+                                                            src={photoUrl}
+                                                            alt={agent?.name || 'Agente'}
+                                                            className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform"
+                                                        />
+                                                        <div
+                                                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
+                                                            style={{
+                                                                backgroundColor: config.color,
+                                                                color: '#001f3f'
+                                                            }}
+                                                        >
+                                                            {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
+                                                        </div>
+                                                    </div>
+                                                ) : (
                                                     <div
-                                                        className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
+                                                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform"
                                                         style={{
-                                                            backgroundColor: config.color,
-                                                            color: '#001f3f'
+                                                            backgroundColor: `${config.color}15`,
+                                                            border: `1px solid ${config.color}30`,
+                                                            color: config.color
                                                         }}
                                                     >
-                                                        {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
+                                                        {config.icon}
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform group-hover:scale-110"
-                                                    style={{
-                                                        backgroundColor: `${config.color}15`,
-                                                        border: `1px solid ${config.color}30`,
-                                                        color: config.color
-                                                    }}
-                                                >
-                                                    {config.icon}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1 min-w-0 pt-0.5">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                {/* PERSONALIZACIÓN: Mostrar nombre del agente en lugar de etiqueta genérica si es posible */}
-                                                <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest">
-                                                    {agent ? agentName : config.label}
-                                                </span>
-                                                <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
+                                                )}
                                             </div>
-                                            <p className="text-[11px] text-white/80 font-bold leading-tight line-clamp-2 uppercase tracking-wide font-montserrat group-hover:text-white transition-colors">
-                                                {item.message}
-                                            </p>
-                                        </div>
 
-                                        <div className="flex flex-col gap-2">
-                                            <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    setSharePreview({ agent, newsItem: item });
-                                                }}
-                                                className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
-                                                title="Compartir Logro"
-                                            >
-                                                <Share2 size={16} />
-                                            </button>
+                                            <div className="flex-1 min-w-0 pt-0.5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest">
+                                                        {agent ? agentName : config.label}
+                                                    </span>
+                                                    <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
+                                                </div>
+                                                <p className="text-[11px] text-white/80 font-bold leading-tight line-clamp-2 uppercase tracking-wide font-montserrat">
+                                                    {item.message}
+                                                </p>
+                                            </div>
 
-                                            {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
+                                            <div className="flex flex-col gap-2">
                                                 <button
                                                     onClick={async (e) => {
                                                         e.stopPropagation();
-                                                        showAlert({
-                                                            title: "ELIMINAR NOTICIA",
-                                                            message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
-                                                            type: 'CONFIRM',
-                                                            onConfirm: async () => {
-                                                                const res = await deleteNewsItemSupabase(item.id);
-                                                                if (res.success) {
-                                                                    showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
-                                                                    loadNews();
-                                                                } else {
-                                                                    showAlert({ title: "ERROR", message: "FALLO AL ELIMINAR", type: 'ERROR' });
-                                                                }
-                                                            }
-                                                        });
+                                                        setSharePreview({ agent, newsItem: item });
                                                     }}
-                                                    className="shrink-0 p-2 text-white/10 hover:text-red-500 transition-colors"
-                                                    title="Eliminar Noticia"
+                                                    className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"
+                                                    title="Compartir Logro"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Share2 size={16} />
                                                 </button>
-                                            )}
+
+                                                {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            showAlert({
+                                                                title: "ELIMINAR NOTICIA",
+                                                                message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
+                                                                type: 'CONFIRM',
+                                                                onConfirm: async () => {
+                                                                    const res = await deleteNewsItemSupabase(item.id);
+                                                                    if (res.success) {
+                                                                        showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
+                                                                        loadNews();
+                                                                    } else {
+                                                                        showAlert({ title: "ERROR", message: "FALLO AL ELIMINAR", type: 'ERROR' });
+                                                                    }
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="shrink-0 p-2 text-white/10 hover:text-red-500 transition-colors"
+                                                        title="Eliminar Noticia"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                </motion.div>
+                                    </motion.div>
+                                </div>
                             );
                         })
                     ) : (

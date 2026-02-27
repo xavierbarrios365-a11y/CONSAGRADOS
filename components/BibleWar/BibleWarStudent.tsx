@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Target, Zap, Clock, CheckCircle2 } from 'lucide-react';
+import { Shield, Target, Zap, Clock, CheckCircle2, RotateCcw } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { fetchBibleWarSession, fetchBibleWarGroups, submitBibleWarAnswer, fetchBibleWarQuestions } from '../../services/supabaseService';
 import { BibleWarSession, Agent } from '../../types';
@@ -51,11 +51,14 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
             fetchBibleWarGroups()
         ]);
 
-        const currentIdStr = String(currentUser.id).trim().toLowerCase();
-        const myGroup = groupsData.find(g => String(g.agent_id).trim().toLowerCase() === currentIdStr);
+        const currentIdStr = String(currentUser.id).trim().toUpperCase();
+        console.log("🕵️ Buscando equipo para Agente:", currentIdStr);
+        const myGroup = groupsData.find(g => String(g.agent_id).trim().toUpperCase() === currentIdStr);
         if (myGroup) {
+            console.log("✅ Equipo encontrado:", myGroup.team);
             setMyTeam(myGroup.team);
         } else {
+            console.warn("⚠️ Agente no encontrado en grupos.");
             setMyTeam(null);
         }
 
@@ -82,11 +85,18 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     };
 
     const handleSelectOption = async (option: string) => {
-        if (!myTeam || session?.status !== 'ACTIVE' || isSubmitting) return;
+        console.log(`🎯 Selección de opción: ${option} | Team: ${myTeam} | Status: ${session?.status} | isSubmitting: ${isSubmitting}`);
+        if (!myTeam || session?.status !== 'ACTIVE' || isSubmitting) {
+            console.warn("🚫 Selección bloqueada por estado o falta de equipo.");
+            return;
+        }
 
         // Verificar si mi equipo ya respondió (evitar envío doble)
         const myTeamAnswer = myTeam === 'A' ? session.answer_a : session.answer_b;
-        if (myTeamAnswer) return;
+        if (myTeamAnswer) {
+            console.warn("🚫 El equipo ya ha enviado una respuesta:", myTeamAnswer);
+            return;
+        }
 
         setIsSubmitting(true);
         setSelectedOption(option);
@@ -122,18 +132,33 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
 
     if (!myTeam) {
         return (
-            <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-[#000814] text-white space-y-4">
+            <div className="flex flex-col items-center justify-center min-h-full p-6 text-center bg-[#000814] text-white space-y-4">
                 <Shield size={64} className="text-white/20 mb-4" />
-                <h2 className="text-3xl font-bebas tracking-widest text-blue-400">AGENTE DETECTADO</h2>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
-                    <p className="text-[10px] font-black uppercase text-white/60">ID: {currentUser.id}</p>
-                    <p className="text-lg font-bebas">{currentUser.name}</p>
+                <h2 className="text-3xl font-bebas tracking-widest text-blue-400">OPERATIVO DETECTADO</h2>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2 w-full max-w-xs">
+                    <p className="text-[7px] font-black uppercase text-white/40 tracking-widest text-left">Firma Digital</p>
+                    <p className="text-[10px] font-black uppercase text-white/80 text-left">{currentUser.name}</p>
+                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                        <span className="text-[7px] font-black uppercase text-white/40">ID de Sistema</span>
+                        <span className="text-[8px] font-mono text-[#ffb700]">{currentUser.id}</span>
+                    </div>
                 </div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-[#ffb700] max-w-xs">Esperando despliegue de Escuadrón por parte del Comando...</p>
-                <div className="pt-10">
+
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl w-full max-w-xs">
+                    <p className="text-[8px] font-black uppercase text-red-500 tracking-widest">Estado: Sin Escuadrón</p>
+                    <p className="text-[7px] text-white/50 uppercase mt-1">El comando aún no te ha asignado a Alfa o Bravo.</p>
+                </div>
+
+                <div className="pt-6">
                     <div className="w-8 h-8 border-2 border-t-[#ffb700] border-transparent rounded-full animate-spin mx-auto" />
                 </div>
-                <button onClick={onClose} className="mt-8 px-6 py-3 bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-50">Cancelar</button>
+
+                <div className="flex flex-col gap-2 w-full max-w-xs pt-4">
+                    <button onClick={loadInitialData} className="px-6 py-3 bg-white/5 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                        <RotateCcw size={10} /> Reintentar Conexión
+                    </button>
+                    <button onClick={onClose} className="px-6 py-3 bg-white/10 rounded-xl text-[8px] font-black uppercase tracking-widest opacity-50">Regresar a Base</button>
+                </div>
             </div>
         );
     }
@@ -151,118 +176,137 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                     &lt; SALIR
                 </button>
                 <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${teamColor}`}>ESCUADRÓN {teamName}</span>
-                    <div className={`w-3 h-3 rounded-full ${teamBgColor} animate-pulse`} />
+                    <button
+                        onClick={loadInitialData}
+                        className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-white/40 hover:text-[#ffb700]"
+                        title="Sincronizar"
+                    >
+                        <RotateCcw size={14} />
+                    </button>
+                    <div className="flex flex-col items-end">
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${teamColor}`}>ESCUADRÓN {teamName}</span>
+                        <div className="flex items-center gap-1">
+                            <span className="text-[7px] text-white/30 uppercase font-bold tracking-tighter">{currentUser.id}</span>
+                            <div className={`w-2 h-2 rounded-full ${teamBgColor} animate-pulse`} />
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-8 flex flex-col items-center relative z-10 w-full custom-scrollbar">
-                {session?.status === 'WAITING' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-10">
-                        <Clock size={48} className="text-[#ffb700]/50 animate-pulse" />
-                        <h2 className="text-3xl md:text-4xl font-bebas tracking-widest text-white/50">ESPERANDO DESPLIEGUE</h2>
-                        <p className="text-[10px] text-[#ffb700] uppercase font-black tracking-widest">Atento a las instrucciones del Comando</p>
-                    </motion.div>
-                )}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 space-y-4 md:space-y-8 relative z-10 w-full custom-scrollbar touch-pan-y">
+                <div className="flex flex-col items-center w-full min-h-full">
+                    {session?.status === 'WAITING' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-10">
+                            <Clock size={48} className="text-[#ffb700]/50 animate-pulse" />
+                            <h2 className="text-3xl md:text-4xl font-bebas tracking-widest text-white/50">ESPERANDO DESPLIEGUE</h2>
+                            <p className="text-[10px] text-[#ffb700] uppercase font-black tracking-widest">Atento a las instrucciones del Comando</p>
+                        </motion.div>
+                    )}
 
-                {session?.status === 'SPINNING' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-10">
-                        <div className="w-16 h-16 md:w-24 md:h-24 border-4 border-t-[#ffb700] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-                        <h2 className="text-2xl md:text-3xl font-bebas tracking-widest text-[#ffb700]">GIRANDO RULETA...</h2>
-                    </motion.div>
-                )}
+                    {session?.status === 'SPINNING' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-10">
+                            <div className="w-16 h-16 md:w-24 md:h-24 border-4 border-t-[#ffb700] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+                            <h2 className="text-2xl md:text-3xl font-bebas tracking-widest text-[#ffb700]">GIRANDO RULETA...</h2>
+                        </motion.div>
+                    )}
 
-                {(session?.status === 'ACTIVE' || session?.status === 'RESOLVED') && activeQuestion && (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-4 md:space-y-6 pb-10">
-                        {/* Status Bar */}
-                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
-                            <div className="flex items-center gap-2">
-                                <Zap size={14} className="text-[#ffb700]" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#ffb700]">{session.stakes_xp} XP</span>
+                    {(session?.status === 'ACTIVE' || session?.status === 'RESOLVED') && activeQuestion && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md space-y-4 md:space-y-6 pb-10">
+                            {/* Status Bar */}
+                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Zap size={14} className="text-[#ffb700]" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#ffb700]">{session.stakes_xp} XP</span>
+                                </div>
+                                {session.accumulated_pot && session.accumulated_pot > 0 && (
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-green-400">
+                                        POZO: +{session.accumulated_pot} XP
+                                    </div>
+                                )}
                             </div>
-                            {session.accumulated_pot && session.accumulated_pot > 0 && (
-                                <div className="text-[10px] font-black uppercase tracking-widest text-green-400">
-                                    POZO: +{session.accumulated_pot} XP
+
+                            <div className="text-center space-y-1 md:space-y-2 px-2">
+                                <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-white/40">{activeQuestion.category}</p>
+                                <h3 className="text-base md:text-2xl font-black italic leading-tight">{activeQuestion.question}</h3>
+                            </div>
+
+                            {myTeamAnswer && session.status !== 'RESOLVED' ? (
+                                <div className="bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-2xl p-4 md:p-6 text-center space-y-3 shadow-[0_0_30px_rgba(255,183,0,0.1)]">
+                                    <CheckCircle2 size={32} className="mx-auto text-[#ffb700]" />
+                                    <h3 className="text-xl md:text-2xl font-bebas tracking-widest text-[#ffb700]">RESPUESTA FIJADA</h3>
+                                    <div className="p-2 bg-white/5 rounded-lg">
+                                        <p className="text-[8px] md:text-[10px] font-black tracking-widest uppercase opacity-60">Tu equipo eligió:</p>
+                                        <p className="text-xs md:text-sm font-bold mt-1">"{myTeamAnswer}"</p>
+                                    </div>
+                                    <p className="text-[7px] md:text-[8px] opacity-40 uppercase mt-2">Esperando resolución del Comando...</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-3">
+                                    {activeQuestion.options.map((opt: string, i: number) => {
+                                        const isCorrect = session.show_answer && (opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer);
+                                        const isMyAnswer = opt === myTeamAnswer;
+                                        const isAnyAnswerResolved = isMyAnswer && session.status === 'RESOLVED';
+
+                                        let bgClass = "bg-white/5 border border-white/10";
+                                        let textClass = "text-white";
+
+                                        if (session.status === 'RESOLVED') {
+                                            if (isCorrect) {
+                                                bgClass = "bg-green-500/20 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)] scale-105 z-10";
+                                                textClass = "text-green-400";
+                                            } else if (isMyAnswer && !isCorrect) {
+                                                bgClass = "bg-red-500/20 border-red-500";
+                                                textClass = "text-red-400 line-through opacity-50";
+                                            } else {
+                                                bgClass = "bg-white/2 border-transparent opacity-30";
+                                            }
+                                        } else if (selectedOption === opt) {
+                                            bgClass = "bg-[#ffb700]/20 border-[#ffb700]";
+                                            textClass = "text-[#ffb700]";
+                                        }
+
+                                        return (
+                                            <button
+                                                key={i}
+                                                disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED'}
+                                                onClick={() => handleSelectOption(opt)}
+                                                className={`p-2 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 relative overflow-hidden text-left flex flex-col justify-center min-h-[50px] md:min-h-[70px] ${bgClass} ${!!myTeamAnswer ? 'cursor-default ring-2 ring-[#ffb700] ring-offset-2 ring-offset-[#000814]' : 'hover:border-white/30 active:scale-[0.97]'}`}
+                                            >
+                                                {/* Indicador de Selección / Envío */}
+                                                {selectedOption === opt && isSubmitting && (
+                                                    <motion.div
+                                                        layoutId="loading-overlay"
+                                                        className="absolute inset-0 bg-white/20 flex items-center justify-center backdrop-blur-sm z-20"
+                                                    >
+                                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                    </motion.div>
+                                                )}
+
+                                                {myTeamAnswer === opt && (
+                                                    <div className="absolute top-2 right-2 z-10">
+                                                        <CheckCircle2 size={16} className="text-[#ffb700]" />
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-start gap-2 relative z-10">
+                                                    <span className="text-[10px] md:text-base opacity-30 font-black mt-0.5">{i === 0 ? 'A' : i === 1 ? 'B' : i === 2 ? 'C' : 'D'}</span>
+                                                    <p className={`text-[11px] md:text-base font-bold leading-snug pr-6 ${textClass}`}>{opt}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
-                        </div>
 
-                        <div className="text-center space-y-1 md:space-y-2 px-2">
-                            <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-white/40">{activeQuestion.category}</p>
-                            <h3 className="text-base md:text-2xl font-black italic leading-tight">{activeQuestion.question}</h3>
-                        </div>
-
-                        {/* Estado: Pendiente de responder o ya respondido */}
-                        {myTeamAnswer && session.status !== 'RESOLVED' ? (
-                            <div className="bg-[#ffb700]/20 border border-[#ffb700] rounded-2xl p-6 text-center space-y-4 shadow-[0_0_30px_rgba(255,183,0,0.2)]">
-                                <CheckCircle2 size={48} className="mx-auto text-[#ffb700]" />
-                                <h3 className="text-2xl font-bebas tracking-widest text-[#ffb700]">¡RESPUESTA FIJADA!</h3>
-                                <p className="text-[10px] font-black tracking-widest uppercase">Tu equipo eligió: <br />"{myTeamAnswer}"</p>
-                                <p className="text-[8px] opacity-60 uppercase mt-4">Esperando a Bravo/Resolución del Comando...</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-3">
-                                {activeQuestion.options.map((opt: string, i: number) => {
-                                    const isCorrect = session.show_answer && (opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer);
-                                    const isMyAnswer = opt === myTeamAnswer;
-                                    const isAnyAnswerResolved = isMyAnswer && session.status === 'RESOLVED';
-
-                                    let bgClass = "bg-white/5 border border-white/10";
-                                    let textClass = "text-white";
-
-                                    if (session.status === 'RESOLVED') {
-                                        if (isCorrect) {
-                                            bgClass = "bg-green-500/20 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)] scale-105 z-10";
-                                            textClass = "text-green-400";
-                                        } else if (isMyAnswer && !isCorrect) {
-                                            bgClass = "bg-red-500/20 border-red-500";
-                                            textClass = "text-red-400 line-through opacity-50";
-                                        } else {
-                                            bgClass = "bg-white/2 border-transparent opacity-30";
-                                        }
-                                    } else if (selectedOption === opt) {
-                                        bgClass = "bg-[#ffb700]/20 border-[#ffb700]";
-                                        textClass = "text-[#ffb700]";
-                                    }
-
-                                    return (
-                                        <button
-                                            key={i}
-                                            disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED'}
-                                            onClick={() => handleSelectOption(opt)}
-                                            className={`p-2.5 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 relative overflow-hidden ${bgClass} ${!!myTeamAnswer ? 'cursor-default ring-2 ring-[#ffb700] ring-offset-2 ring-offset-[#000814]' : 'hover:border-white/30 active:scale-95'}`}
-                                        >
-                                            {/* Indicador de Selección / Envío */}
-                                            {selectedOption === opt && isSubmitting && (
-                                                <motion.div
-                                                    layoutId="loading-overlay"
-                                                    className="absolute inset-0 bg-white/20 flex items-center justify-center backdrop-blur-sm"
-                                                >
-                                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                </motion.div>
-                                            )}
-
-                                            {myTeamAnswer === opt && (
-                                                <div className="absolute top-2 right-2">
-                                                    <CheckCircle2 size={16} className="text-[#ffb700]" />
-                                                </div>
-                                            )}
-
-                                            <p className={`text-xs md:text-base font-bold ${textClass}`}>{opt}</p>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {session.status === 'RESOLVED' && (
-                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-8 text-center bg-white/5 p-4 rounded-xl border border-white/10">
-                                <h4 className="text-sm font-black uppercase tracking-widest text-[#ffb700] mb-2">RESOLUCIÓN</h4>
-                                {activeQuestion.reference && <p className="text-[10px] text-white/50 italic">{activeQuestion.reference}</p>}
-                            </motion.div>
-                        )}
-                    </motion.div>
-                )}
+                            {session.status === 'RESOLVED' && (
+                                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-8 text-center bg-white/5 p-4 rounded-xl border border-white/10">
+                                    <h4 className="text-sm font-black uppercase tracking-widest text-[#ffb700] mb-2">RESOLUCIÓN</h4>
+                                    {activeQuestion.reference && <p className="text-[10px] text-white/50 italic">{activeQuestion.reference}</p>}
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )}
+                </div>
             </div>
 
             {/* Background FX */}

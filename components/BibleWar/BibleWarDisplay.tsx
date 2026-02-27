@@ -170,7 +170,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
         // Cargar gladiadores si cambiaron (v4.0)
         if (newState.gladiator_a_id !== session?.gladiator_a_id || newState.gladiator_b_id !== session?.gladiator_b_id) {
-            const { data: agents } = await supabase.from('agents').select('*').in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
+            const { data: agents } = await supabase.from('agentes').select('*').in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
             setGladiators({
                 a: agents?.find(a => a.id === newState.gladiator_a_id) || null,
                 b: agents?.find(a => a.id === newState.gladiator_b_id) || null
@@ -334,20 +334,20 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                     ) : activeQuestion ? (
                         <div className="max-w-7xl w-full h-full text-center flex flex-col justify-center min-h-0">
                             {displayPhase === 'READING' ? (
-                                <motion.div key="reading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -100 }} className="space-y-4 md:space-y-8">
-                                    <p className="text-lg md:text-2xl font-black uppercase tracking-[0.6em] text-[#ffb700] animate-pulse">ESTUDIO DE CAMPO</p>
-                                    <h1 className="text-4xl md:text-8xl font-black italic tracking-tighter leading-none px-10">{activeQuestion.question}</h1>
+                                <motion.div key="reading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -100 }} className="space-y-4 md:space-y-6">
+                                    <p className="text-lg md:text-xl font-black uppercase tracking-[0.6em] text-[#ffb700] animate-pulse">ESTUDIO DE CAMPO</p>
+                                    <h1 className="text-[clamp(1.5rem,5vw,5rem)] font-black italic tracking-tighter leading-tight px-10">{activeQuestion.question}</h1>
                                 </motion.div>
                             ) : (
-                                <motion.div key="battle" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4 md:space-y-6 flex flex-col justify-center min-h-0 h-full">
-                                    <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold italic text-white/90 max-w-5xl mx-auto leading-tight shrink-0">{activeQuestion.question}</h1>
-                                    {activeQuestion.image_url && <img src={activeQuestion.image_url} className="max-h-[25vh] mx-auto rounded-3xl border border-white/10 shadow-2xl object-contain min-h-0" />}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-10 overflow-y-auto no-scrollbar py-2">
+                                <motion.div key="battle" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-2 md:space-y-4 flex flex-col justify-center min-h-0 h-full">
+                                    <h1 className="text-[clamp(1.2rem,3vw,3rem)] font-bold italic text-white/90 max-w-5xl mx-auto leading-tight shrink-0">{activeQuestion.question}</h1>
+                                    {activeQuestion.image_url && <img src={activeQuestion.image_url} className="max-h-[25vh] mx-auto rounded-2xl border border-white/10 shadow-2xl object-contain min-h-0" />}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 px-10 overflow-y-auto no-scrollbar py-2">
                                         {activeQuestion.options.map((opt: string, i: number) => {
                                             const isCorrect = opt === (activeQuestion.correct_answer || activeQuestion.correctAnswer);
                                             const show = session?.show_answer;
                                             return (
-                                                <div key={i} className={`p-4 md:p-6 rounded-2xl md:rounded-3xl border text-xl md:text-2xl lg:text-3xl font-bebas tracking-widest transition-all duration-500 flex items-center justify-center text-center ${show && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_50px_rgba(34,197,94,0.4)] scale-105' : show ? 'opacity-20 grayscale border-white/5' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}>
+                                                <div key={i} className={`p-3 md:p-5 rounded-xl md:rounded-2xl border text-[clamp(1rem,2vw,2rem)] font-bebas tracking-widest transition-all duration-500 flex items-center justify-center text-center ${show && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_50px_rgba(34,197,94,0.4)] scale-105' : show ? 'opacity-20 grayscale border-white/5' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'}`}>
                                                     {opt}
                                                 </div>
                                             );

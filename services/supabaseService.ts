@@ -1345,8 +1345,8 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
                 else if (winnerTeam === 'B' || winnerTeam === 'NONE') amountA = -stakes;
 
                 if (amountA !== 0) {
-                    const { data: agent } = await supabase.from('agents').select('xp').eq('id', gadA).single();
-                    if (agent) await supabase.from('agents').update({ xp: (agent.xp || 0) + amountA }).eq('id', gadA);
+                    const { data: agent } = await supabase.from('agentes').select('xp').eq('id', gadA).single();
+                    if (agent) await supabase.from('agentes').update({ xp: (agent.xp || 0) + amountA }).eq('id', gadA);
                 }
             }
 
@@ -1357,8 +1357,8 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
                 else if (winnerTeam === 'A' || winnerTeam === 'NONE') amountB = -stakes;
 
                 if (amountB !== 0) {
-                    const { data: agent } = await supabase.from('agents').select('xp').eq('id', gadB).single();
-                    if (agent) await supabase.from('agents').update({ xp: (agent.xp || 0) + amountB }).eq('id', gadB);
+                    const { data: agent } = await supabase.from('agentes').select('xp').eq('id', gadB).single();
+                    if (agent) await supabase.from('agentes').update({ xp: (agent.xp || 0) + amountB }).eq('id', gadB);
                 }
             }
         }

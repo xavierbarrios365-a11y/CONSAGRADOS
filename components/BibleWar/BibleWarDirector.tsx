@@ -421,27 +421,45 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                                         <p className={`text-[8px] font-black uppercase ${t === 'A' ? 'text-blue-400' : 'text-teal-400'}`}>COMO JUGADOR {t === 'A' ? 'UNO' : 'DOS'}</p>
                                         <div className="bg-white/5 rounded-xl p-3 border border-white/10 flex flex-col gap-3">
                                             {gladiator ? (
-                                                <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg relative group">
-                                                    <img src={gladiator.photoUrl || '/default-avatar.png'} className="w-10 h-10 rounded-full border border-white/20 object-cover" />
-                                                    <span className="text-[10px] font-bold truncate pr-6">{gladiator.name}</span>
-                                                    <button onClick={() => updateBibleWarSession(t === 'A' ? { gladiator_a_id: null } : { gladiator_b_id: null })} className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Plus size={14} className="rotate-45" />
+                                                <div className="flex items-center gap-3 bg-white/10 p-2 rounded-lg relative group border border-[#ffb700]/30 shadow-lg shadow-[#ffb700]/5">
+                                                    <img src={gladiator.photoUrl || '/default-avatar.png'} className="w-10 h-10 rounded-full border-2 border-[#ffb700]/50 object-cover" />
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-[10px] font-bold truncate">{gladiator.name}</span>
+                                                        <span className="text-[7px] text-[#ffb700] font-black uppercase tracking-widest">{gladiator.rank}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const res = await updateBibleWarSession(t === 'A' ? { gladiator_a_id: null } : { gladiator_b_id: null });
+                                                            if (!res.success) alert("Error al remover gladiador");
+                                                        }}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 hover:scale-125 transition-transform"
+                                                    >
+                                                        <Plus size={16} className="rotate-45" />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-2 px-4 border border-dashed border-white/20 rounded-lg text-[8px] text-white/30 italic">SIN GLADIADOR</div>
+                                                <div className="text-center py-4 px-4 border border-dashed border-white/20 rounded-lg text-[8px] text-white/30 italic uppercase tracking-widest animate-pulse">
+                                                    SIN GLADIADOR {t === 'A' ? 'ALFA' : 'BRAVO'}
+                                                </div>
                                             )}
                                             <div className="relative">
                                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-white/40" size={12} />
                                                 <select
-                                                    onChange={e => updateBibleWarSession(t === 'A' ? { gladiator_a_id: e.target.value } : { gladiator_b_id: e.target.value })}
-                                                    className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-2 py-2 text-[9px] font-black outline-none focus:border-[#ffb700]"
+                                                    onChange={async (e) => {
+                                                        const val = e.target.value;
+                                                        if (!val) return;
+                                                        const res = await updateBibleWarSession(t === 'A' ? { gladiator_a_id: val } : { gladiator_b_id: val });
+                                                        if (!res.success) alert("Error al asignar gladiador");
+                                                    }}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-2 py-2 text-[9px] font-black outline-none focus:border-[#ffb700] appearance-none"
                                                     value=""
                                                 >
-                                                    <option value="">+ CAMBIAR GLADIADOR</option>
-                                                    {agents.filter(a => a.id !== session?.gladiator_a_id && a.id !== session?.gladiator_b_id).map(a => (
-                                                        <option key={a.id} value={a.id}>{a.name}</option>
-                                                    ))}
+                                                    <option value="" disabled>+ SELECCIONAR GLADIADOR</option>
+                                                    {agents.filter(a => a.id !== session?.gladiator_a_id && a.id !== session?.gladiator_b_id)
+                                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                                        .map(a => (
+                                                            <option key={a.id} value={a.id}>{a.name} ({a.rank})</option>
+                                                        ))}
                                                 </select>
                                             </div>
                                         </div>

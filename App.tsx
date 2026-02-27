@@ -1438,6 +1438,15 @@ const App: React.FC = () => {
           </motion.div>
         );
       case AppView.BIBLE_WAR_ARENA:
+        // Si el usuario es estudiante, mostramos la interfaz interactiva (BibleWarStudent)
+        // en lugar de solo el display visual (BibleWarDisplay).
+        if (effectiveRole === UserRole.STUDENT && currentUser) {
+          return (
+            <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="student_arena" className="h-full">
+              <BibleWarStudent currentUser={currentUser} onClose={() => setView(AppView.HOME)} />
+            </motion.div>
+          );
+        }
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="arena" className="h-full">
             <BibleWarDisplay isFullScreen={false} />

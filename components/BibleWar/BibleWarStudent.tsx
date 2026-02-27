@@ -19,6 +19,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log("🛡️ CARGANDO BIBLE WAR STUDENT v2.0.0 (TOUCH-FIX)");
         loadInitialData();
 
         const sessionChannel = supabase

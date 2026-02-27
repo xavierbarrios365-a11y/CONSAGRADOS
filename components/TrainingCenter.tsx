@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
-import { BookOpen, ClipboardList, ChevronUp, ArrowLeft, Target, Sparkles, Zap } from 'lucide-react';
+import { BookOpen, ClipboardList, ChevronUp, ArrowLeft, Target, Sparkles, Zap, Skull } from 'lucide-react';
 import ContentModule from './ContentModule';
 import TasksModule from './TasksModule';
 import PromotionModule from './PromotionModule';
+import BibleWarDirector from './BibleWar/BibleWarDirector';
 import { AppView, Agent, UserRole, Guide } from '../types';
 
 interface TrainingCenterProps {
     currentUser: Agent;
     setView: (view: AppView) => void;
     onUpdateNeeded: () => void;
-    initialTab?: 'material' | 'misiones' | 'ascenso';
+    initialTab?: 'material' | 'misiones' | 'ascenso' | 'guerra';
 }
 
 const TrainingCenter: React.FC<TrainingCenterProps> = ({
@@ -19,12 +20,13 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
     onUpdateNeeded,
     initialTab = 'material'
 }) => {
-    const [activeTab, setActiveTab] = useState<'material' | 'misiones' | 'ascenso'>(initialTab);
+    const [activeTab, setActiveTab] = useState<'material' | 'misiones' | 'ascenso' | 'guerra'>(initialTab);
 
     const tabs = [
         { id: 'material', label: 'Material', icon: <BookOpen size={18} />, color: 'text-blue-400' },
         { id: 'misiones', label: 'Misiones', icon: <ClipboardList size={18} />, color: 'text-amber-400' },
         { id: 'ascenso', label: 'Ascenso', icon: <ChevronUp size={18} />, color: 'text-[#ffb700]' },
+        ...(currentUser.userRole === UserRole.DIRECTOR ? [{ id: 'guerra', label: 'Guerra', icon: <Skull size={18} />, color: 'text-red-500' }] : []),
     ];
 
     return (
@@ -85,6 +87,11 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
                 {activeTab === 'ascenso' && (
                     <div className="animate-in slide-in-from-right-4 duration-500">
                         <PromotionModule agentId={currentUser.id} agentName={currentUser.name} userRole={currentUser.userRole} onActivity={onUpdateNeeded} />
+                    </div>
+                )}
+                {activeTab === 'guerra' && currentUser.userRole === UserRole.DIRECTOR && (
+                    <div className="animate-in slide-in-from-right-4 duration-500 h-full">
+                        <BibleWarDirector />
                     </div>
                 )}
             </div>

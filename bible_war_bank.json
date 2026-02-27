@@ -1,0 +1,72 @@
+[
+    {
+        "id": "q_001",
+        "category": "PENTATEUCO",
+        "difficulty": "EASY",
+        "question": "¿Cuántas plagas envió Dios a Egipto antes del Éxodo?",
+        "options": [
+            "7",
+            "10",
+            "12",
+            "3"
+        ],
+        "correctAnswer": "10",
+        "reference": "Éxodo 7-12"
+    },
+    {
+        "id": "q_002",
+        "category": "HISTORIA",
+        "difficulty": "MEDIUM",
+        "question": "¿Quién fue el profeta que ungió a Saúl como el primer rey de Israel?",
+        "options": [
+            "Natán",
+            "Samuel",
+            "Elías",
+            "Gad"
+        ],
+        "correctAnswer": "Samuel",
+        "reference": "1 Samuel 10:1"
+    },
+    {
+        "id": "q_003",
+        "category": "NUEVO TESTAMENTO",
+        "difficulty": "EASY",
+        "question": "¿En qué ciudad nació Jesús?",
+        "options": [
+            "Nazaret",
+            "Jerusalén",
+            "Belén",
+            "Jericó"
+        ],
+        "correctAnswer": "Belén",
+        "reference": "Mateo 2:1"
+    },
+    {
+        "id": "q_004",
+        "category": "PENTATEUCO",
+        "difficulty": "HARD",
+        "question": "¿Cuál era el nombre del padre de Moisés?",
+        "options": [
+            "Amram",
+            "Levi",
+            "Abiram",
+            "Coré"
+        ],
+        "correctAnswer": "Amram",
+        "reference": "Éxodo 6:20"
+    },
+    {
+        "id": "q_005",
+        "category": "POESÍA",
+        "difficulty": "MEDIUM",
+        "question": "¿Cuál es el libro más largo de la Biblia por número de capítulos?",
+        "options": [
+            "Isaías",
+            "Salmos",
+            "Jeremías",
+            "Génesis"
+        ],
+        "correctAnswer": "Salmos",
+        "reference": "Libro de Salmos (150 capítulos)"
+    }
+]

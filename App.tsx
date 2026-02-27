@@ -7,6 +7,8 @@ import { formatDriveUrl } from './services/storageUtils';
 import IntelFeed from './components/IntelFeed';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
+import BibleWarDisplay from './components/BibleWar/BibleWarDisplay';
+import BibleWarStudent from './components/BibleWar/BibleWarStudent';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import EliteRecruitmentTest from './components/EliteRecruitmentTest';
@@ -231,6 +233,15 @@ const App: React.FC = () => {
       }
     };
     checkVersionAndPurge();
+  }, []);
+
+  // --- ROUTING VIA URL PARAMS ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view');
+    if (viewParam === 'bible_war_display') {
+      setView(AppView.BIBLE_WAR_DISPLAY);
+    }
   }, []);
 
   const [isUpdatingAiProfile, setIsUpdatingAiProfile] = useState(false);
@@ -844,6 +855,10 @@ const App: React.FC = () => {
                   <Trophy size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
                   <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
                 </button>
+                <button onClick={() => setView(AppView.BIBLE_WAR_STUDENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-blue-500/10 hover:border-blue-500/40 transition-all active:scale-90 shadow-lg group">
+                  <ShieldCheck size={24} className="text-blue-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Combatir</span>
+                </button>
                 {currentUser?.userRole !== UserRole.STUDENT && (
                   <button onClick={() => setView(AppView.ENROLLMENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
                     <UserPlus size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
@@ -1272,6 +1287,12 @@ const App: React.FC = () => {
             />
           </motion.div>
         );
+      case AppView.BIBLE_WAR_DISPLAY:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="bible_war_display" className="h-full">
+            <BibleWarDisplay />
+          </motion.div>
+        );
 
       case AppView.ASCENSO:
       case AppView.CONTENT:
@@ -1414,6 +1435,18 @@ const App: React.FC = () => {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="enrollment" className="h-full">
             <EnrollmentForm onSuccess={() => { showAlert({ title: "ÉXITO", message: "Inscripción exitosa", type: 'SUCCESS' }); syncData(); setView(AppView.DIRECTORY); }} userRole={currentUser?.userRole} agents={agents} />
+          </motion.div>
+        );
+      case AppView.BIBLE_WAR_ARENA:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="arena" className="h-full">
+            <BibleWarDisplay isFullScreen={false} />
+          </motion.div>
+        );
+      case AppView.BIBLE_WAR_STUDENT:
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="student_arena" className="h-full">
+            {currentUser && <BibleWarStudent currentUser={currentUser} onClose={() => setView(AppView.HOME)} />}
           </motion.div>
         );
       default: return null;
@@ -1629,6 +1662,14 @@ const App: React.FC = () => {
           )}
         </div>
       </div>
+    );
+  }
+
+  if (view === AppView.BIBLE_WAR_DISPLAY) {
+    return (
+      <TacticalAlertProvider>
+        <BibleWarDisplay />
+      </TacticalAlertProvider>
     );
   }
 

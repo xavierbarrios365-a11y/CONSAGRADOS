@@ -1185,3 +1185,242 @@ export const deleteNewsItemSupabase = async (id: string): Promise<{ success: boo
         return { success: false, error: err.message };
     }
 };
+
+/**
+ * ===== SISTEMA GUERRA BÍBLICA (REALTIME) =====
+ */
+
+export const assignAgentToBibleWarGroup = async (agentId: string, team: 'A' | 'B' | null): Promise<{ success: boolean; error?: string }> => {
+    try {
+        if (!team) {
+            const { error } = await supabase
+                .from('bible_war_groups')
+                .delete()
+                .eq('agent_id', agentId);
+            if (error) throw error;
+        } else {
+            const { error } = await supabase
+                .from('bible_war_groups')
+                .upsert({ agent_id: agentId, team }, { onConflict: 'agent_id' });
+            if (error) throw error;
+        }
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error asignando grupo de Guerra Bíblica:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const fetchBibleWarGroups = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('bible_war_groups')
+            .select('*');
+        if (error) throw error;
+        return data || [];
+    } catch (e: any) {
+        console.error('❌ Error obteniendo grupos de Guerra Bíblica:', e.message);
+        return [];
+    }
+};
+
+export const fetchBibleWarSession = async (): Promise<any> => {
+    try {
+        const { data, error } = await supabase
+            .from('bible_war_sessions')
+            .select('*')
+            .eq('id', '00000000-0000-0000-0000-000000000001')
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (e: any) {
+        console.error('❌ Error obteniendo sesión de Guerra Bíblica:', e.message);
+        return null;
+    }
+};
+
+export const updateBibleWarSession = async (updates: any): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('bible_war_sessions')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', '00000000-0000-0000-0000-000000000001');
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error actualizando sesión de Guerra Bíblica:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const submitBibleWarAnswer = async (team: 'A' | 'B', answer: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const updates: any = {};
+        if (team === 'A') updates.answer_a = answer;
+        if (team === 'B') updates.answer_b = answer;
+
+        const { error } = await supabase
+            .from('bible_war_sessions')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', '00000000-0000-0000-0000-000000000001');
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error enviando respuesta de Bible War:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Ejecuta la transferencia atómica de puntos entre equipos y los aplica a los agentes
+ * @param winnerTeam 'A' | 'B' | 'NONE' | 'TIE' (TIE adds to pot)
+ */
+export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE', stakes: number): Promise<{ success: boolean; error?: string }> => {
+    try {
+        // 1. Obtener sesión actual
+        const { data: session, error: fetchError } = await supabase
+            .from('bible_war_sessions')
+            .select('score_a, score_b, accumulated_pot')
+            .eq('id', '00000000-0000-0000-0000-000000000001')
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        let newScoreA = session.score_a;
+        let newScoreB = session.score_b;
+        let newPot = session.accumulated_pot || 0;
+
+        const totalAward = stakes + newPot;
+
+        if (winnerTeam === 'A') {
+            newScoreA += totalAward;
+            newScoreB -= totalAward;
+            newPot = 0; // Se consume el pozo
+        } else if (winnerTeam === 'B') {
+            newScoreB += totalAward;
+            newScoreA -= totalAward;
+            newPot = 0; // Se consume el pozo
+        } else if (winnerTeam === 'NONE') {
+            newScoreA -= stakes;
+            newScoreB -= stakes;
+            newPot = 0; // Pierden y se pierde el pozo también o se puede mantener? Vamos a dejar que pierdan el pozo.
+        } else if (winnerTeam === 'TIE') {
+            // Empate: los stakes van al pot para la próxima. Nadie gana ni pierde ahora.
+            newPot += stakes;
+        }
+
+        // 2. Actualizar sesión global
+        const { error: updateError } = await supabase
+            .from('bible_war_sessions')
+            .update({
+                score_a: newScoreA,
+                score_b: newScoreB,
+                accumulated_pot: newPot,
+                show_answer: true,
+                status: 'RESOLVED',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', '00000000-0000-0000-0000-000000000001');
+
+        if (updateError) throw updateError;
+
+        // 3. TRANSFERENCIA AUTOMÁTICA A AGENTES (Si no es empate)
+        if (winnerTeam !== 'TIE') {
+            const { data: groups, error: groupsError } = await supabase
+                .from('bible_war_groups')
+                .select('agent_id, team');
+
+            if (!groupsError && groups) {
+                console.log(`🚀 Iniciando transferencia masiva para ${groups.length} agentes en grupos.`);
+                for (const member of groups) {
+                    let amount = 0;
+                    if (winnerTeam === 'A') {
+                        amount = member.team === 'A' ? totalAward : -totalAward;
+                    } else if (winnerTeam === 'B') {
+                        amount = member.team === 'B' ? totalAward : -totalAward;
+                    } else if (winnerTeam === 'NONE') {
+                        amount = -totalAward; // Ambos pierden
+                    }
+
+                    if (amount !== 0) {
+                        console.log(`⚡ Aplicando ${amount} XP a Agente ID: ${member.agent_id} (Team ${member.team})`);
+                        await updateAgentPointsSupabase(member.agent_id, 'XP', amount);
+                    }
+                }
+            } else {
+                console.warn("⚠️ No se encontraron grupos para transferencia automática o hubo error:", groupsError);
+            }
+        }
+
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error en transferencia de XP Bible War:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Obtiene todas las preguntas del banco dinámico
+ */
+export const fetchBibleWarQuestions = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('bible_war_questions')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        return data || [];
+    } catch (e: any) {
+        console.error('❌ Error obteniendo preguntas de Bible War:', e.message);
+        return [];
+    }
+};
+
+/**
+ * @description Borra todas las preguntas del banco actual
+ */
+export const clearBibleWarQuestions = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('bible_war_questions')
+            .delete()
+            .neq('id', 'NONE'); // Truco para borrar todo si no hay filtro directo permitido
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error borrando preguntas de Bible War:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Importa una lista de preguntas (JSON) a Supabase
+ */
+export const importBibleWarQuestions = async (questions: any[]): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const mappedQuestions = questions.map(q => ({
+            id: q.id || `q_${Math.random().toString(36).substr(2, 9)}`,
+            category: q.category,
+            difficulty: q.difficulty,
+            question: q.question,
+            options: q.options,
+            correct_answer: q.correctAnswer,
+            reference: q.reference
+        }));
+
+        const { error } = await supabase
+            .from('bible_war_questions')
+            .upsert(mappedQuestions);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error importando preguntas de Bible War:', e.message);
+        return { success: false, error: e.message };
+    }
+};

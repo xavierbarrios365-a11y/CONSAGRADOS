@@ -86,7 +86,10 @@ export enum AppView {
   TAREAS = 'TAREAS',
   CAPACITACION = 'CAPACITACION',
   HOME = 'home',
-  ADMIN = 'admin'
+  ADMIN = 'admin',
+  BIBLE_WAR_DISPLAY = 'BIBLE_WAR_DISPLAY',
+  BIBLE_WAR_ARENA = 'BIBLE_WAR_ARENA',
+  BIBLE_WAR_STUDENT = 'BIBLE_WAR_STUDENT'
 }
 
 export interface Visitor {
@@ -191,5 +194,24 @@ export interface Badge {
   agentId?: string;
   agentName: string;
   value: number;
+}
+
+export interface BibleWarSession {
+  id: string;
+  status: 'WAITING' | 'ACTIVE' | 'SPINNING' | 'RESOLVED' | 'FINISHED';
+  score_a: number;
+  score_b: number;
+  current_question_id: string | null;
+  active_team: 'A' | 'B' | null;
+  stakes_xp: number;
+  show_answer: boolean;
+  roulette_category: string | null;
+  updated_at: string;
+  answer_a?: string | null;
+  answer_b?: string | null;
+  accumulated_pot?: number;
+  timer_status?: 'RUNNING' | 'STOPPED';
+  timer_end_at?: string | null;
+  last_coin_flip?: string | null;
 }
 

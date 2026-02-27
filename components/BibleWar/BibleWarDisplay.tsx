@@ -38,37 +38,46 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             })
             .subscribe();
 
-        // 2. Canal de Broadcast para sincronización instantánea (Ultra-low latency)
+        // 2. Canal de Broadcast para sincronización instantánea (Unificado con Director)
         const syncChannel = supabase
-            .channel('bible_war_sync')
-            .on('broadcast', { event: 'bible_war_action' }, (envelope) => {
-                const payload = envelope.payload;
-                console.log('⚡ Recibido comando de ultra-baja latencia:', payload);
-                if (!payload) return;
-
-                if (payload.type === 'SPIN_ROULETTE') {
-                    setSession(prev => prev ? { ...prev, status: 'SPINNING', roulette_category: payload.category } : null);
-                } else if (payload.type === 'LAUNCH_QUESTION') {
-                    setActiveQuestion(payload.question);
-                    setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: payload.question?.id, show_answer: false } : null);
-                } else if (payload.type === 'RESOLVE') {
-                    setShowTransfer(payload.winner);
-                    setTimeout(() => setShowTransfer(null), 5000);
-                    loadSession(); // Recargar estado completo para ver el ganador y XP
-                } else if (payload.type === 'UPDATE_STAKES') {
-                    setSession(prev => prev ? { ...prev, stakes_xp: payload.stakes } : null);
-                } else if (payload.type === 'SHOW_ANSWER') {
-                    setSession(prev => prev ? { ...prev, show_answer: payload.show } : null);
-                } else if (payload.type === 'START_TIMER') {
-                    startLocalTimer(payload.seconds);
-                } else if (payload.type === 'RESET') {
-                    loadSession();
-                    setActiveQuestion(null);
+            .channel('bible_war_realtime')
+            .on('broadcast', { event: 'SPIN_ROULETTE' }, (envelope) => {
+                console.log('⚡ Display: SPIN_ROULETTE', envelope.payload);
+                setSession(prev => prev ? { ...prev, status: 'SPINNING', roulette_category: envelope.payload?.category, answer_a: null, answer_b: null, current_question_id: null, show_answer: false } : null);
+                setActiveQuestion(null);
+            })
+            .on('broadcast', { event: 'LAUNCH_QUESTION' }, (envelope) => {
+                console.log('⚡ Display: LAUNCH_QUESTION', envelope.payload);
+                if (envelope.payload?.question) {
+                    setActiveQuestion(envelope.payload.question);
+                    setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: envelope.payload.question?.id, show_answer: false, answer_a: null, answer_b: null } : null);
                 }
+            })
+            .on('broadcast', { event: 'RESOLVE' }, (envelope) => {
+                console.log('⚡ Display: RESOLVE', envelope.payload);
+                setShowTransfer(envelope.payload?.winner);
+                setTimeout(() => setShowTransfer(null), 5000);
+                loadSession();
+            })
+            .on('broadcast', { event: 'UPDATE_STAKES' }, (envelope) => {
+                setSession(prev => prev ? { ...prev, stakes_xp: envelope.payload?.stakes } : null);
+            })
+            .on('broadcast', { event: 'SHOW_ANSWER' }, (envelope) => {
+                setSession(prev => prev ? { ...prev, show_answer: envelope.payload?.show } : null);
+            })
+            .on('broadcast', { event: 'START_TIMER' }, (envelope) => {
+                startLocalTimer(envelope.payload?.seconds);
+            })
+            .on('broadcast', { event: 'RESET' }, () => {
+                loadSession();
+                setActiveQuestion(null);
+            })
+            .on('broadcast', { event: 'COIN_FLIP' }, (envelope) => {
+                setSession(prev => prev ? { ...prev, last_coin_flip: envelope.payload?.winner } : null);
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('✅ Arena conectada al canal de sincronización instantánea');
+                    console.log('✅ Arena Display v2.2.0 conectada al canal de sincronización unificado');
                 }
             });
 
@@ -132,7 +141,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     };
 
     return (
-        <div className={`${isFullScreen ? 'fixed inset-0' : 'w-full min-h-screen'} bg-[#000814] flex flex-col overflow-y-auto custom-scrollbar font-montserrat text-white select-none pb-20`}>
+        <div className={`${isFullScreen ? 'fixed inset-0' : 'w-full h-screen'} bg-[#000814] flex flex-col overflow-hidden font-montserrat text-white select-none`}>
             {/* Background Ambient FX */}
             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#003566_0%,transparent_70%)]" />
@@ -140,66 +149,77 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             </div>
 
             {/* Top Bar: Scores & Match Info */}
-            <div className="relative z-10 p-2 md:p-6 flex flex-row justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-2 md:gap-4 overflow-hidden">
+            <div className="relative z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-3 items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-6">
                 {/* Team A Card */}
                 <motion.div
                     animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}}
-                    className="flex items-center gap-2 md:gap-8 bg-blue-900/20 p-2 md:p-6 rounded-xl md:rounded-2xl border border-blue-500/30 shadow-2xl min-w-0 flex-1 md:flex-initial md:min-w-[320px]"
+                    className="flex items-center gap-4 md:gap-6 bg-blue-900/20 p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-blue-500/30 shadow-2xl w-full max-w-[450px] justify-self-start"
                 >
-                    <div className="w-10 h-10 md:w-24 md:h-24 bg-blue-600 rounded-lg md:rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.4)] flex-shrink-0">
-                        <Shield size={isFullScreen ? (window.innerWidth < 768 ? 20 : 48) : 24} className="text-white" />
+                    <div className="w-14 h-14 md:w-28 md:h-28 bg-blue-600 rounded-2xl md:rounded-[2.5rem] flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.5)] flex-shrink-0">
+                        <Shield size={isFullScreen ? (window.innerWidth < 768 ? 28 : 56) : 32} className="text-white" />
                     </div>
                     <div className="min-w-0">
-                        <p className="text-[8px] md:text-[14px] font-black text-blue-400 uppercase tracking-[0.2em] md:tracking-[0.3em] truncate"> ALFA</p>
+                        <p className="text-[12px] md:text-[16px] font-black text-blue-400 uppercase tracking-[0.3em] truncate">ESCUADRÓN ALFA</p>
                         <motion.p
                             key={session?.score_a}
                             initial={{ scale: 1.5, color: '#60a5fa' }}
                             animate={{ scale: 1, color: '#ffffff' }}
-                            className="text-2xl md:text-7xl font-bebas leading-tight"
+                            className="text-5xl md:text-8xl font-bebas leading-none mt-1"
                         >
                             {session?.score_a || 0}
                         </motion.p>
                     </div>
                 </motion.div>
 
-                {/* Central Stakes Container */}
-                <div className="flex flex-col items-center gap-1 md:gap-2 scale-75 md:scale-100">
+                {/* Central Stakes + Pot Container */}
+                <div className="flex flex-col items-center gap-2 md:gap-4 justify-self-center py-4 md:py-0">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-black/60 border border-[#ffb700]/30 px-4 md:px-10 py-1 md:py-4 rounded-full flex flex-col items-center shadow-[0_0_40px_rgba(255,183,0,0.1)]"
+                        className="bg-black/80 border border-[#ffb700]/40 px-6 md:px-12 py-3 md:py-5 rounded-3xl md:rounded-[3rem] flex flex-col items-center shadow-[0_0_60px_rgba(255,183,0,0.15)]"
                     >
-                        <div className="flex items-center gap-2 md:gap-4">
-                            <Zap size={isFullScreen ? (window.innerWidth < 768 ? 14 : 24) : 16} className="text-[#ffb700] animate-pulse" />
-                            <span className="text-md md:text-2xl font-bebas tracking-[0.1em] md:tracking-[0.2em] text-[#ffb700] whitespace-nowrap">{session?.stakes_xp || 100} XP</span>
+                        <div className="flex items-center gap-3 md:gap-5">
+                            <Zap size={isFullScreen ? (window.innerWidth < 768 ? 20 : 36) : 24} className="text-[#ffb700] animate-pulse" />
+                            <span className="text-2xl md:text-5xl font-bebas tracking-[0.2em] text-[#ffb700] whitespace-nowrap">{session?.stakes_xp || 100} XP</span>
                         </div>
                     </motion.div>
+                    {/* POZO ACUMULADO */}
+                    {(session?.accumulated_pot ?? 0) > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-green-500/20 border border-green-500/40 px-6 md:px-10 py-2 md:py-3 rounded-full flex items-center gap-3 shadow-[0_0_30px_rgba(34,197,94,0.3)]"
+                        >
+                            <Sparkles size={isFullScreen ? (window.innerWidth < 768 ? 16 : 24) : 16} className="text-green-400 animate-pulse" />
+                            <span className="text-lg md:text-2xl font-bebas tracking-widest text-green-400 whitespace-nowrap uppercase">POZO: +{session?.accumulated_pot} XP</span>
+                        </motion.div>
+                    )}
                 </div>
 
                 {/* Team B Card */}
                 <motion.div
                     animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}}
-                    className="flex items-center gap-2 md:gap-8 bg-teal-900/20 p-2 md:p-6 rounded-xl md:rounded-2xl border border-teal-500/30 shadow-2xl min-w-0 flex-1 md:flex-initial md:min-w-[320px] text-right justify-end"
+                    className="flex items-center gap-4 md:gap-6 bg-teal-900/20 p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-teal-500/30 shadow-2xl w-full max-w-[450px] text-right justify-self-end flex-row-reverse"
                 >
+                    <div className="w-14 h-14 md:w-28 md:h-28 bg-teal-600 rounded-2xl md:rounded-[2.5rem] flex items-center justify-center shadow-[0_0_40px_rgba(20,184,166,0.5)] flex-shrink-0">
+                        <Target size={isFullScreen ? (window.innerWidth < 768 ? 28 : 56) : 32} className="text-white" />
+                    </div>
                     <div className="min-w-0">
-                        <p className="text-[8px] md:text-[14px] font-black text-teal-400 uppercase tracking-[0.2em] md:tracking-[0.3em] truncate"> BRAVO</p>
+                        <p className="text-[12px] md:text-[16px] font-black text-teal-400 uppercase tracking-[0.3em] truncate">ESCUADRÓN BRAVO</p>
                         <motion.p
                             key={session?.score_b}
                             initial={{ scale: 1.5, color: '#2dd4bf' }}
                             animate={{ scale: 1, color: '#ffffff' }}
-                            className="text-2xl md:text-7xl font-bebas leading-tight"
+                            className="text-5xl md:text-8xl font-bebas leading-none mt-1"
                         >
                             {session?.score_b || 0}
                         </motion.p>
-                    </div>
-                    <div className="w-10 h-10 md:w-24 md:h-24 bg-teal-600 rounded-lg md:rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(20,184,166,0.4)] flex-shrink-0">
-                        <Target size={isFullScreen ? (window.innerWidth < 768 ? 20 : 48) : 24} className="text-white" />
                     </div>
                 </motion.div>
             </div>
 
             {/* Main Stage: Roulette or Question */}
-            <div className="relative flex-none md:flex-1 flex flex-col items-center justify-start md:justify-center p-4 md:p-10 z-10 w-full">
+            <div className="relative flex-1 flex flex-col items-center justify-center p-2 md:p-6 z-10 w-full">
                 {/* Temporizador HUD */}
                 <AnimatePresence>
                     {timeLeft > 0 && (
@@ -207,9 +227,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                             initial={{ opacity: 0, scale: 0.5 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 1.5 }}
-                            className="absolute bottom-4 md:bottom-20 right-4 md:right-10 z-[100] pointer-events-none"
+                            className="absolute bottom-10 md:bottom-20 right-6 md:right-12 z-[100] pointer-events-none"
                         >
-                            <div className={`text-6xl md:text-9xl font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} drop-shadow-[0_0_30px_rgba(0,0,0,0.5)]`}>
+                            <div className={`text-6xl md:text-8xl font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} drop-shadow-[0_0_30px_rgba(0,0,0,0.5)]`}>
                                 {timeLeft}
                             </div>
                         </motion.div>
@@ -259,7 +279,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5 }}
-                                className="text-xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
+                                className="text-xl md:text-5xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
                             >
                                 {activeQuestion.question}
                             </motion.h1>
@@ -276,7 +296,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6 mt-4 md:mt-10">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4 mt-2 md:mt-6">
                                 {activeQuestion.options.map((opt: string, i: number) => {
                                     const isCorrect = opt === activeQuestion.correctAnswer || opt === activeQuestion.correct_answer;
                                     const showAnswer = session?.show_answer;
@@ -287,9 +307,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             transition={{ delay: 0.8 + (i * 0.1) }}
-                                            className={`p-4 md:p-8 rounded-xl md:rounded-[2rem] border text-sm md:text-3xl font-bebas tracking-wider transition-all duration-500 ${showAnswer && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_30px_rgba(34,197,94,0.3)] scale-[1.02]' : showAnswer ? 'opacity-10 border-white/5 bg-white/2' : 'bg-white/5 border-white/10 text-white/80'}`}
+                                            className={`p-3 md:p-6 rounded-xl md:rounded-[1.5rem] border text-sm md:text-2xl font-bebas tracking-wider transition-all duration-500 ${showAnswer && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_30px_rgba(34,197,94,0.3)] scale-[1.02]' : showAnswer ? 'opacity-10 border-white/5 bg-white/2' : 'bg-white/5 border-white/10 text-white/80'}`}
                                         >
-                                            <span className="text-xs md:text-xl mr-2 md:mr-4 opacity-30">{i + 1}.</span> {opt}
+                                            <span className="text-xs md:text-lg mr-1 md:mr-2 opacity-30">{i + 1}.</span> {opt}
                                         </motion.div>
                                     );
                                 })}
@@ -313,9 +333,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                     </div>
 
                                     {activeQuestion.reference && (
-                                        <div className="p-6 bg-white/5 border border-white/10 rounded-2xl inline-block mt-4">
-                                            <p className="text-[12px] text-[#ffb700] font-black uppercase tracking-[0.4em] mb-2">Referencia Táctica</p>
-                                            <p className="text-2xl font-serif italic text-white/60">"{activeQuestion.reference}"</p>
+                                        <div className="p-4 bg-white/5 border border-white/10 rounded-2xl inline-block mt-2">
+                                            <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] mb-1">Referencia Táctica</p>
+                                            <p className="text-xl font-serif italic text-white/60">"{activeQuestion.reference}"</p>
                                         </div>
                                     )}
                                 </motion.div>
@@ -384,7 +404,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             </AnimatePresence>
 
             {/* Bottom Tech Bar */}
-            <div className="relative z-10 p-4 md:p-8 flex justify-center md:justify-between items-center bg-black/60 border-t border-white/5 opacity-40">
+            <div className="relative z-10 p-2 md:p-4 flex justify-center md:justify-between items-center bg-black/60 border-t border-white/5 opacity-40">
                 <div className="hidden md:flex gap-10">
                     <div className="flex flex-col">
                         <span className="text-[8px] font-black uppercase tracking-widest text-white/40">Encryption</span>

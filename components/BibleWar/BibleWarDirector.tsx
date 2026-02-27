@@ -42,8 +42,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     const [loading, setLoading] = useState(true);
     const [customStakes, setCustomStakes] = useState(100);
     const [agents, setAgents] = useState<Agent[]>([]);
-    const [groups, setGroups] = useState<{ agent_id: string, team: 'A' | 'B' }[]>([]);
-    const [showGroupManager, setShowGroupManager] = useState(false);
+    const [showGladiatorManager, setShowGladiatorManager] = useState(false);
     const [broadcastChannel, setBroadcastChannel] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
     const [showQuestionImporter, setShowQuestionImporter] = useState(false);
@@ -68,9 +67,6 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_sessions' }, (payload) => {
                 console.log("🔄 BibleWarDirector: DB CHANGE DETECTED", payload);
                 setSession(payload.new as BibleWarSession);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_groups' }, () => {
-                loadGroups();
             })
             .subscribe((status) => console.log("📡 Subscripción DB:", status));
 
@@ -111,14 +107,9 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         setSession(sessionData);
         setAgents(agentsData);
         setQuestions(bibleQuestions);
-        await loadGroups();
         setLoading(false);
     };
 
-    const loadGroups = async () => {
-        const groupsData = await fetchBibleWarGroups();
-        setGroups(groupsData);
-    };
 
     const broadcastAction = (event: string, payload: any = {}) => {
         const channel = bcRef.current;
@@ -334,18 +325,6 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         }
     };
 
-    // 6. FUNCIONES DE UTILIDAD (GRUPOS, TIMERS, IMPORTACIÓN)
-    const handleAssignGroup = async (agentId: string, team: 'A' | 'B' | null) => {
-        const prevGroups = [...groups];
-        if (!team) setGroups(groups.filter(g => g.agent_id !== agentId));
-        else setGroups(prev => [...prev.filter(g => g.agent_id !== agentId), { agent_id: agentId, team }]);
-
-        const res = await assignAgentToBibleWarGroup(agentId, team);
-        if (!res.success) {
-            alert("Error al asignar grupo.");
-            setGroups(prevGroups);
-        }
-    };
 
     const handleStartTimer = async (seconds: number) => {
         const endAt = new Date(Date.now() + seconds * 1000).toISOString();
@@ -409,7 +388,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                     <button onClick={() => setShowQuestionImporter(!showQuestionImporter)} className={`p-2 rounded-xl transition-all ${showQuestionImporter ? 'bg-purple-600' : 'bg-white/5 border border-white/10'}`}>
                         <Plus size={16} />
                     </button>
-                    <button onClick={() => setShowGroupManager(!showGroupManager)} className={`p-2 rounded-xl transition-all ${showGroupManager ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 border border-white/10'}`}>
+                    <button onClick={() => setShowGladiatorManager(!showGladiatorManager)} className={`p-2 rounded-xl transition-all ${showGladiatorManager ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 border border-white/10'}`}>
                         <Users size={16} />
                     </button>
                     <button onClick={() => window.open('?view=bible_war_display', '_blank')} className="p-2 bg-blue-600 rounded-xl">
@@ -430,21 +409,45 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                         <button onClick={handleImportQuestions} className="w-full py-3 bg-purple-600 rounded-xl font-black uppercase text-[10px]">IMPORTAR</button>
                     </motion.div>
                 )}
-                {showGroupManager && (
+                {showGladiatorManager && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="bg-black/30 border-b border-white/10 overflow-hidden p-6 space-y-4">
-                        <h3 className="text-[10px] font-black uppercase text-[#ffb700]">Gestión de Escuadras</h3>
+                        <h3 className="text-[10px] font-black uppercase text-[#ffb700]">Selección de Gladiadores Reales</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            {['A', 'B'].map(t => (
-                                <div key={t} className="space-y-2">
-                                    <p className={`text-[8px] font-black uppercase ${t === 'A' ? 'text-blue-400' : 'text-teal-400'}`}>GRUPO {t === 'A' ? 'ALFA' : 'BRAVO'}</p>
-                                    <div className="bg-white/5 rounded-xl p-2 space-y-1">
-                                        {agents.filter(a => groups.find(g => g.agent_id === a.id && g.team === t)).map(a => (
-                                            <div key={a.id} className="flex justify-between p-2 bg-white/5 rounded-lg border border-white/10"><span className="text-[8px]">{a.name}</span><button onClick={() => handleAssignGroup(a.id, null)}><Minus size={12} /></button></div>
-                                        ))}
-                                        <select onChange={e => handleAssignGroup(e.target.value, t as 'A' | 'B')} className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-[8px]"><option value="">+ AÑADIR</option>{agents.filter(a => !groups.find(g => g.agent_id === a.id)).map(a => (<option key={a.id} value={a.id}>{a.name}</option>))}</select>
+                            {['A', 'B'].map(t => {
+                                const gladId = t === 'A' ? session?.gladiator_a_id : session?.gladiator_b_id;
+                                const gladiator = agents.find(a => a.id === gladId);
+                                return (
+                                    <div key={t} className="space-y-2">
+                                        <p className={`text-[8px] font-black uppercase ${t === 'A' ? 'text-blue-400' : 'text-teal-400'}`}>COMO JUGADOR {t === 'A' ? 'UNO' : 'DOS'}</p>
+                                        <div className="bg-white/5 rounded-xl p-3 border border-white/10 flex flex-col gap-3">
+                                            {gladiator ? (
+                                                <div className="flex items-center gap-3 bg-white/5 p-2 rounded-lg relative group">
+                                                    <img src={gladiator.photoUrl || '/default-avatar.png'} className="w-10 h-10 rounded-full border border-white/20 object-cover" />
+                                                    <span className="text-[10px] font-bold truncate pr-6">{gladiator.name}</span>
+                                                    <button onClick={() => updateBibleWarSession(t === 'A' ? { gladiator_a_id: null } : { gladiator_b_id: null })} className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Plus size={14} className="rotate-45" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-2 px-4 border border-dashed border-white/20 rounded-lg text-[8px] text-white/30 italic">SIN GLADIADOR</div>
+                                            )}
+                                            <div className="relative">
+                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-white/40" size={12} />
+                                                <select
+                                                    onChange={e => updateBibleWarSession(t === 'A' ? { gladiator_a_id: e.target.value } : { gladiator_b_id: e.target.value })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-2 py-2 text-[9px] font-black outline-none focus:border-[#ffb700]"
+                                                    value=""
+                                                >
+                                                    <option value="">+ CAMBIAR GLADIADOR</option>
+                                                    {agents.filter(a => a.id !== session?.gladiator_a_id && a.id !== session?.gladiator_b_id).map(a => (
+                                                        <option key={a.id} value={a.id}>{a.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </motion.div>
                 )}

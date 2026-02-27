@@ -226,5 +226,7 @@ export interface BibleWarSession {
   timer_end_at?: string | null;
   last_coin_flip?: string | null;
   used_questions?: string[];
+  gladiator_a_id?: string | null;
+  gladiator_b_id?: string | null;
 }
 

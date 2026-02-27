@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { fetchBibleWarSession, fetchBibleWarQuestions } from '../../services/supabaseService';
-import { BibleWarSession } from '../../types';
+import { BibleWarSession, Agent } from '../../types';
 
 interface BibleWarDisplayProps {
     isFullScreen?: boolean;
@@ -24,6 +24,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [showTransfer, setShowTransfer] = useState<'A' | 'B' | 'NONE' | 'TIE' | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(0);
     const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
+    const [gladiators, setGladiators] = useState<{ a: Agent | null, b: Agent | null }>({ a: null, b: null });
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const phaseRef = useRef<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
 
@@ -166,6 +167,16 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
     const handleUpdate = async (newState: BibleWarSession) => {
         setSession(newState);
+
+        // Cargar gladiadores si cambiaron (v4.0)
+        if (newState.gladiator_a_id !== session?.gladiator_a_id || newState.gladiator_b_id !== session?.gladiator_b_id) {
+            const { data: agents } = await supabase.from('agents').select('*').in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
+            setGladiators({
+                a: agents?.find(a => a.id === newState.gladiator_a_id) || null,
+                b: agents?.find(a => a.id === newState.gladiator_b_id) || null
+            });
+        }
+
         const currentPhase = phaseRef.current;
         if (currentPhase === 'BATTLE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
             console.log("🎯 Ambos equipos listos. Notificando Director...");
@@ -252,13 +263,19 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
             {/* Top Bar */}
             <div className="relative z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-3 items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-6">
-                <motion.div animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-blue-900/20 p-4 rounded-2xl border border-blue-500/30 shadow-2xl">
-                    <div className="w-14 h-14 md:w-24 md:h-24 bg-blue-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.5)]">
-                        <Shield size={40} className="text-white" />
+                <motion.div animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-blue-900/40 p-4 rounded-2xl border border-blue-500/30 shadow-2xl overflow-hidden min-w-0">
+                    <div className="w-16 h-16 md:w-24 md:h-24 shrink-0 relative">
+                        {gladiators.a?.photoUrl ? (
+                            <img src={gladiators.a.photoUrl} className="w-full h-full object-cover rounded-2xl border-2 border-blue-400/50 shadow-[0_0_40px_rgba(37,99,235,0.5)]" />
+                        ) : (
+                            <div className="w-full h-full bg-blue-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.5)]">
+                                <Shield size={40} className="text-white" />
+                            </div>
+                        )}
                     </div>
-                    <div>
-                        <p className="text-[12px] font-black text-blue-400 uppercase tracking-widest">ALFA</p>
-                        <motion.p key={session?.score_a} className="text-5xl md:text-7xl font-bebas leading-none">{session?.score_a || 0}</motion.p>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[10px] md:text-[12px] font-black text-blue-400 uppercase tracking-widest truncate">{gladiators.a?.name || 'ALFA'}</p>
+                        <motion.p key={session?.score_a} className="text-4xl md:text-7xl font-bebas leading-none truncate">{session?.score_a || 0}</motion.p>
                     </div>
                 </motion.div>
 
@@ -275,13 +292,19 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                     )}
                 </div>
 
-                <motion.div animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-teal-900/20 p-4 rounded-2xl border border-teal-500/30 shadow-2xl flex-row-reverse text-right">
-                    <div className="w-14 h-14 md:w-24 md:h-24 bg-teal-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(20,184,166,0.5)]">
-                        <Target size={40} className="text-white" />
+                <motion.div animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-teal-900/40 p-4 rounded-2xl border border-teal-500/30 shadow-2xl flex-row-reverse text-right overflow-hidden min-w-0">
+                    <div className="w-16 h-16 md:w-24 md:h-24 shrink-0 relative">
+                        {gladiators.b?.photoUrl ? (
+                            <img src={gladiators.b.photoUrl} className="w-full h-full object-cover rounded-2xl border-2 border-teal-400/50 shadow-[0_0_40px_rgba(20,184,166,0.5)]" />
+                        ) : (
+                            <div className="w-full h-full bg-teal-600 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(20,184,166,0.5)]">
+                                <Target size={40} className="text-white" />
+                            </div>
+                        )}
                     </div>
-                    <div>
-                        <p className="text-[12px] font-black text-teal-400 uppercase tracking-widest">BRAVO</p>
-                        <motion.p key={session?.score_b} className="text-5xl md:text-7xl font-bebas leading-none">{session?.score_b || 0}</motion.p>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[10px] md:text-[12px] font-black text-teal-400 uppercase tracking-widest truncate">{gladiators.b?.name || 'BRAVO'}</p>
+                        <motion.p key={session?.score_b} className="text-4xl md:text-7xl font-bebas leading-none truncate">{session?.score_b || 0}</motion.p>
                     </div>
                 </motion.div>
             </div>
@@ -347,9 +370,14 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md">
                         <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center space-y-6">
                             <Trophy size={120} className="mx-auto text-[#ffb700]" />
-                            <h2 className="text-7xl md:text-9xl font-bebas tracking-[0.2em]">
-                                {showTransfer === 'A' ? 'ALFA VENCE' : showTransfer === 'B' ? 'BRAVO VENCE' : showTransfer === 'TIE' ? 'EMPATE' : 'NINGUNO'}
+                            <h2 className="text-7xl md:text-9xl font-bebas tracking-[0.2em] uppercase">
+                                {showTransfer === 'A' ? (gladiators.a?.name || 'ALFA VENCE') :
+                                    showTransfer === 'B' ? (gladiators.b?.name || 'BRAVO VENCE') :
+                                        showTransfer === 'TIE' ? 'EMPATE' : 'NINGUNO'}
                             </h2>
+                            {(showTransfer === 'A' || showTransfer === 'B') && (
+                                <p className="text-3xl md:text-5xl font-black text-[#ffb700] italic">¡GLORIA AL VENCEDOR!</p>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}

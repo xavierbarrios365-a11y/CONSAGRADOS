@@ -1328,31 +1328,38 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
 
         if (updateError) throw updateError;
 
-        // 3. TRANSFERENCIA AUTOMÁTICA A AGENTES (Si no es empate)
-        if (winnerTeam !== 'TIE') {
-            const { data: groups, error: groupsError } = await supabase
-                .from('bible_war_groups')
-                .select('agent_id, team');
+        // 3. TRANSFERENCIA INDIVIDUAL A GLADIADORES (v4.0)
+        const { data: currentSession } = await supabase
+            .from('bible_war_sessions')
+            .select('gladiator_a_id, gladiator_b_id')
+            .eq('id', '00000000-0000-0000-0000-000000000001')
+            .single();
 
-            if (!groupsError && groups) {
-                console.log(`🚀 Iniciando transferencia masiva para ${groups.length} agentes en grupos.`);
-                for (const member of groups) {
-                    let amount = 0;
-                    if (winnerTeam === 'A') {
-                        amount = member.team === 'A' ? totalAward : -totalAward;
-                    } else if (winnerTeam === 'B') {
-                        amount = member.team === 'B' ? totalAward : -totalAward;
-                    } else if (winnerTeam === 'NONE') {
-                        amount = -totalAward; // Ambos pierden
-                    }
+        if (currentSession) {
+            const { gladiator_a_id: gadA, gladiator_b_id: gadB } = currentSession;
 
-                    if (amount !== 0) {
-                        console.log(`⚡ Aplicando ${amount} XP a Agente ID: ${member.agent_id} (Team ${member.team})`);
-                        await updateAgentPointsSupabase(member.agent_id, 'XP', amount);
-                    }
+            // Procesar Agente A
+            if (gadA) {
+                let amountA = 0;
+                if (winnerTeam === 'A') amountA = totalAward;
+                else if (winnerTeam === 'B' || winnerTeam === 'NONE') amountA = -stakes;
+
+                if (amountA !== 0) {
+                    const { data: agent } = await supabase.from('agents').select('xp').eq('id', gadA).single();
+                    if (agent) await supabase.from('agents').update({ xp: (agent.xp || 0) + amountA }).eq('id', gadA);
                 }
-            } else {
-                console.warn("⚠️ No se encontraron grupos para transferencia automática o hubo error:", groupsError);
+            }
+
+            // Procesar Agente B
+            if (gadB) {
+                let amountB = 0;
+                if (winnerTeam === 'B') amountB = totalAward;
+                else if (winnerTeam === 'A' || winnerTeam === 'NONE') amountB = -stakes;
+
+                if (amountB !== 0) {
+                    const { data: agent } = await supabase.from('agents').select('xp').eq('id', gadB).single();
+                    if (agent) await supabase.from('agents').update({ xp: (agent.xp || 0) + amountB }).eq('id', gadB);
+                }
             }
         }
 

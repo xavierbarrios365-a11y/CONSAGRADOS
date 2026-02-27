@@ -132,7 +132,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     };
 
     return (
-        <div className={`${isFullScreen ? 'fixed inset-0' : 'w-full h-full min-h-[600px] rounded-[2rem]'} bg-[#000814] flex flex-col overflow-hidden font-montserrat text-white select-none`}>
+        <div className={`${isFullScreen ? 'fixed inset-0' : 'w-full min-h-screen'} bg-[#000814] flex flex-col overflow-y-auto custom-scrollbar font-montserrat text-white select-none pb-20`}>
             {/* Background Ambient FX */}
             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#003566_0%,transparent_70%)]" />
@@ -199,7 +199,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             </div>
 
             {/* Main Stage: Roulette or Question */}
-            <div className="relative flex-1 flex flex-col items-center justify-center p-2 md:p-10 z-10 overflow-hidden">
+            <div className="relative flex-none md:flex-1 flex flex-col items-center justify-start md:justify-center p-4 md:p-10 z-10 w-full">
                 {/* Temporizador HUD */}
                 <AnimatePresence>
                     {timeLeft > 0 && (
@@ -259,7 +259,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5 }}
-                                className="text-2xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
+                                className="text-xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
                             >
                                 {activeQuestion.question}
                             </motion.h1>
@@ -287,7 +287,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                             initial={{ opacity: 0, scale: 0.9 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             transition={{ delay: 0.8 + (i * 0.1) }}
-                                            className={`p-4 md:p-8 rounded-xl md:rounded-[2rem] border text-lg md:text-3xl font-bebas tracking-wider transition-all duration-500 ${showAnswer && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_30px_rgba(34,197,94,0.3)] scale-[1.02]' : showAnswer ? 'opacity-10 border-white/5 bg-white/2' : 'bg-white/5 border-white/10 text-white/80'}`}
+                                            className={`p-4 md:p-8 rounded-xl md:rounded-[2rem] border text-sm md:text-3xl font-bebas tracking-wider transition-all duration-500 ${showAnswer && isCorrect ? 'bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_30px_rgba(34,197,94,0.3)] scale-[1.02]' : showAnswer ? 'opacity-10 border-white/5 bg-white/2' : 'bg-white/5 border-white/10 text-white/80'}`}
                                         >
                                             <span className="text-xs md:text-xl mr-2 md:mr-4 opacity-30">{i + 1}.</span> {opt}
                                         </motion.div>

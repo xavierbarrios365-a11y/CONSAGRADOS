@@ -13,7 +13,8 @@ import {
     Minus,
     Zap,
     HelpCircle,
-    Eye
+    Eye,
+    RefreshCw
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { updateBibleWarSession, transferBibleWarXP, fetchBibleWarSession, fetchBibleWarGroups, assignAgentToBibleWarGroup, fetchAgentsFromSupabase, fetchBibleWarQuestions, clearBibleWarQuestions, importBibleWarQuestions } from '../../services/supabaseService';
@@ -205,6 +206,12 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         } else {
             loadSession();
         }
+    };
+
+    const handleForceReload = () => {
+        if (!window.confirm("📡 ¿Forzar RECARGA de todos los dispositivos conectados?")) return;
+        broadcastAction('FORCE_RELOAD', {});
+        alert("📡 Señal de recarga enviada.");
     };
 
     const handleAssignGroup = async (agentId: string, team: 'A' | 'B' | null) => {

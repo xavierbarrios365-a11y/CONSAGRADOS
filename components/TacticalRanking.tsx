@@ -37,6 +37,9 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
     const tiers = ['RECLUTA', 'ACTIVO', 'CONSAGRADO', 'REFERENTE', 'LÍDER'];
 
     const filteredAgents = agents.filter(a => {
+        // Ocultar perfiles de prueba del ranking
+        if (a.id === 'CON-TEST1' || a.id === 'CON-TEST2') return false;
+
         if (activeCategory === 'LEADERS') {
             return a.role === 'LIDER' || a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
         } else {

@@ -33,7 +33,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.ADMIN, icon: <Settings size={20} />, label: 'Admin', roles: [UserRole.DIRECTOR] },
   ];
 
-  const filteredNavItems = allNavItems.filter(item => item.roles.includes(userRole));
+  // Si es un jugador test, solo mostrar Inicio, Arena (Combatir) y Mi Perfil
+  const filteredNavItems = allNavItems.filter(item => {
+    if (!item.roles.includes(userRole)) return false;
+    if (userName && (userName.includes('Test') || userName.includes('TEST'))) {
+      return item.id === AppView.HOME || item.id === AppView.PROFILE || item.label === 'Arena' || item.label === 'Combatir';
+    }
+    return true;
+  });
 
   return (
     <div className="flex flex-col h-screen bg-[#000810] text-[#f4f4f4] overflow-hidden font-montserrat relative">

@@ -1296,20 +1296,20 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
 
         const totalAward = stakes + newPot;
 
+        // 1. Calcular resolución para los marcadores VISUALES de la sesión
         if (winnerTeam === 'A') {
             newScoreA += totalAward;
-            newScoreB -= totalAward;
+            newScoreB -= stakes;
             newPot = 0; // Se consume el pozo
         } else if (winnerTeam === 'B') {
             newScoreB += totalAward;
-            newScoreA -= totalAward;
+            newScoreA -= stakes;
             newPot = 0; // Se consume el pozo
         } else if (winnerTeam === 'NONE') {
-            newScoreA -= stakes;
-            newScoreB -= stakes;
-            newPot = 0; // Pierden y se pierde el pozo también o se puede mantener? Vamos a dejar que pierdan el pozo.
+            // Ambos fallan: el pozo se acumula, nadie pierde XP real
+            newPot += stakes;
         } else if (winnerTeam === 'TIE') {
-            // Empate: los stakes van al pot para la próxima. Nadie gana ni pierde ahora.
+            // Empate (ambos aciertan): el pozo se acumula, nadie pierde.
             newPot += stakes;
         }
 
@@ -1341,24 +1341,24 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
             // Procesar Agente A
             if (gadA) {
                 let amountA = 0;
-                if (winnerTeam === 'A') amountA = totalAward;
-                else if (winnerTeam === 'B' || winnerTeam === 'NONE') amountA = -stakes;
+                if (winnerTeam === 'A') amountA = totalAward; // Gana pozo + stakes
+                else if (winnerTeam === 'B') amountA = -stakes; // Pierde solo sus stakes en combate directo
 
                 if (amountA !== 0) {
                     const { data: agent } = await supabase.from('agentes').select('xp').eq('id', gadA).single();
-                    if (agent) await supabase.from('agentes').update({ xp: (agent.xp || 0) + amountA }).eq('id', gadA);
+                    if (agent) await supabase.from('agentes').update({ xp: Math.max(0, (agent.xp || 0) + amountA) }).eq('id', gadA);
                 }
             }
 
             // Procesar Agente B
             if (gadB) {
                 let amountB = 0;
-                if (winnerTeam === 'B') amountB = totalAward;
-                else if (winnerTeam === 'A' || winnerTeam === 'NONE') amountB = -stakes;
+                if (winnerTeam === 'B') amountB = totalAward; // Gana pozo + stakes
+                else if (winnerTeam === 'A') amountB = -stakes; // Pierde solo sus stakes en combate directo
 
                 if (amountB !== 0) {
                     const { data: agent } = await supabase.from('agentes').select('xp').eq('id', gadB).single();
-                    if (agent) await supabase.from('agentes').update({ xp: (agent.xp || 0) + amountB }).eq('id', gadB);
+                    if (agent) await supabase.from('agentes').update({ xp: Math.max(0, (agent.xp || 0) + amountB) }).eq('id', gadB);
                 }
             }
         }

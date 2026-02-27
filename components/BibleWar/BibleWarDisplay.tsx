@@ -140,79 +140,60 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             </div>
 
             {/* Top Bar: Scores & Match Info */}
-            <div className="relative z-10 p-2 md:p-6 flex flex-col md:flex-row justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-2 md:gap-4">
+            <div className="relative z-10 p-2 md:p-6 flex flex-row justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-2 md:gap-4 overflow-hidden">
                 {/* Team A Card */}
                 <motion.div
                     animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}}
-                    className="flex items-center gap-4 md:gap-8 bg-blue-900/20 p-2 md:p-6 rounded-2xl border border-blue-500/30 shadow-2xl min-w-0 w-full md:min-w-[320px] md:w-auto"
+                    className="flex items-center gap-2 md:gap-8 bg-blue-900/20 p-2 md:p-6 rounded-xl md:rounded-2xl border border-blue-500/30 shadow-2xl min-w-0 flex-1 md:flex-initial md:min-w-[320px]"
                 >
-                    <div className="w-12 h-12 md:w-24 md:h-24 bg-blue-600 rounded-xl md:rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.4)]">
-                        <Shield size={isFullScreen ? 48 : 24} className="text-white" />
+                    <div className="w-10 h-10 md:w-24 md:h-24 bg-blue-600 rounded-lg md:rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.4)] flex-shrink-0">
+                        <Shield size={isFullScreen ? (window.innerWidth < 768 ? 20 : 48) : 24} className="text-white" />
                     </div>
-                    <div>
-                        <p className="text-[10px] md:text-[14px] font-black text-blue-400 uppercase tracking-[0.3em]"> ALFA</p>
+                    <div className="min-w-0">
+                        <p className="text-[8px] md:text-[14px] font-black text-blue-400 uppercase tracking-[0.2em] md:tracking-[0.3em] truncate"> ALFA</p>
                         <motion.p
                             key={session?.score_a}
                             initial={{ scale: 1.5, color: '#60a5fa' }}
                             animate={{ scale: 1, color: '#ffffff' }}
-                            className="text-4xl md:text-7xl font-bebas"
+                            className="text-2xl md:text-7xl font-bebas leading-tight"
                         >
                             {session?.score_a || 0}
                         </motion.p>
-                        {session?.status === 'ACTIVE' && activeQuestion && (
-                            <div className="mt-2">
-                                <span className={`text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full ${session.answer_a ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/5 border border-white/10 text-white/50'}`}>
-                                    {session.answer_a ? '✓ LISTO' : 'PENSANDO...'}
-                                </span>
-                            </div>
-                        )}
                     </div>
                 </motion.div>
 
                 {/* Central Stakes Container */}
-                <div className="flex flex-col items-center gap-1 md:gap-2">
+                <div className="flex flex-col items-center gap-1 md:gap-2 scale-75 md:scale-100">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-black/60 border border-[#ffb700]/30 px-6 md:px-10 py-2 md:py-4 rounded-full flex flex-col items-center shadow-[0_0_40px_rgba(255,183,0,0.1)]"
+                        className="bg-black/60 border border-[#ffb700]/30 px-4 md:px-10 py-1 md:py-4 rounded-full flex flex-col items-center shadow-[0_0_40px_rgba(255,183,0,0.1)]"
                     >
                         <div className="flex items-center gap-2 md:gap-4">
-                            <Zap size={isFullScreen ? 24 : 16} className="text-[#ffb700] animate-pulse" />
-                            <span className="text-lg md:text-2xl font-bebas tracking-[0.2em] text-[#ffb700]">{session?.stakes_xp || 100} XP</span>
+                            <Zap size={isFullScreen ? (window.innerWidth < 768 ? 14 : 24) : 16} className="text-[#ffb700] animate-pulse" />
+                            <span className="text-md md:text-2xl font-bebas tracking-[0.1em] md:tracking-[0.2em] text-[#ffb700] whitespace-nowrap">{session?.stakes_xp || 100} XP</span>
                         </div>
-                        {session?.accumulated_pot !== undefined && session.accumulated_pot > 0 && (
-                            <div className="text-[12px] md:text-sm font-black text-green-400 mt-1 flex items-center gap-2 uppercase">
-                                + POZO: {session.accumulated_pot} XP
-                            </div>
-                        )}
                     </motion.div>
                 </div>
 
                 {/* Team B Card */}
                 <motion.div
                     animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}}
-                    className="flex items-center gap-4 md:gap-8 bg-teal-900/20 p-2 md:p-6 rounded-2xl border border-teal-500/30 shadow-2xl min-w-0 w-full md:min-w-[320px] md:w-auto text-right justify-end"
+                    className="flex items-center gap-2 md:gap-8 bg-teal-900/20 p-2 md:p-6 rounded-xl md:rounded-2xl border border-teal-500/30 shadow-2xl min-w-0 flex-1 md:flex-initial md:min-w-[320px] text-right justify-end"
                 >
-                    <div>
-                        <p className="text-[10px] md:text-[14px] font-black text-teal-400 uppercase tracking-[0.3em]"> BRAVO</p>
+                    <div className="min-w-0">
+                        <p className="text-[8px] md:text-[14px] font-black text-teal-400 uppercase tracking-[0.2em] md:tracking-[0.3em] truncate"> BRAVO</p>
                         <motion.p
                             key={session?.score_b}
                             initial={{ scale: 1.5, color: '#2dd4bf' }}
                             animate={{ scale: 1, color: '#ffffff' }}
-                            className="text-4xl md:text-7xl font-bebas"
+                            className="text-2xl md:text-7xl font-bebas leading-tight"
                         >
                             {session?.score_b || 0}
                         </motion.p>
-                        {session?.status === 'ACTIVE' && activeQuestion && (
-                            <div className="mt-2 text-right">
-                                <span className={`text-[10px] md:text-xs font-black px-2 md:px-3 py-1 rounded-full ${session.answer_b ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-white/5 border border-white/10 text-white/50'}`}>
-                                    {session.answer_b ? '✓ LISTO' : 'PENSANDO...'}
-                                </span>
-                            </div>
-                        )}
                     </div>
-                    <div className="w-12 h-12 md:w-24 md:h-24 bg-teal-600 rounded-xl md:rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(20,184,166,0.4)]">
-                        <Target size={isFullScreen ? 48 : 24} className="text-white" />
+                    <div className="w-10 h-10 md:w-24 md:h-24 bg-teal-600 rounded-lg md:rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(20,184,166,0.4)] flex-shrink-0">
+                        <Target size={isFullScreen ? (window.innerWidth < 768 ? 20 : 48) : 24} className="text-white" />
                     </div>
                 </motion.div>
             </div>
@@ -246,19 +227,19 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                             exit={{ opacity: 0, scale: 1.2 }}
                             className="flex flex-col items-center gap-10"
                         >
-                            <div className="relative w-80 h-80 rounded-full border-8 border-white/10 flex items-center justify-center overflow-hidden">
+                            <div className="relative w-48 h-48 md:w-80 md:h-80 rounded-full border-4 md:border-8 border-white/10 flex items-center justify-center overflow-hidden">
                                 <motion.div
                                     animate={{ rotate: 3600 }}
                                     transition={{ duration: 4, ease: "circOut" }}
                                     className="absolute inset-0 bg-[conic-gradient(from_0deg,#3b82f6,#2dd4bf,#ef4444,#f59e0b,#8b5cf6,#3b82f6)]"
                                 />
-                                <div className="absolute inset-2 bg-[#001f3f] rounded-full z-10 flex items-center justify-center text-center p-6">
-                                    <p className="text-4xl font-bebas tracking-tighter transition-all duration-300">
+                                <div className="absolute inset-1.5 md:inset-2 bg-[#001f3f] rounded-full z-10 flex items-center justify-center text-center p-4 md:p-6">
+                                    <p className="text-xl md:text-4xl font-bebas tracking-tighter transition-all duration-300">
                                         {session?.roulette_category || '???'}
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-2xl font-bebas text-[#ffb700] tracking-[0.4em] animate-pulse">SELECCIONANDO CATEGORÍA...</p>
+                            <p className="text-lg md:text-2xl font-bebas text-[#ffb700] tracking-[0.2em] md:tracking-[0.4em] animate-pulse">SELECCIONANDO CATEGORÍA...</p>
                         </motion.div>
                     ) : activeQuestion ? (
                         <motion.div
@@ -278,7 +259,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.5 }}
-                                className="text-xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight"
+                                className="text-2xl md:text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 leading-tight px-4"
                             >
                                 {activeQuestion.question}
                             </motion.h1>

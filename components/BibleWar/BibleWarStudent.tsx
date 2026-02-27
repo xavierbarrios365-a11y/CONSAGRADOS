@@ -115,19 +115,19 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 flex flex-col items-center relative z-10">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 flex flex-col items-center relative z-10 w-full">
                 {session?.status === 'WAITING' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-4 mt-20">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-10">
                         <Clock size={48} className="text-[#ffb700]/50 animate-pulse" />
-                        <h2 className="text-4xl font-bebas tracking-widest text-white/50">ESPERANDO DESPLIEGUE</h2>
+                        <h2 className="text-3xl md:text-4xl font-bebas tracking-widest text-white/50">ESPERANDO DESPLIEGUE</h2>
                         <p className="text-[10px] text-[#ffb700] uppercase font-black tracking-widest">Atento a las instrucciones del Comando</p>
                     </motion.div>
                 )}
 
                 {session?.status === 'SPINNING' && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-6 mt-20">
-                        <div className="w-24 h-24 border-4 border-t-[#ffb700] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-                        <h2 className="text-3xl font-bebas tracking-widest text-[#ffb700]">GIRANDO RULETA...</h2>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-10">
+                        <div className="w-16 h-16 md:w-24 md:h-24 border-4 border-t-[#ffb700] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+                        <h2 className="text-2xl md:text-3xl font-bebas tracking-widest text-[#ffb700]">GIRANDO RULETA...</h2>
                     </motion.div>
                 )}
 
@@ -147,9 +147,9 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                         </div>
 
                         {/* Pregunta */}
-                        <div className="text-center space-y-2">
+                        <div className="text-center space-y-2 px-2">
                             <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">{activeQuestion.category}</p>
-                            <h3 className="text-xl md:text-2xl font-black italic">{activeQuestion.question}</h3>
+                            <h3 className="text-lg md:text-2xl font-black italic leading-tight">{activeQuestion.question}</h3>
                         </div>
 
                         {/* Estado: Pendiente de responder o ya respondido */}
@@ -190,9 +190,9 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                                             key={i}
                                             disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED'}
                                             onClick={() => handleSelectOption(opt)}
-                                            className={`p-4 rounded-2xl transition-all duration-300 ${bgClass} ${!!myTeamAnswer ? 'cursor-default' : 'hover:border-white/30 active:scale-95'}`}
+                                            className={`p-3 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 ${bgClass} ${!!myTeamAnswer ? 'cursor-default' : 'hover:border-white/30 active:scale-95'}`}
                                         >
-                                            <p className={`text-sm md:text-base font-bold ${textClass}`}>{opt}</p>
+                                            <p className={`text-xs md:text-base font-bold ${textClass}`}>{opt}</p>
                                         </button>
                                     );
                                 })}

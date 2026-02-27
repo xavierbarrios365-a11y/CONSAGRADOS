@@ -97,7 +97,9 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             show_answer: false,
             active_team: null,
             timer_status: 'STOPPED' as const,
-            timer_end_at: null
+            timer_end_at: null,
+            answer_a: null,
+            answer_b: null
         };
         // Actualización optimista
         setSession(prev => prev ? { ...prev, ...updates } : null);
@@ -275,30 +277,30 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             {/* Header Director */}
             <div className="p-6 bg-black/20 border-b border-white/10 flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-bebas tracking-widest uppercase">Panel de Comando: Guerra Bíblica</h2>
+                    <h2 className="text-lg md:text-xl font-bebas tracking-widest uppercase">Panel de Comando: Guerra Bíblica</h2>
                     <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest opacity-60">Controlador de Eventos Real-time</p>
                 </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowQuestionImporter(!showQuestionImporter)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showQuestionImporter ? 'bg-purple-600 text-white' : 'bg-white/5 border border-white/10'}`}
+                        className={`flex items-center gap-2 px-2 md:px-4 py-2 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${showQuestionImporter ? 'bg-purple-600 text-white' : 'bg-white/5 border border-white/10'}`}
                     >
-                        <Plus size={14} /> Banco JSON
+                        <Plus size={14} /> <span className="hidden xs:inline">Banco JSON</span><span className="xs:hidden">JSON</span>
                     </button>
                     <button
                         onClick={() => setShowGroupManager(!showGroupManager)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showGroupManager ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 border border-white/10'}`}
+                        className={`flex items-center gap-2 px-2 md:px-4 py-2 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all ${showGroupManager ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/5 border border-white/10'}`}
                     >
-                        <Users size={14} /> Grupos
+                        <Users size={14} /> <span className="hidden xs:inline">Grupos</span><span className="xs:hidden">GPS</span>
                     </button>
                     <button
                         onClick={() => window.open('?view=bible_war_display', '_blank')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/40"
+                        className="flex items-center gap-2 px-2 md:px-4 py-2 bg-blue-600 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/40"
                     >
-                        <Eye size={14} /> Lanzar Arena
+                        <Eye size={14} /> <span className="hidden xs:inline">Lanzar Arena</span><span className="xs:hidden">ARENA</span>
                     </button>
                     <button onClick={handleReset} className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 hover:bg-red-500/20 transition-all">
-                        <RotateCcw size={18} />
+                        <RotateCcw size={16} />
                     </button>
                 </div>
             </div>
@@ -403,7 +405,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                 )}
             </AnimatePresence>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 md:y-8">
                 {/* 1. Estatus Actual Display */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className={`p-4 bg-blue-600/10 border rounded-2xl text-center transition-all ${session?.last_coin_flip === 'ALFA' ? 'border-blue-500 bg-blue-500/30 shadow-[0_0_20px_rgba(37,99,235,0.3)]' : 'border-blue-500/30'}`}>
@@ -468,7 +470,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto pr-2 no-scrollbar">
+                    <div className="grid grid-cols-1 gap-3 max-h-64 md:max-h-96 overflow-y-auto pr-2">
                         {filteredQuestions.map(q => (
                             <button
                                 key={q.id}
@@ -492,7 +494,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
                 {/* 4. Controles de Resolución (Solo si hay pregunta activa) */}
                 {session?.current_question_id && (
-                    <div className="bg-black/60 border border-[#ffb700]/30 rounded-[2.5rem] p-8 space-y-6 animate-in slide-in-from-bottom-4">
+                    <div className="bg-black/60 border border-[#ffb700]/30 rounded-3xl md:rounded-[2.5rem] p-4 md:p-8 space-y-4 md:space-y-6 animate-in slide-in-from-bottom-4">
                         <div className="text-center space-y-2">
                             <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">En Pantalla:</p>
                             <h3 className="text-lg font-bold italic line-clamp-2">"{questions.find(q => q.id === session.current_question_id)?.question}"</h3>

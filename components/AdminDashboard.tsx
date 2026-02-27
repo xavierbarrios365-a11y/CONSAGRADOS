@@ -227,15 +227,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                         />
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={handleForceHistoriesCloning} disabled={isForceSyncingHistories} className="px-4 py-4 bg-teal-500/10 border border-teal-500/30 text-teal-500 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-teal-500/20 transition-all disabled:opacity-50">
-                            <Clock size={14} className={isForceSyncingHistories ? "animate-spin" : ""} /> {isForceSyncingHistories ? '...' : 'CLONAR HISTORIALES'}
-                        </button>
-                        <button onClick={handleForceAcademyCloning} disabled={isForceSyncingAcademy} className="px-4 py-4 bg-purple-500/10 border border-purple-500/30 text-purple-500 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-all disabled:opacity-50">
-                            <BookOpen size={14} className={isForceSyncingAcademy ? "animate-spin" : ""} /> {isForceSyncingAcademy ? '...' : 'CLONAR ACADEMIA'}
-                        </button>
-                        <button onClick={handleForceCloning} disabled={isForceSyncing} className="px-6 py-4 bg-orange-500/10 border border-orange-500/30 text-orange-500 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-orange-500/20 transition-all disabled:opacity-50">
-                            <DatabaseBackup size={14} className={isForceSyncing ? "animate-spin" : ""} /> {isForceSyncing ? 'CLONANDO...' : 'CLONAR AGENTES'}
-                        </button>
                         <button onClick={fetchAgents} className="px-6 py-4 bg-white/5 border border-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
                             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> REFRESCAR BD
                         </button>

@@ -666,17 +666,7 @@ const App: React.FC = () => {
               }
             `}</style>
 
-              {/* BOTÓN EXPERIMENTAL DE COMANDO CENTRAL (SOLO DIRECTOR) */}
-              {currentUser?.userRole === UserRole.DIRECTOR && (
-                <div className="mb-6 animate-in slide-in-from-top-4 duration-700">
-                  <button
-                    onClick={() => setView(AppView.ADMIN)}
-                    className="w-full py-4 bg-[#ffb700] text-[#001f3f] font-black uppercase tracking-[0.2em] rounded-2xl shadow-[0_0_30px_rgba(255,183,0,0.3)] hover:scale-[1.02] transform transition-all font-bebas flex items-center justify-center gap-3"
-                  >
-                    <ShieldCheck size={18} /> INICIAR COMANDO CENTRAL
-                  </button>
-                </div>
-              )}
+
 
               <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
                 <DailyVerse

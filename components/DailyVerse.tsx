@@ -50,7 +50,11 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
             const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
             const lastDateStr = new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 
-            if (lastDateStr === todayStr) {
+            // Backup local para evitar que se pida de nuevo si la base de datos tarda en llegar
+            const localToday = localStorage.getItem('verse_completed_date');
+            const isCompletedToday = (lastDateStr === todayStr) || (localToday === todayStr);
+
+            if (isCompletedToday) {
                 setQuizCompleted(true);
 
                 // Calcular tiempo hasta la medianoche de Caracas

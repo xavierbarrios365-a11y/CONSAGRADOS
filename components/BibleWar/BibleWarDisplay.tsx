@@ -25,6 +25,11 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [timeLeft, setTimeLeft] = useState<number>(0);
     const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const phaseRef = useRef<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
+
+    useEffect(() => {
+        phaseRef.current = displayPhase;
+    }, [displayPhase]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const soundsRef = useRef<Record<string, HTMLAudioElement>>({});
 
@@ -161,7 +166,8 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
     const handleUpdate = async (newState: BibleWarSession) => {
         setSession(newState);
-        if (displayPhase === 'BATTLE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
+        const currentPhase = phaseRef.current;
+        if (currentPhase === 'BATTLE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
             console.log("🎯 Ambos equipos listos. Notificando Director...");
             supabase.channel('bible_war_realtime').send({
                 type: 'broadcast',

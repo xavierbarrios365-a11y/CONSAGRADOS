@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Dice5,
@@ -48,6 +48,15 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     const [questions, setQuestions] = useState<any[]>([]);
     const [showQuestionImporter, setShowQuestionImporter] = useState(false);
     const [importJson, setImportJson] = useState('');
+    const sessionRef = useRef<BibleWarSession | null>(null);
+    const questionsRef = useRef<any[]>([]);
+    const bcRef = useRef<any>(null);
+    const autoResolveRef = useRef<() => void>(() => { });
+
+    // Actualizar Refs cada vez que cambien los estados
+    useEffect(() => { sessionRef.current = session; }, [session]);
+    useEffect(() => { questionsRef.current = questions; }, [questions]);
+    useEffect(() => { bcRef.current = broadcastChannel; }, [broadcastChannel]);
 
     // 2. EFECTOS
     useEffect(() => {
@@ -69,16 +78,14 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             .on('broadcast', { event: 'TIMER_END' }, (envelope) => {
                 console.log('⚡ Director: TIMER_END', envelope.payload);
                 if (envelope.payload?.phase === 'BATTLE') {
-                    // Resolución rápida v3.2
-                    console.log("⏰ El tiempo terminó. Resolviendo automáticamente...");
-                    setTimeout(handleAutoResolve, 500);
+                    console.log("⏰ Tiempo agotado. Disparando auto-resolución...");
+                    setTimeout(() => autoResolveRef.current(), 500);
                 }
             })
             .on('broadcast', { event: 'BOTH_ANSWERED' }, (envelope) => {
                 console.log('⚡ Director: BOTH_ANSWERED', envelope.payload);
-                // Resolución rápida v3.2
-                console.log("🎯 Ambos respondieron. Resolviendo automáticamente...");
-                setTimeout(handleAutoResolve, 500);
+                console.log("🎯 Ambos respondieron. Disparando auto-resolución...");
+                setTimeout(() => autoResolveRef.current(), 500);
             })
             .subscribe((status) => {
                 console.log("📡 Subscripción Broadcast:", status);
@@ -114,9 +121,10 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     };
 
     const broadcastAction = (event: string, payload: any = {}) => {
-        if (broadcastChannel) {
+        const channel = bcRef.current;
+        if (channel) {
             console.log(`📤 Enviando Broadcast: ${event}`, payload);
-            broadcastChannel.send({
+            channel.send({
                 type: 'broadcast',
                 event: event,
                 payload: payload
@@ -173,12 +181,24 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     };
 
     const handleAutoResolve = async () => {
-        if (!session?.current_question_id) return;
-        const q = questions.find(qu => qu.id === session.current_question_id);
-        if (!q) return;
+        const currentSession = sessionRef.current;
+        const currentQuestions = questionsRef.current;
 
-        const ansA = session.answer_a;
-        const ansB = session.answer_b;
+        // v3.5 logic inside handleAutoResolve...
+
+        if (!currentSession?.current_question_id) {
+            console.log("❌ handleAutoResolve: No hay sesión o question_id activo.");
+            return;
+        }
+
+        const q = currentQuestions.find(qu => qu.id === currentSession.current_question_id);
+        if (!q) {
+            console.log("❌ handleAutoResolve: No se encontró la pregunta en el banco.");
+            return;
+        }
+
+        const ansA = currentSession.answer_a;
+        const ansB = currentSession.answer_b;
 
         if (!ansA && !ansB) {
             console.log("⚠️ Nadie respondió. Resolviendo como derrota general (NONE).");
@@ -193,12 +213,22 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         else if (isACorrect && isBCorrect) winner = 'TIE';
         else winner = 'NONE';
 
-        const stakes = session?.stakes_xp || customStakes;
-        await transferBibleWarXP(winner, stakes);
-        broadcastAction('RESOLVE', { winner });
+        const stakes = currentSession?.stakes_xp || customStakes;
+        console.log(`✅ Resolviendo: Ganador=${winner}, Stakes=${stakes}`);
 
-        setTimeout(loadSession, 1000);
+        const res = await transferBibleWarXP(winner, stakes);
+        if (res.success) {
+            broadcastAction('RESOLVE', { winner });
+            setTimeout(loadSession, 1000);
+        } else {
+            console.error("Error en transferencia:", res.error);
+        }
     };
+
+    // Registrar handleAutoResolve en el Ref en cada render (v3.5)
+    useEffect(() => {
+        autoResolveRef.current = handleAutoResolve;
+    });
 
     const handleSpinRoulette = async () => {
         const categories = [...new Set(questions.map(q => q.category))];

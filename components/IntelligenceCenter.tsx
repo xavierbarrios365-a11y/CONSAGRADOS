@@ -465,6 +465,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     Material
                   </button>
                 )}
+                {setView && (
+                  <button
+                    onClick={() => setView(AppView.ADMIN)}
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-purple-500/10 text-purple-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-purple-500/20 transition-all border border-purple-500/20 active:scale-95 font-bebas shadow-xl"
+                  >
+                    <Settings size={16} />
+                    Panel ADMIN
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     showAlert({

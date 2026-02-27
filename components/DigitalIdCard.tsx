@@ -20,17 +20,12 @@ export const formatDriveUrl = (url: string) => {
     return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
   }
 
-  // Si es un enlace directo de lh3, ya está procesado, pero nos aseguramos de que tenga un tamaño decente (s1000)
-  if (url.includes('lh3.googleusercontent.com/d/')) {
-    // Si ya tiene un parámetro de tamaño, lo dejamos, si no, le ponemos s1000
-    return url.includes('=') ? url : `${url}=s1000`;
+  // Si ya es de Supabase Storage o Unsplash o externo no relacionado a google, retornamos tal cual
+  if (url.includes('supabase.co') || url.includes('unsplash.com') || (url.startsWith('http') && !url.includes('google'))) {
+    return url;
   }
 
-  // SI YA ES UN ENLACE DIRECTO DE GOOGLE CONTENT (LH3), LO DEJAMOS PASAR
-  if (url.includes('googleusercontent.com')) return url;
-
-  // Extraer el ID de Google Drive (cubre múltiples formatos: /d/, open?id=, uc?id=, file/d/, preview, etc.)
-  // El regex ahora es más específico para capturar el ID correctamente incluso con parámetros extra
+  // Rescatar ID independientemente del formato (drive.google.com, lh3.googleusercontent.com, doc-0g...)
   const driveRegex = /(?:id=|\/d\/|file\/d\/|open\?id=|uc\?id=|\/file\/d\/|preview\/d\/|open\?id=)([\w-]{25,100})/;
   const match = url.match(driveRegex);
 
@@ -38,20 +33,21 @@ export const formatDriveUrl = (url: string) => {
   if (match && match[1]) {
     fileId = match[1];
   } else if (url.length >= 25 && !url.includes('/') && !url.includes('.') && !url.includes(':')) {
-    // Si parece un ID crudo
     fileId = url;
   }
 
   if (fileId) {
-    return `https://lh3.googleusercontent.com/d/${fileId}=s1000`;
+    // Endpoints modernos anti-bloqueo:
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
   }
 
-  // Fallback para URLs normales y assets locales
-  if (url.startsWith('http')) return url;
-  if (url.startsWith('/')) return url;
+  // Fallback si no logramos extraer ID pero parece URL válida
+  if (url.startsWith('http') || url.startsWith('/')) return url;
 
   return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
 };
+
+
 
 const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
   const [isFlipped, setIsFlipped] = useState(false);

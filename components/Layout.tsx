@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield, Settings } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from './DigitalIdCard';
 
@@ -29,6 +29,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ASCENSO, icon: <ChevronUp size={20} />, label: 'Ascenso', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Mi Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.ADMIN, icon: <Settings size={20} />, label: 'Admin', roles: [UserRole.DIRECTOR] },
   ];
 
   const filteredNavItems = allNavItems.filter(item => item.roles.includes(userRole));

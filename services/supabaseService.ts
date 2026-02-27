@@ -839,9 +839,7 @@ export const submitTransactionSupabase = async (rawString: string, type: 'ASISTE
             .insert({
                 agent_id: rawString,
                 type: type,
-                location: 'CORE_V37_NODE',
-                timestamp: new Date().toISOString(),
-                referido_por: referidoPor || null
+                timestamp: new Date().toISOString()
             });
 
         if (error) throw error;

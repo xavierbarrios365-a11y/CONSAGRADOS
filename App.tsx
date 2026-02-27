@@ -1197,8 +1197,6 @@ const App: React.FC = () => {
             <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />
           </motion.div>
         );
-      case AppView.ASCENSO:
-      case AppView.CONTENT:
       case AppView.ADMIN:
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="admin" className="h-full">
@@ -1210,6 +1208,8 @@ const App: React.FC = () => {
           </motion.div>
         );
 
+      case AppView.ASCENSO:
+      case AppView.CONTENT:
       case AppView.TAREAS:
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="training" className="h-full">

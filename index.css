@@ -17,4 +17,13 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 183, 0, 0.5);
     }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
 }

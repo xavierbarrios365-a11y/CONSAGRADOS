@@ -190,6 +190,29 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
             </div>
 
+            {/* Side-Glow Indicators (v2.7) */}
+            <div className="absolute inset-y-0 left-0 w-4 z-50 pointer-events-none">
+                <motion.div
+                    animate={session?.answer_a ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
+                    className="h-full w-full bg-blue-600 shadow-[0_0_50px_rgba(37,99,235,0.8)] filter blur-[2px]"
+                />
+                <motion.div
+                    animate={session?.answer_a ? { opacity: 0.4 } : { opacity: 0 }}
+                    className="absolute inset-y-0 left-4 w-[20vw] bg-gradient-to-r from-blue-600/30 to-transparent"
+                />
+            </div>
+
+            <div className="absolute inset-y-0 right-0 w-4 z-50 pointer-events-none">
+                <motion.div
+                    animate={session?.answer_b ? { opacity: 1, x: 0 } : { opacity: 0, x: 10 }}
+                    className="h-full w-full bg-teal-500 shadow-[0_0_50px_rgba(20,184,166,0.8)] filter blur-[2px]"
+                />
+                <motion.div
+                    animate={session?.answer_b ? { opacity: 0.4 } : { opacity: 0 }}
+                    className="absolute inset-y-0 right-4 w-[20vw] bg-gradient-to-l from-teal-500/30 to-transparent"
+                />
+            </div>
+
             {/* Top Bar: Scores & Match Info */}
             <div className="relative z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-3 items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-6">
                 {/* Team A Card */}
@@ -262,17 +285,39 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
 
             {/* Main Stage: Roulette or Question */}
             <div className="relative flex-1 flex flex-col items-center justify-center p-2 md:p-6 z-10 w-full">
-                {/* Temporizador HUD */}
+                {/* Temporizador HUD Dinámico (v2.7) */}
                 <AnimatePresence>
                     {timeLeft > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.5 }}
-                            className="absolute bottom-10 md:bottom-20 right-6 md:right-12 z-[100] pointer-events-none"
+                            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 2, filter: 'blur(20px)' }}
+                            className={`absolute z-[100] ${displayPhase === 'READING' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : 'bottom-10 right-10 md:bottom-20 md:right-12'} pointer-events-none`}
                         >
-                            <div className={`text-6xl md:text-8xl font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} drop-shadow-[0_0_30px_rgba(0,0,0,0.5)]`}>
-                                {timeLeft}
+                            <div className={`relative flex items-center justify-center ${displayPhase === 'READING' ? 'w-32 h-32 md:w-64 md:h-64' : 'w-20 h-20 md:w-40 md:h-40'}`}>
+                                {/* Anillo de Progreso */}
+                                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                    <circle
+                                        cx="50%" cy="50%" r="48%"
+                                        fill="none"
+                                        stroke="white"
+                                        strokeOpacity="0.05"
+                                        strokeWidth="4"
+                                    />
+                                    <motion.circle
+                                        cx="50%" cy="50%" r="48%"
+                                        fill="none"
+                                        stroke={timeLeft <= 5 ? '#ef4444' : '#ffb700'}
+                                        strokeWidth="4"
+                                        strokeDasharray="100 100"
+                                        initial={{ strokeDashoffset: 100 }}
+                                        animate={{ strokeDashoffset: (timeLeft / (displayPhase === 'READING' ? 15 : 30)) * 100 }}
+                                        className="transition-all duration-1000 ease-linear"
+                                    />
+                                </svg>
+                                <div className={`font-bebas ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'} drop-shadow-[0_0_30px_rgba(0,0,0,0.5)] ${displayPhase === 'READING' ? 'text-7xl md:text-[12rem]' : 'text-5xl md:text-8xl'}`}>
+                                    {timeLeft}
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -322,9 +367,14 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                                         className="py-10"
                                     >
                                         <p className="text-[12px] md:text-[20px] font-black uppercase tracking-[0.5em] text-[#ffb700] mb-8 animate-pulse">PREPARA TU MENTE / PREGUNTA DE NIVEL {activeQuestion.difficulty}</p>
-                                        <h1 className="text-4xl md:text-8xl font-black italic tracking-tighter leading-tight px-10 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                                        <motion.h1
+                                            initial={{ y: 20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            transition={{ type: "spring", damping: 15 }}
+                                            className="text-4xl md:text-8xl font-black italic tracking-tighter leading-[1.1] px-10 drop-shadow-[0_0_50px_rgba(255,b7,0,0.3)] text-white"
+                                        >
                                             {activeQuestion.question}
-                                        </h1>
+                                        </motion.h1>
                                     </motion.div>
                                 ) : (
                                     <motion.div

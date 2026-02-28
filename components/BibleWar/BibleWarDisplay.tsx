@@ -36,6 +36,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const [gladiators, setGladiators] = useState<{ a: Agent | null, b: Agent | null }>({ a: null, b: null });
     const [showVsAnimation, setShowVsAnimation] = useState(false);
     const prevGladiatorsReady = useRef<string | null>(null);
+    const isResolvingRef = useRef(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const phaseRef = useRef<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
 
@@ -153,11 +154,25 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             })
             .on('broadcast', { event: 'RESOLVE' }, (envelope) => {
                 console.log('⚡ Display: RESOLVE', envelope.payload);
+                isResolvingRef.current = true;
+
+                // 🛑 Detener y ocultar el cronómetro inmediatamente
+                if (timerRef.current) clearInterval(timerRef.current);
+                setTimeLeft(0);
+
                 const winner = envelope.payload?.winner;
                 setShowTransfer(winner);
                 if (winner === 'A' || winner === 'B' || winner === 'TIE') playSound('success');
                 else if (winner === 'NONE') playSound('fail');
-                setTimeout(() => setShowTransfer(null), 5000);
+
+                setTimeout(() => {
+                    setShowTransfer(null);
+                    // 🛑 Limpiar pantalla y prepararla para la siguiente ronda
+                    setActiveQuestion(null);
+                    setDisplayPhase('IDLE');
+                    isResolvingRef.current = false;
+                }, 5000);
+
                 loadSession();
             })
             .on('broadcast', { event: 'UPDATE_STAKES' }, (envelope) => {
@@ -224,13 +239,16 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
                 payload: { answer_a: newState.answer_a, answer_b: newState.answer_b }
             });
         }
-        if (newState.current_question_id) {
+
+        if (newState.current_question_id && newState.status !== 'RESOLVED' && !isResolvingRef.current) {
             if (activeQuestion?.id !== newState.current_question_id) {
                 const bibleQuestions = await fetchBibleWarQuestions();
                 const q = bibleQuestions.find(q => q.id === newState.current_question_id);
                 setActiveQuestion(q);
             }
-        } else {
+        } else if (newState.status === 'RESOLVED' && !isResolvingRef.current) {
+            setActiveQuestion(null);
+        } else if (!newState.current_question_id) {
             setActiveQuestion(null);
         }
     };
@@ -238,10 +256,14 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
     const loadSession = async () => {
         const data = await fetchBibleWarSession();
         setSession(data);
-        if (data?.current_question_id) {
+
+        if (data?.current_question_id && data?.status !== 'RESOLVED' && !isResolvingRef.current) {
             const bibleQuestions = await fetchBibleWarQuestions();
             setActiveQuestion(bibleQuestions.find(q => q.id === data.current_question_id));
+        } else if (data?.status === 'RESOLVED' && !isResolvingRef.current) {
+            setActiveQuestion(null);
         }
+
         if (data?.timer_status === 'RUNNING' && data.timer_end_at) {
             const remaining = Math.max(0, Math.floor((new Date(data.timer_end_at).getTime() - Date.now()) / 1000));
             startLocalTimer(remaining);

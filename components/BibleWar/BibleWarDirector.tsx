@@ -467,6 +467,14 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                                 );
                             })}
                         </div>
+                        {session?.gladiator_a_id && session?.gladiator_b_id && (
+                            <button
+                                onClick={() => broadcastAction('TRIGGER_VS_ANIMATION')}
+                                className="w-full mt-4 py-3 bg-[#ffb700] text-[#001f3f] rounded-xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_15px_rgba(255,183,0,0.3)] hover:bg-[#ffb700]/90 transition-all flex justify-center items-center gap-2"
+                            >
+                                <Zap size={16} /> Lanza Animación VS
+                            </button>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -6,7 +6,9 @@ import {
     Sparkles,
     Target,
     Settings,
-    Star
+    Star,
+    Shield,
+    Zap
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { fetchBibleWarSession, fetchBibleWarQuestions } from '../../services/supabaseService';
@@ -142,21 +144,8 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
     }, []);
 
     // ✨ VS ANIMATION TRIGGER ✨
-    useEffect(() => {
-        const areReady = !!gladiators.a && !!gladiators.b;
-        const currentPairKey = areReady ? `${gladiators.a?.id}-${gladiators.b?.id}` : null;
+    // Ahora se lanza MANUALMENTE desde el Director via 'TRIGGER_VS_ANIMATION'
 
-        if (areReady && currentPairKey !== prevGladiatorsReady.current) {
-            // Un NUEVO par de gladiadores ha sido asignado por completo
-            setShowVsAnimation(true);
-            playSound('transicion_2');
-            setTimeout(() => setShowVsAnimation(false), 4500);
-            prevGladiatorsReady.current = currentPairKey;
-        } else if (!areReady) {
-            // Si desarman el par, reseteamos el key para permitir volver a armarlo
-            prevGladiatorsReady.current = null;
-        }
-    }, [gladiators]);
 
     useEffect(() => {
         loadSession();
@@ -175,6 +164,12 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                 console.log('⚡ Display: SPIN_ROULETTE', envelope.payload);
                 setSession(prev => prev ? { ...prev, status: 'SPINNING', roulette_category: envelope.payload?.category, answer_a: null, answer_b: null, current_question_id: null, show_answer: false } : null);
                 setActiveQuestion(null);
+            })
+            .on('broadcast', { event: 'TRIGGER_VS_ANIMATION' }, () => {
+                console.log('⚡ Display: TRIGGER_VS_ANIMATION');
+                setShowVsAnimation(true);
+                playSound('transicion_2');
+                setTimeout(() => setShowVsAnimation(false), 4500);
             })
             .on('broadcast', { event: 'LAUNCH_QUESTION' }, (envelope) => {
                 console.log('⚡ Display: LAUNCH_QUESTION', envelope.payload);

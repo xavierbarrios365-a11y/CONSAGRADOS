@@ -467,14 +467,6 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                                 );
                             })}
                         </div>
-                        {session?.gladiator_a_id && session?.gladiator_b_id && (
-                            <button
-                                onClick={() => broadcastAction('TRIGGER_VS_ANIMATION')}
-                                className="w-full mt-4 py-3 bg-[#ffb700] text-[#001f3f] rounded-xl font-black uppercase tracking-widest text-[10px] shadow-[0_0_15px_rgba(255,183,0,0.3)] hover:bg-[#ffb700]/90 transition-all flex justify-center items-center gap-2"
-                            >
-                                <Zap size={16} /> Lanza Animación VS
-                            </button>
-                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -492,6 +484,16 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                         <p className="text-3xl font-bebas">{session?.score_b || 0}</p>
                     </div>
                 </div>
+
+                {/* Botón VS (Visible si hay gladeadores) */}
+                {session?.gladiator_a_id && session?.gladiator_b_id && (
+                    <button
+                        onClick={() => broadcastAction('TRIGGER_VS_ANIMATION')}
+                        className="w-full py-4 bg-[#ffb700] text-[#001f3f] rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] shadow-[0_0_20px_rgba(255,183,0,0.4)] hover:bg-[#ffb700]/90 active:scale-95 transition-all flex justify-center items-center gap-3 animate-in zoom-in"
+                    >
+                        <Zap size={20} className="animate-pulse" /> LANZAR PANTALLA ÉPICA (VS)
+                    </button>
+                )}
 
                 {/* Sorteo y Timer */}
                 <div className="grid grid-cols-2 gap-4">

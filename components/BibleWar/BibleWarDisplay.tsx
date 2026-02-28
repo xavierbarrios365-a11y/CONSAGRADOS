@@ -103,6 +103,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
 
             audio.loop = loop;
             audio.volume = 0.6;
+            audio.currentTime = 0;
 
             audio.play()
                 .then(() => {
@@ -259,8 +260,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             });
         }
 
-        const currentPhase = phaseRef.current;
-        if (currentPhase === 'BATTLE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
+        // Verificamos si ambos equipos han respondido para notificar auto-resolución
+        // Eliminamos la restricción de 'BATTLE' phase para que si responden muy rápido en 'READING' también resuelva de inmediato.
+        if (newState.status === 'ACTIVE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
             console.log("🎯 Ambos equipos listos. Notificando Director...");
             supabase.channel('bible_war_realtime').send({
                 type: 'broadcast',

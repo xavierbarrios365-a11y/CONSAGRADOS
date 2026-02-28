@@ -33,7 +33,8 @@ export function useFirebaseMessaging(
                 }
 
                 // Suscribir oficialmente el token al topic "all_agents" de Vercel (Push Broadcast)
-                fetch(`${import.meta.env.DEV ? 'https://consagrados.vercel.app' : ''}/api/notify`, {
+                const notifyUrl = `${import.meta.env.DEV ? 'https://consagrados.vercel.app' : ''}/api/notify`;
+                fetch(notifyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -41,7 +42,14 @@ export function useFirebaseMessaging(
                         targetToken: token,
                         message: 'FCM_REGISTRATION_PING'
                     })
-                }).catch(e => console.error("Error al suscribir a push", e));
+                }).then(async res => {
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        console.warn("⚠️ Fallo en suscripción Push remote:", err);
+                    } else {
+                        console.log("✅ Suscripción Push confirmada.");
+                    }
+                }).catch(e => console.error("Error de red al suscribir a push", e));
             }
 
             onMessageListener().then((payload: any) => {

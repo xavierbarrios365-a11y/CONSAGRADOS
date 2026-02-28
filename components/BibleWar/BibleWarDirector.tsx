@@ -14,7 +14,10 @@ import {
     Zap,
     HelpCircle,
     Eye,
-    RefreshCw
+    RefreshCw,
+    Swords,
+    X,
+    Layout
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import {
@@ -343,6 +346,21 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         if (res.success) broadcastAction('COIN_FLIP', { winner });
     };
 
+    const handleTriggerRanking = () => {
+        console.log("🚀 Lanzando RANKING ANIMADO");
+        broadcastAction('TRIGGER_RANKING_ANIMATION');
+    };
+
+    const handleTriggerArenaLive = () => {
+        console.log("🔥 Activando ARENA LIVE PERSISTENTE");
+        broadcastAction('TRIGGER_ARENA_LIVE');
+    };
+
+    const handleCloseRanking = () => {
+        console.log("🛑 Cerrando RANKING/ARENA");
+        broadcastAction('CLOSE_RANKING');
+    };
+
     const handleClearQuestions = async () => {
         if (!window.confirm("¿BORRAR TODO el banco de preguntas?")) return;
         const res = await clearBibleWarQuestions();
@@ -404,9 +422,16 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             <AnimatePresence>
                 {showQuestionImporter && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="bg-purple-900/20 border-b border-purple-500/30 overflow-hidden p-6 space-y-4">
-                        <div className="flex justify-between items-center"><h3 className="text-[10px] font-black uppercase text-purple-400">Importador JSON</h3><button onClick={handleClearQuestions} className="text-[8px] color-red-400">VACÍAR</button></div>
-                        <textarea value={importJson} onChange={e => setImportJson(e.target.value)} className="w-full h-32 bg-black/40 border border-purple-500/30 rounded-xl p-4 text-[10px] font-mono" />
-                        <button onClick={handleImportQuestions} className="w-full py-3 bg-purple-600 rounded-xl font-black uppercase text-[10px]">IMPORTAR</button>
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-[10px] font-black uppercase text-purple-400">Importador Táctico JSON</h3>
+                            <button onClick={handleClearQuestions} className="px-3 py-1 bg-red-600/20 border border-red-500/30 rounded-lg text-[8px] font-black text-red-400 hover:bg-red-600/40 transition-colors uppercase">
+                                BORRAR BANCO ACTUAL
+                            </button>
+                        </div>
+                        <textarea value={importJson} onChange={e => setImportJson(e.target.value)} placeholder='Pega aquí el código "Jerson"...' className="w-full h-32 bg-black/40 border border-purple-500/30 rounded-xl p-4 text-[10px] font-mono outline-none focus:border-purple-400 transition-colors" />
+                        <button onClick={handleImportQuestions} className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-purple-900/40 transition-all">
+                            IMPORTAR PREGUNTAS REALES
+                        </button>
                     </motion.div>
                 )}
                 {showGladiatorManager && (
@@ -575,6 +600,17 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             <div className="p-6 bg-black/60 border-t border-white/10 space-y-4">
                 <button onClick={handleSpinRoulette} className="w-full py-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl font-black uppercase tracking-[0.3em] font-bebas shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20">
                     <Dice5 size={24} className="animate-spin-slow" /> GIRAR RULETA
+                </button>
+                <div className="grid grid-cols-2 gap-2">
+                    <button onClick={handleTriggerRanking} className="py-4 bg-gradient-to-r from-amber-500 to-[#ffb700] text-[#001f3f] rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(255,183,0,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-2">
+                        <Swords size={18} /> RANKING (8s)
+                    </button>
+                    <button onClick={handleTriggerArenaLive} className="py-4 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-2">
+                        <Layout size={18} /> MODO ARENA
+                    </button>
+                </div>
+                <button onClick={handleCloseRanking} className="w-full py-2 bg-white/5 hover:bg-white/10 text-white/40 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border border-white/5 flex items-center justify-center gap-2">
+                    <X size={12} /> CERRAR OVERLAY DISPLAY
                 </button>
                 <div className="grid grid-cols-4 gap-2">
                     <button onClick={handleNukeReset} className="flex flex-col items-center justify-center gap-1 p-3 bg-red-600 border border-red-400 rounded-2xl text-[7px] font-black uppercase tracking-widest text-white shadow-lg active:scale-95 transition-all"><Skull size={14} /><span>NUKE</span></button>

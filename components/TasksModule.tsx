@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardList, Plus, Check, Clock, Lock, Trash2, Shield, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { ClipboardList, Plus, Check, Clock, Lock, Trash2, Shield, X, ChevronDown, ChevronUp, Users, AlertCircle } from 'lucide-react';
 import { UserRole, ServiceTask } from '../types';
 import { TASK_AREAS } from '../constants';
 import { fetchPromotionStatus } from '../services/sheetsService';
@@ -35,6 +35,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
     const [agentProgress, setAgentProgress] = useState<Record<string, string>>({});
     const [taskRecruits, setTaskRecruits] = useState<Record<string, { agentId: string; agentName: string; date: string; status: string }[]>>({});
     const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const isDirector = userRole === UserRole.DIRECTOR;
 
@@ -70,8 +71,12 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
             }
             setTaskRecruits(recruitsMap);
             setAgentProgress(progressMap);
+            setLoadError(null);
 
-        } catch (e) { console.error(e); }
+        } catch (e: any) {
+            console.error(e);
+            setLoadError(e.message || 'Error al conectar con la base de datos');
+        }
         setLoading(false);
     };
 
@@ -96,8 +101,13 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                 setShowCreate(false);
                 setNewTask({ title: '', description: '', area: 'SERVICIO', requiredLevel: 'RECLUTA', xpReward: '', maxSlots: '' });
                 loadData();
+            } else {
+                alert('❌ Error al crear misión: ' + (res.error || 'La base de datos rechazó la operación.'));
             }
-        } catch (e) { console.error(e); }
+        } catch (e: any) {
+            console.error(e);
+            alert('❌ Fallo crítico: ' + (e.message || 'Error de conexión.'));
+        }
         setCreating(false);
         onActivity?.();
     };
@@ -308,7 +318,21 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
             </div>
 
             {/* Tasks Grid */}
-            {filteredTasks.length === 0 ? (
+            {loadError ? (
+                <div className="text-center py-16 bg-red-500/5 rounded-3xl border border-red-500/10 space-y-4">
+                    <AlertCircle size={40} className="mx-auto text-red-500 opacity-50" />
+                    <div className="space-y-1">
+                        <p className="text-sm font-bold text-red-500">FALLO DE SINCRONIZACIÓN</p>
+                        <p className="text-xs text-red-400/60 uppercase tracking-widest">{loadError}</p>
+                    </div>
+                    <button
+                        onClick={loadData}
+                        className="px-6 py-2 bg-red-500/20 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-red-500/30 hover:bg-red-500/30 transition-all"
+                    >
+                        Reintentar Conexión
+                    </button>
+                </div>
+            ) : filteredTasks.length === 0 ? (
                 <div className="text-center py-16 text-gray-600 space-y-2">
                     <ClipboardList size={40} className="mx-auto opacity-30" />
                     <p className="text-sm">No hay misiones disponibles</p>

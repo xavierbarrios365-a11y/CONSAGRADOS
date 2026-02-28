@@ -212,6 +212,14 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             const res = await saveBulkAcademyData(finalData);
 
             if (res.success) {
+                // Publicar noticia en el feed
+                try {
+                    const { publishNewsSupabase } = await import('../services/supabaseService');
+                    await publishNewsSupabase('SISTEMA', 'Coordinación', 'OPERACION', `Actualización de Academia: Se han desplegado ${lessons.length} lecciones y ${courses.length} cursos nuevos.`);
+                } catch (e) {
+                    console.error("Error al publicar noticia de academia:", e);
+                }
+
                 setSuccess(true);
                 setTimeout(() => {
                     onSuccess();

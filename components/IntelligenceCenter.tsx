@@ -20,15 +20,18 @@ import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
 interface CIUProps {
   agents: Agent[];
   currentUser: Agent | null;
-  onUpdateNeeded?: () => void;
+  onUpdateNeeded?: () => void | Promise<void>;
+
   intelReport?: string;
   setView?: (view: AppView) => void;
   visitorCount?: number;
-  onRefreshIntel?: () => void;
+  onRefreshIntel?: () => void | Promise<void>;
+
   isRefreshingIntel?: boolean;
   onAgentClick?: (agent: Agent) => void;
   userRole?: UserRole;
-  onActivateNotifications?: () => Promise<void>;
+  onActivateNotifications?: () => void | Promise<void>;
+
 }
 
 const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateNeeded, intelReport, setView, visitorCount, onRefreshIntel, isRefreshingIntel, onAgentClick, userRole, onActivateNotifications }) => {

@@ -548,8 +548,9 @@ export const fetchTaskRecruitsSupabase = async (): Promise<any[]> => {
  */
 export const createTaskSupabase = async (data: { title: string; description: string; area: string; requiredLevel: string; xpReward: number; maxSlots: number }): Promise<{ success: boolean, error?: string }> => {
     try {
+        const id = globalThis.crypto ? crypto.randomUUID() : Date.now().toString();
         const { error } = await supabase.from('tareas').insert({
-            id: globalThis.crypto ? crypto.randomUUID() : Date.now().toString(),
+            id,
             title: data.title,
             description: data.description,
             area: data.area,
@@ -558,8 +559,13 @@ export const createTaskSupabase = async (data: { title: string; description: str
             max_slots: data.maxSlots
         });
         if (error) throw error;
+
+        // Notificar en el feed
+        await publishNewsSupabase('SISTEMA', 'Logística', 'TAREA', `Nueva Misión Disponible: ${data.title} [Área: ${data.area}]`);
+
         return { success: true };
     } catch (error: any) {
+        console.error('Error creating task in Supabase:', error.message);
         return { success: false, error: error.message };
     }
 };
@@ -1426,6 +1432,27 @@ export const clearBibleWarQuestions = async (): Promise<{ success: boolean; erro
     } catch (e: any) {
         console.error('❌ Error borrando preguntas de Bible War:', e.message);
         return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Publica una noticia en el historial de actividad (asistencia_visitas)
+ */
+export const publishNewsSupabase = async (agentId: string, agentName: string, type: string, message: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase.from('asistencia_visitas').insert({
+            id: `NEWS-${Date.now()}`,
+            agent_id: agentId || 'SISTEMA',
+            agent_name: agentName || 'Sistema',
+            tipo: type,
+            detalle: message,
+            registrado_en: new Date().toISOString()
+        });
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error publicando noticia:', error.message);
+        return { success: false, error: error.message };
     }
 };
 

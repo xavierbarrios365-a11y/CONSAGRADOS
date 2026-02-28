@@ -35,7 +35,7 @@ async function getFcmAccessToken() {
     const now = Math.floor(Date.now() / 1000);
     const claim = JSON.stringify({
         iss: FIREBASE_CLIENT_EMAIL,
-        scope: "https://www.googleapis.com/auth/firebase.messaging",
+        scope: "https://www.googleapis.com/auth/firebase.messaging https://www.googleapis.com/auth/cloud-platform",
         aud: "https://oauth2.googleapis.com/token",
         exp: now + 3600,
         iat: now
@@ -48,22 +48,33 @@ async function getFcmAccessToken() {
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(signatureInput);
     sign.end();
-    const signature = sign.sign(FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), 'base64url');
 
-    const jwt = `${signatureInput}.${signature}`;
-
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to get FCM token: ${await response.text()}`);
+    // Normalizar la clave para que funcione tanto con \n reales como con \\n de variables de entorno
+    const normalizedKey = FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+    if (!normalizedKey || !normalizedKey.includes('PRIVATE KEY')) {
+        throw new Error("Credencial de Firebase (Private Key) no configurada o malformada.");
     }
 
-    const data = await response.json();
-    return data.access_token;
+    try {
+        const signature = sign.sign(normalizedKey, 'base64url');
+        const jwt = `${signatureInput}.${signature}`;
+
+        const response = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`FCM Token Auth Failed: ${response.status} - ${errBody}`);
+        }
+
+        const data = await response.json();
+        return data.access_token;
+    } catch (e: any) {
+        throw new Error(`Error signing/fetching FCM access token: ${e.message}`);
+    }
 }
 
 async function sendPushNotification(title: string, message: string, targetToken?: string) {
@@ -133,28 +144,36 @@ export default async function handler(req: any, res: any) {
         if (action === 'telegram') {
             if (!message) return res.status(400).json({ error: 'Missing message' });
             await sendTelegramNotification(message);
-        } else if (action === 'subscribe' && targetToken) {
+        } else if (action === 'subscribe') {
+            if (!targetToken) return res.status(400).json({ error: 'Missing targetToken' });
+
             const accessToken = await getFcmAccessToken();
-            const response = await fetch(`https://iid.googleapis.com/iid/v1/${targetToken}/rel/topics/all_agents`, {
+            const iidUrl = `https://iid.googleapis.com/iid/v1/${targetToken}/rel/topics/all_agents`;
+
+            const response = await fetch(iidUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json'
                 }
             });
+
             if (!response.ok) {
                 const errText = await response.text();
-                console.error("FCM Subscribe Error:", errText);
-                return res.status(500).json({ error: 'Failed to subscribe: ' + errText });
+                process.env.NODE_ENV === 'development' && console.error("FCM Subscribe Error:", errText);
+                return res.status(500).json({
+                    error: 'Subscription failed',
+                    details: errText,
+                    code: response.status
+                });
             }
-            console.log("Token completely subscribed to all_agents:", targetToken);
+            console.log("Token subscribed to all_agents:", targetToken.substring(0, 10) + "...");
         } else if (action === 'push') {
             if (!message) return res.status(400).json({ error: 'Missing message' });
             await sendPushNotification(title || "CONSAGRADOS 2026", message, targetToken);
-            // Notificar a Telegram como backup de la notificación Push global
             await sendTelegramNotification(`📢 <b>${(title || "MANDO CENTRAL").toUpperCase()}</b>\n\n${message}`);
         } else {
-            return res.status(400).json({ error: 'Invalid action' });
+            return res.status(400).json({ error: 'Invalid action', receivedAction: action });
         }
 
         return res.status(200).json({ success: true });

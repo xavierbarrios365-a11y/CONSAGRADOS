@@ -8,10 +8,11 @@ import {
     Settings,
     Star,
     Shield,
-    Zap
+    Zap,
+    Swords
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
-import { fetchBibleWarSession, fetchBibleWarQuestions } from '../../services/supabaseService';
+import { fetchBibleWarSession, fetchBibleWarQuestions, fetchAgentsFromSupabase } from '../../services/supabaseService';
 import { formatDriveUrl } from '../../services/storageUtils';
 import { BibleWarSession, Agent } from '../../types';
 
@@ -71,6 +72,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
     const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
     const [gladiators, setGladiators] = useState<{ a: Agent | null, b: Agent | null }>({ a: null, b: null });
     const [showVsAnimation, setShowVsAnimation] = useState(false);
+    const [showRanking, setShowRanking] = useState(false);
+    const [isArenaLive, setIsArenaLive] = useState(false);
+    const [rankingAgents, setRankingAgents] = useState<Agent[]>([]);
     const prevGladiatorsReady = useRef<string | null>(null);
     const isResolvingRef = useRef(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -171,6 +175,40 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                 setShowVsAnimation(true);
                 playSound('transicion_2');
                 setTimeout(() => setShowVsAnimation(false), 4500);
+            })
+            .on('broadcast', { event: 'TRIGGER_RANKING_ANIMATION' }, async () => {
+                console.log('⚡ Display: TRIGGER_RANKING_ANIMATION');
+                const allAgents = await fetchAgentsFromSupabase();
+                // Filtro Táctico: Solo Estudiantes/Reclutas. Excluir LÍDER y REFERENTE.
+                const filtered = allAgents.filter(a =>
+                    a.rank !== 'LÍDER' &&
+                    a.rank !== 'REFERENTE' &&
+                    a.userRole === 'STUDENT'
+                );
+                const sorted = [...filtered].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 8);
+                setRankingAgents(sorted);
+                setShowRanking(true);
+                setIsArenaLive(false);
+                playSound('transicion_2');
+                setTimeout(() => setShowRanking(false), 8000);
+            })
+            .on('broadcast', { event: 'TRIGGER_ARENA_LIVE' }, async () => {
+                console.log('⚡ Display: TRIGGER_ARENA_LIVE');
+                const allAgents = await fetchAgentsFromSupabase();
+                const filtered = allAgents.filter(a =>
+                    a.rank !== 'LÍDER' &&
+                    a.rank !== 'REFERENTE' &&
+                    a.userRole === 'STUDENT'
+                );
+                const sorted = [...filtered].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 8);
+                setRankingAgents(sorted);
+                setShowRanking(true);
+                setIsArenaLive(true);
+                playSound('transicion_2');
+            })
+            .on('broadcast', { event: 'CLOSE_RANKING' }, () => {
+                setShowRanking(false);
+                setIsArenaLive(false);
             })
             .on('broadcast', { event: 'LAUNCH_QUESTION' }, (envelope) => {
                 console.log('⚡ Display: LAUNCH_QUESTION', envelope.payload);
@@ -281,6 +319,18 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             setActiveQuestion(null);
         } else if (!newState.current_question_id) {
             setActiveQuestion(null);
+        }
+
+        // Refrescar ranking en tiempo real si está visible
+        if (showRanking) {
+            const allAgents = await fetchAgentsFromSupabase();
+            const filtered = allAgents.filter(a =>
+                a.rank !== 'LÍDER' &&
+                a.rank !== 'REFERENTE' &&
+                a.userRole === 'STUDENT'
+            );
+            const sorted = [...filtered].sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 8);
+            setRankingAgents(sorted);
         }
     };
 
@@ -562,6 +612,97 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                                 <h2 className="text-3xl md:text-6xl font-black text-teal-400 uppercase tracking-widest text-center">{formatName(gladiators.b.name)}</h2>
                                 <p className="text-xl md:text-3xl text-teal-200/50 font-bebas tracking-widest -mt-4">BRAVO</p>
                             </motion.div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 🏆 EPIC RANKING OVERLAY 🏆 */}
+            <AnimatePresence>
+                {showRanking && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[400] bg-[#000814]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 md:p-10"
+                    >
+                        {isArenaLive && (
+                            <div className="absolute top-6 left-6 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full animate-pulse">
+                                <div className="w-2 h-2 bg-white rounded-full" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Live Arena</span>
+                            </div>
+                        )}
+
+                        <motion.div
+                            initial={{ y: -50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="flex items-center gap-4 mb-8"
+                        >
+                            <Swords size={48} className="text-[#ffb700] animate-pulse" />
+                            <h2 className="text-4xl md:text-8xl font-bebas tracking-[0.3em] text-[#ffb700] drop-shadow-[0_0_30px_rgba(255,183,0,0.5)]">
+                                {isArenaLive ? 'ARENA TÁCTICA' : 'TOP GLADIADORES'}
+                            </h2>
+                            <Swords size={48} className="text-[#ffb700] animate-pulse scale-x-[-1]" />
+                        </motion.div>
+
+                        <div className="w-full max-w-5xl space-y-3">
+                            <AnimatePresence mode="popLayout">
+                                {rankingAgents.map((agent, index) => (
+                                    <motion.div
+                                        key={agent.id}
+                                        layout
+                                        initial={{ x: -100, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        exit={{ x: 100, opacity: 0 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30, delay: index * 0.05 }}
+                                        className="relative flex items-center gap-4 md:gap-6 bg-white/5 border border-white/10 p-3 md:p-4 rounded-3xl overflow-hidden group border-l-4 border-l-[#ffb700]/30"
+                                    >
+                                        <div className="text-3xl md:text-5xl font-bebas text-white/20 w-12 md:w-16 text-center shrink-0">{index + 1}</div>
+                                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0">
+                                            <img src={formatDriveUrl(agent.photoUrl || '')} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-lg md:text-3xl font-bold uppercase tracking-wider truncate">{agent.name}</h3>
+                                            <p className="text-[#ffb700] font-black text-[7px] md:text-[9px] tracking-[0.2em]">{agent.rank}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <motion.p
+                                                key={agent.xp}
+                                                initial={{ scale: 1.2, color: '#fff' }}
+                                                animate={{ scale: 1, color: '#ffb700' }}
+                                                className="text-3xl md:text-5xl font-bebas"
+                                            >
+                                                {agent.xp} XP
+                                            </motion.p>
+                                        </div>
+
+                                        {/* Sword Decor */}
+                                        <motion.div
+                                            animate={{ x: [-20, 0], opacity: [0, 1, 0] }}
+                                            transition={{ duration: 1.5, repeat: Infinity, delay: index * 0.3 }}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2"
+                                        >
+                                            <Swords size={24} className="text-white/10" />
+                                        </motion.div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Sparkles effect */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            {[...Array(10)].map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 100 }}
+                                    animate={{ opacity: [0, 1, 0], y: -200 }}
+                                    transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 5 }}
+                                    style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
+                                    className="absolute"
+                                >
+                                    <Sparkles size={16} className="text-[#ffb700]/30" />
+                                </motion.div>
+                            ))}
                         </div>
                     </motion.div>
                 )}

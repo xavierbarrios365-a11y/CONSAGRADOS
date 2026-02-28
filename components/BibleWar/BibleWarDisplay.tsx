@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Zap,
     Trophy,
-    Skull,
-    Star,
+    ShieldAlert,
     Sparkles,
-    Shield,
-    Target
+    Target,
+    Settings,
+    Star
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import { fetchBibleWarSession, fetchBibleWarQuestions } from '../../services/supabaseService';
@@ -16,6 +15,7 @@ import { BibleWarSession, Agent } from '../../types';
 
 interface BibleWarDisplayProps {
     isFullScreen?: boolean;
+    stopSound?: () => void;
 }
 
 const formatName = (fullName: string | undefined) => {
@@ -26,7 +26,41 @@ const formatName = (fullName: string | undefined) => {
     return words[0];
 };
 
-const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }) => {
+const ParticleSwarm = ({ winner }: { winner: 'A' | 'B' }) => {
+    const startX = winner === 'A' ? '40vw' : '-40vw';
+    const endX = winner === 'A' ? '-40vw' : '40vw';
+
+    return (
+        <div className="fixed inset-0 pointer-events-none z-[250] overflow-hidden flex items-center justify-center">
+            {[...Array(20)].map((_, i) => {
+                const randomY = (Math.random() - 0.5) * 40;
+                const randomArc = (Math.random() - 0.5) * 60;
+                return (
+                    <motion.div
+                        key={i}
+                        initial={{ x: startX, y: `${randomY}vh`, opacity: 0, scale: 0 }}
+                        animate={{
+                            x: endX,
+                            y: [`${randomY}vh`, `${randomY - randomArc}vh`, `${randomY}vh`],
+                            opacity: [0, 1, 1, 0],
+                            scale: [0, 1.5, 1, 0]
+                        }}
+                        transition={{
+                            duration: 1.5 + Math.random() * 1,
+                            delay: i * 0.05,
+                            ease: "easeInOut"
+                        }}
+                        className="absolute"
+                    >
+                        <Star size={32} className="text-[#ffb700] fill-[#ffb700] drop-shadow-[0_0_15px_rgba(255,183,0,0.8)]" />
+                    </motion.div>
+                );
+            })}
+        </div>
+    );
+};
+
+const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, stopSound: externalStopSound }) => {
     const [session, setSession] = useState<BibleWarSession | null>(null);
     const [activeQuestion, setActiveQuestion] = useState<any>(null);
     const [prevScores, setPrevScores] = useState({ a: 0, b: 0 });
@@ -264,6 +298,22 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             setActiveQuestion(null);
         }
 
+        // Siempre refrescar gladiadores por si hubo cambio de puntos
+        if (data?.gladiator_a_id || data?.gladiator_b_id) {
+            const { data: rawAgents } = await supabase.from('agentes').select('*').in('id', [data.gladiator_a_id, data.gladiator_b_id].filter(Boolean));
+            const mappedAgents = (rawAgents || []).map(d => ({
+                id: d.id,
+                name: d.nombre,
+                photoUrl: d.foto_url,
+                xp: d.xp || 0,
+                rank: d.rango
+            })) as unknown as Agent[];
+            setGladiators({
+                a: mappedAgents.find(a => a.id === data.gladiator_a_id) || null,
+                b: mappedAgents.find(a => a.id === data.gladiator_b_id) || null
+            });
+        }
+
         if (data?.timer_status === 'RUNNING' && data.timer_end_at) {
             const remaining = Math.max(0, Math.floor((new Date(data.timer_end_at).getTime() - Date.now()) / 1000));
             startLocalTimer(remaining);
@@ -431,19 +481,22 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true }
             {/* Results Overlay */}
             <AnimatePresence>
                 {showTransfer && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md">
-                        <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center space-y-6">
-                            <Trophy size={120} className="mx-auto text-[#ffb700]" />
-                            <h2 className="text-7xl md:text-9xl font-bebas tracking-[0.2em] uppercase">
-                                {showTransfer === 'A' ? (gladiators.a?.name ? `${gladiators.a.name} VENCE` : 'ALFA VENCE') :
-                                    showTransfer === 'B' ? (gladiators.b?.name ? `${gladiators.b.name} VENCE` : 'BRAVO VENCE') :
-                                        showTransfer === 'TIE' ? 'EMPATE' : 'NINGUNO'}
-                            </h2>
-                            {(showTransfer === 'A' || showTransfer === 'B') && (
-                                <p className="text-3xl md:text-5xl font-black text-[#ffb700] italic">¡GLORIA AL VENCEDOR!</p>
-                            )}
+                    <>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md">
+                            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center space-y-6">
+                                <Trophy size={120} className="mx-auto text-[#ffb700]" />
+                                <h2 className="text-7xl md:text-9xl font-bebas tracking-[0.2em] uppercase">
+                                    {showTransfer === 'A' ? (gladiators.a?.name ? `${gladiators.a.name} VENCE` : 'ALFA VENCE') :
+                                        showTransfer === 'B' ? (gladiators.b?.name ? `${gladiators.b.name} VENCE` : 'BRAVO VENCE') :
+                                            showTransfer === 'TIE' ? 'EMPATE' : 'NINGUNO'}
+                                </h2>
+                                {(showTransfer === 'A' || showTransfer === 'B') && (
+                                    <p className="text-3xl md:text-5xl font-black text-[#ffb700] italic">¡GLORIA AL VENCEDOR!</p>
+                                )}
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
+                        {(showTransfer === 'A' || showTransfer === 'B') && <ParticleSwarm winner={showTransfer} />}
+                    </>
                 )}
             </AnimatePresence>
 

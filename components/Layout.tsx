@@ -29,17 +29,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ASCENSO, icon: <ChevronUp size={20} />, label: 'Ascenso', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Mi Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.STUDENT] },
+    { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.DIRECTOR] },
     { id: AppView.ADMIN, icon: <Settings size={20} />, label: 'Admin', roles: [UserRole.DIRECTOR] },
   ];
 
   // Si es un jugador test, solo mostrar Inicio, Arena (Combatir) y Mi Perfil
   const filteredNavItems = allNavItems.filter(item => {
-    if (!item.roles.includes(userRole)) return false;
-    if (userName && (userName.includes('Test') || userName.includes('TEST'))) {
-      return item.id === AppView.HOME || item.id === AppView.PROFILE || item.label === 'Arena' || item.label === 'Combatir';
+    const isTest = userName && (userName.includes('Test') || userName.includes('TEST'));
+
+    // Si es Test Player, forzar visibilidad de Arena aunque no tenga el rol, y limitar el resto
+    if (isTest) {
+      return item.id === AppView.HOME || item.id === AppView.PROFILE || item.id === AppView.BIBLE_WAR_ARENA;
     }
-    return true;
+
+    // Para los demás, solo mostrar si tienen el rol correspondiente
+    return item.roles.includes(userRole);
   });
 
   return (

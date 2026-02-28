@@ -1374,8 +1374,16 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
                 else if (winnerTeam === 'B') amountA = -stakes; // Pierde solo sus stakes en combate directo
 
                 if (amountA !== 0) {
-                    const { data: agent } = await supabase.from('agentes').select('xp').eq('id', gadA).single();
-                    if (agent) await supabase.from('agentes').update({ xp: Math.max(0, (agent.xp || 0) + amountA) }).eq('id', gadA);
+                    await updateAgentPointsSupabase(gadA, 'XP', amountA);
+
+                    if (amountA > 0) {
+                        try {
+                            const { data: agentData } = await supabase.from('agentes').select('nombre').eq('id', gadA).single();
+                            if (agentData) {
+                                await publishNewsSupabase(gadA, agentData.nombre, 'RECOMPENSA', `Ganó ${amountA} XP en la Arena Táctica.`);
+                            }
+                        } catch (e) { }
+                    }
                 }
             }
 
@@ -1386,8 +1394,16 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
                 else if (winnerTeam === 'A') amountB = -stakes; // Pierde solo sus stakes en combate directo
 
                 if (amountB !== 0) {
-                    const { data: agent } = await supabase.from('agentes').select('xp').eq('id', gadB).single();
-                    if (agent) await supabase.from('agentes').update({ xp: Math.max(0, (agent.xp || 0) + amountB) }).eq('id', gadB);
+                    await updateAgentPointsSupabase(gadB, 'XP', amountB);
+
+                    if (amountB > 0) {
+                        try {
+                            const { data: agentData } = await supabase.from('agentes').select('nombre').eq('id', gadB).single();
+                            if (agentData) {
+                                await publishNewsSupabase(gadB, agentData.nombre, 'RECOMPENSA', `Ganó ${amountB} XP en la Arena Táctica.`);
+                            }
+                        } catch (e) { }
+                    }
                 }
             }
         }

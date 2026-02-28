@@ -505,9 +505,22 @@ export const confirmEventAttendanceSupabase = async (data: { agentId: string; ag
  */
 export const fetchTasksSupabase = async (): Promise<any[]> => {
     try {
-        const { data, error } = await supabase.from('tareas').select('*').order('fecha_creacion', { ascending: false });
+        const { data, error } = await supabase.from('tareas').select('*').order('created_at', { ascending: false });
         if (error) throw error;
-        return data || [];
+
+        // Count recruits from progreso_tareas manually (since we don't have a view or join set up here, TasksModule uses fetchTaskRecruits for this instead. 
+        // We will just map the fields correctly.
+        return (data || []).map(t => ({
+            id: t.id,
+            title: t.title,
+            description: t.description || '',
+            area: t.area,
+            requiredLevel: t.required_level,
+            xpReward: t.xp_reward || 0,
+            maxSlots: t.max_slots || 0,
+            currentSlots: 0, // Calculated in frontend or via recruits
+            createdAt: t.created_at
+        }));
     } catch { return []; }
 };
 
@@ -518,7 +531,15 @@ export const fetchTaskRecruitsSupabase = async (): Promise<any[]> => {
     try {
         const { data, error } = await supabase.from('progreso_tareas').select('*');
         if (error) throw error;
-        return data || [];
+        return (data || []).map(r => ({
+            id: r.id,
+            taskId: r.task_id,
+            agentId: r.agent_id,
+            agentName: r.agent_name,
+            status: r.status,
+            verifiedBy: r.verified_by,
+            createdAt: r.completed_at
+        }));
     } catch { return []; }
 };
 
@@ -528,12 +549,13 @@ export const fetchTaskRecruitsSupabase = async (): Promise<any[]> => {
 export const createTaskSupabase = async (data: { title: string; description: string; area: string; requiredLevel: string; xpReward: number; maxSlots: number }): Promise<{ success: boolean, error?: string }> => {
     try {
         const { error } = await supabase.from('tareas').insert({
-            titulo: data.title,
-            descripcion: data.description,
+            id: globalThis.crypto ? crypto.randomUUID() : Date.now().toString(),
+            title: data.title,
+            description: data.description,
             area: data.area,
-            nivel_requerido: data.requiredLevel,
-            xp_recompensa: data.xpReward,
-            max_cupos: data.maxSlots
+            required_level: data.requiredLevel,
+            xp_reward: data.xpReward,
+            max_slots: data.maxSlots
         });
         if (error) throw error;
         return { success: true };
@@ -565,7 +587,7 @@ export const submitTaskCompletionSupabase = async (taskId: string, agentId: stri
             agent_id: agentId,
             agent_name: agentName,
             status: 'ENTREGADO',
-            fecha_entrega: new Date().toISOString()
+            completed_at: new Date().toISOString()
         });
         if (error) throw error;
         return { success: true };
@@ -581,7 +603,8 @@ export const verifyTaskSupabase = async (data: { taskId: string; agentId: string
     try {
         const { error } = await supabase.from('progreso_tareas').update({
             status: 'VERIFICADO',
-            fecha_verificacion: new Date().toISOString()
+            completed_at: new Date().toISOString(),
+            verified_by: data.verifiedBy
         }).eq('task_id', data.taskId).eq('agent_id', data.agentId);
 
         if (error) throw error;

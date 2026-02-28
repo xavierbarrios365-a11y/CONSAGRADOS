@@ -910,10 +910,10 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
             id: newId,
             nombre: data.nombre || '',
             whatsapp: data.whatsapp || '',
-            fecha_nacimiento: data.fechaNacimiento || '',
+            birthday: data.fechaNacimiento || '',
             talent: data.talento || '',
             baptism_status: data.bautizado || 'NO',
-            relacion_con_dios: data.relacion || '',
+            relationship_with_god: data.relacion || '',
             cargo: data.nivel || 'ESTUDIANTE',
             foto_url: data.photoUrl || '',
             pin: newPin,
@@ -923,10 +923,11 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
             bible: 0,
             notes: 0,
             leadership: 0,
-            fecha_ingreso: new Date().toISOString(),
-            pregunta_seguridad: data.preguntaSeguridad || '¿Cuál es tu color favorito?',
-            respuesta_seguridad: data.respuestaSeguridad || 'Azul',
+            joined_date: new Date().toISOString(),
+            security_question: data.preguntaSeguridad || '¿Cuál es tu color favorito?',
+            security_answer: data.respuestaSeguridad || 'Azul',
             must_change_password: true,
+            user_role: data.nivel === 'DIRECTOR' ? 'DIRECTOR' : data.nivel === 'LÍDER' ? 'LEADER' : 'STUDENT',
             referido_por: data.referidoPor || ''
         };
 
@@ -936,10 +937,10 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
                 id: record.id,
                 nombre: record.nombre,
                 whatsapp: record.whatsapp,
-                fecha_nacimiento: record.fecha_nacimiento,
+                birthday: record.birthday,
                 talent: record.talent,
                 baptism_status: record.baptism_status,
-                relacion_con_dios: record.relacion_con_dios,
+                relationship_with_god: record.relationship_with_god,
                 cargo: record.cargo,
                 foto_url: record.foto_url,
                 pin: record.pin,
@@ -949,10 +950,11 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
                 bible: record.bible,
                 notes: record.notes,
                 leadership: record.leadership,
-                fecha_ingreso: record.fecha_ingreso,
-                pregunta_seguridad: record.pregunta_seguridad,
-                respuesta_seguridad: record.respuesta_seguridad,
-                must_change_password: record.must_change_password
+                joined_date: record.joined_date,
+                security_question: record.security_question,
+                security_answer: record.security_answer,
+                must_change_password: record.must_change_password,
+                user_role: record.user_role
             });
 
         if (error) throw error;
@@ -1342,22 +1344,7 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
             newPot += stakes;
         }
 
-        // 2. Actualizar sesión global
-        const { error: updateError } = await supabase
-            .from('bible_war_sessions')
-            .update({
-                score_a: newScoreA,
-                score_b: newScoreB,
-                accumulated_pot: newPot,
-                show_answer: true,
-                status: 'RESOLVED',
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', '00000000-0000-0000-0000-000000000001');
-
-        if (updateError) throw updateError;
-
-        // 3. TRANSFERENCIA INDIVIDUAL A GLADIADORES (v4.0)
+        // 2. TRANSFERENCIA INDIVIDUAL A GLADIADORES (v4.0)
         const { data: currentSession } = await supabase
             .from('bible_war_sessions')
             .select('gladiator_a_id, gladiator_b_id')
@@ -1407,6 +1394,21 @@ export const transferBibleWarXP = async (winnerTeam: 'A' | 'B' | 'NONE' | 'TIE',
                 }
             }
         }
+
+        // 3. Actualizar sesión global
+        const { error: updateError } = await supabase
+            .from('bible_war_sessions')
+            .update({
+                score_a: newScoreA,
+                score_b: newScoreB,
+                accumulated_pot: newPot,
+                show_answer: true,
+                status: 'RESOLVED',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', '00000000-0000-0000-0000-000000000001');
+
+        if (updateError) throw updateError;
 
         return { success: true };
     } catch (e: any) {

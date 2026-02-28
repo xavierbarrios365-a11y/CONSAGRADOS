@@ -164,12 +164,29 @@ const DirectorView: React.FC<DirectorViewProps> = (props) => {
                                 <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Inteligencia</h2>
                                 <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">SISTEMA DE ANÁLISIS DE SEÑALES TÁCTICAS</p>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
                                 <button onClick={() => syncData()} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-indigo-900/40 border border-white/10">
                                     <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} /> ESCANEAR DESERCIONES
                                 </button>
                                 <button onClick={() => setView(AppView.ENROLLMENT)} className="bg-green-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-green-900/40 border border-white/10">
                                     <UserPlus size={16} /> INSCRIPCIÓN DE AGENTE
+                                </button>
+                                <button onClick={async () => {
+                                    const visitorName = prompt('Nombre completo del visitante:');
+                                    if (!visitorName || visitorName.trim() === '') return;
+                                    setScanStatus('SCANNING');
+                                    const visitorId = `VISIT-${Date.now()}`;
+                                    const res = await registerVisitorSupabase(visitorId, visitorName, currentUser?.name);
+                                    if (res.success) {
+                                        setScanStatus('SUCCESS');
+                                        showAlert({ title: "VISITANTE REGISTRADO", message: "✅ Acceso concedido.", type: 'SUCCESS' });
+                                        setTimeout(() => { setScanStatus('IDLE'); syncData(true); }, 3000);
+                                    } else {
+                                        showAlert({ title: "FALLO DE SISTEMA", message: res.error || "Fallo en registro.", type: 'ERROR' });
+                                        setScanStatus('IDLE');
+                                    }
+                                }} className="bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-900/40 border border-white/10">
+                                    <UserPlus size={16} /> REGISTRAR VISITANTE
                                 </button>
                             </div>
                         </div>

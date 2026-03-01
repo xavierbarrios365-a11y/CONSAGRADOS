@@ -5,7 +5,8 @@ import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake,
 import { motion, AnimatePresence } from 'framer-motion';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
-import { updateAgentAiProfile, fetchAcademyData, updateAgentPoints } from '../services/sheetsService';
+import { updateAgentAiProfile, updateAgentPoints } from '../services/sheetsService';
+import { fetchAcademyDataSupabase } from '../services/supabaseService';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -55,7 +56,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
   React.useEffect(() => {
     const loadBadges = async () => {
       try {
-        const data = await fetchAcademyData(agent.id);
+        const data = await fetchAcademyDataSupabase(agent.id);
         if (data.courses && data.lessons && data.progress) {
           const approved = data.courses.filter((course: any) => {
             const courseLessons = data.lessons.filter((l: any) => l.courseId === course.id);

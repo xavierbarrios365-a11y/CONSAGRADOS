@@ -1217,6 +1217,181 @@ export const deleteNewsItemSupabase = async (id: string): Promise<{ success: boo
     }
 };
 
+export const resolveTaskSupabase = async (taskId: string, status: 'RECHAZADO' | 'VERIFICADO', verifiedBy?: string) => {
+    try {
+        const updateData: any = { status };
+        if (verifiedBy) updateData.verified_by = verifiedBy;
+
+        const { error } = await supabase
+            .from('progreso_tareas')
+            .update(updateData)
+            .eq('id', taskId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ Error resolviendo tarea:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * @description Guarda masivamente cursos y lecciones directamente en Supabase (evitando Apps Script)
+ */
+export const saveBulkAcademyDataSupabase = async (data: { courses: any[], lessons: any[] }) => {
+    try {
+        const { courses, lessons } = data;
+
+        // 1. Prepare and insert courses
+        if (courses && courses.length > 0) {
+            const coursesData = courses.map(c => ({
+                id: c.id,
+                title: c.title,
+                description: c.description || '',
+                badge_reward: c.requiredLevel || c.badgeReward || null,
+                xp_reward: c.xpReward || 0,
+                image_url: c.imageUrl || null,
+                order_index: c.order || 0,
+                is_active: c.isActive !== false
+            }));
+
+            const { error: coursesError } = await supabase
+                .from('academy_courses')
+                .upsert(coursesData, { onConflict: 'id' });
+
+            if (coursesError) throw coursesError;
+        }
+
+        // 2. Prepare and insert lessons
+        if (lessons && lessons.length > 0) {
+            const lessonsData = lessons.map(l => ({
+                id: l.id,
+                course_id: l.courseId,
+                title: l.title,
+                embed_url: l.videoUrl || null,
+                required_role: l.requiredRole || 'STUDENT',
+                content: l.content || '',
+                questions_json: {
+                    questions: l.questions || [],
+                    xpReward: l.xpReward || 0,
+                    resultAlgorithm: l.resultAlgorithm || 'NONE',
+                    resultMappings: l.resultMappings || []
+                }
+            }));
+
+            const { error: lessonsError } = await supabase
+                .from('academy_lessons')
+                .upsert(lessonsData, { onConflict: 'id' });
+
+            if (lessonsError) throw lessonsError;
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ Error in saveBulkAcademyDataSupabase:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * @description Retrieves academy courses, lessons, and progress directly from Supabase, ordered newest to oldest.
+ */
+export const fetchAcademyDataSupabase = async (agentId?: string) => {
+    try {
+        // Fetch courses, ordering by created_at DESC (newest to oldest)
+        const { data: coursesData, error: coursesError } = await supabase
+            .from('academy_courses')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (coursesError) throw coursesError;
+
+        // Fetch lessons
+        const { data: lessonsData, error: lessonsError } = await supabase
+            .from('academy_lessons')
+            .select('*')
+            .order('created_at', { ascending: true }); // lessons keep sequential order
+
+        if (lessonsError) throw lessonsError;
+
+        // Map to expected format
+        const courses = coursesData.map(c => ({
+            id: c.id,
+            title: c.title,
+            description: c.description || '',
+            requiredLevel: c.badge_reward || 'ESTUDIANTE',
+            imageUrl: c.image_url || null,
+            // Extra optional fields that might be useful
+            badgeReward: c.badge_reward || null,
+            xpReward: c.xp_reward || 0,
+            order: c.order_index || 0,
+            isActive: c.is_active
+        }));
+
+        const lessons = lessonsData.map((l, index) => ({
+            id: l.id,
+            courseId: l.course_id,
+            order: index + 1,
+            title: l.title,
+            videoUrl: l.embed_url || null,
+            content: l.content || '',
+            questions: l.questions_json?.questions || [],
+            xpReward: l.questions_json?.xpReward || 0,
+            resultAlgorithm: l.questions_json?.resultAlgorithm || 'NONE',
+            resultMappings: l.questions_json?.resultMappings || []
+        }));
+
+        let progress: any[] = [];
+        if (agentId) {
+            const { data: progressData, error: progressError } = await supabase
+                .from('academy_progress')
+                .select('*')
+                .eq('agent_id', agentId);
+
+            if (!progressError && progressData) {
+                progress = progressData.map(p => ({
+                    id: p.id,
+                    agentId: p.agent_id,
+                    lessonId: p.lesson_id,
+                    courseId: p.course_id,
+                    isCompleted: p.is_completed,
+                    score: p.score,
+                    attempts: p.attempts,
+                    completedAt: p.completed_at
+                }));
+            }
+        }
+
+        return { courses, lessons, progress };
+    } catch (error: any) {
+        console.error('❌ Error fetching academy data from Supabase:', error.message);
+        return { courses: [], lessons: [], progress: [] };
+    }
+};
+
+export const deleteAcademyCourseSupabase = async (courseId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        await supabase.from('academy_lessons').delete().eq('course_id', courseId);
+        const { error } = await supabase.from('academy_courses').delete().eq('id', courseId);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error deleting course from Supabase:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const deleteAcademyLessonSupabase = async (lessonId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase.from('academy_lessons').delete().eq('id', lessonId);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error deleting lesson from Supabase:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
 /**
  * ===== SISTEMA GUERRA BÍBLICA (REALTIME) =====
  */
@@ -1459,7 +1634,6 @@ export const clearBibleWarQuestions = async (): Promise<{ success: boolean; erro
 export const publishNewsSupabase = async (agentId: string, agentName: string, type: string, message: string): Promise<{ success: boolean, error?: string }> => {
     try {
         const { error } = await supabase.from('asistencia_visitas').insert({
-            id: `NEWS-${Date.now()}`,
             agent_id: agentId || 'SISTEMA',
             agent_name: agentName || 'Sistema',
             tipo: type,

@@ -8,8 +8,9 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, reconcileXP, resetSyncBackoff, fetchAcademyData } from '../services/sheetsService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, updateAgentPhotoSupabase as updateAgentPhoto } from '../services/supabaseService';
+import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, reconcileXP, resetSyncBackoff } from '../services/sheetsService';
+import { fetchAcademyDataSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, updateAgentPhotoSupabase as updateAgentPhoto } from '../services/supabaseService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -210,7 +211,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (!agent) return;
     setIsGeneratingAi(true);
     try {
-      const { progress } = await fetchAcademyData(agent.id);
+      const { progress } = await fetchAcademyDataSupabase(agent.id);
       const aiProfile = await generateTacticalProfile(agent, progress);
       if (aiProfile) {
         const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
@@ -390,7 +391,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (!currentUser) return;
     setIsSendingBroadcast(true);
     try {
-      const res = await broadcastNotification("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
+      const res = await sendPushBroadcast("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
       if (res.success) {
         showAlert({ title: "PRUEBA ENVIADA", message: "✅ PRUEBA ENVIADA. Verifica tu bandeja de notificaciones.", type: 'SUCCESS' });
       }

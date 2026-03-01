@@ -4,14 +4,14 @@ import {
     submitTransactionSupabase,
     updateAgentPointsSupabase,
     updateAgentStreaksSupabase,
-    confirmEventAttendanceSupabase as confirmEventAttendanceService
+    confirmEventAttendanceSupabase as confirmEventAttendanceService,
+    fetchAcademyDataSupabase
 } from '../services/supabaseService';
 
 import {
     updateAgentAiProfile,
     updateAgentAiPendingStatus,
     fetchDailyVerse,
-    fetchAcademyData,
     confirmDirectorAttendance
 } from '../services/sheetsService';
 
@@ -91,7 +91,7 @@ export const useTacticalLogic = (
         if (!currentUser) return;
         setIsUpdatingAiProfile(true);
         try {
-            const { progress } = await fetchAcademyData(currentUser.id);
+            const { progress } = await fetchAcademyDataSupabase(currentUser.id);
             const result = await generateTacticalProfile(currentUser, progress, testAnswers);
             if (result) {
                 await updateAgentAiProfile(currentUser.id, result.stats, result.summary);

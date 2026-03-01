@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
-import { fetchAcademyData, submitQuizResult, deleteAcademyLesson, deleteAcademyCourse, resetStudentAttempts, uploadImage, saveBulkAcademyData, updateAgentAiProfile } from '../services/sheetsService';
-import { fetchAgentsFromSupabase } from '../services/supabaseService';
+import { fetchAcademyData, submitQuizResult, resetStudentAttempts, uploadImage, saveBulkAcademyData, updateAgentAiProfile } from '../services/sheetsService';
+import { fetchAgentsFromSupabase, fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase } from '../services/supabaseService';
+import { useTacticalAlert } from './TacticalAlert';
 import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, LayoutGrid, Trash2, BrainCircuit, Info, Sparkles, Users, Search, Award, Flame, Star, Target, Image as ImageIcon } from 'lucide-react';
 import { processAssessmentAI, getDeepTestAnalysis, generateCourseFinalReport } from '../services/geminiService';
 import AcademyStudio from './AcademyStudio';
@@ -28,6 +29,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const [auditProgress, setAuditProgress] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [certificateData, setCertificateData] = useState<{ agentName: string, courseTitle: string, date: string } | null>(null);
+    const { showAlert } = useTacticalAlert();
 
     // Quiz State
     const [quizState, setQuizState] = useState<'IDLE' | 'STARTED' | 'SUBMITTING' | 'RESULT'>('IDLE');
@@ -63,7 +65,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const loadAcademy = async (isAuditFetch = false) => {
         setIsLoading(true);
         try {
-            const data = await fetchAcademyData((userRole === UserRole.DIRECTOR && isAuditFetch) ? undefined : agentId);
+            const data = await fetchAcademyDataSupabase((userRole === UserRole.DIRECTOR && isAuditFetch) ? undefined : agentId);
             setCourses(data.courses || []);
             setLessons(data.lessons || []);
 
@@ -93,30 +95,46 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     }, [directorView]);
 
     const handleDeleteLesson = async (lessonId: string, title: string) => {
-        if (!confirm(`¿Eliminar la lección "${title}"? Esta acción no se puede deshacer.`)) return;
-        setIsLoading(true);
-        const result = await deleteAcademyLesson(lessonId);
-        if (result.success) {
-            setLessons(prev => prev.filter(l => l.id !== lessonId));
-            if (activeLesson?.id === lessonId) setActiveLesson(null);
-        } else {
-            alert(`Error: ${result.error}`);
-        }
-        setIsLoading(false);
+        showAlert({
+            title: 'ELIMINAR LECCIÓN',
+            message: `¿Eliminar la lección "${title}"? Esta acción no se puede deshacer.`,
+            type: 'CONFIRM',
+            confirmText: 'ELIMINAR LECCIÓN',
+            onConfirm: async () => {
+                setIsLoading(true);
+                const result = await deleteAcademyLessonSupabase(lessonId);
+                if (result.success) {
+                    setLessons(prev => prev.filter(l => l.id !== lessonId));
+                    if (activeLesson?.id === lessonId) setActiveLesson(null);
+                    showAlert({ title: 'ÉXITO', message: 'Lección eliminada correctamente.', type: 'SUCCESS' });
+                } else {
+                    showAlert({ title: 'ERROR', message: `No se pudo eliminar: ${result.error}`, type: 'ERROR' });
+                }
+                setIsLoading(false);
+            }
+        });
     };
 
     const handleDeleteCourse = async (courseId: string, title: string) => {
-        if (!confirm(`¿Eliminar el curso "${title}" y TODAS sus lecciones? Esta acción no se puede deshacer.`)) return;
-        setIsLoading(true);
-        const result = await deleteAcademyCourse(courseId);
-        if (result.success) {
-            setCourses(prev => prev.filter(c => c.id !== courseId));
-            setLessons(prev => prev.filter(l => l.courseId !== courseId));
-            setSelectedCourse(null);
-        } else {
-            alert(`Error: ${result.error}`);
-        }
-        setIsLoading(false);
+        showAlert({
+            title: 'ELIMINAR CURSO',
+            message: `¿Eliminar el curso "${title}" y TODAS sus lecciones? Esta acción no se puede deshacer.`,
+            type: 'CONFIRM',
+            confirmText: 'ELIMINAR CURSO',
+            onConfirm: async () => {
+                setIsLoading(true);
+                const result = await deleteAcademyCourseSupabase(courseId);
+                if (result.success) {
+                    setCourses(prev => prev.filter(c => c.id !== courseId));
+                    setLessons(prev => prev.filter(l => l.courseId !== courseId));
+                    setSelectedCourse(null);
+                    showAlert({ title: 'ÉXITO', message: 'Curso eliminado correctamente.', type: 'SUCCESS' });
+                } else {
+                    showAlert({ title: 'ERROR', message: `No se pudo eliminar: ${result.error}`, type: 'ERROR' });
+                }
+                setIsLoading(false);
+            }
+        });
     };
 
     const handleEditCourseImage = async (e: React.ChangeEvent<HTMLInputElement>, courseId: string) => {
@@ -135,18 +153,19 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                         const updateRes = await saveBulkAcademyData({ courses: [updatedCourse], lessons: [] });
                         if (updateRes.success) {
                             setCourses(prev => prev.map(c => c.id === courseId ? updatedCourse : c));
+                            showAlert({ title: 'ÉXITO', message: 'Portada actualizada de forma correcta.', type: 'SUCCESS' });
                         } else {
-                            alert("Error al actualizar metadatos del curso: " + updateRes.error);
+                            showAlert({ title: 'ERROR', message: "Error al actualizar metadatos del curso: " + updateRes.error, type: 'ERROR' });
                         }
                     }
                 } else {
-                    alert("Error al subir imagen: " + res.error);
+                    showAlert({ title: 'ERROR', message: "Error al subir imagen: " + res.error, type: 'ERROR' });
                 }
-                setUploadingCourseId(null);
             };
             reader.readAsDataURL(file);
         } catch (err: any) {
-            alert("Error: " + err.message);
+            showAlert({ title: 'ERROR', message: "Error: " + err.message, type: 'ERROR' });
+        } finally {
             setUploadingCourseId(null);
         }
     };
@@ -180,28 +199,34 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             confirmMsg = `¿Estás seguro de resetear TODOS los intentos para el agente ${aId}?`;
         }
 
-        if (!confirm(confirmMsg)) return;
-        setIsLoading(true);
-        try {
-            const res = await resetStudentAttempts(aId, courseId, lessonId);
-            if (res.success) {
-                alert("Reseteo exitoso. El agente puede re-intentar las evaluaciones.");
-                // Refrescar tanto la auditoría como el progreso actual (si es el mismo usuario)
-                await loadAcademy(true);
-                if (aId === agentId) {
-                    await loadAcademy(false);
-                    setQuizState('IDLE');
-                    setCurrentQuestionIndex(0);
-                    setQuizResult(null);
+        showAlert({
+            title: 'RESETEO DE EVALUACIÓN',
+            message: confirmMsg,
+            type: 'CONFIRM',
+            confirmText: 'SÍ, RESETEAR',
+            onConfirm: async () => {
+                setIsLoading(true);
+                try {
+                    const res = await resetStudentAttempts(aId, courseId, lessonId);
+                    if (res.success) {
+                        showAlert({ title: 'ÉXITO', message: "Reseteo exitoso. El agente puede re-intentar las evaluaciones.", type: 'SUCCESS' });
+                        await loadAcademy(true);
+                        if (aId === agentId) {
+                            await loadAcademy(false);
+                            setQuizState('IDLE');
+                            setCurrentQuestionIndex(0);
+                            setQuizResult(null);
+                        }
+                    } else {
+                        showAlert({ title: 'ERROR', message: "Error al resetear: " + res.error, type: 'ERROR' });
+                    }
+                } catch (err: any) {
+                    showAlert({ title: 'ERROR', message: "Error: " + err.message, type: 'ERROR' });
+                } finally {
+                    setIsLoading(false);
                 }
-            } else {
-                alert("Error al resetear: " + res.error);
             }
-        } catch (err: any) {
-            alert("Error: " + err.message);
-        } finally {
-            setIsLoading(false);
-        }
+        });
     };
 
     const handleLessonSelect = (lesson: Lesson) => {
@@ -437,11 +462,13 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 setDeepAnalysis(report);
                 // Persistencia: Guardar en el perfil del agente
                 await updateAgentAiProfile(agent.id, agent.tacticalStats || {}, report);
-                alert("✅ REPORTE TÁCTICO INTEGRADO EN TU EXPEDIENTE.");
+                showAlert({ title: 'REPORTE CREADO', message: 'REPORTE TÁCTICO INTEGRADO EN TU EXPEDIENTE.', type: 'SUCCESS' });
+            } else {
+                showAlert({ title: 'ERROR DE REPORTE', message: 'FALLO EN LA CONSOLIDACIÓN DE INTELIGENCIA.', type: 'ERROR' });
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error al generar reporte final:", err);
-            alert("❌ FALLO EN LA CONSOLIDACIÓN DE INTELIGENCIA.");
+            showAlert({ title: 'ERROR', message: 'CRITICAL FAILURE: ' + err.message, type: 'ERROR' });
         } finally {
             setIsAnalyzingDeeply(false);
         }
@@ -659,93 +686,97 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                         )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         {courses.length === 0 ? (
                             <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
                                 <GraduationCap className="mx-auto text-gray-800 mb-4" size={48} />
                                 <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest font-bebas">No hay cursos disponibles en el servidor</p>
                             </div>
                         ) : (
-                            courses.map(course => (
-                                <div
-                                    key={course.id}
-                                    className="group relative bg-[#001f3f] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all shadow-xl hover:-translate-y-1"
-                                >
-                                    <div onClick={() => setSelectedCourse(course)} className="cursor-pointer">
-                                        <div className="h-40 bg-gray-900 relative">
-                                            {course.imageUrl ? (
-                                                <img src={course.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-white/5">
-                                                    <BookOpen size={40} className="text-gray-700" />
-                                                </div>
-                                            )}
-                                            <div className="absolute top-4 left-4">
-                                                <span className="text-[8px] font-black bg-[#ffb700] text-[#001f3f] px-3 py-1 rounded-full uppercase tracking-widest font-bebas">
-                                                    {course.requiredLevel}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="p-6 space-y-3">
-                                            <h3 className="text-lg font-bebas text-white uppercase tracking-wider">{course.title}</h3>
-                                            <p className="text-[9px] text-gray-500 font-bold uppercase leading-relaxed line-clamp-2">
-                                                {course.description}
-                                            </p>
-                                            <div className="flex flex-col gap-3 pt-2">
-                                                {isCourseCompleted(course.id) && (
-                                                    <div className="flex flex-col gap-2">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDownloadCertificate(course); }}
-                                                            className="w-full py-2 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center gap-2 text-green-500 text-[8px] font-black uppercase hover:bg-green-500/20 transition-all"
-                                                        >
-                                                            <Trophy size={10} /> Certificado Disponible
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleCourseFinalReport(course); }}
-                                                            className="w-full py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center gap-2 text-indigo-400 text-[8px] font-black uppercase hover:bg-indigo-500/20 transition-all"
-                                                        >
-                                                            {isAnalyzingDeeply ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
-                                                            Generar Reporte de Comando
-                                                        </button>
+                            courses.map(course => {
+                                const courseLessons = lessons.filter(l => l.courseId === course.id);
+                                return (
+                                    <div
+                                        key={course.id}
+                                        className="group relative bg-[#001f3f] border border-white/5 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden hover:border-[#ffb700]/40 transition-all shadow-xl hover:-translate-y-1"
+                                    >
+                                        <div onClick={() => setSelectedCourse(course)} className="cursor-pointer flex flex-row md:flex-col h-full">
+                                            <div className="w-1/3 md:w-full min-h-[100px] md:h-40 bg-gray-900 relative flex-shrink-0">
+                                                {course.imageUrl ? (
+                                                    <img src={course.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-white/5">
+                                                        <BookOpen size={24} className="text-gray-700 md:w-10 md:h-10" />
                                                     </div>
                                                 )}
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <BookOpen size={12} className="text-[#ffb700]" />
-                                                        <span className="text-[8px] text-[#ffb700] font-black uppercase">
-                                                            {lessons.filter(l => l.courseId === course.id).length} Lecciones
-                                                        </span>
+                                                <div className="absolute top-2 left-2 md:top-4 md:left-4">
+                                                    <span className="text-[7px] md:text-[8px] font-black bg-[#ffb700] text-[#001f3f] px-2 py-1 flex items-center justify-center rounded-sm uppercase tracking-widest font-bebas line-clamp-1">
+                                                        {course.requiredLevel}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="p-4 md:p-6 space-y-2 md:space-y-3 flex-1 flex flex-col justify-center">
+                                                <h3 className="text-sm md:text-lg font-bebas text-white uppercase tracking-wider line-clamp-2 leading-tight">{course.title}</h3>
+                                                <p className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-widest leading-relaxed line-clamp-2 md:line-clamp-3">
+                                                    {course.description}
+                                                </p>
+                                                <div className="pt-2 md:pt-4 border-t border-white/5 transition-all mt-auto space-y-2 md:space-y-3">
+                                                    {courseLessons.length > 0 && isCourseCompleted(course.id) && (
+                                                        <div className="space-y-2">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleDownloadCertificate(course); }}
+                                                                className="w-full py-1.5 md:py-2 bg-[#ffb700] text-[#001f3f] rounded-lg md:rounded-xl flex items-center justify-center gap-2 text-[8px] font-black uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_15px_rgba(255,183,0,0.3)]"
+                                                            >
+                                                                <Trophy size={10} /> Certificado Disponible
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleCourseFinalReport(course); }}
+                                                                className="w-full py-1.5 md:py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg md:rounded-xl flex items-center justify-center gap-2 text-indigo-400 text-[8px] font-black uppercase hover:bg-indigo-500/20 transition-all"
+                                                            >
+                                                                {isAnalyzingDeeply ? <Loader2 size={10} className="animate-spin" /> : <BrainCircuit size={10} />}
+                                                                <span className="hidden sm:inline">Generar Reporte de Comando</span>
+                                                                <span className="sm:hidden">Reporte</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <BookOpen size={12} className="text-[#ffb700] w-2.5 h-2.5 md:w-3 md:h-3" />
+                                                            <span className="text-[7px] md:text-[8px] text-[#ffb700] font-black uppercase">
+                                                                {lessons.filter(l => l.courseId === course.id).length} Lecciones
+                                                            </span>
+                                                        </div>
+                                                        <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-all transform group-hover:translate-x-1 w-3.5 h-3.5 md:w-4 md:h-4" />
                                                     </div>
-                                                    <ChevronRight size={16} className="text-gray-600 group-hover:text-white transition-all transform group-hover:translate-x-1" />
                                                 </div>
                                             </div>
                                         </div>
+                                        {userRole === UserRole.DIRECTOR && (
+                                            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        fileInputRef.current?.setAttribute('data-course-id', course.id);
+                                                        fileInputRef.current?.click();
+                                                    }}
+                                                    className="p-2 bg-[#ffb700]/20 hover:bg-[#ffb700]/40 border border-[#ffb700]/30 rounded-xl text-[#ffb700] transition-all"
+                                                    title="Cambiar Portada"
+                                                    disabled={uploadingCourseId === course.id}
+                                                >
+                                                    {uploadingCourseId === course.id ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
+                                                    className="p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all"
+                                                    title="Eliminar Curso"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
-                                    {userRole === UserRole.DIRECTOR && (
-                                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    fileInputRef.current?.setAttribute('data-course-id', course.id);
-                                                    fileInputRef.current?.click();
-                                                }}
-                                                className="p-2 bg-[#ffb700]/20 hover:bg-[#ffb700]/40 border border-[#ffb700]/30 rounded-xl text-[#ffb700] transition-all"
-                                                title="Cambiar Portada"
-                                                disabled={uploadingCourseId === course.id}
-                                            >
-                                                {uploadingCourseId === course.id ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id, course.title); }}
-                                                className="p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all"
-                                                title="Eliminar Curso"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 )}

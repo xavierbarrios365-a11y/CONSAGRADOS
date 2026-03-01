@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Agent, UserRole } from '../types';
 import { supabase } from '../services/supabaseClient';
-import { fetchAgentsFromSheets, fetchAcademyData, fetchDailyVerse, fetchNotifications, fetchBadges, fetchNewsFeed } from '../services/sheetsService';
+import { fetchAgentsFromSheets, fetchDailyVerse, fetchNotifications, fetchBadges, fetchNewsFeed, fetchAcademyData } from '../services/sheetsService';
 import { fetchTasksSupabase as fetchTasks, fetchActiveEventsSupabase as fetchActiveEvents, fetchTaskRecruitsSupabase as fetchTaskRecruits } from '../services/supabaseService';
 import { syncAllAgentsToSupabase, syncAcademyToSupabase, syncDailyVersesToSupabase, syncTasksToSupabase, syncAllHistoriesToSupabase } from '../services/supabaseService';
-import { Search, Save, X, RefreshCw, ShieldAlert, AlertTriangle, ShieldCheck, DatabaseBackup, BookOpen, Clock } from 'lucide-react';
+import { Search, Save, X, RefreshCw, ShieldAlert, AlertTriangle, ShieldCheck, DatabaseBackup, BookOpen, Clock, Users } from 'lucide-react';
 
 interface AdminDashboardProps {
     currentUser: Agent | null;
@@ -118,7 +118,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         if (!confirm('¿CONFIRMAS iniciar la clonación absoluta de la Academia y Versículos desde Google Sheets a Supabase? Esto sobrescribirá las tablas.')) return;
         setIsForceSyncingAcademy(true);
         try {
-            // 1. Obtener Academia de Sheets
             const academyData = await fetchAcademyData();
             if (!academyData || !academyData.courses || academyData.courses.length === 0) {
                 alert('No se pudieron leer los cursos de Google Sheets.');
@@ -332,6 +331,40 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                         )}
                     </div>
                 )}
+            </div>
+
+            {/* ZONA DE MIGRACIÓN SUPABASE */}
+            <div className="bg-[#ffb700]/5 border border-[#ffb700]/30 rounded-3xl p-6 shadow-[0_0_30px_rgba(255,183,0,0.05)]">
+                <h3 className="text-lg font-bebas text-[#ffb700] uppercase flex items-center gap-2 mb-4"><DatabaseBackup size={16} /> HERRAMIENTAS DE BASE DE DATOS (MIGRACIÓN A SUPABASE)</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button
+                        onClick={handleForceCloning}
+                        disabled={isForceSyncing}
+                        className="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffb700]/20 hover:border-[#ffb700]/50 transition-all font-bold text-white text-[10px] uppercase tracking-widest disabled:opacity-50"
+                    >
+                        {isForceSyncing ? <RefreshCw size={16} className="animate-spin text-[#ffb700]" /> : <Users size={16} className="text-[#ffb700]" />}
+                        {isForceSyncing ? 'MIGRANDO AGENTES...' : 'MIGRAR AGENTES (SHEETS -> SUPABASE)'}
+                    </button>
+
+                    <button
+                        onClick={handleForceAcademyCloning}
+                        disabled={isForceSyncingAcademy}
+                        className="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffb700]/20 hover:border-[#ffb700]/50 transition-all font-bold text-white text-[10px] uppercase tracking-widest disabled:opacity-50"
+                    >
+                        {isForceSyncingAcademy ? <RefreshCw size={16} className="animate-spin text-[#ffb700]" /> : <BookOpen size={16} className="text-[#ffb700]" />}
+                        {isForceSyncingAcademy ? 'MIGRANDO ACADEMIA...' : 'MIGRAR ACADEMIA (SHEETS -> SUPABASE)'}
+                    </button>
+
+                    <button
+                        onClick={handleForceHistoriesCloning}
+                        disabled={isForceSyncingHistories}
+                        className="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffb700]/20 hover:border-[#ffb700]/50 transition-all font-bold text-white text-[10px] uppercase tracking-widest disabled:opacity-50"
+                    >
+                        {isForceSyncingHistories ? <RefreshCw size={16} className="animate-spin text-[#ffb700]" /> : <Clock size={16} className="text-[#ffb700]" />}
+                        {isForceSyncingHistories ? 'MIGRANDO HISTORIALES...' : 'MIGRAR HISTORIALES (ASIST., EVENTOS)'}
+                    </button>
+                </div>
             </div>
 
             <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6">

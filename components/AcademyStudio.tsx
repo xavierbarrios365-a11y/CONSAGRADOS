@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { saveBulkAcademyData } from '../services/sheetsService';
+import { saveBulkAcademyDataSupabase } from '../services/supabaseService';
 import { Upload, FileCode, CheckCircle, AlertCircle, Loader2, Save, X, Info, Sparkles, Camera, Image as ImageIcon, Plus, Trash2, ClipboardCopy, PenTool } from 'lucide-react';
 import { processAssessmentAI } from '../services/geminiService';
 import { UserRole } from '../types';
@@ -209,7 +209,7 @@ const AcademyStudio: React.FC<AcademyStudioProps> = ({ onSuccess, onCancel }) =>
             const finalData = { courses, lessons };
 
             setIsSaving(true);
-            const res = await saveBulkAcademyData(finalData);
+            const res = await saveBulkAcademyDataSupabase(finalData);
 
             if (res.success) {
                 // Publicar noticia en el feed

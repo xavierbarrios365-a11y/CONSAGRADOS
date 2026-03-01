@@ -48,7 +48,6 @@ import {
   deductPercentagePoints,
   deleteGuide,
   fetchVisitorRadar,
-  fetchAcademyData,
   submitQuizResult,
   deleteAcademyLesson,
   deleteAcademyCourse,

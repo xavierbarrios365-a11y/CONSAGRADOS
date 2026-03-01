@@ -693,7 +693,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                             <img
                               src={formatDriveUrl(a.photoUrl)}
                               className="w-10 h-10 rounded-xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all"
-                              onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                              onError={(e) => {
+                                const target = e.currentTarget as HTMLImageElement;
+                                if (!target.src.includes('ui-avatars.com')) {
+                                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                }
+                              }}
                             />
                             <div>
                               <p className="text-[11px] font-black text-white uppercase tracking-wider font-bebas">{a.name}</p>
@@ -738,7 +743,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                             <img
                               src={formatDriveUrl(a.photoUrl)}
                               className="w-10 h-10 rounded-xl object-cover border border-white/10 grayscale group-hover:grayscale-0 transition-all opacity-60"
-                              onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                              onError={(e) => {
+                                const target = e.currentTarget as HTMLImageElement;
+                                if (!target.src.includes('ui-avatars.com')) {
+                                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                }
+                              }}
                             />
                             <div>
                               <p className="text-[11px] font-black text-white/80 uppercase tracking-wider font-bebas">{a.name}</p>
@@ -847,8 +857,11 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     src={formatDriveUrl(agent.photoUrl)}
                     className="w-full h-full rounded-xl object-cover grayscale hover:grayscale-0 transition-all duration-700"
                     onError={(e) => {
-                      e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-                      e.currentTarget.className = "w-full h-full object-cover opacity-20";
+                      const target = e.currentTarget as HTMLImageElement;
+                      if (!target.src.includes('ui-avatars.com')) {
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                        target.className = "w-full h-full object-cover opacity-80";
+                      }
                     }}
                   />
 

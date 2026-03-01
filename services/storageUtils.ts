@@ -46,11 +46,14 @@ export const compressImage = (file: File, maxWidth: number = 1000, quality: numb
 /**
  * Standardizes Google Drive image URLs to use the view endpoint directly.
  */
-export const formatDriveUrl = (url: string | undefined) => {
-    const DEFAULT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+export const formatDriveUrl = (url: string | undefined, name?: string) => {
+    // Generate a fallback initials avatar if name is provided, otherwise generic
+    const fallbackName = name ? encodeURIComponent(name) : 'Agente';
+    const DEFAULT_AVATAR = `https://ui-avatars.com/api/?name=${fallbackName}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+
     if (!url || typeof url !== 'string' || url.trim() === '' || url === 'N/A' || url === 'PENDIENTE') return DEFAULT_AVATAR;
 
-    if (url.includes('supabase.co') || url.includes('unsplash.com') || (url.startsWith('http') && !url.includes('drive.google.com') && !url.includes('docs.google.com'))) {
+    if (url.includes('supabase.co') || url.includes('unsplash.com') || url.includes('ui-avatars.com') || (url.startsWith('http') && !url.includes('drive.google.com') && !url.includes('docs.google.com'))) {
         return url;
     }
 
@@ -65,6 +68,7 @@ export const formatDriveUrl = (url: string | undefined) => {
     }
 
     if (fileId) {
+        // Restore standard Drive thumbnail endpoint (lh3 fails for non-Photo drive IDs with 403)
         return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
     }
 

@@ -117,7 +117,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.9.2"; // Force Atomic Purge for Bible War Fix v1.9.2
+  const APP_VERSION = "1.9.4"; // Force Atomic Purge for Smart Fallbacks
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
   const auth = useAuth();
@@ -566,9 +566,14 @@ const App: React.FC = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <img
-                    src={formatDriveUrl(rememberedUser.photoUrl)}
+                    src={formatDriveUrl(rememberedUser.photoUrl, rememberedUser.name)}
                     className="w-24 h-24 rounded-full object-cover border-4 border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)] animate-pulse"
-                    onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'; }}
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      if (!target.src.includes('ui-avatars.com')) {
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(rememberedUser.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                      }
+                    }}
                   />
                   <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-[#001f3f]"></div>
                 </div>

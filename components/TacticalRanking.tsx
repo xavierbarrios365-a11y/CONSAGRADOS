@@ -175,9 +175,14 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                             >
                                 <div className="relative shadow-2xl">
                                     <img
-                                        src={formatDriveUrl(topThree[1].photoUrl)}
+                                        src={formatDriveUrl(topThree[1].photoUrl, topThree[1].name)}
                                         className="w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale"
-                                        onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                        onError={(e) => {
+                                            const target = e.currentTarget as HTMLImageElement;
+                                            if (!target.src.includes('ui-avatars.com')) {
+                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(topThree[1].name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                            }
+                                        }}
                                     />
                                     <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-6 h-6 md:w-10 md:h-10 bg-[#1A1A1A] border-2 border-gray-400 rounded-lg flex flex-col items-center justify-center text-gray-400">
                                         <span className="font-bebas text-xs md:text-xl leading-none">2</span>
@@ -218,9 +223,14 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                 <div className="relative mb-2">
                                     <Crown className="absolute -top-4 md:-top-10 left-1/2 -translate-x-1/2 text-[#FFB700] w-6 h-6 md:w-16 md:h-16 drop-shadow-[0_0_20px_rgba(255,183,0,0.6)] animate-pulse" />
                                     <img
-                                        src={formatDriveUrl(topThree[0].photoUrl)}
+                                        src={formatDriveUrl(topThree[0].photoUrl, topThree[0].name)}
                                         className="w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)]"
-                                        onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                        onError={(e) => {
+                                            const target = e.currentTarget as HTMLImageElement;
+                                            if (!target.src.includes('ui-avatars.com')) {
+                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(topThree[0].name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                            }
+                                        }}
                                     />
                                     <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex flex-col items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
                                         <span className="font-bebas text-lg md:text-3xl font-black leading-none">1</span>
@@ -260,9 +270,14 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                             >
                                 <div className="relative shadow-2xl">
                                     <img
-                                        src={formatDriveUrl(topThree[2].photoUrl)}
+                                        src={formatDriveUrl(topThree[2].photoUrl, topThree[2].name)}
                                         className="w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale"
-                                        onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                        onError={(e) => {
+                                            const target = e.currentTarget as HTMLImageElement;
+                                            if (!target.src.includes('ui-avatars.com')) {
+                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(topThree[2].name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                            }
+                                        }}
                                     />
                                     <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 w-5 h-5 md:w-9 md:h-9 bg-[#1A1A1A] border-2 border-orange-800 rounded-lg flex flex-col items-center justify-center text-orange-800">
                                         <span className="font-bebas text-[10px] md:text-lg leading-none">3</span>
@@ -332,9 +347,14 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                                 <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                                                     <div className="relative shrink-0">
                                                         <img
-                                                            src={formatDriveUrl(agent.photoUrl)}
+                                                            src={formatDriveUrl(agent.photoUrl, agent.name)}
                                                             className="w-10 h-10 md:w-16 md:h-16 rounded-xl object-cover grayscale group-hover:grayscale-0 transition-all border border-white/20 shadow-lg"
-                                                            onError={(e) => e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"}
+                                                            onError={(e) => {
+                                                                const target = e.currentTarget as HTMLImageElement;
+                                                                if (!target.src.includes('ui-avatars.com')) {
+                                                                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                                                }
+                                                            }}
                                                         />
                                                         {agent.id === currentUser?.id && (
                                                             <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border border-[#001f3f] bg-[#FFB700] animate-pulse" />

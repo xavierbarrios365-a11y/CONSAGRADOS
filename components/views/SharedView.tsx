@@ -60,7 +60,16 @@ const SharedView: React.FC<SharedViewProps> = (props) => {
                             onClick={() => setFoundAgent(a)}
                             className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} transition-all p-1 active:scale-90 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-1`}
                         >
-                            <img src={formatDriveUrl(a.photoUrl)} className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-700" />
+                            <img
+                                src={formatDriveUrl(a.photoUrl, a.name)}
+                                className="w-full h-full object-cover rounded-2xl grayscale group-hover:grayscale-0 transition-all duration-700"
+                                onError={(e) => {
+                                    const target = e.currentTarget as HTMLImageElement;
+                                    if (!target.src.includes('ui-avatars.com')) {
+                                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                    }
+                                }}
+                            />
                             <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
                                 {badges.filter(b => String(b.agentId) === String(a.id) || String(b.agentName) === String(a.name)).map((b, i) => (
                                     <div key={i} className="w-4 h-4 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-[8px]" title={b.label}>

@@ -1475,6 +1475,66 @@ export const publishNewsSupabase = async (agentId: string, agentName: string, ty
 };
 
 /**
+ * @description Verifica si hay agentes cumpliendo años hoy y publica una noticia en el feed, asegurando que se publique solo una vez al día.
+ */
+export const checkAndPublishBirthdays = async (agents: any[]): Promise<void> => {
+    try {
+        const today = new Date();
+        const todayMonth = today.getMonth() + 1; // 1-12
+        const todayDay = today.getDate(); // 1-31
+
+        const birthdayAgents = agents.filter(agent => {
+            if (!agent.birthday || agent.birthday === 'N/A') return false;
+
+            // Try to parse 'DD/MM' or 'DD/MM/YYYY' or 'YYYY-MM-DD'
+            const parts = agent.birthday.split(/[\/\-]/);
+            if (parts.length >= 2) {
+                // Si es YYYY-MM-DD
+                if (parts[0].length === 4) {
+                    const m = parseInt(parts[1], 10);
+                    const d = parseInt(parts[2], 10);
+                    return m === todayMonth && d === todayDay;
+                } else {
+                    // Asumimos DD/MM o DD/MM/YYYY
+                    const d = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10);
+                    return m === todayMonth && d === todayDay;
+                }
+            }
+            return false;
+        });
+
+        if (birthdayAgents.length === 0) return;
+
+        // Verificar cuáles agentes ya tienen noticia de CUMPLEAÑOS hoy en BD
+        const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+        const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+
+        const { data: existingNews } = await supabase
+            .from('asistencia_visitas')
+            .select('agent_id')
+            .eq('tipo', 'CUMPLEAÑOS')
+            .gte('registrado_en', startOfDay)
+            .lte('registrado_en', endOfDay);
+
+        const publishedIds = new Set(existingNews?.map(n => n.agent_id) || []);
+
+        for (const agent of birthdayAgents) {
+            if (!publishedIds.has(agent.id)) {
+                await publishNewsSupabase(
+                    agent.id,
+                    agent.name,
+                    'CUMPLEAÑOS',
+                    `¡Feliz cumpleaños, ${agent.name.split(' ')[0]}! 🎂 Que Dios bendiga tu vida y ministerio.`
+                );
+            }
+        }
+    } catch (error) {
+        console.error('Error verificando cumpleaños:', error);
+    }
+};
+
+/**
  * @description Importa una lista de preguntas (JSON) a Supabase
  */
 export const importBibleWarQuestions = async (questions: any[]): Promise<{ success: boolean; error?: string }> => {

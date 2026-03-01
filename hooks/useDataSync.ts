@@ -9,7 +9,8 @@ import {
     fetchAgentsFromSupabase,
     fetchVisitorRadarSupabase as fetchVisitorRadar,
     fetchActiveEventsSupabase as fetchActiveEvents,
-    fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations
+    fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations,
+    checkAndPublishBirthdays
 } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
@@ -37,6 +38,15 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
                     console.log(`  📊 ${a.name}: XP=${a.xp} Rank=${a.rank}`)
                 );
                 setAgents(sheetAgents);
+
+                // Run birthday check once per day locally
+                const todayStr = new Date().toISOString().split('T')[0];
+                if (localStorage.getItem('last_birthday_check') !== todayStr) {
+                    checkAndPublishBirthdays(sheetAgents).then(() => {
+                        localStorage.setItem('last_birthday_check', todayStr);
+                    });
+                }
+
             } else {
                 console.warn('⚠️ SYNC: Empty response, keeping existing agents');
             }

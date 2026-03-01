@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
-    GraduationCap, Award, Flame, AlertCircle, Share2, Trash2
+    GraduationCap, Award, Flame, AlertCircle, Share2, Trash2, Gift
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
 import { fetchNewsFeedSupabase as fetchNewsFeed, deleteNewsItemSupabase } from '../services/supabaseService';
@@ -27,6 +27,7 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
     'TAREA': { icon: <Target size={16} />, color: '#22c55e', label: 'MISIÓN' },
     'DESPLIEGUE': { icon: <Cpu size={16} />, color: '#ffb700', label: 'LOGÍSTICA' },
     'OPERACION': { icon: <Activity size={16} />, color: '#00ffff', label: 'OPERACIÓN' },
+    'CUMPLEAÑOS': { icon: <Gift size={16} />, color: '#ec4899', label: 'CUMPLEAÑOS' }, // Pink color for birthday
 };
 
 const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole }) => {

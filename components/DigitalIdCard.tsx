@@ -237,10 +237,15 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
               <div className="relative mb-3">
                 <div className="absolute inset-0 bg-[#ffb700] blur-2xl opacity-10"></div>
                 <img
-                  src={imgError ? "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" : (capturedPhotoUrl || formatDriveUrl(agent.photoUrl))}
+                  src={capturedPhotoUrl || formatDriveUrl(agent.photoUrl, agent.name)}
                   alt={agent.name}
-                  onError={() => setImgError(true)}
                   className="relative w-32 h-32 rounded-[2.5rem] object-cover border-2 border-[#ffb700]/30 shadow-2xl grayscale hover:grayscale-0 transition-all duration-700 hover:rotate-2"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    if (!target.src.includes('ui-avatars.com')) {
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                    }
+                  }}
                 />
               </div>
               <div className="text-center px-4">
@@ -414,7 +419,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

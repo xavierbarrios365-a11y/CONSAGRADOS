@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Agent, NewsFeedItem } from '../types';
-import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote, MessageSquare, Send } from 'lucide-react';
+import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote, MessageSquare, Send, Gift } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -83,6 +83,15 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                     icon: <GraduationCap size={140} className="text-[#3b82f6]" />,
                     accent: '#3b82f6',
                     bgGradient: 'from-[#001f3f] via-[#051020] to-black'
+                };
+            case 'CUMPLEAÑOS':
+                return {
+                    title: 'VUELTA AL',
+                    titleBottom: 'SOL',
+                    subtitle: 'CELEBRACIÓN TÁCTICA',
+                    icon: <Gift size={140} className="text-[#ec4899]" />,
+                    accent: '#ec4899',
+                    bgGradient: 'from-[#2e001f] via-[#1a0011] to-black'
                 };
             case 'ASCENSO':
                 return {

@@ -381,8 +381,10 @@ function sendPushNotification(title, message, targetToken) {
   const CONFIG = getGlobalConfig();
   if (!CONFIG.SERVICE_ACCOUNT || !CONFIG.SERVICE_ACCOUNT.private_key || CONFIG.SERVICE_ACCOUNT.private_key === 'REPLACE_ME') {
     Logger.log("Service Account no configurada. Saltando envío push.");
-    // Envío por Telegram como fallback inmediato si no hay Firebase
-    sendTelegramNotification(`📢 <b>${title.toUpperCase()}</b>\n\n${message}\n\n<i>(Enviado vía Telegram porque Push no está configurado)</i>`);
+    // Envío por Telegram como fallback inmediato si no hay Firebase, SOLO si es un mensaje global
+    if (!targetToken) {
+      sendTelegramNotification(`📢 <b>${title.toUpperCase()}</b>\n\n${message}\n\n<i>(Enviado vía Telegram porque Push no está configurado)</i>`);
+    }
     return;
   }
 
@@ -405,10 +407,25 @@ function sendPushNotification(title, message, targetToken) {
       }
     };
 
-    if (targetToken) {
+    // NUEVA LÓGICA DE SEGURIDAD PARA PUSH
+    if (targetToken === 'ALL_AGENTS') {
+      // Envío global explícito
+      payload.message.topic = "all_agents";
+    } else if (targetToken) {
+      // Envío personal
       payload.message.token = targetToken;
     } else {
-      payload.message.topic = "all_agents";
+      // Si targetToken es falsy o null (y no es ALL_AGENTS), significa que queríamos 
+      // mandar un push personal pero el usuario no tiene token registrado.
+      // NO DEBEMOS ENVIAR A ALL_AGENTS. 
+      // A menos que sea llamado con solo 2 agumentos (title, message), en cuyo caso
+      // es una llamada antigua (deprecated) de broadcast. Verificamos los args:
+      if (arguments.length < 3) {
+         payload.message.topic = "all_agents";
+      } else {
+         Logger.log("sendPushNotification abortado: se solicitó push personal pero targetToken es null.");
+         return; // ABORTAR ENVÍO, EVITAR SPAM GRUPAL
+      }
     }
 
     const options = {
@@ -426,8 +443,10 @@ function sendPushNotification(title, message, targetToken) {
     
     if (responseCode !== 200) {
       Logger.log(`❌ ERROR FCM v1: ${response.getContentText()}`);
-      // Fallback a Telegram si falla Firebase
-      sendTelegramNotification(`⚠️ <b>FALLO PUSH (FCM Error ${responseCode}):</b>\n<b>${title}</b>\n${message}`);
+      // Fallback a Telegram si falla Firebase SOLO si es un mensaje global (no directo a un agente)
+      if (!targetToken) {
+        sendTelegramNotification(`⚠️ <b>FALLO PUSH (FCM Error ${responseCode}):</b>\n<b>${title}</b>\n${message}`);
+      }
     } else {
       Logger.log(`✅ ÉXITO FCM v1: Mensaje enviado.`);
       // Opcional: También enviar a Telegram para registro histórico
@@ -2749,42 +2768,50 @@ function getDailyVerse() {
   
   const values = sheet.getDataRange().getValues();
   if (values.length <= 1) {
-     // Versículo por defecto si no hay nada en la hoja
      return jsonOk({ data: { verse: "Mas el que persevere hasta el fin, este será salvo.", reference: "Mateo 24:13" } });
   }
 
-  // Buscar el verso de hoy por fecha
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const todayFormat2 = Utilities.formatDate(today, "GMT-4", "dd/MM/yyyy");
+  // Determinar la fecha exacta en GMT-4 
+  const now = new Date();
+  const todayStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd");
   
   const headers = values[0];
   const dateIdx = headers.indexOf('DATE');
   const verseIdx = headers.indexOf('VERSE');
   const refIdx = headers.indexOf('REFERENCE');
 
-  const verseFound = values.slice(1).find(row => {
-    let rowDate = row[dateIdx];
-    if (!rowDate) return false;
-    
-    // Convertir cualquier formato de fecha a string YYYY-MM-DD para comparar
-    let rowDateStr = "";
-    if (rowDate instanceof Date) {
-      rowDateStr = rowDate.toISOString().split('T')[0];
-    } else {
-      rowDateStr = String(rowDate).trim();
-    }
-    
-    return rowDateStr === todayStr || rowDateStr === todayFormat2;
-  });
+  // 1. Intentar buscar por fecha exacta en la hoja
+  if (dateIdx !== -1) {
+    const verseFound = values.slice(1).find(row => {
+      let rowDate = row[dateIdx];
+      if (!rowDate) return false;
+      let rowDateStr = (rowDate instanceof Date) 
+          ? Utilities.formatDate(rowDate, "GMT-4", "yyyy-MM-dd") 
+          : String(rowDate).trim();
+      
+      // Manejar formato dd/mm/yyyy
+      if (rowDateStr.includes("/")) {
+        const parts = rowDateStr.split("/");
+        if (parts.length === 3) rowDateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      return rowDateStr === todayStr;
+    });
 
-  if (verseFound) {
-    return jsonOk({ data: { verse: verseFound[verseIdx], reference: verseFound[refIdx] } });
+    if (verseFound) {
+      return jsonOk({ data: { verse: verseFound[verseIdx], reference: verseFound[refIdx] } });
+    }
   }
 
-  // Si no hay para hoy, dar uno aleatorio
-  const randomRow = values[Math.floor(Math.random() * (values.length - 1)) + 1];
-  return jsonOk({ data: { verse: randomRow[verseIdx], reference: randomRow[refIdx] } });
+  // 2. Si no hay fecha exacta, rotar pseudo-aleatoriamente usando la fecha GMT-4 como "semilla"
+  // Esto garantiza que el versículo cambie *exactamente* a las 12:00 AM hora local (GMT-4) y sea el mismo para todos durante ese día.
+  const timeStr = Utilities.formatDate(now, "GMT-4", "yyyy-MM-dd'T'00:00:00");
+  const seedTime = new Date(timeStr).getTime();
+  const dayIndex = Math.floor(seedTime / 86400000); // Días desde Epoch
+  
+  const randomIndex = (dayIndex % (values.length - 1)) + 1;
+  const selectedRow = values[randomIndex];
+
+  return jsonOk({ data: { verse: selectedRow[verseIdx], reference: selectedRow[refIdx] } });
 }
 
 /**
@@ -3150,16 +3177,20 @@ function checkRachaNotifications() {
     const lastDateRaw = data[i][lastDateIdx];
     let sentNotifs = String(data[i][notifsSentIdx] || "");
 
-    if (!lastDateRaw || !agentId) continue;
+    if (!agentId) continue;
 
     // Obtener fecha de última racha en formato Caracas
     let lastDateStr = "";
-    if (lastDateRaw instanceof Date) {
-      lastDateStr = Utilities.formatDate(lastDateRaw, "GMT-4", "yyyy-MM-dd");
-    } else {
-      const numVal = Number(lastDateRaw);
-      if (!isNaN(numVal) && numVal > 1000000000000) {
-        lastDateStr = Utilities.formatDate(new Date(numVal), "GMT-4", "yyyy-MM-dd");
+    if (lastDateRaw) {
+      if (lastDateRaw instanceof Date) {
+        lastDateStr = Utilities.formatDate(lastDateRaw, "GMT-4", "yyyy-MM-dd");
+      } else {
+        const numVal = Number(lastDateRaw);
+        if (!isNaN(numVal) && numVal > 1000000000000) {
+          lastDateStr = Utilities.formatDate(new Date(numVal), "GMT-4", "yyyy-MM-dd");
+        } else {
+          lastDateStr = String(lastDateRaw).trim();
+        }
       }
     }
 
@@ -3168,34 +3199,39 @@ function checkRachaNotifications() {
 
     let title = "";
     let message = "";
-    let milestoneKey = "";
+    let newNotifs = sentNotifs;
+    let shouldSend = false;
 
     // Lógica Basada en Horas hasta la Medianoche (Cierre del Día)
+    // Se marcan los hitos anteriores para evitar envíos desordenados si el script se retrasa
     if (hoursRemaining <= 1 && !sentNotifs.includes("1H")) {
-      title = "⚠️ ALERTA DE PERÍMETRO";
-      message = `¡Riesgo crítico! Solo te queda 1 HORA para asegurar tu racha de ${streakCount} días. ¡Actúa ya!`;
-      milestoneKey = "1H";
-    } else if (hoursRemaining <= 4 && !sentNotifs.includes("4H")) {
-      title = "🔋 RECARGA TÁCTICA";
-      message = `El día está terminando. Tienes 4 horas para mantener tu racha de ${streakCount} días. No te rindas.`;
-      milestoneKey = "4H";
-    } else if (now.getHours() >= 20 && !sentNotifs.includes("NIGHT")) { // 8 PM
-      title = "🕯️ MANTÉN LA LLAMA";
-      message = "Es hora de tu dosis diaria de sabiduría. Tu racha de consagración te espera.";
-      milestoneKey = "NIGHT";
-    } else if (now.getHours() >= 12 && !sentNotifs.includes("MIDDAY")) { // 12 PM
-      title = "🚀 OBJETIVO REVELADO";
-      message = `¡Agente listo! El versículo de hoy está disponible. No dejes caer tu racha de ${streakCount} días.`;
-      milestoneKey = "MIDDAY";
+      title = "🚨 ALERTA CRÍTICA";
+      message = `¡Última llamada, agente! Resta menos de 1 hora para el cierre del día. Confirme su entrenamiento y proteja su racha de ${streakCount} días antes de la medianoche.`;
+      newNotifs += ",12H,8H,4H,1H";
+      shouldSend = true;
+    } else if (hoursRemaining <= 4 && !sentNotifs.includes("4H") && hoursRemaining > 1) {
+      title = "⚠️ AVISO TÁCTICO";
+      message = `Atención agente: Solo restan 4 horas antes del cierre del perímetro diario. Su racha activa de ${streakCount} días requiere confirmación.`;
+      newNotifs += ",12H,8H,4H";
+      shouldSend = true;
+    } else if (hoursRemaining <= 8 && !sentNotifs.includes("8H") && hoursRemaining > 4) { 
+      title = "⏱️ RECORDATORIO DE COMANDO";
+      message = `Restan 8 horas para el final de operaciones de hoy. Mantenga su disciplina y asegure su racha de ${streakCount} días.`;
+      newNotifs += ",12H,8H";
+      shouldSend = true;
+    } else if (hoursRemaining <= 12 && !sentNotifs.includes("12H") && hoursRemaining > 8) { 
+      title = "📡 ACTUALIZACIÓN DE OBJETIVO";
+      message = `Agente, el protocolo del día está activo. Su progreso marca ${streakCount} días consecutivos. Proceda al centro de entrenamiento cuando esté listo.`;
+      newNotifs += ",12H";
+      shouldSend = true;
     }
 
-    if (milestoneKey && message) {
+    if (shouldSend && message) {
       const fcmToken = getAgentFcmToken(agentId);
       if (fcmToken) {
         sendPushNotification(title, message, fcmToken);
-        sentNotifs += (sentNotifs ? "," : "") + milestoneKey;
         if (notifsSentIdx !== -1) {
-          sheet.getRange(i + 1, notifsSentIdx + 1).setValue(sentNotifs);
+          sheet.getRange(i + 1, notifsSentIdx + 1).setValue(newNotifs);
         }
       }
     }

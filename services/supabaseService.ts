@@ -1463,6 +1463,88 @@ export const deleteAcademyLessonSupabase = async (lessonId: string): Promise<{ s
     }
 };
 
+export const submitQuizResultSupabase = async (
+    agentId: string,
+    lessonId: string,
+    courseId: string,
+    score: number,
+    isCompleted: boolean,
+    attempts: number
+): Promise<{ success: boolean; error?: string }> => {
+    try {
+        // Obtenemos los intentos actuales
+        const { data: currentProgress, error: fetchError } = await supabase
+            .from('academy_progress')
+            .select('attempts')
+            .eq('agent_id', agentId)
+            .eq('lesson_id', lessonId)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        const currentAttempts = currentProgress?.attempts || 0;
+        const newAttempts = currentAttempts + attempts;
+
+        const payload = {
+            agent_id: agentId,
+            lesson_id: lessonId,
+            course_id: courseId,
+            score: score,
+            is_completed: isCompleted,
+            attempts: newAttempts,
+            completed_at: isCompleted ? new Date().toISOString() : null
+        };
+
+        const { error: upsertError } = await supabase
+            .from('academy_progress')
+            .upsert([payload], { onConflict: 'agent_id, lesson_id' }); // IMPORTANTE: Requiere este índice en Supabase
+
+        if (upsertError) {
+            // Intento alternativo sin onConflict compuesto si no existe la restricción UNIQUE
+            const { data: existing } = await supabase
+                .from('academy_progress')
+                .select('id')
+                .eq('agent_id', agentId)
+                .eq('lesson_id', lessonId)
+                .maybeSingle();
+
+            if (existing) {
+                const { error: updateError } = await supabase
+                    .from('academy_progress')
+                    .update(payload)
+                    .eq('id', existing.id);
+                if (updateError) throw updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from('academy_progress')
+                    .insert([payload]);
+                if (insertError) throw insertError;
+            }
+        }
+
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error submitting quiz result to Supabase:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const resetStudentAttemptsSupabase = async (agentId: string, lessonId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('academy_progress')
+            .delete()
+            .eq('agent_id', agentId)
+            .eq('lesson_id', lessonId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error resetting student attempts:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
 /**
  * ===== RECURSOS TÁCTICOS (MANUALES Y LIBROS) =====
  */

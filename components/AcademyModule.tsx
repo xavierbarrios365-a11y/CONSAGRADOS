@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
-import { fetchAcademyData, submitQuizResult, resetStudentAttempts, uploadImage, saveBulkAcademyData, updateAgentAiProfile } from '../services/sheetsService';
-import { fetchAgentsFromSupabase, fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase } from '../services/supabaseService';
+import { fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase, submitQuizResultSupabase, resetStudentAttemptsSupabase, saveBulkAcademyDataSupabase } from '../services/supabaseService';
+import { uploadImage } from '../services/sheetsService';
+import { updateAgentAiProfileSupabase } from '../services/supabaseService';
+import { fetchAgentsFromSupabase } from '../services/supabaseService';
 import { useTacticalAlert } from './TacticalAlert';
 import { BookOpen, Play, ChevronRight, CheckCircle, GraduationCap, ArrowLeft, Trophy, AlertCircle, Loader2, PlayCircle, Settings, LayoutGrid, Trash2, BrainCircuit, Info, Sparkles, Users, Search, Award, Flame, Star, Target, Image as ImageIcon } from 'lucide-react';
 import { processAssessmentAI, getDeepTestAnalysis, generateCourseFinalReport } from '../services/geminiService';
@@ -150,7 +152,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     const course = courses.find(c => c.id === courseId);
                     if (course) {
                         const updatedCourse = { ...course, imageUrl: res.url };
-                        const updateRes = await saveBulkAcademyData({ courses: [updatedCourse], lessons: [] });
+                        const updateRes = await saveBulkAcademyDataSupabase({ courses: [updatedCourse], lessons: [] });
                         if (updateRes.success) {
                             setCourses(prev => prev.map(c => c.id === courseId ? updatedCourse : c));
                             showAlert({ title: 'ÉXITO', message: 'Portada actualizada de forma correcta.', type: 'SUCCESS' });
@@ -207,7 +209,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             onConfirm: async () => {
                 setIsLoading(true);
                 try {
-                    const res = await resetStudentAttempts(aId, courseId, lessonId);
+                    const res = await resetStudentAttemptsSupabase(aId, lessonId);
                     if (res.success) {
                         showAlert({ title: 'ÉXITO', message: "Reseteo exitoso. El agente puede re-intentar las evaluaciones.", type: 'SUCCESS' });
                         await loadAcademy(true);
@@ -385,20 +387,39 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     }
                 }
             }
+            const isCompleted = score > 0 || (activeLesson.questions.length === 0 && textAnswer.trim() !== "");
+            const result = await submitQuizResultSupabase(
+                agentId,
+                activeLesson.id,
+                activeLesson.courseId,
+                score,
+                isCompleted,
+                1 // Agrega 1 intento
+            );
 
-            const result = await submitQuizResult(agentId, activeLesson.id, score);
+            if (result.success) {
+                setQuizResult({
+                    isCorrect: isCompleted,
+                    xpAwarded: score,
+                    score: score,
+                    error: undefined,
+                    profile: profile,
+                });
+            } else {
+                // Handle error case if submission failed
+                setQuizResult({
+                    isCorrect: false,
+                    xpAwarded: 0,
+                    score: score,
+                    error: result.error || "Error al enviar el resultado.",
+                    profile: profile,
+                    title: resultTitle,
+                    content: resultContent
+                });
+            }
 
-            setQuizResult({
-                isCorrect: result.isCorrect,
-                xpAwarded: result.xpAwarded,
-                score: score,
-                error: result.success === false ? result.error : undefined,
-                profile: profile,
-                title: resultTitle,
-                content: resultContent
-            });
 
-            if (result.isCorrect) {
+            if (isCompleted) {
                 setProgress(prev => [...prev.filter(p => p.lessonId !== activeLesson.id), {
                     lessonId: activeLesson.id,
                     status: 'COMPLETADO',
@@ -461,7 +482,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
             if (report) {
                 setDeepAnalysis(report);
                 // Persistencia: Guardar en el perfil del agente
-                await updateAgentAiProfile(agent.id, agent.tacticalStats || {}, report);
+                await updateAgentAiProfileSupabase(agent.id, agent.tacticalStats || {}, report);
                 showAlert({ title: 'REPORTE CREADO', message: 'REPORTE TÁCTICO INTEGRADO EN TU EXPEDIENTE.', type: 'SUCCESS' });
             } else {
                 showAlert({ title: 'ERROR DE REPORTE', message: 'FALLO EN LA CONSOLIDACIÓN DE INTELIGENCIA.', type: 'ERROR' });
@@ -882,7 +903,21 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                     </div>
                                                     {userRole === UserRole.DIRECTOR && (
                                                         <button
-                                                            onClick={() => handleResetAttempts(agentId)}
+                                                            onClick={async () => {
+                                                                try {
+                                                                    // Update: The backend now groups it by course+lesson. We need lessonId.
+                                                                    const res = await resetStudentAttemptsSupabase(agentId, activeLesson.id);
+                                                                    if (res.success) {
+                                                                        alert('Reseteo Exitoso.');
+                                                                        loadAcademy(true);
+                                                                    } else {
+                                                                        alert('Error al resetear: ' + res.error);
+                                                                    }
+                                                                } catch (e: any) {
+                                                                    console.error("Error resetting attempts:", e);
+                                                                    alert('Error inesperado al resetear intentos.');
+                                                                }
+                                                            }}
                                                             className="px-6 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-gray-800 transition-all"
                                                         >
                                                             Resetear mis intentos (Modo Director)

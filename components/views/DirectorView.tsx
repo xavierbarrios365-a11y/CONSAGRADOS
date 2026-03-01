@@ -85,74 +85,74 @@ const DirectorView: React.FC<DirectorViewProps> = (props) => {
                                     </button>
                                 )}
                             </div>
+                        </div>
 
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#001f3f] via-[#001f3f]/95 to-transparent p-6 sm:p-10 pb-[env(safe-area-inset-bottom,20px)]">
-                                <div className="max-w-sm mx-auto space-y-4">
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            placeholder="BUSCAR NOMBRE O ID..."
-                                            value={scannedId}
-                                            onChange={(e) => setScannedId(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-8 text-white text-[12px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all text-center placeholder:text-white/20"
-                                        />
-                                        {scannedId && !agents.find(a => String(a.id) === scannedId) && (
-                                            <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#001f3f] border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2 z-50 animate-in slide-in-from-bottom-2 no-scrollbar">
-                                                {agents.filter(a => a.name.toLowerCase().includes(scannedId.toLowerCase()) || String(a.id).includes(scannedId)).slice(0, 8).map(a => (
-                                                    <button key={a.id} onClick={() => { setScannedId(a.id); processScan(a.id); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left">
-                                                        <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-lg object-cover" />
-                                                        <div>
-                                                            <p className="text-[10px] font-black text-white uppercase leading-none">{a.name}</p>
-                                                            <p className="text-[7px] text-[#ffb700]/60 font-bold">ID: {a.id}</p>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => scannedId && processScan(scannedId)}
-                                        disabled={!scannedId || !!(scannedId && !agents.find(a => String(a.id) === scannedId))}
-                                        className="w-full bg-[#ffb700] py-5 rounded-3xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
-                                    >
-                                        <CheckCircle2 size={18} /> Confirmar Asistencia
-                                    </button>
+                        <div className="w-full pt-6 pb-[env(safe-area-inset-bottom,20px)] flex-shrink-0 z-20">
+                            <div className="max-w-sm mx-auto space-y-4">
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="BUSCAR NOMBRE O ID..."
+                                        value={scannedId}
+                                        onChange={(e) => setScannedId(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-8 text-white text-[12px] font-black uppercase tracking-widest outline-none focus:border-[#ffb700] transition-all text-center placeholder:text-white/20"
+                                    />
                                     {scannedId && !agents.find(a => String(a.id) === scannedId) && (
-                                        <button
-                                            onClick={async () => {
-                                                const visitorName = prompt('Nombre completo del visitante:');
-                                                if (!visitorName || visitorName.trim() === '') return;
-
-                                                setScanStatus('SCANNING');
-                                                const res = await registerVisitorSupabase(scannedId, visitorName, currentUser?.name);
-                                                if (res.success) {
-                                                    setScanStatus('SUCCESS');
-                                                    showAlert({ title: "VISITANTE REGISTRADO", message: "✅ Acceso concedido.", type: 'SUCCESS' });
-                                                    setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); syncData(true); }, 3000);
-                                                } else {
-                                                    showAlert({ title: "FALLO DE SISTEMA", message: res.error || "Fallo en registro.", type: 'ERROR' });
-                                                    setScanStatus('IDLE');
-                                                }
-                                            }}
-                                            className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-400 py-4 rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2 mt-2"
-                                        >
-                                            <UserPlus size={16} /> Registrar como Visitante
-                                        </button>
+                                        <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#001f3f] border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto p-2 z-50 animate-in slide-in-from-bottom-2 no-scrollbar">
+                                            {agents.filter(a => a.name.toLowerCase().includes(scannedId.toLowerCase()) || String(a.id).includes(scannedId)).slice(0, 8).map(a => (
+                                                <button key={a.id} onClick={() => { setScannedId(a.id); processScan(a.id); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left">
+                                                    <img src={formatDriveUrl(a.photoUrl)} className="w-8 h-8 rounded-lg object-cover" />
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-white uppercase leading-none">{a.name}</p>
+                                                        <p className="text-[7px] text-[#ffb700]/60 font-bold">ID: {a.id}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                            <div className="absolute top-6 right-6 z-20">
                                 <button
-                                    onClick={() => syncData()}
-                                    className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl active:scale-95"
-                                    title="Actualizar Radar"
+                                    onClick={() => scannedId && processScan(scannedId)}
+                                    disabled={!scannedId || !!(scannedId && !agents.find(a => String(a.id) === scannedId))}
+                                    className="w-full bg-[#ffb700] py-5 rounded-3xl text-[#001f3f] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                                 >
-                                    <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
+                                    <CheckCircle2 size={18} /> Confirmar Asistencia
                                 </button>
+                                {scannedId && !agents.find(a => String(a.id) === scannedId) && (
+                                    <button
+                                        onClick={async () => {
+                                            const visitorName = prompt('Nombre completo del visitante:');
+                                            if (!visitorName || visitorName.trim() === '') return;
+
+                                            setScanStatus('SCANNING');
+                                            const res = await registerVisitorSupabase(scannedId, visitorName, currentUser?.name);
+                                            if (res.success) {
+                                                setScanStatus('SUCCESS');
+                                                showAlert({ title: "VISITANTE REGISTRADO", message: "✅ Acceso concedido.", type: 'SUCCESS' });
+                                                setTimeout(() => { setScanStatus('IDLE'); setScannedId(''); syncData(true); }, 3000);
+                                            } else {
+                                                showAlert({ title: "FALLO DE SISTEMA", message: res.error || "Fallo en registro.", type: 'ERROR' });
+                                                setScanStatus('IDLE');
+                                            }
+                                        }}
+                                        className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-400 py-4 rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-blue-600/30 transition-all flex items-center justify-center gap-2 mt-2"
+                                    >
+                                        <UserPlus size={16} /> Registrar como Visitante
+                                    </button>
+                                )}
                             </div>
                         </div>
+                        <div className="absolute top-6 right-6 z-20">
+                            <button
+                                onClick={() => syncData()}
+                                className="p-3 bg-[#001f3f]/80 backdrop-blur-md border border-white/10 rounded-2xl text-[#ffb700] hover:bg-[#ffb700]/10 transition-all shadow-xl active:scale-95"
+                                title="Actualizar Radar"
+                            >
+                                <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
+                            </button>
+                        </div>
                     </div>
-                </motion.div>
+                </motion.div >
             );
 
         case AppView.VISITOR:

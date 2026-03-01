@@ -995,6 +995,7 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
             notes: 0,
             leadership: 0,
             joined_date: new Date().toISOString(),
+            last_attendance: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }),
             security_question: data.preguntaSeguridad || '¿Cuál es tu color favorito?',
             security_answer: data.respuestaSeguridad || 'Azul',
             must_change_password: true,
@@ -1025,7 +1026,8 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
                 security_question: record.security_question,
                 security_answer: record.security_answer,
                 must_change_password: record.must_change_password,
-                user_role: record.user_role
+                user_role: record.user_role,
+                last_attendance: record.last_attendance
             });
 
         if (error) throw error;
@@ -1072,6 +1074,8 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
                 .lte('registrado_en', endDate.toISOString());
 
             if (duplicates && duplicates.length > 0) {
+                // Incluso si ya está registrado hoy, asegurémonos de que su last_attendance diga HOY.
+                await supabase.from('agentes').update({ last_attendance: localToday }).eq('id', agentId);
                 return { success: false, error: `Asistencia de ${agentName} ya fue registrada hoy.` };
             }
         }

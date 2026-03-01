@@ -826,7 +826,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     message: "⚠️ ¿Deseas enviar las credenciales actuales de este agente al Telegram táctico?",
                     type: 'CONFIRM',
                     onConfirm: async () => {
-                      const msg = `🔐 <b>CREDENCIALES TÁCTICAS</b>\n\nAgente: <b>${agent.name}</b>\n\n<b>• ID:</b> <code>${agent.id}</code>\n<b>• PIN:</b> <code>${agent.pin}</code>\n\n<i>Entrega esta información al agente para restablecer su acceso al TACTOR.</i>`;
+                      const loginUrl = window.location.origin;
+                      const msg = `🔐 <b>CREDENCIALES TÁCTICAS</b>\n\nAgente: <b>${agent.name}</b>\n\n<b>• URL:</b> ${loginUrl}\n<b>• ID:</b> <code>${agent.id}</code>\n<b>• PIN:</b> <code>${agent.pin}</code>\n\n<i>Entrega esta información al agente para restablecer su acceso al TACTOR.</i>`;
                       const success = await sendTelegramAlert(msg);
                       if (success) showAlert({ title: "ÉXITO", message: "✅ CREDENCIALES ENVIADAS A TELEGRAM", type: 'SUCCESS' });
                       else showAlert({ title: "ERROR", message: "❌ FALLO AL CONECTAR CON TELEGRAM", type: 'ERROR' });
@@ -1394,7 +1395,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

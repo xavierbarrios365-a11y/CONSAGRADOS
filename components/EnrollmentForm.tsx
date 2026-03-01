@@ -97,7 +97,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
 
     if (enrollResult.success) {
       // 3. Notificar a Telegram
-      const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${formData.nombre}\n<b>• URL:</b> https://consagrados.vercel.app/\n<b>• ID Generado:</b> <code>${enrollResult.newId}</code>\n<b>• PIN de Acceso:</b> <code>${enrollResult.newPin}</code>\n<b>• Pregunta:</b> ${formData.preguntaSeguridad || '¿Cuál es tu color favorito?'}\n<b>• Respuesta:</b> ${formData.respuestaSeguridad || 'Azul'}\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
+      const appUrl = window.location.origin;
+      const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${formData.nombre}\n<b>• URL:</b> ${appUrl}\n<b>• ID Generado:</b> <code>${enrollResult.newId}</code>\n<b>• PIN de Acceso:</b> <code>${enrollResult.newPin}</code>\n<b>• Pregunta:</b> ${formData.preguntaSeguridad || '¿Cuál es tu color favorito?'}\n<b>• Respuesta:</b> ${formData.respuestaSeguridad || 'Azul'}\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
       await sendTelegramAlert(telegramMessage);
 
       setStatus('SUCCESS');

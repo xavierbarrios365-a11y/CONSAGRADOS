@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Guide, UserRole } from '../types';
-import { fetchGuides, uploadFile, uploadGuideMetadata, deleteGuide } from '../services/sheetsService';
+import { uploadFile } from '../services/sheetsService';
+import { fetchTacticalResourcesSupabase, addTacticalResourceSupabase, deleteTacticalResourceSupabase } from '../services/supabaseService';
 import { compressImage } from '../services/storageUtils';
 import { BookOpen, Download, Upload, Plus, X, FileText, Loader2, Search, Trash2, Link } from 'lucide-react';
 
@@ -33,8 +34,14 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
 
     const loadGuides = async () => {
         setIsLoading(true);
-        const data = await fetchGuides(userRole);
-        setGuides(data || []);
+        const data = await fetchTacticalResourcesSupabase();
+        setGuides(data.map((r: any) => ({
+            id: r.id,
+            name: r.title,
+            type: r.type,
+            url: r.driveUrl,
+            date: r.createdAt
+        })) || []);
         setIsLoading(false);
     };
 
@@ -42,7 +49,7 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
         if (!window.confirm(`¿ESTÁS SEGURO DE ELIMINAR EL RECURSO: "${name.toUpperCase()}"? UN DIRECTOR NO PUEDE DESHACER ESTA ACCIÓN.`)) return;
 
         try {
-            const res = await deleteGuide(guideId);
+            const res = await deleteTacticalResourceSupabase(guideId);
             if (res.success) {
                 alert('Recurso retirado del sistema.');
                 loadGuides();
@@ -62,7 +69,13 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
         try {
             if (uploadMode === 'LINK') {
                 if (!externalUrl.trim()) { alert('Debes pegar un enlace de Google Drive.'); setIsUploading(false); return; }
-                const metadataRes = await uploadGuideMetadata(newName, newType, externalUrl);
+                const metadataRes = await addTacticalResourceSupabase({
+                    id: `REC_${Date.now()}`,
+                    title: newName,
+                    type: newType,
+                    driveFileId: 'external_link',
+                    driveUrl: externalUrl
+                });
                 if (metadataRes.success) {
                     alert('✅ Material publicado exitosamente.');
                     setShowUploadModal(false);
@@ -99,7 +112,13 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
                     if (uploadRes.success && uploadRes.url) {
                         // Usar el nombre base + index si hay varios, o solo el nombre si es uno
                         const finalName = selectedFiles.length > 1 ? `${newName} (${index + 1})` : newName;
-                        const metadataRes = await uploadGuideMetadata(finalName, newType, uploadRes.url);
+                        const metadataRes = await addTacticalResourceSupabase({
+                            id: `REC_${Date.now()}_${index}`,
+                            title: finalName,
+                            type: newType,
+                            driveFileId: `drive_auto`,
+                            driveUrl: uploadRes.url
+                        });
 
                         if (metadataRes.success) {
                             setUploadStatuses(prev => ({ ...prev, [file.name]: 'SUCCESS' }));

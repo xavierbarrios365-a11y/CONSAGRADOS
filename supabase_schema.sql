@@ -273,3 +273,27 @@ CREATE POLICY "Lectura anon progreso" ON public.progreso_tareas FOR SELECT USING
 DROP POLICY IF EXISTS "Escritura anon progreso" ON public.progreso_tareas;
 CREATE POLICY "Insert anon progreso" ON public.progreso_tareas FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon progreso" ON public.progreso_tareas FOR UPDATE USING (true);
+
+
+-- 12. TABLA: recursos_tacticos (Manuales, Libros, etc.)
+CREATE TABLE IF NOT EXISTS public.recursos_tacticos (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    drive_file_id TEXT NOT NULL,
+    drive_url TEXT NOT NULL,
+    type TEXT DEFAULT 'PDF',
+    category TEXT DEFAULT 'GENERAL',
+    is_active BOOLEAN DEFAULT true,
+    created_by TEXT REFERENCES public.agentes(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- RLS Policies
+ALTER TABLE public.recursos_tacticos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Select API anon recursos_tacticos" ON public.recursos_tacticos;
+CREATE POLICY "Select API anon recursos_tacticos" ON public.recursos_tacticos FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Insert API anon recursos_tacticos" ON public.recursos_tacticos;
+CREATE POLICY "Insert API anon recursos_tacticos" ON public.recursos_tacticos FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Delete API anon recursos_tacticos" ON public.recursos_tacticos;
+CREATE POLICY "Delete API anon recursos_tacticos" ON public.recursos_tacticos FOR DELETE USING (true);

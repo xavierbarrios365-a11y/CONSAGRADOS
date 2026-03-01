@@ -1464,6 +1464,79 @@ export const deleteAcademyLessonSupabase = async (lessonId: string): Promise<{ s
 };
 
 /**
+ * ===== RECURSOS TÁCTICOS (MANUALES Y LIBROS) =====
+ */
+
+export const fetchTacticalResourcesSupabase = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('recursos_tacticos')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('❌ Error fetching tactical resources:', error);
+            return [];
+        }
+
+        return (data || []).map((r: any) => ({
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            driveFileId: r.drive_file_id,
+            driveUrl: r.drive_url,
+            type: r.type,
+            category: r.category,
+            isActive: r.is_active,
+            createdBy: r.created_by,
+            createdAt: r.created_at
+        }));
+    } catch (e: any) {
+        console.error('❌ Fatal error fetching tactical resources:', e.message);
+        return [];
+    }
+};
+
+export const addTacticalResourceSupabase = async (resourceData: any): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('recursos_tacticos')
+            .insert([{
+                id: resourceData.id,
+                title: resourceData.title,
+                description: resourceData.description,
+                drive_file_id: resourceData.driveFileId,
+                drive_url: resourceData.driveUrl,
+                type: resourceData.type || 'PDF',
+                category: resourceData.category || 'GENERAL',
+                is_active: true,
+                created_by: resourceData.createdBy
+            }]);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error adding tactical resource:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const deleteTacticalResourceSupabase = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('recursos_tacticos')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error deleting tactical resource:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
  * ===== SISTEMA GUERRA BÍBLICA (REALTIME) =====
  */
 

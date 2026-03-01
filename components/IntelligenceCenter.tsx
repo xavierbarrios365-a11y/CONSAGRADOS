@@ -8,9 +8,9 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, reconcileXP, resetSyncBackoff } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, updateAgentPhotoSupabase as updateAgentPhoto } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase } from '../services/supabaseService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -364,9 +364,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       onConfirm: async () => {
         setIsReconcilingXP(true);
         try {
-          const res = await reconcileXP();
+          const res = await reconcileXPSupabase();
           if (res.success) {
-            const names = res.updatedNames?.length > 0 ? res.updatedNames.join(', ') : 'Ninguno';
+            const names = res.updatedNames && res.updatedNames.length > 0 ? res.updatedNames.join(', ') : 'Ninguno';
             const ids = res.foundIds?.length || 0;
             showAlert({
               title: "CONCILIACIÓN EXITOSA",

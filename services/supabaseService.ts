@@ -168,8 +168,9 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
         const adjustedAmount = Math.round(amount * multiplier);
 
         // Actualizar el campo correspondiente y sumar/restar XP base
-        // Evitamos que el XP global baje de 0
-        const updates: any = { xp: Math.max(0, (currentData.xp || 0) + adjustedAmount) };
+        // Actuarialmente forzamos a entero para evitar problemas de concatenación que invaliden o nulifiquen datos
+        const currentXp = Number(currentData.xp || 0);
+        const updates: any = { xp: Math.max(0, currentXp + adjustedAmount) };
 
         // Agregar o restar a los contadores específicos según el signo del monto
         const counterChange = amount > 0 ? 1 : (amount < 0 ? -1 : 0);
@@ -275,6 +276,48 @@ export const deductPercentagePointsSupabase = async (agentId: string, percentage
 
         if (updateError) throw updateError;
         return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+};
+
+export const reconcileXPSupabase = async (): Promise<{ success: boolean, count?: number, updatedNames?: string[], foundIds?: string[], error?: string }> => {
+    try {
+        const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+        const startDate = new Date(localToday + 'T00:00:00-04:00').toISOString();
+        const endDate = new Date(localToday + 'T23:59:59-04:00').toISOString();
+
+        // 1. Obtener los IDs que asistieron HOY
+        const { data: attendanceData, error: attErr } = await supabase
+            .from('asistencia_visitas')
+            .select('agent_id, agent_name')
+            .eq('tipo', 'ASISTENCIA')
+            .gte('registrado_en', startDate)
+            .lte('registrado_en', endDate);
+
+        if (attErr) throw attErr;
+
+        const attendedRecords = attendanceData || [];
+        const uniqueAgents = new Map<string, string>();
+        attendedRecords.forEach(r => uniqueAgents.set(String(r.agent_id), r.agent_name || 'Agente'));
+
+        if (uniqueAgents.size === 0) {
+            return { success: true, count: 0, updatedNames: [], foundIds: [] };
+        }
+
+        let count = 0;
+        let updatedNames: string[] = [];
+        let foundIds: string[] = [];
+
+        // 2. Darles 10 XP a cada uno
+        for (const [id, name] of uniqueAgents.entries()) {
+            await updateAgentPointsSupabase(id, 'XP', 10);
+            count++;
+            updatedNames.push(name);
+            foundIds.push(id);
+        }
+
+        return { success: true, count, updatedNames, foundIds };
     } catch (error: any) {
         return { success: false, error: error.message };
     }

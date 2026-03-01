@@ -49,6 +49,7 @@ export const useTacticalLogic = (
             const result = await submitTransactionSupabase(id, 'ASISTENCIA', currentUser?.name);
             if (result.success) {
                 setScanStatus('SUCCESS');
+                syncData(true); // Se desplaza fuera del timeout para actualización inmediata en UI
                 const agent = agents.find(a => String(a.id) === String(id));
                 if (agent) {
                     setScannedAgentForPoints(agent);
@@ -56,7 +57,6 @@ export const useTacticalLogic = (
                 setTimeout(() => {
                     setScanStatus('IDLE');
                     setScannedId('');
-                    syncData(true);
                 }, 3000);
             } else {
                 showAlert({ title: "FALLO DE SISTEMA", message: result.error || "Fallo en registro.", type: 'ERROR' });

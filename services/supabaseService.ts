@@ -168,16 +168,18 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
         const adjustedAmount = Math.round(amount * multiplier);
 
         // Actualizar el campo correspondiente y sumar/restar XP base
-        // Actuarialmente forzamos a entero para evitar problemas de concatenación que invaliden o nulifiquen datos
-        const currentXp = Number(currentData.xp || 0);
+        let currentXp = Number(currentData.xp);
+        if (isNaN(currentXp)) currentXp = 0;
         const updates: any = { xp: Math.max(0, currentXp + adjustedAmount) };
 
         // Agregar o restar a los contadores específicos según el signo del monto
         const counterChange = amount > 0 ? 1 : (amount < 0 ? -1 : 0);
 
-        if (type === 'BIBLIA') updates.bible = Math.max(0, (currentData.bible || 0) + counterChange);
-        if (type === 'APUNTES') updates.notes = Math.max(0, (currentData.notes || 0) + counterChange);
-        if (type === 'LIDERAZGO') updates.leadership = Math.max(0, (currentData.leadership || 0) + counterChange);
+        const safeVal = (val: any) => { const num = Number(val); return isNaN(num) ? 0 : num; };
+
+        if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + counterChange);
+        if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + counterChange);
+        if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + counterChange);
 
         const { error: updateError } = await supabase
             .from('agentes')
@@ -253,6 +255,28 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
 };
 
 /**
+ * @description Actualiza el perfil de IA (estadísticas y resumen táctico) del agente en Supabase.
+ */
+export const updateAgentAiProfileSupabase = async (agentId: string, stats: any, summary: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('agentes')
+            .update({
+                tactical_stats: stats,
+                tactor_summary: summary,
+                is_ai_profile_pending: false
+            })
+            .eq('id', agentId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ Error guardando perfil IA en Supabase:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
  * @description Deduce un porcentaje de los puntos de un agente (ej. Sanción masiva)
  */
 export const deductPercentagePointsSupabase = async (agentId: string, percentage: number): Promise<{ success: boolean, error?: string }> => {
@@ -265,7 +289,9 @@ export const deductPercentagePointsSupabase = async (agentId: string, percentage
 
         if (fetchError) throw fetchError;
 
-        const currentXp = currentData.xp || 0;
+        let currentXp = Number(currentData.xp);
+        if (isNaN(currentXp)) currentXp = 0;
+
         const toDeduct = Math.floor(currentXp * (percentage / 100));
         const newXp = Math.max(0, currentXp - toDeduct);
 
@@ -401,7 +427,9 @@ export const applyAbsencePenaltiesSupabase = async (): Promise<{ success: boolea
             else if (streak >= 5) multiplier = 1.25;
 
             const penaltyAmount = Math.round(10 * multiplier);
-            const newXp = Math.max(0, (agent.xp || 0) - penaltyAmount);
+            let agentXp = Number(agent.xp);
+            if (isNaN(agentXp)) agentXp = 0;
+            const newXp = Math.max(0, agentXp - penaltyAmount);
 
             const { error: updateError } = await supabase
                 .from('agentes')

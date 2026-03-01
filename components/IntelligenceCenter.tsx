@@ -8,9 +8,9 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentAiProfile, updateAgentAiPendingStatus, fetchPromotionStatus, resetSyncBackoff } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, fetchPromotionStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase } from '../services/supabaseService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -114,6 +114,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         showAlert({ title: "ÉXITO", message: "✅ EVENTO CREADO EXITOSAMENTE", type: 'SUCCESS' });
         setNewEvent({ title: '', date: '', time: '', description: '' });
         loadEvents();
+      } else {
+        showAlert({ title: "ERROR DE SERVIDOR", message: "❌ " + (res.error || "Fallo desconocido al crear evento."), type: 'ERROR' });
       }
     } catch (e) {
       showAlert({ title: "ERROR", message: "❌ FALLO AL CREAR EVENTO", type: 'ERROR' });
@@ -132,6 +134,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           const res = await deleteEvent(id);
           if (res.success) {
             loadEvents();
+          } else {
+            showAlert({ title: "ERROR DE SERVIDOR", message: "❌ " + (res.error || "Fallo desconocido al eliminar evento."), type: 'ERROR' });
           }
         } catch (e) {
           showAlert({ title: "ERROR", message: "❌ FALLO AL ELIMINAR", type: 'ERROR' });
@@ -214,7 +218,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       const { progress } = await fetchAcademyDataSupabase(agent.id);
       const aiProfile = await generateTacticalProfile(agent, progress);
       if (aiProfile) {
-        const res = await updateAgentAiProfile(agent.id, aiProfile.stats, aiProfile.summary);
+        const res = await updateAgentAiProfileSupabase(agent.id, aiProfile.stats, aiProfile.summary);
         if (res.success) {
           showAlert({ title: "SINCRONIZACIÓN", message: "✅ SINCRONIZACIÓN IA COMPLETADA", type: 'SUCCESS' });
           if (onUpdateNeeded) onUpdateNeeded();

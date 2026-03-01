@@ -99,7 +99,8 @@ CREATE POLICY "Lectura API anon eventos" ON public.eventos FOR SELECT USING (tru
 DROP POLICY IF EXISTS "Escritura API anon eventos" ON public.eventos;
 CREATE POLICY "Insert API anon eventos" ON public.eventos FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update API anon eventos" ON public.eventos FOR UPDATE USING (true);
-
+DROP POLICY IF EXISTS "Delete API anon eventos" ON public.eventos;
+CREATE POLICY "Delete API anon eventos" ON public.eventos FOR DELETE USING (true);
 
 -- 3. TABLA: notificaciones_push
 CREATE TABLE IF NOT EXISTS public.notificaciones_push (

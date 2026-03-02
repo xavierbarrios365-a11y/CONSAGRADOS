@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.agentes (
     weekly_tasks JSONB DEFAULT '[]'::jsonb,
     notif_prefs JSONB DEFAULT '{"read": [], "deleted": []}'::jsonb,
     last_course TEXT,
+    fcm_token TEXT,
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -64,6 +65,7 @@ ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS last_attendance TEXT;
 ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS weekly_tasks JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS notif_prefs JSONB DEFAULT '{"read": [], "deleted": []}'::jsonb;
 ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS last_course TEXT;
+ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS fcm_token TEXT;
 */
 
 -- Habilitar RLS para agentes

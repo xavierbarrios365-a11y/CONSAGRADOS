@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Clock, Info, ShieldAlert, Target, X, Trash2, CheckCheck, Loader2 } from 'lucide-react';
 import { InboxNotification, Agent } from '../types';
-import { fetchNotifications, updateNotifPrefs } from '../services/sheetsService';
+import { fetchNotificationsSupabase, updateNotifPrefsSupabase } from '../services/supabaseService';
 
 interface NotificationInboxProps {
     onClose: () => void;
@@ -69,7 +69,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchNotifications();
+            const data = await fetchNotificationsSupabase();
             if (!Array.isArray(data)) {
                 throw new Error('Formato de respuesta inválido');
             }
@@ -97,7 +97,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
 
         if (agentId) {
             setIsSyncing(true);
-            await updateNotifPrefs(agentId, { read: newRead, deleted: deletedIds });
+            await updateNotifPrefsSupabase(agentId, { read: newRead, deleted: deletedIds });
             setIsSyncing(false);
         }
     };
@@ -111,7 +111,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
 
         if (agentId) {
             setIsSyncing(true);
-            await updateNotifPrefs(agentId, { read: readIds, deleted: newDeleted });
+            await updateNotifPrefsSupabase(agentId, { read: readIds, deleted: newDeleted });
             setIsSyncing(false);
         }
     };
@@ -126,7 +126,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
 
             if (agentId) {
                 setIsSyncing(true);
-                await updateNotifPrefs(agentId, { read: readIds, deleted: newDeleted });
+                await updateNotifPrefsSupabase(agentId, { read: readIds, deleted: newDeleted });
                 setIsSyncing(false);
             }
         }

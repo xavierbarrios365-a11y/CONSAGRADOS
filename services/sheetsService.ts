@@ -386,11 +386,6 @@ export const broadcastNotification = async (title: string, message: string) => {
   catch (error: any) { return { success: false, error: error.message }; }
 };
 
-export const updateNotifPrefs = async (agentId: string, prefs: { read: string[]; deleted: string[] }) => {
-  try { return await postToAction('update_notif_prefs', { agentId, prefs }); }
-  catch (error: any) { return { success: false, error: error.message }; }
-};
-
 export const syncFcmToken = async (agentId: string, token: string) => {
   try { return await postToAction('sync_fcm_token', { agentId, token }); }
   catch (error: any) { return { success: false, error: error.message }; }

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Agent, UserRole } from '../types';
-import { resetPasswordWithAnswer, updateAgentPin, syncFcmToken } from '../services/sheetsService';
+import { resetPasswordWithAnswerSupabase as resetPasswordWithAnswer, updateAgentPinSupabase as updateAgentPin } from '../services/supabaseService';
 import { isBiometricAvailable, authenticateBiometric } from '../services/BiometricService';
 import { trackEvent } from '../firebase-config';
 

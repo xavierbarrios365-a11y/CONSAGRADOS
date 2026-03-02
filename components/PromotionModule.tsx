@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, ChevronUp, Award, BookOpen, CheckCircle, Lock, Clock, Star, Trophy, ArrowRight } from 'lucide-react';
 import { UserRole } from '../types';
 import { RANK_CONFIG, PROMOTION_RULES } from '../constants';
-import { fetchPromotionStatus } from '../services/sheetsService';
-import { promoteAgentActionSupabase } from '../services/supabaseService';
+import { promoteAgentActionSupabase, getPromotionStatusSupabase } from '../services/supabaseService';
 
 interface PromotionModuleProps {
     agentId: string;
@@ -25,7 +24,7 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await fetchPromotionStatus(agentId);
+            const res = await getPromotionStatusSupabase(agentId);
             if (res.success) setPromoData(res);
         } catch (e) { console.error(e); }
         setLoading(false);

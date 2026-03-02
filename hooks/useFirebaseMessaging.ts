@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Agent } from '../types';
-import { syncFcmToken } from '../services/sheetsService';
+import { syncFcmTokenSupabase as syncFcmToken } from '../services/supabaseService';
 import { requestForToken, onMessageListener, db } from '../firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -32,24 +32,8 @@ export function useFirebaseMessaging(
                     });
                 }
 
-                // Suscribir oficialmente el token al topic "all_agents" de Vercel (Push Broadcast)
-                const notifyUrl = `${import.meta.env.DEV ? 'https://consagrados.vercel.app' : ''}/api/notify`;
-                fetch(notifyUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'subscribe',
-                        targetToken: token,
-                        message: 'FCM_REGISTRATION_PING'
-                    })
-                }).then(async res => {
-                    if (!res.ok) {
-                        const err = await res.json().catch(() => ({}));
-                        console.warn("⚠️ Fallo en suscripción Push remote:", err);
-                    } else {
-                        console.log("✅ Suscripción Push confirmada.");
-                    }
-                }).catch(e => console.error("Error de red al suscribir a push", e));
+                // (La suscripción al topic de Vercel fue removida porque sus endpoints de IID están deprecados por Google 
+                // y ahora almacenamos el token de forma nativa en Supabase para envíos punto-a-punto).
             }
 
             onMessageListener().then((payload: any) => {

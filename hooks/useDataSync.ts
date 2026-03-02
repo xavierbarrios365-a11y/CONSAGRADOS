@@ -1,16 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
 import { INITIAL_AGENTS } from '../mockData';
-import {
-    fetchNotifications
-} from '../services/sheetsService';
+
 import {
     fetchAgentsFromSupabase,
     fetchVisitorRadarSupabase as fetchVisitorRadar,
     fetchActiveEventsSupabase as fetchActiveEvents,
     fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations,
     checkAndPublishBirthdays,
-    computeBadgesSupabase
+    computeBadgesSupabase,
+    fetchNotificationsSupabase
 } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
@@ -87,7 +86,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const checkHeadlines = useCallback(async () => {
         try {
             // 1. Notifications
-            const notifs = await fetchNotifications() || [];
+            const notifs = await fetchNotificationsSupabase() || [];
             const agentId = currentUser?.id;
             const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
             const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';

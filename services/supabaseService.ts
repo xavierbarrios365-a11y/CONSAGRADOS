@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { Agent, Badge } from '../types';
+import { Agent, Badge, InboxNotification } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 
 /**
@@ -2143,5 +2143,181 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
     } catch (e: any) {
         console.error("Error en computeBadgesSupabase:", e.message);
         return [];
+    }
+
+};
+
+/**
+ * ===== SISTEMA DE NOTIFICACIONES (INBOX) =====
+ */
+
+export const updateNotifPrefsSupabase = async (agentId: string, prefs: { read: string[]; deleted: string[] }): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('agentes')
+            .update({ notif_prefs: prefs })
+            .eq('id', agentId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error updating notification prefs:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const fetchNotificationsSupabase = async (): Promise<InboxNotification[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('notificaciones_push')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50); // Get latest 50 notifications
+
+        if (error) throw error;
+
+        if (!data) return [];
+
+        return data.map((n: any) => ({
+            id: n.id,
+            fecha: n.created_at,
+            titulo: n.titulo,
+            mensaje: n.mensaje,
+            categoria: (n.tipo && n.tipo !== 'general') ? String(n.tipo).toUpperCase() : 'INFO',
+            emisor: n.emisor || 'Comando Central'
+        })) as InboxNotification[];
+    } catch (e: any) {
+        console.error('❌ Error fetching global notifications:', e.message);
+        return [];
+    }
+};
+
+/**
+ * ===== SISTEMA DE PROMOCIONES Y ASCENSOS =====
+ */
+
+export const getPromotionStatusSupabase = async (agentId: string): Promise<any> => {
+    try {
+        // 1. Obtener datos del agente (XP y Rango)
+        const { data: agentData, error: agentError } = await supabase
+            .from('agentes')
+            .select('xp, rango')
+            .eq('id', agentId)
+            .single();
+
+        if (agentError) throw agentError;
+
+        // 2. Obtener certificados (Módulos de academia completados)
+        const { count: certCount, error: certError } = await supabase
+            .from('academy_progress')
+            .select('*', { count: 'exact', head: true })
+            .eq('agent_id', agentId)
+            .eq('is_completed', true);
+
+        if (certError) throw certError;
+
+        // 3. Obtener misiones completadas (VERIFICADO) y pendientes (ENTREGADO)
+        const { data: tasksData, error: tasksError } = await supabase
+            .from('progreso_tareas')
+            .select('status')
+            .eq('agent_id', agentId)
+            .in('status', ['VERIFICADO', 'ENTREGADO']);
+
+        if (tasksError) throw tasksError;
+
+        const tasksCompleted = tasksData?.filter(t => t.status === 'VERIFICADO').length || 0;
+        const tasksPending = tasksData?.filter(t => t.status === 'ENTREGADO').length || 0;
+
+        // 4. Historial de ascensos - (Por ahora se mockea si no hay tabla de historial, 
+        // pero se podría leer de `notificaciones` o `insignias_otorgadas` a futuro)
+        const promotionHistory: any[] = [];
+
+        return {
+            success: true,
+            rank: agentData.rango || 'RECLUTA',
+            xp: agentData.xp || 0,
+            certificates: certCount || 0,
+            tasksCompleted,
+            tasksPending,
+            promotionHistory
+        };
+
+    } catch (e: any) {
+        console.error('❌ Error calculando estado de promoción:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const getSecurityQuestionSupabase = async (agentId: string): Promise<{ success: boolean, question?: string, error?: string }> => {
+    try {
+        const { data, error } = await supabase
+            .from('agentes')
+            .select('security_question')
+            .eq('id', agentId)
+            .single();
+
+        if (error) throw error;
+        if (!data || !data.security_question) {
+            return { success: false, error: "Agente no tiene pregunta de seguridad configurada" };
+        }
+        return { success: true, question: data.security_question };
+    } catch (e: any) {
+        console.error("❌ Error obteniendo pregunta de seguridad:", e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+export const resetPasswordWithAnswerSupabase = async (agentId: string, answer: string): Promise<{ success: boolean, newPin?: string, error?: string }> => {
+    try {
+        // Find agent and verify answer
+        const { data, error } = await supabase
+            .from('agentes')
+            .select('security_answer')
+            .eq('id', agentId)
+            .single();
+
+        if (error) throw error;
+        if (!data || !data.security_answer) {
+            return { success: false, error: "Pregunta de seguridad no configurada." };
+        }
+
+        // Simple case-insensitive match for answer
+        if (data.security_answer.trim().toLowerCase() !== answer.trim().toLowerCase()) {
+            return { success: false, error: "Respuesta incorrecta." };
+        }
+
+        // Generate a new 4-digit PIN
+        const newPin = Math.floor(1000 + Math.random() * 9000).toString();
+
+        // Update agent PIN
+        const { error: updateError } = await supabase
+            .from('agentes')
+            .update({ pin: newPin })
+            .eq('id', agentId);
+
+        if (updateError) throw updateError;
+
+        return { success: true, newPin };
+    } catch (e: any) {
+        console.error("❌ Error reseteando PIN:", e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * ===== SISTEMA DE DISPOSITIVOS Y PUSH =====
+ */
+export const syncFcmTokenSupabase = async (agentId: string, token: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('agentes')
+            .update({ fcm_token: token })
+            .eq('id', agentId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error("❌ Error sincronizando FCM Token:", e.message);
+        return { success: false, error: e.message };
     }
 };

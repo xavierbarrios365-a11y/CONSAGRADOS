@@ -8,9 +8,9 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, fetchPromotionStatus, resetSyncBackoff } from '../services/sheetsService';
+import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, fetchAgentProfileSupabase as fetchAgentProfile, getPromotionStatusSupabase, assignAgentToBibleWarGroup, generateAIProfileSupabase, fetchTaskRecruitsSupabase } from '../services/supabaseService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -61,7 +61,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       if (!selectedAgentId) return;
       setIsLoadingPromo(true);
       try {
-        const res = await fetchPromotionStatus(selectedAgentId);
+        const res = await getPromotionStatusSupabase(selectedAgentId);
         if (res.success) {
           setPromoData({
             xp: res.xp || 0,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Star, Award, ChevronRight, Loader2 } from 'lucide-react';
 import { PROMOTION_RULES } from '../constants';
-import { fetchPromotionStatus } from '../services/sheetsService';
+import { getPromotionStatusSupabase } from '../services/supabaseService';
 
 interface PromotionProgressCardProps {
     agentId: string;
@@ -17,7 +17,7 @@ const PromotionProgressCard: React.FC<PromotionProgressCardProps> = ({ agentId, 
     useEffect(() => {
         const loadPromoData = async () => {
             try {
-                const res = await fetchPromotionStatus(agentId);
+                const res = await getPromotionStatusSupabase(agentId);
                 if (res.success) {
                     setData({
                         xp: res.xp || 0,

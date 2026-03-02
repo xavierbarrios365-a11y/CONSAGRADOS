@@ -41,9 +41,7 @@ import {
   uploadImage,
   reconstructDatabase,
   updateAgentPoints,
-  getSecurityQuestion,
-  resetPasswordWithAnswer,
-  updateAgentPin,
+
   fetchGuides,
   deductPercentagePoints,
   deleteGuide,
@@ -54,17 +52,13 @@ import {
   saveBulkAcademyData,
   updateAgentAiProfile,
   resetStudentAttempts,
-  updateNotifPrefs,
   fetchDailyVerse,
   registerBiometrics,
   verifyBiometrics,
   updateAgentAiPendingStatus,
-  fetchNotifications,
-  syncFcmToken,
   deleteAgent as deleteAgentService,
 } from './services/sheetsService';
 import {
-  syncAllAgentsToSupabase,
   fetchAgentsFromSupabase,
   updateAgentPointsSupabase,
   fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations,
@@ -75,7 +69,12 @@ import {
   submitTransactionSupabase,
   updateAgentStreaksSupabase,
   registerVisitorSupabase,
-  applyAbsencePenaltiesSupabase
+  applyAbsencePenaltiesSupabase,
+  syncAllAgentsToSupabase,
+  getSecurityQuestionSupabase as getSecurityQuestion,
+  resetPasswordWithAnswerSupabase as resetPasswordWithAnswer,
+  updateAgentPinSupabase as updateAgentPin,
+  fetchNotificationsSupabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';

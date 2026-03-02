@@ -299,3 +299,33 @@ DROP POLICY IF EXISTS "Insert API anon recursos_tacticos" ON public.recursos_tac
 CREATE POLICY "Insert API anon recursos_tacticos" ON public.recursos_tacticos FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Delete API anon recursos_tacticos" ON public.recursos_tacticos;
 CREATE POLICY "Delete API anon recursos_tacticos" ON public.recursos_tacticos FOR DELETE USING (true);
+
+-- ==========================================
+-- ESTRUCTURAS ADICIONALES (Misiones)
+-- ==========================================
+
+-- TABLA: misiones
+CREATE TABLE IF NOT EXISTS public.misiones (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    xp_reward INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.misiones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura y Escritura anon" ON public.misiones;
+CREATE POLICY "Lectura y Escritura anon" ON public.misiones FOR ALL USING (true) WITH CHECK (true);
+
+-- TABLA: progreso_misiones
+CREATE TABLE IF NOT EXISTS public.progreso_misiones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mision_id TEXT,
+    agent_id TEXT,
+    status TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.progreso_misiones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura y Escritura anon" ON public.progreso_misiones;
+CREATE POLICY "Lectura y Escritura anon" ON public.progreso_misiones FOR ALL USING (true) WITH CHECK (true);

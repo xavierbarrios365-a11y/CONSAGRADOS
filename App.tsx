@@ -556,16 +556,97 @@ const App: React.FC = () => {
             <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-[0.5em] opacity-80">Command Center Táctico</p>
           </div>
 
-          {rememberedUser && showQuickLogin ? (
-            <form
+          {showForgotPassword ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="space-y-6"
+            >
+              <div className="text-center">
+                <h2 className="text-[#ffb700] font-bebas text-2xl tracking-widest">Recuperación Táctica</h2>
+                <p className="text-[10px] text-white/50 uppercase tracking-widest mt-1">
+                  {forgotPasswordStep === 'ID' && "Ingresa tu ID de Agente"}
+                  {forgotPasswordStep === 'QUESTION' && "Responde a tu pregunta de seguridad"}
+                  {forgotPasswordStep === 'SUCCESS' && "Autorización Concedida"}
+                </p>
+              </div>
+
+              {forgotPasswordStep === 'ID' && (
+                <form onSubmit={handleForgotPasswordCheck} className="space-y-4">
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="ID DE AGENTE"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
+                      autoFocus
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:shadow-[0_0_15px_rgba(255,183,0,0.3)] transition-all uppercase text-center focus:bg-white/10"
+                    />
+                  </div>
+                  {resetError && (
+                    <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center justify-center gap-2">
+                      <AlertCircle size={14} className="text-red-500" />
+                      <p className="text-red-500 text-[9px] font-black uppercase tracking-widest">{resetError}</p>
+                    </motion.div>
+                  )}
+                  <button type="submit" className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 transition-all font-bebas hover:shadow-[0_0_20px_rgba(255,183,0,0.4)] active:scale-[0.98]">Verificar Identidad</button>
+                  <button type="button" onClick={() => { setShowForgotPassword(false); setResetError(''); setForgotPasswordStep('ID'); }} className="w-full py-3 text-white/40 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all">Cancelar</button>
+                </form>
+              )}
+              {forgotPasswordStep === 'QUESTION' && (
+                <form onSubmit={handleForgotPasswordAnswer} className="space-y-4">
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-2xl p-4 text-center shadow-[0_0_15px_rgba(255,183,0,0.1)]">
+                    <p className="text-[#ffb700] text-xs font-black tracking-widest uppercase mb-1">Pregunta de Seguridad</p>
+                    <p className="text-white text-sm font-bold">{newQuestionInput}</p>
+                  </motion.div>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="INGRESA TU RESPUESTA SECRETA"
+                      value={securityAnswerInput}
+                      onChange={(e) => setSecurityAnswerInput(e.target.value)}
+                      autoFocus
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:shadow-[0_0_15px_rgba(255,183,0,0.3)] transition-all uppercase text-center focus:bg-white/10"
+                    />
+                  </div>
+                  {resetError && (
+                    <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center justify-center gap-2">
+                      <AlertCircle size={14} className="text-red-500" />
+                      <p className="text-red-500 text-[9px] font-black uppercase tracking-widest">{resetError}</p>
+                    </motion.div>
+                  )}
+                  <button type="submit" className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 transition-all font-bebas hover:shadow-[0_0_20px_rgba(255,183,0,0.4)] active:scale-[0.98]">Desencriptar Registro</button>
+                  <button type="button" onClick={() => { setShowForgotPassword(false); setResetError(''); setForgotPasswordStep('ID'); }} className="w-full py-3 text-white/40 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all">Cancelar</button>
+                </form>
+              )}
+              {forgotPasswordStep === 'SUCCESS' && (
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 text-center">
+                  <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(34,197,94,0.3)] relative">
+                    <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping"></div>
+                    <ShieldCheck size={32} className="text-green-500 relative z-10" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-2">TU PIN REVELADO ES:</p>
+                    <p className="text-[#ffb700] font-bebas text-5xl tracking-widest drop-shadow-[0_0_10px_rgba(255,183,0,0.8)]">{revealedPin}</p>
+                  </div>
+                  <button type="button" onClick={() => { setShowForgotPassword(false); setResetError(''); setForgotPasswordStep('ID'); setRevealedPin(''); }} className="w-full bg-[#ffb700] py-5 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 transition-all font-bebas hover:shadow-[0_0_20px_rgba(255,183,0,0.4)] active:scale-[0.98]">Volver al Logotipo</button>
+                </motion.div>
+              )}
+            </motion.div>
+          ) : rememberedUser && showQuickLogin ? (
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
               onSubmit={(e) => handleLogin(e, rememberedUser.id)}
-              className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
+              className="space-y-6"
             >
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <img
                     src={formatDriveUrl(rememberedUser.photoUrl, rememberedUser.name)}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)] animate-pulse"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)]"
                     onError={(e) => {
                       const target = e.currentTarget as HTMLImageElement;
                       if (!target.src.includes('ui-avatars.com')) {
@@ -573,10 +654,11 @@ const App: React.FC = () => {
                       }
                     }}
                   />
-                  <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-[#001f3f]"></div>
+                  <div className="absolute inset-0 rounded-full border border-[#ffb700]/30 animate-ping"></div>
+                  <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-[#001f3f] shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                 </div>
                 <div className="text-center">
-                  <p className="text-white font-black text-lg uppercase tracking-widest leading-none mb-1">{rememberedUser.name}</p>
+                  <p className="text-white font-black text-lg uppercase tracking-widest leading-none mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{rememberedUser.name}</p>
                   <p className="text-[#ffb700] text-[8px] font-black uppercase tracking-[0.4em] opacity-80">Sesión Detectada</p>
                 </div>
               </div>
@@ -595,9 +677,9 @@ const App: React.FC = () => {
                       if (loginError.message) setLoginError({ field: null, message: null });
                     }}
                     autoFocus
-                    className={`w-full bg-white/5 border ${loginError.message ? 'border-red-500' : 'border-white/10'} rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all text-center`}
+                    className={`w-full bg-white/5 border ${loginError.message ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'border-white/10'} rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:shadow-[0_0_15px_rgba(255,183,0,0.3)] focus:bg-white/10 transition-all text-center`}
                   />
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
+                  <button type="button" onClick={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -620,12 +702,22 @@ const App: React.FC = () => {
                   {biometricAvailable && (
                     <button
                       type="button"
-                      onClick={() => {
-                        handleBiometricLogin(rememberedUser.id);
-                      }}
-                      className="w-full bg-blue-600/20 border border-blue-500/30 py-6 rounded-2xl text-blue-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-blue-600/30 active:scale-[0.98] transition-all font-bebas flex items-center justify-center gap-2"
+                      onClick={() => handleBiometricLogin(rememberedUser.id)}
+                      disabled={isAuthenticatingBio}
+                      className="w-full relative overflow-hidden bg-blue-600/20 border border-blue-500/50 py-6 rounded-2xl text-blue-400 font-black uppercase text-[10px] tracking-[0.2em] shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:bg-blue-600/30 hover:shadow-[0_0_25px_rgba(59,130,246,0.4)] hover:border-blue-400 active:scale-[0.98] transition-all font-bebas flex items-center justify-center gap-3 disabled:opacity-50"
                     >
-                      <Fingerprint size={18} /> Acceso Biométrico
+                      {isAuthenticatingBio ? (
+                        <>
+                          <Loader2 size={24} className="animate-spin text-blue-300" />
+                          <span>Verificando Identidad...</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="absolute inset-x-0 h-1 bg-blue-400/30 top-1/2 -translate-y-1/2 shadow-[0_0_10px_rgba(59,130,246,0.5)] opacity-0 group-hover:opacity-100 group-hover:animate-scan"></div>
+                          <Fingerprint size={24} className="text-blue-400" />
+                          <span>Acceso Biométrico Extendido</span>
+                        </>
+                      )}
                     </button>
                   )}
 
@@ -645,9 +737,15 @@ const App: React.FC = () => {
                   </button>
                 </div>
               </div>
-            </form>
+            </motion.form>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <motion.form
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              onSubmit={handleLogin}
+              className="space-y-4"
+            >
               <div className="space-y-4">
                 <div className="relative group">
                   <input
@@ -672,9 +770,9 @@ const App: React.FC = () => {
                     placeholder="PIN DE SEGURIDAD"
                     value={loginPin}
                     onChange={(e) => setLoginPin(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:shadow-[0_0_15px_rgba(255,183,0,0.3)] transition-all group-hover:border-white/20 focus:bg-white/10"
                   />
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
+                  <button type="button" onClick={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -693,15 +791,22 @@ const App: React.FC = () => {
                     type="button"
                     onClick={() => handleBiometricLogin()}
                     disabled={isAuthenticatingBio}
-                    className="w-20 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#ffb700] hover:bg-white/10 transition-all active:scale-[0.98] disabled:opacity-50"
-                    title="Acceso Biométrico"
+                    className="w-16 md:w-20 relative overflow-hidden bg-blue-600/10 border border-blue-500/40 rounded-2xl flex items-center justify-center text-blue-400 hover:bg-blue-600/20 hover:border-blue-400 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all active:scale-[0.95] disabled:opacity-50 group"
+                    title="Acceso Biométrico Múltiple"
                   >
-                    {isAuthenticatingBio ? <Loader2 size={24} className="animate-spin" /> : <Fingerprint size={24} />}
+                    {isAuthenticatingBio ? (
+                      <Loader2 size={24} className="animate-spin text-blue-300" />
+                    ) : (
+                      <>
+                        <div className="absolute inset-x-0 h-0.5 bg-blue-400/50 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:animate-scan"></div>
+                        <Fingerprint size={28} className="drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>
 
-              <div className="pt-4 text-center">
+              <div className="pt-4 flex flex-col items-center gap-3">
                 <button
                   type="button"
                   className="text-[8px] text-white/30 font-black uppercase tracking-widest hover:text-[#ffb700] transition-colors"
@@ -709,8 +814,27 @@ const App: React.FC = () => {
                 >
                   ¿Olvidaste tu PIN de Seguridad?
                 </button>
+                <button
+                  type="button"
+                  className="text-[8px] text-red-500/70 font-black uppercase tracking-widest hover:text-red-400 transition-colors"
+                  onClick={() => {
+                    if (window.confirm("¿Seguro que deseas purgar la caché y recargar? Esto resolverá problemas de sincronización con la base de datos.")) {
+                      if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(regs => {
+                          for (let reg of regs) { reg.unregister(); }
+                        });
+                      }
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      alert("Caché purgada. El sistema se reiniciará en modo limpio.");
+                      setTimeout(() => { window.location.reload(); }, 500);
+                    }
+                  }}
+                >
+                  🚑 PULSAR AQUÍ EN CASO DE ERRORES 400 (PURGAR CACHÉ)
+                </button>
               </div>
-            </form>
+            </motion.form>
           )}
 
           <div className="text-center">

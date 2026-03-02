@@ -10,7 +10,7 @@ export interface AuthState {
     loginId: string;
     loginPin: string;
     showPin: boolean;
-    loginError: { field: 'id' | 'pin' | 'both' | null; message: string | null };
+    loginError: { field: 'id' | 'pin' | 'both' | 'biometric' | null; message: string | null };
     showForgotPassword: boolean;
     forgotPasswordStep: 'ID' | 'QUESTION' | 'SUCCESS';
     securityAnswerInput: string;
@@ -42,7 +42,7 @@ export function useAuth() {
     const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
     const [loginPin, setLoginPin] = useState('');
     const [showPin, setShowPin] = useState(false);
-    const [loginError, setLoginError] = useState<{ field: 'id' | 'pin' | 'both' | null; message: string | null }>({ field: null, message: null });
+    const [loginError, setLoginError] = useState<{ field: 'id' | 'pin' | 'both' | 'biometric' | null; message: string | null }>({ field: null, message: null });
 
     // --- Session management ---
     const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
@@ -190,13 +190,13 @@ export function useAuth() {
     const handleBiometricLogin = useCallback(async (overrideId?: string) => {
         const effectiveId = overrideId || loginId;
         if (!effectiveId) {
-            alert("INGRESA TU ID PRIMERO");
+            setLoginError({ field: 'id', message: 'INGRESA TU ID PRIMERO' });
             return;
         }
         const agents = agentsRef.current;
         const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
         if (!user || !user.biometricCredential) {
-            alert("BIOMETRÍA NO CONFIGURADA PARA ESTE ID.\n\nPor favor, ingresa con tu PIN primero y regístrala en 'Mi Perfil'.");
+            setLoginError({ field: 'biometric', message: 'BIOMETRÍA NO ENCONTRADA PARA ESTE ID. INGRESA CON PIN Y REGÍSTRALA EN TU PERFIL.' });
             return;
         }
 
@@ -217,9 +217,11 @@ export function useAuth() {
                 setCurrentUser(user);
                 setIsLoggedIn(true);
                 trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'biometric' });
+                setLoginError({ field: null, message: null });
             }
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            console.error("Biometric Authentication Error:", err);
+            setLoginError({ field: 'biometric', message: err.message || 'ERROR DE AUTENTICACIÓN BIOMÉTRICA' });
         } finally {
             setIsAuthenticatingBio(false);
         }
@@ -268,6 +270,80 @@ export function useAuth() {
             try { setRememberedUser(JSON.parse(storedRemembered)); } catch (e) { localStorage.removeItem('remembered_user'); }
         }
     }, [handleLogout]);
+
+    // --- Forgot Password Flow ---
+    const handleForgotPasswordCheck = useCallback(async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        setResetError('');
+        if (!loginId) {
+            setResetError('INGRESA TU ID DE AGENTE');
+            return;
+        }
+
+        const effectiveId = loginId.trim().toUpperCase();
+        // Since getSecurityQuestionSupabase requires backend call, let's use the loaded agents if possible,
+        // or just rely on the existing agents array to get the question.
+        const agents = agentsRef.current;
+        const numericInput = effectiveId.replace(/[^0-9]/g, '');
+        let user = agents.find(a => String(a.id).trim().toUpperCase() === effectiveId);
+        if (!user && numericInput.length > 3) {
+            user = agents.find(a => {
+                const agentNumeric = String(a.id).replace(/[^0-9]/g, '');
+                return agentNumeric.length > 0 && agentNumeric === numericInput;
+            });
+        }
+
+        if (!user) {
+            setResetError('AGENTE NO ENCONTRADO EN LA BASE DE DATOS');
+            return;
+        }
+
+        if (!user.securityQuestion) {
+            setResetError('NO TIENES CONFIGURADA UNA PREGUNTA DE SEGURIDAD. CONTACTA AL DIRECTOR.');
+            return;
+        }
+
+        // Store the question to display and move to next step
+        setNewQuestionInput(user.securityQuestion);
+        setForgotPasswordStep('QUESTION');
+    }, [loginId]);
+
+    const handleForgotPasswordAnswer = useCallback(async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        setResetError('');
+        if (!securityAnswerInput) {
+            setResetError('DEBES INGRESAR UNA RESPUESTA');
+            return;
+        }
+
+        const effectiveId = loginId.trim().toUpperCase();
+        const numericInput = effectiveId.replace(/[^0-9]/g, '');
+        const agents = agentsRef.current;
+        let user = agents.find(a => String(a.id).trim().toUpperCase() === effectiveId);
+        if (!user && numericInput.length > 3) {
+            user = agents.find(a => {
+                const agentNumeric = String(a.id).replace(/[^0-9]/g, '');
+                return agentNumeric.length > 0 && agentNumeric === numericInput;
+            });
+        }
+
+        if (!user) {
+            setResetError('AGENTE NO ENCONTRADO');
+            return;
+        }
+
+        // Check if the answer matches what we have in memory (or we can call backend)
+        const agentAnswer = user.securityAnswer?.trim().toLowerCase();
+        const inputAnswer = securityAnswerInput.trim().toLowerCase();
+
+        if (agentAnswer && agentAnswer === inputAnswer) {
+            setRevealedPin(user.pin);
+            setForgotPasswordStep('SUCCESS');
+        } else {
+            setResetError('RESPUESTA INCORRECTA. ACCESO DENEGADO.');
+            trackEvent('forgot_password_fail', { id: user.id });
+        }
+    }, [loginId, securityAnswerInput]);
 
     // --- Session timeout ---
     useEffect(() => {
@@ -352,6 +428,7 @@ export function useAuth() {
         // Actions
         handleLogin, handleBiometricLogin, handleLogout, handleHardReset,
         resetSessionTimer, refreshCurrentUser,
+        handleForgotPasswordCheck, handleForgotPasswordAnswer,
         agentsRef,
     };
 }

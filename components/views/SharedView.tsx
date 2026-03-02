@@ -168,16 +168,26 @@ const SharedView: React.FC<SharedViewProps> = (props) => {
                                     onClick={async () => {
                                         if (!currentUser) return;
                                         try {
-                                            const credentialId = await registerBiometric(currentUser.id, currentUser.name, currentUser.biometricCredential ? [currentUser.biometricCredential] : []);
-                                            if (credentialId) {
-                                                const res = await registerBiometrics(currentUser.id, credentialId);
+                                            let existing: string[] = [];
+                                            if (currentUser.biometricCredential) {
+                                                try {
+                                                    existing = JSON.parse(currentUser.biometricCredential);
+                                                    if (!Array.isArray(existing)) existing = [currentUser.biometricCredential];
+                                                } catch {
+                                                    existing = [currentUser.biometricCredential];
+                                                }
+                                            }
+                                            const newCredentialId = await registerBiometric(currentUser.id, currentUser.name, existing);
+                                            if (newCredentialId) {
+                                                const updatedCredentials = [...existing, newCredentialId];
+                                                const res = await registerBiometrics(currentUser.id, JSON.stringify(updatedCredentials));
                                                 if (res.success) {
-                                                    showAlert({ title: "ÉXITO", message: "BIOMETRÍA REGISTRADA.", type: 'SUCCESS' });
+                                                    showAlert({ title: "ÉXITO", message: "NUEVO DISPOSITIVO BIOMÉTRICO ASIGNADO.", type: 'SUCCESS' });
                                                     syncData();
                                                 }
                                             }
                                         } catch (err: any) {
-                                            showAlert({ title: "ERROR", message: err.message || "FALLO BIOMÉTRICO.", type: 'ERROR' });
+                                            showAlert({ title: "ERROR TÁCTICO", message: err.message || "FALLO BIOMÉTRICO.", type: 'ERROR' });
                                         }
                                     }}
                                     disabled={isRegisteringBio}

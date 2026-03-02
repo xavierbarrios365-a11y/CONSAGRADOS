@@ -102,17 +102,31 @@ export const registerBiometric = async (
     return null;
 };
 
-export const authenticateBiometric = async (storedCredentialId: string): Promise<boolean> => {
+export const authenticateBiometric = async (storedCredentialIdsRaw: string): Promise<boolean> => {
     try {
+        let credentialIds: string[] = [];
+        try {
+            credentialIds = JSON.parse(storedCredentialIdsRaw);
+            if (!Array.isArray(credentialIds)) credentialIds = [storedCredentialIdsRaw];
+        } catch {
+            credentialIds = [storedCredentialIdsRaw];
+        }
+
+        const allowCredentials = credentialIds.filter(id => id && id.trim() !== '').map(id => ({
+            id: base64ToUint8Array(id),
+            type: 'public-key',
+        }));
+
+        if (allowCredentials.length === 0) {
+            throw new Error("NO HAY CREDENCIALES VÁLIDAS.");
+        }
+
         const challenge = new Uint8Array(32);
         window.crypto.getRandomValues(challenge);
 
         const publicKeyCredentialRequestOptions: any = {
             challenge: challenge,
-            allowCredentials: [{
-                id: base64ToUint8Array(storedCredentialId),
-                type: 'public-key',
-            }],
+            allowCredentials: allowCredentials,
             userVerification: "required",
             timeout: 60000,
         };
@@ -122,8 +136,11 @@ export const authenticateBiometric = async (storedCredentialId: string): Promise
         });
 
         return !!assertion;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error al autenticar biometría:", error);
+        if (error.name === 'NotAllowedError') {
+            throw new Error("AUTENTICACIÓN CANCELADA.");
+        }
+        throw new Error("NO SE PUDO AUTENTICAR.");
     }
-    return false;
 };

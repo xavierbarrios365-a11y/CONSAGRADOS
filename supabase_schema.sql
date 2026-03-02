@@ -376,4 +376,21 @@ ALTER TABLE public.leads_inversion ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Insert público leads_inversion" ON public.leads_inversion;
 CREATE POLICY "Insert público leads_inversion" ON public.leads_inversion FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Lectura restringida leads_inversion" ON public.leads_inversion;
-CREATE POLICY "Lectura restringida leads_inversion" ON public.leads_inversion FOR SELECT USING (true); -- Para simplificar en esta fase
+-- 14. TABLA: banners (Comunicación Estratégica en Web Pública)
+CREATE TABLE IF NOT EXISTS public.banners (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    titulo TEXT NOT NULL,
+    subtitulo TEXT,
+    imagen_url TEXT,
+    cta_label TEXT,
+    cta_link TEXT,
+    activo BOOLEAN DEFAULT true,
+    tipo TEXT DEFAULT 'EVENTO', -- 'EVENTO', 'PRODUCTO', 'COMUNICADO'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.banners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura pública banners" ON public.banners;
+CREATE POLICY "Lectura pública banners" ON public.banners FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Escritura interna banners" ON public.banners;
+CREATE POLICY "Escritura interna banners" ON public.banners FOR ALL USING (true) WITH CHECK (true);

@@ -7,6 +7,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 import { AppView } from '../types';
+import { fetchActiveBannersSupabase } from '../services/supabaseService';
 
 interface PublicWebsiteProps {
     onLoginClick: () => void;
@@ -17,12 +18,19 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeSection, setActiveSection] = useState('inicio');
     const [scrolled, setScrolled] = useState(false);
+    const [activeBanners, setActiveBanners] = useState<any[]>([]);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
         window.addEventListener('scroll', handleScroll);
+        loadBanners();
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    const loadBanners = async () => {
+        const data = await fetchActiveBannersSupabase();
+        setActiveBanners(data);
+    };
 
     const navLinks = [
         { id: 'inicio', label: 'INICIO' },
@@ -135,6 +143,41 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                             transition={{ duration: 0.8 }}
                             viewport={{ once: true }}
                         >
+                            {/* BANNERS ESTRATÉGICOS DINÁMICOS */}
+                            <AnimatePresence>
+                                {activeBanners.length > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="mb-10 max-w-2xl mx-auto"
+                                    >
+                                        {activeBanners.map((banner, idx) => (
+                                            <div key={banner.id || idx} className="bg-[#d97706]/10 border border-[#d97706]/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-sm">
+                                                <div className="flex items-center gap-4 text-left">
+                                                    <div className="w-12 h-12 bg-[#d97706] rounded-xl flex items-center justify-center shrink-0">
+                                                        <Zap className="text-[#0F172A]" size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bebas text-xl tracking-widest text-[#d97706]">{banner.titulo}</h4>
+                                                        <p className="text-[10px] text-white/60 font-mono uppercase tracking-wider">{banner.subtitulo}</p>
+                                                    </div>
+                                                </div>
+                                                {banner.cta_link && (
+                                                    <a
+                                                        href={banner.cta_link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-6 py-2 bg-[#d97706] text-[#0F172A] font-bebas text-sm rounded-lg hover:bg-[#d97706]/80 transition-all flex items-center gap-2"
+                                                    >
+                                                        {banner.cta_label || 'VER MÁS'} <ArrowRight size={14} />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <span className="font-mono text-[#d97706] text-[10px] lg:text-xs tracking-[5px] lg:tracking-[10px] uppercase mb-8 block">TURÉN // VENEZUELA // 2026</span>
                             <h1 className="font-oswald text-5xl md:text-7xl lg:text-9xl font-bold uppercase leading-[1] lg:leading-[0.85] mb-8">
                                 FORJANDO LA <br />

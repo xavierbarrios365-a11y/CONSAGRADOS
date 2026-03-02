@@ -99,7 +99,7 @@ export function useAuth() {
 
         setIsLoggedIn(false);
         setCurrentUser(null);
-        setLoginId('');
+        setCurrentUser(null);
         setLoginPin('');
         setShowSessionWarning(false);
         setIsMustChangeFlow(false);

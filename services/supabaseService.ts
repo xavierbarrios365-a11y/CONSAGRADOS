@@ -147,7 +147,6 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
  */
 export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number = 10): Promise<{ success: boolean, error?: string }> => {
     try {
-        // Primero, obtener valores actuales y racha
         const { data: currentData, error: fetchError } = await supabase
             .from('agentes')
             .select('xp, bible, notes, leadership, streak_count')
@@ -156,7 +155,6 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
 
         if (fetchError) throw fetchError;
 
-        // Calcular Multiplicador Bidireccional (basado en streak_count)
         let multiplier = 1.0;
         const streak = currentData.streak_count || 0;
         if (streak >= 30) multiplier = 2.0;
@@ -164,22 +162,20 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
         else if (streak >= 10) multiplier = 1.50;
         else if (streak >= 5) multiplier = 1.25;
 
-        // Multiplicar el monto de XP
         const adjustedAmount = Math.round(amount * multiplier);
-
-        // Actualizar el campo correspondiente y sumar/restar XP base
         let currentXp = Number(currentData.xp);
         if (isNaN(currentXp)) currentXp = 0;
         const updates: any = { xp: Math.max(0, currentXp + adjustedAmount) };
 
-        // Agregar o restar a los contadores específicos según el signo del monto
-        const counterChange = amount > 0 ? 1 : (amount < 0 ? -1 : 0);
-
         const safeVal = (val: any) => { const num = Number(val); return isNaN(num) ? 0 : num; };
 
-        if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + counterChange);
-        if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + counterChange);
-        if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + counterChange);
+        // CORRECCIÓN: Usar el monto real (amount) en lugar de counterChange (+1/-1)
+        if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + amount);
+        if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + amount);
+        if (type === 'LIDERAZGO' || type === 'XP') {
+            // Si es LIDERAZGO, actualizamos leadership. Si es XP, solo afectó a updates.xp arriba.
+            if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + amount);
+        }
 
         const { error: updateError } = await supabase
             .from('agentes')
@@ -187,12 +183,61 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
             .eq('id', agentId);
 
         if (updateError) throw updateError;
-
         return { success: true };
     } catch (error: any) {
         console.error('❌ Error actualizando puntos en Supabase:', error.message);
         return { success: false, error: error.message };
     }
+};
+
+/**
+ * @description Servicios para Banners Estratégicos
+ */
+export const fetchActiveBannersSupabase = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('banners')
+            .select('*')
+            .eq('activo', true)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch { return []; }
+};
+
+export const fetchAllBannersSupabase = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('banners')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch { return []; }
+};
+
+export const createBannerSupabase = async (banner: any): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase.from('banners').insert(banner);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) { return { success: false, error: e.message }; }
+};
+
+export const toggleBannerStatusSupabase = async (id: string, active: boolean): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase.from('banners').update({ activo: active }).eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) { return { success: false, error: e.message }; }
+};
+
+export const deleteBannerSupabase = async (id: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase.from('banners').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) { return { success: false, error: e.message }; }
 };
 
 /**

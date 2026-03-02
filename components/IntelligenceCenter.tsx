@@ -10,7 +10,7 @@ import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, fetchAgentProfileSupabase as fetchAgentProfile, getPromotionStatusSupabase, assignAgentToBibleWarGroup, generateAIProfileSupabase, fetchTaskRecruitsSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase } from '../services/supabaseService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -64,6 +64,11 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     potencial: 0,
     adaptabilidad: 0
   });
+
+  const [banners, setBanners] = useState<any[]>([]);
+  const [isCreatingBanner, setIsCreatingBanner] = useState(false);
+  const [newBanner, setNewBanner] = useState({ titulo: '', subtitulo: '', imagen_url: '', cta_label: '', cta_link: '', tipo: 'EVENTO' });
+  const [showBannerManager, setShowBannerManager] = useState(false);
 
   React.useEffect(() => {
     const currentAgent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
@@ -136,8 +141,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   React.useEffect(() => {
     if (userRole === UserRole.DIRECTOR) {
       loadEvents();
+      loadBanners();
     }
   }, [userRole]);
+
+  const loadBanners = async () => {
+    const data = await fetchAllBannersSupabase();
+    setBanners(data);
+  };
 
   const loadEvents = async () => {
     try {
@@ -185,6 +196,36 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         }
       }
     });
+  };
+
+  const handleCreateBanner = async () => {
+    if (!newBanner.titulo) return;
+    setIsCreatingBanner(true);
+    try {
+      const res = await createBannerSupabase(newBanner);
+      if (res.success) {
+        showAlert({ title: "ÉXITO", message: "✅ BANNER PUBLICADO EN LA WEB", type: 'SUCCESS' });
+        setNewBanner({ titulo: '', subtitulo: '', imagen_url: '', cta_label: '', cta_link: '', tipo: 'EVENTO' });
+        loadBanners();
+      } else {
+        showAlert({ title: "ERROR", message: "❌ FALLO AL PUBLICAR BANNER", type: 'ERROR' });
+      }
+    } catch (e) {
+      showAlert({ title: "ERROR", message: "❌ FALLO TÁCTICO", type: 'ERROR' });
+    } finally {
+      setIsCreatingBanner(false);
+    }
+  };
+
+  const handleToggleBanner = async (id: string, active: boolean) => {
+    const res = await toggleBannerStatusSupabase(id, active);
+    if (res.success) loadBanners();
+  };
+
+  const handleDeleteBanner = async (id: string) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este banner de la web?")) return;
+    const res = await deleteBannerSupabase(id);
+    if (res.success) loadBanners();
   };
 
   const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
@@ -326,7 +367,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       const uploadResult = await uploadImage(compressed, file);
       if (uploadResult.success && uploadResult.url) {
         setPhotoStatus('SAVING');
-        const updateResult = await updateAgentPhoto(agent.id, uploadResult.url);
+        const updateResult = await updateAgentPhotoSupabase(agent.id, uploadResult.url);
         if (updateResult.success) {
           setPhotoStatus('SUCCESS');
           if (onUpdateNeeded) onUpdateNeeded();
@@ -353,7 +394,11 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       try {
         const res = await updateAgentPointsSupabase(agent.id, type, points);
         if (res.success) {
-          showAlert({ title: "PUNTOS ACTUALIZADOS", message: `✅ ${points > 0 ? '+' : ''}${points} PUNTOS REGISTRADOS PARA ${agent.name}`, type: 'SUCCESS' });
+          showAlert({
+            title: "PUNTOS ACTUALIZADOS",
+            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + (points * (agent.streakCount >= 5 ? 1.25 : 1))} XP`,
+            type: 'SUCCESS'
+          });
           if (onUpdateNeeded) onUpdateNeeded();
         } else {
           showAlert({ title: "ERROR", message: "❌ ERROR: " + (res.error || "Fallo en protocolo de puntos."), type: 'ERROR' });
@@ -1031,6 +1076,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                       >
                         <RotateCcw size={12} />
                       </button>
+                      <button
+                        onClick={() => handleUpdatePoints('LIDERAZGO', adjustmentAmount)}
+                        disabled={isUpdatingPoints}
+                        className="flex-1 py-2 bg-[#ffb700]/20 border border-[#ffb700]/30 text-[#ffb700] text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-[#ffb700]/30 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                        title="Asignar XP por Desempeño Táctico/IA"
+                      >
+                        <Award size={12} />
+                        Premiar IA
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1483,6 +1537,126 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   )}
                 </AnimatePresence>
               </motion.div>
+            )}
+
+            {/* GESTIÓN DE BANNERS ESTRATÉGICOS */}
+            {userRole === UserRole.DIRECTOR && (
+              <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-[2.5rem] p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-amber-500/10 rounded-xl">
+                      <Radio className="text-amber-500 animate-pulse" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-black text-lg uppercase tracking-widest font-bebas">Banners de Web Pública</h3>
+                      <p className="text-[8px] text-amber-500/60 font-black uppercase tracking-[0.3em] font-montserrat">Inyección de información en tiempo real</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowBannerManager(!showBannerManager)}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600/20 border border-amber-500/30 text-amber-500 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-600/30 transition-all font-bebas"
+                  >
+                    {showBannerManager ? 'Cerrar Gestor' : 'Nuevo Banner'}
+                  </button>
+                </div>
+
+                {showBannerManager && (
+                  <div className="bg-black/20 p-5 rounded-2xl border border-white/5 space-y-4 animate-in slide-in-from-top-4 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[7px] text-white/40 font-black uppercase ml-2">Título del Banner</label>
+                        <input
+                          type="text"
+                          placeholder="EJ: NUEVA FRANELA CONSAGRADOS"
+                          value={newBanner.titulo}
+                          onChange={(e) => setNewBanner({ ...newBanner, titulo: e.target.value.toUpperCase() })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white font-bold outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[7px] text-white/40 font-black uppercase ml-2">Subtítulo / Info</label>
+                        <input
+                          type="text"
+                          placeholder="EJ: OBTÉN LA TUYA EN EL COMANDO"
+                          value={newBanner.subtitulo}
+                          onChange={(e) => setNewBanner({ ...newBanner, subtitulo: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[7px] text-white/40 font-black uppercase ml-2">URL de Imagen (Opcional)</label>
+                        <input
+                          type="text"
+                          placeholder="https://..."
+                          value={newBanner.imagen_url}
+                          onChange={(e) => setNewBanner({ ...newBanner, imagen_url: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[7px] text-white/40 font-black uppercase ml-2">Texto Botón</label>
+                          <input
+                            type="text"
+                            placeholder="VER INFO"
+                            value={newBanner.cta_label}
+                            onChange={(e) => setNewBanner({ ...newBanner, cta_label: e.target.value.toUpperCase() })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white font-bold outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[7px] text-white/40 font-black uppercase ml-2">Link Botón</label>
+                          <input
+                            type="text"
+                            placeholder="https://..."
+                            value={newBanner.cta_link}
+                            onChange={(e) => setNewBanner({ ...newBanner, cta_link: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCreateBanner}
+                      disabled={isCreatingBanner || !newBanner.titulo}
+                      className="w-full py-4 bg-amber-600 text-[#001f3f] text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-amber-500 transition-all font-bebas shadow-lg shadow-amber-900/20 active:scale-95"
+                    >
+                      {isCreatingBanner ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Publicar en Web Pública'}
+                    </button>
+                  </div>
+                )}
+
+                {banners.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {banners.map((b) => (
+                      <div key={b.id} className="bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#ffb700]/30 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${b.activo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                          <div>
+                            <p className="text-[10px] font-black text-white uppercase font-bebas">{b.titulo}</p>
+                            <p className="text-[7px] text-white/40 font-bold uppercase">{b.tipo}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleBanner(b.id, !b.activo)}
+                            className={`p-2 rounded-lg transition-all ${b.activo ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}
+                            title={b.activo ? 'Desactivar' : 'Activar'}
+                          >
+                            {b.activo ? <X size={14} /> : <UserCheck size={14} />}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBanner(b.id)}
+                            className="p-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

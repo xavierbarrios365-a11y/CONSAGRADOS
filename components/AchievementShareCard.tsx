@@ -163,10 +163,10 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                     files: [file],
                 });
             } else {
-                // FALLBACK: Descarga automática y aviso
+                // FALLBACK: Descarga automática y aviso mejorado
                 const url = URL.createObjectURL(blob);
 
-                // Descarga
+                // Descarga forzada
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `logro-${agent?.name || 'agente'}.png`;
@@ -174,8 +174,13 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 a.click();
                 document.body.removeChild(a);
 
-                // Notificar al usuario 
-                alert("¡FOTO GENERADA! Tu dispositivo no permite compartir la imagen directamente. La hemos guardado en tus descargas para que la subas a tus historias.");
+                // Copiar texto al portapapeles para facilitar el pegado
+                try {
+                    await navigator.clipboard.writeText(shareText);
+                } catch (e) { /* ignore */ }
+
+                // Notificar al usuario con instrucción de RED SOCIAL
+                alert("📂 IMAGEN DESCARGADA Y TEXTO COPIADO.\n\nTu dispositivo no permite compartir archivos directamente. Abre tu red social, pega el mensaje y adjunta la imagen que acabamos de guardar en tus descargas.");
 
                 if (navigator.share) {
                     try {

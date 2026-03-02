@@ -2411,3 +2411,25 @@ export const syncFcmTokenSupabase = async (agentId: string, token: string): Prom
         return { success: false, error: e.message };
     }
 };
+/**
+ * @description Registra un nuevo lead de inversión (Padrino/Sponsor) en Supabase.
+ */
+export const submitInversionLead = async (lead: { nombre: string; email?: string; whatsapp?: string; tipoAlianza: string }) => {
+    try {
+        const { error } = await supabase
+            .from('leads_inversion')
+            .insert([{
+                nombre: lead.nombre,
+                email: lead.email,
+                whatsapp: lead.whatsapp,
+                tipo_alianza: lead.tipoAlianza,
+                status: 'NUEVO'
+            }]);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ Error registrando lead de inversión:', error.message);
+        return { success: false, error: error.message };
+    }
+};

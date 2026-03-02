@@ -24,7 +24,7 @@ interface SharedViewProps {
     registerBiometrics: (id: string, credentialId: string) => Promise<{ success: boolean }>;
     handleLogout: (purge: boolean) => void;
     showAlert: (config: any) => void;
-    syncData: (force?: boolean) => void;
+    syncData: (force?: boolean) => any;
     viewingAsRole: UserRole | null;
     setViewingAsRole: (role: UserRole | null) => void;
 }

@@ -29,6 +29,7 @@ import TacticalCertificate from './components/TacticalCertificate';
 import LoadingScreen from './components/LoadingScreen';
 import LighthouseIndicator from './components/LighthouseIndicator';
 import AdminDashboard from './components/AdminDashboard';
+import LandingInversion from './components/LandingInversion';
 
 // --- Modularized Views ---
 import StudentView from './components/views/StudentView';
@@ -836,6 +837,17 @@ const App: React.FC = () => {
                   🚑 PULSAR AQUÍ EN CASO DE ERRORES 400 (PURGAR CACHÉ)
                 </button>
               </div>
+
+              <div className="pt-6 border-t border-white/5 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setView(AppView.LANDING)}
+                  className="w-full bg-[#ffb700]/5 border border-[#ffb700]/20 py-4 rounded-2xl text-[#ffb700] font-bebas text-xl tracking-widest hover:bg-[#ffb700]/10 transition-all flex items-center justify-center gap-3 group"
+                >
+                  <Target size={18} className="group-hover:scale-110 transition-transform" />
+                  VER PLAN DE INVERSIÓN 2026
+                </button>
+              </div>
             </motion.form>
           )}
 
@@ -846,6 +858,15 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // VISTA DE LANDING (PÚBLICA)
+  if (view === AppView.LANDING) {
+    return (
+      <TacticalAlertProvider>
+        <LandingInversion onBack={() => setView(AppView.HOME)} />
+      </TacticalAlertProvider>
     );
   }
 

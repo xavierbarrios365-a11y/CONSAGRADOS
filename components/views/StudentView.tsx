@@ -42,7 +42,7 @@ interface StudentViewProps {
     resetSessionTimer: () => void;
     setScannedAgentForPoints: (agent: Agent | null) => void;
     showAlert: (config: { title: string, message: string, type: 'SUCCESS' | 'ERROR' | 'INFO' | 'CONFIRM', onConfirm?: () => void | Promise<void> }) => void;
-    syncData?: () => void | Promise<void>;
+    syncData?: (force?: boolean) => any;
 }
 
 const viewVariants: any = {

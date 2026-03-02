@@ -78,6 +78,8 @@ CREATE POLICY "Lectura API anon agentes" ON public.agentes FOR SELECT USING (tru
 -- Política de escritura temporal para la migración y la App (Hasta fase 4)
 -- BLOQUEO DE DELETE: Sólo se permite Insert y Update explícitamente.
 DROP POLICY IF EXISTS "Escritura API anon agentes" ON public.agentes;
+DROP POLICY IF EXISTS "Insert API anon agentes" ON public.agentes;
+DROP POLICY IF EXISTS "Update API anon agentes" ON public.agentes;
 CREATE POLICY "Insert API anon agentes" ON public.agentes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update API anon agentes" ON public.agentes FOR UPDATE USING (true);
 
@@ -99,6 +101,8 @@ ALTER TABLE public.eventos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura API anon eventos" ON public.eventos;
 CREATE POLICY "Lectura API anon eventos" ON public.eventos FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura API anon eventos" ON public.eventos;
+DROP POLICY IF EXISTS "Insert API anon eventos" ON public.eventos;
+DROP POLICY IF EXISTS "Update API anon eventos" ON public.eventos;
 CREATE POLICY "Insert API anon eventos" ON public.eventos FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update API anon eventos" ON public.eventos FOR UPDATE USING (true);
 DROP POLICY IF EXISTS "Delete API anon eventos" ON public.eventos;
@@ -118,6 +122,8 @@ ALTER TABLE public.notificaciones_push ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura API anon notificaciones" ON public.notificaciones_push;
 CREATE POLICY "Lectura API anon notificaciones" ON public.notificaciones_push FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura API anon notificaciones" ON public.notificaciones_push;
+DROP POLICY IF EXISTS "Insert API anon notificaciones" ON public.notificaciones_push;
+DROP POLICY IF EXISTS "Update API anon notificaciones" ON public.notificaciones_push;
 CREATE POLICY "Insert API anon notificaciones" ON public.notificaciones_push FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update API anon notificaciones" ON public.notificaciones_push FOR UPDATE USING (true);
 
@@ -135,6 +141,8 @@ ALTER TABLE public.insignias_otorgadas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura API anon insignias" ON public.insignias_otorgadas;
 CREATE POLICY "Lectura API anon insignias" ON public.insignias_otorgadas FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura API anon insignias" ON public.insignias_otorgadas;
+DROP POLICY IF EXISTS "Insert API anon insignias" ON public.insignias_otorgadas;
+DROP POLICY IF EXISTS "Update API anon insignias" ON public.insignias_otorgadas;
 CREATE POLICY "Insert API anon insignias" ON public.insignias_otorgadas FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update API anon insignias" ON public.insignias_otorgadas FOR UPDATE USING (true);
 
@@ -156,6 +164,8 @@ ALTER TABLE public.asistencia_visitas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura API anon asistencia" ON public.asistencia_visitas;
 CREATE POLICY "Lectura API anon asistencia" ON public.asistencia_visitas FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura API anon asistencia" ON public.asistencia_visitas;
+DROP POLICY IF EXISTS "Insert API anon asistencia" ON public.asistencia_visitas;
+DROP POLICY IF EXISTS "Update API anon asistencia" ON public.asistencia_visitas;
 CREATE POLICY "Insert API anon asistencia" ON public.asistencia_visitas FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update API anon asistencia" ON public.asistencia_visitas FOR UPDATE USING (true);
 
@@ -184,6 +194,8 @@ ALTER TABLE public.versiculos_diarios ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura anon versiculos" ON public.versiculos_diarios;
 CREATE POLICY "Lectura anon versiculos" ON public.versiculos_diarios FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura anon versiculos" ON public.versiculos_diarios;
+DROP POLICY IF EXISTS "Insert anon versiculos" ON public.versiculos_diarios;
+DROP POLICY IF EXISTS "Update anon versiculos" ON public.versiculos_diarios;
 CREATE POLICY "Insert anon versiculos" ON public.versiculos_diarios FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon versiculos" ON public.versiculos_diarios FOR UPDATE USING (true);
 
@@ -205,6 +217,8 @@ ALTER TABLE public.academy_courses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura anon courses" ON public.academy_courses;
 CREATE POLICY "Lectura anon courses" ON public.academy_courses FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura anon courses" ON public.academy_courses;
+DROP POLICY IF EXISTS "Insert anon courses" ON public.academy_courses;
+DROP POLICY IF EXISTS "Update anon courses" ON public.academy_courses;
 CREATE POLICY "Insert anon courses" ON public.academy_courses FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon courses" ON public.academy_courses FOR UPDATE USING (true);
 
@@ -225,6 +239,8 @@ ALTER TABLE public.academy_lessons ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura anon lessons" ON public.academy_lessons;
 CREATE POLICY "Lectura anon lessons" ON public.academy_lessons FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura anon lessons" ON public.academy_lessons;
+DROP POLICY IF EXISTS "Insert anon lessons" ON public.academy_lessons;
+DROP POLICY IF EXISTS "Update anon lessons" ON public.academy_lessons;
 CREATE POLICY "Insert anon lessons" ON public.academy_lessons FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon lessons" ON public.academy_lessons FOR UPDATE USING (true);
 
@@ -245,6 +261,8 @@ ALTER TABLE public.academy_progress ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura anon progress" ON public.academy_progress;
 CREATE POLICY "Lectura anon progress" ON public.academy_progress FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura anon progress" ON public.academy_progress;
+DROP POLICY IF EXISTS "Insert anon progress" ON public.academy_progress;
+DROP POLICY IF EXISTS "Update anon progress" ON public.academy_progress;
 CREATE POLICY "Insert anon progress" ON public.academy_progress FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon progress" ON public.academy_progress FOR UPDATE USING (true);
 
@@ -265,6 +283,8 @@ ALTER TABLE public.tareas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura anon tareas" ON public.tareas;
 CREATE POLICY "Lectura anon tareas" ON public.tareas FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura anon tareas" ON public.tareas;
+DROP POLICY IF EXISTS "Insert anon tareas" ON public.tareas;
+DROP POLICY IF EXISTS "Update anon tareas" ON public.tareas;
 CREATE POLICY "Insert anon tareas" ON public.tareas FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon tareas" ON public.tareas FOR UPDATE USING (true);
 
@@ -281,8 +301,11 @@ CREATE TABLE IF NOT EXISTS public.progreso_tareas (
 );
 
 ALTER TABLE public.progreso_tareas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura anon progreso" ON public.progreso_tareas;
 CREATE POLICY "Lectura anon progreso" ON public.progreso_tareas FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Escritura anon progreso" ON public.progreso_tareas;
+DROP POLICY IF EXISTS "Insert anon progreso" ON public.progreso_tareas;
+DROP POLICY IF EXISTS "Update anon progreso" ON public.progreso_tareas;
 CREATE POLICY "Insert anon progreso" ON public.progreso_tareas FOR INSERT WITH CHECK (true);
 CREATE POLICY "Update anon progreso" ON public.progreso_tareas FOR UPDATE USING (true);
 
@@ -338,4 +361,19 @@ CREATE TABLE IF NOT EXISTS public.progreso_misiones (
 
 ALTER TABLE public.progreso_misiones ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Lectura y Escritura anon" ON public.progreso_misiones;
-CREATE POLICY "Lectura y Escritura anon" ON public.progreso_misiones FOR ALL USING (true) WITH CHECK (true);
+-- 13. TABLA: leads_inversion (Sponsors y Padrinos Interesados)
+CREATE TABLE IF NOT EXISTS public.leads_inversion (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre TEXT,
+    email TEXT,
+    whatsapp TEXT,
+    tipo_alianza TEXT, -- 'PADRINO', 'REFERENTE', 'COMANDO'
+    status TEXT DEFAULT 'NUEVO', -- 'NUEVO', 'CONTACTADO', 'CONVERTIDO'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.leads_inversion ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Insert público leads_inversion" ON public.leads_inversion;
+CREATE POLICY "Insert público leads_inversion" ON public.leads_inversion FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Lectura restringida leads_inversion" ON public.leads_inversion;
+CREATE POLICY "Lectura restringida leads_inversion" ON public.leads_inversion FOR SELECT USING (true); -- Para simplificar en esta fase

@@ -90,7 +90,8 @@ export enum AppView {
   LANDING = 'landing',
   BIBLE_WAR_DISPLAY = 'BIBLE_WAR_DISPLAY',
   BIBLE_WAR_ARENA = 'BIBLE_WAR_ARENA',
-  BIBLE_WAR_STUDENT = 'BIBLE_WAR_STUDENT'
+  BIBLE_WAR_STUDENT = 'BIBLE_WAR_STUDENT',
+  PUBLIC_WEB = 'public_web'
 }
 
 export interface Visitor {

@@ -214,12 +214,20 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         Invierta en el cambio real de la juventud. No financiamos actividades; forjamos líderes.
                     </p>
                     <div className="flex flex-wrap justify-center gap-8 mb-24">
-                        <button className="flex items-center gap-3 font-bebas text-xl px-12 py-5 bg-white/5 border border-white/20 hover:border-[#ffb700] transition-all">
+                        <a
+                            href="https://wa.me/584245371079"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 font-bebas text-xl px-12 py-5 bg-white/5 border border-white/20 hover:border-[#ffb700] transition-all"
+                        >
                             <MessageSquare className="w-6 h-6 text-[#ffb700]" /> WHATSAPP DIRECTO
-                        </button>
-                        <button className="flex items-center gap-3 font-bebas text-xl px-12 py-5 bg-white/5 border border-white/20 hover:border-[#ffb700] transition-all">
+                        </a>
+                        <a
+                            href="mailto:consagradosapp@gmail.com"
+                            className="flex items-center gap-3 font-bebas text-xl px-12 py-5 bg-white/5 border border-white/20 hover:border-[#ffb700] transition-all"
+                        >
                             <Mail className="w-6 h-6 text-[#ffb700]" /> EMAIL DIRECTIVA
-                        </button>
+                        </a>
                     </div>
                     <div className="grid md:grid-cols-2 text-left pt-20 border-t border-white/5 opacity-60">
                         <div>

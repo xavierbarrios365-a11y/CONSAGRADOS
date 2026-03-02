@@ -30,6 +30,7 @@ import LoadingScreen from './components/LoadingScreen';
 import LighthouseIndicator from './components/LighthouseIndicator';
 import AdminDashboard from './components/AdminDashboard';
 import LandingInversion from './components/LandingInversion';
+import PublicWebsite from './components/PublicWebsite';
 
 // --- Modularized Views ---
 import StudentView from './components/views/StudentView';
@@ -173,7 +174,7 @@ const App: React.FC = () => {
   const { showAlert } = useTacticalAlert();
 
   // --- Remaining local state (view-specific, not worth extracting) ---
-  const [view, setView] = useState<AppView>(AppView.HOME);
+  const [view, setView] = useState<AppView>(AppView.PUBLIC_WEB);
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [showExpedienteFor, setShowExpedienteFor] = useState<Agent | null>(null);
@@ -536,6 +537,27 @@ const App: React.FC = () => {
   };
 
 
+  // VISTA PÚBLICA PRINCIPAL (ADN / ECOSISTEMA)
+  if (view === AppView.PUBLIC_WEB) {
+    return (
+      <TacticalAlertProvider>
+        <PublicWebsite
+          onLoginClick={() => setView(AppView.HOME)}
+          onInvestmentClick={() => setView(AppView.LANDING)}
+        />
+      </TacticalAlertProvider>
+    );
+  }
+
+  // VISTA DE LANDING (PÚBLICA)
+  if (view === AppView.LANDING) {
+    return (
+      <TacticalAlertProvider>
+        <LandingInversion onBack={() => setView(AppView.PUBLIC_WEB)} />
+      </TacticalAlertProvider>
+    );
+  }
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#001f3f] relative overflow-hidden font-montserrat">
@@ -838,7 +860,7 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              <div className="pt-6 border-t border-white/5 mt-4">
+              <div className="pt-6 border-t border-white/5 mt-4 space-y-3">
                 <button
                   type="button"
                   onClick={() => setView(AppView.LANDING)}
@@ -846,6 +868,13 @@ const App: React.FC = () => {
                 >
                   <Target size={18} className="group-hover:scale-110 transition-transform" />
                   VER PLAN DE INVERSIÓN 2026
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView(AppView.PUBLIC_WEB)}
+                  className="w-full py-2 text-white/20 hover:text-white/40 font-mono text-[8px] tracking-[0.3em] uppercase transition-all"
+                >
+                  ← VOLVER AL PORTAL PRINCIPAL
                 </button>
               </div>
             </motion.form>
@@ -861,14 +890,6 @@ const App: React.FC = () => {
     );
   }
 
-  // VISTA DE LANDING (PÚBLICA)
-  if (view === AppView.LANDING) {
-    return (
-      <TacticalAlertProvider>
-        <LandingInversion onBack={() => setView(AppView.HOME)} />
-      </TacticalAlertProvider>
-    );
-  }
 
   if (isLoggedIn && !currentUser) return <LoadingScreen message="INICIALIZANDO CONEXIÓN..." />;
 

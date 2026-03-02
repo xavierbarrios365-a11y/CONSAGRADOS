@@ -296,6 +296,26 @@ export const updateAgentAiProfileSupabase = async (agentId: string, stats: any, 
 };
 
 /**
+ * @description Actualiza SOLO las estadísticas tácticas (psicométricas) del agente en Supabase.
+ */
+export const updateAgentTacticalStatsSupabase = async (agentId: string, stats: any): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('agentes')
+            .update({
+                tactical_stats: stats,
+            })
+            .eq('id', agentId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ Error guardando stats tácticas en Supabase:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
  * @description Deduce un porcentaje de los puntos de un agente (ej. Sanción masiva)
  */
 export const deductPercentagePointsSupabase = async (agentId: string, percentage: number): Promise<{ success: boolean, error?: string }> => {

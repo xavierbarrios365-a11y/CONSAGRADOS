@@ -10,7 +10,7 @@ import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, fetchAgentProfileSupabase as fetchAgentProfile, getPromotionStatusSupabase, assignAgentToBibleWarGroup, generateAIProfileSupabase, fetchTaskRecruitsSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, fetchAgentProfileSupabase as fetchAgentProfile, getPromotionStatusSupabase, assignAgentToBibleWarGroup, generateAIProfileSupabase, fetchTaskRecruitsSupabase } from '../services/supabaseService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -55,6 +55,49 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', description: '' });
   const [adjustmentAmount, setAdjustmentAmount] = useState<number>(5);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [showPsychoEdit, setShowPsychoEdit] = useState(false);
+  const [tempPsychoStats, setTempPsychoStats] = useState({
+    liderazgo: 0,
+    servicio: 0,
+    analisis: 0,
+    potencial: 0,
+    adaptabilidad: 0
+  });
+
+  React.useEffect(() => {
+    const currentAgent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
+    if (currentAgent?.tacticalStats) {
+      setTempPsychoStats({
+        liderazgo: currentAgent.tacticalStats.liderazgo || 0,
+        servicio: currentAgent.tacticalStats.servicio || 0,
+        analisis: currentAgent.tacticalStats.analisis || 0,
+        potencial: currentAgent.tacticalStats.potencial || 0,
+        adaptabilidad: currentAgent.tacticalStats.adaptabilidad || 0
+      });
+    } else {
+      setTempPsychoStats({ liderazgo: 0, servicio: 0, analisis: 0, potencial: 0, adaptabilidad: 0 });
+    }
+  }, [selectedAgentId, showPsychoEdit, agents]);
+
+  const handleSavePsychoStats = async () => {
+    setIsUpdatingPoints(true);
+    try {
+      const res = await updateAgentTacticalStatsSupabase(selectedAgentId, tempPsychoStats);
+      if (res.success) {
+        showAlert({ title: "PERFIL ACTUALIZADO", message: "Estadísticas psicométricas guardadas.", type: 'SUCCESS' });
+        setShowPsychoEdit(false);
+        if (onUpdateNeeded) await onUpdateNeeded();
+      } else {
+        showAlert({ title: "ERROR TÁCTICO", message: "Error al actualizar estadísticas.", type: 'ERROR' });
+      }
+    } catch (e) {
+      console.error(e);
+      showAlert({ title: "ERROR TÁCTICO", message: "Fallo de conexión.", type: 'ERROR' });
+    } finally {
+      setIsUpdatingPoints(false);
+    }
+  };
 
   React.useEffect(() => {
     const loadPromoData = async () => {
@@ -1135,14 +1178,63 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
               {/* RADAR TÁCTICO IN-CENTER */}
               <div className="mt-4 p-4 bg-gradient-to-b from-white/5 to-transparent rounded-[2rem] border border-white/5 w-full flex flex-col items-center">
-                <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] mb-4 font-bebas">Análisis Psicométrico Directivo</p>
-                {agent.tacticalStats ? (
-                  <TacticalRadar stats={agent.tacticalStats} size={180} />
-                ) : (
-                  <div className="py-10 text-center opacity-30">
-                    <Sparkles size={32} className="mx-auto mb-2" />
-                    <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA</p>
+                <div className="w-full flex justify-between items-center mb-4 px-2">
+                  <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas">Análisis Psicométrico Directivo</p>
+                  {(currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER) && (
+                    <button
+                      onClick={() => setShowPsychoEdit(!showPsychoEdit)}
+                      className={`p-1.5 rounded-lg transition-colors ${showPsychoEdit ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/10 text-[#ffb700] hover:bg-white/20'}`}
+                    >
+                      <Settings size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {showPsychoEdit ? (
+                  <div className="w-full space-y-3 bg-[#001f3f]/50 p-4 rounded-xl border border-[#ffb700]/30 shadow-inner">
+                    {['liderazgo', 'servicio', 'analisis', 'potencial', 'adaptabilidad'].map((trait) => (
+                      <div key={trait} className="flex flex-col gap-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-white/70">{trait}</span>
+                          <span className="text-[10px] font-black text-[#ffb700]">{tempPsychoStats[trait as keyof typeof tempPsychoStats]} / 100</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setTempPsychoStats(prev => ({ ...prev, [trait]: Math.max(0, prev[trait as keyof typeof tempPsychoStats] - 5) }))}
+                            className="p-1.5 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30"
+                          ><Minus size={12} /></button>
+                          <input
+                            type="range"
+                            min="0" max="100" step="5"
+                            value={tempPsychoStats[trait as keyof typeof tempPsychoStats]}
+                            onChange={(e) => setTempPsychoStats(prev => ({ ...prev, [trait]: parseInt(e.target.value) }))}
+                            className="flex-1 accent-[#ffb700]"
+                          />
+                          <button
+                            onClick={() => setTempPsychoStats(prev => ({ ...prev, [trait]: Math.min(100, prev[trait as keyof typeof tempPsychoStats] + 5) }))}
+                            className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-md hover:bg-emerald-500/30"
+                          ><Plus size={12} /></button>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      onClick={handleSavePsychoStats}
+                      disabled={isUpdatingPoints}
+                      className="w-full mt-4 py-2 bg-[#ffb700] text-[#001f3f] font-black text-[10px] uppercase tracking-widest rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 font-bebas"
+                    >
+                      {isUpdatingPoints ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                      GUARDAR PERFIL
+                    </button>
                   </div>
+                ) : (
+                  agent.tacticalStats ? (
+                    <TacticalRadar stats={agent.tacticalStats} size={180} />
+                  ) : (
+                    <div className="py-10 text-center opacity-30">
+                      <Sparkles size={32} className="mx-auto mb-2" />
+                      <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA o Ingreso Manual</p>
+                    </div>
+                  )
                 )}
               </div>
             </div>

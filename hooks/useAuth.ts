@@ -189,21 +189,35 @@ export function useAuth() {
     // --- Biometric login ---
     const handleBiometricLogin = useCallback(async (overrideId?: string) => {
         const effectiveId = overrideId || loginId;
-        if (!effectiveId) {
-            setLoginError({ field: 'id', message: 'INGRESA TU ID PRIMERO' });
-            return;
-        }
         const agents = agentsRef.current;
-        const user = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
-        if (!user || !user.biometricCredential) {
-            setLoginError({ field: 'biometric', message: 'BIOMETRÍA NO ENCONTRADA PARA ESTE ID. INGRESA CON PIN Y REGÍSTRALA EN TU PERFIL.' });
-            return;
+        let userToLogin = null;
+
+        if (effectiveId) {
+            userToLogin = agents.find(a => String(a.id).replace(/[^0-9]/g, '') === effectiveId.replace(/[^0-9]/g, ''));
+            if (!userToLogin || !userToLogin.biometricCredential) {
+                setLoginError({ field: 'biometric', message: 'BIOMETRÍA NO ENCONTRADA PARA ESTE ID. INGRESA CON PIN Y REGÍSTRALA EN TU PERFIL.' });
+                return;
+            }
         }
 
         setIsAuthenticatingBio(true);
         try {
-            const success = await authenticateBiometric(user.biometricCredential);
-            if (success) {
+            // Autenticación Biométrica (Si userToLogin no está, se lanza descubrimiento de credenciales)
+            const authResult = await authenticateBiometric(userToLogin?.biometricCredential);
+
+            if (authResult.success) {
+                if (!userToLogin && authResult.userId) {
+                    // Buscar usuario basado en el ID retornado por el Passkey
+                    userToLogin = agents.find(a => String(a.id).toUpperCase() === authResult.userId!.toUpperCase());
+                }
+
+                if (!userToLogin) {
+                    setLoginError({ field: 'biometric', message: 'HUELLA VÁLIDA PERO USUARIO NO RECONOCIDO.' });
+                    return;
+                }
+
+                const user = userToLogin;
+
                 sessionStorage.setItem('consagrados_session', JSON.stringify(user));
                 localStorage.setItem('last_login_id', user.id);
                 const now = Date.now();

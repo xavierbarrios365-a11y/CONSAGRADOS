@@ -278,6 +278,17 @@ export const generateTacticalProfile = async (agent: Agent, academyProgress: any
 
     if (!resultJson) throw new Error("ERROR DE PARSE EN REPORTE TÁCTICO.");
 
+    // COMPLEMENTAR CON STATS MANUALES EXISTENTES
+    if (agent.tacticalStats) {
+      resultJson.stats = {
+        liderazgo: Math.round(((agent.tacticalStats.liderazgo || 0) + (resultJson.stats.liderazgo || 0)) / (agent.tacticalStats.liderazgo ? 2 : 1)),
+        servicio: Math.round(((agent.tacticalStats.servicio || 0) + (resultJson.stats.servicio || 0)) / (agent.tacticalStats.servicio ? 2 : 1)),
+        analisis: Math.round(((agent.tacticalStats.analisis || 0) + (resultJson.stats.analisis || 0)) / (agent.tacticalStats.analisis ? 2 : 1)),
+        potencial: Math.round(((agent.tacticalStats.potencial || 0) + (resultJson.stats.potencial || 0)) / (agent.tacticalStats.potencial ? 2 : 1)),
+        adaptabilidad: Math.round(((agent.tacticalStats.adaptabilidad || 0) + (resultJson.stats.adaptabilidad || 0)) / (agent.tacticalStats.adaptabilidad ? 2 : 1))
+      };
+    }
+
     saveToCache(cacheKey, resultJson);
     return resultJson;
   } catch (error: any) {

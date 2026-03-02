@@ -101,40 +101,55 @@ export const registerBiometric = async (
     return null;
 };
 
-export const authenticateBiometric = async (storedCredentialIdsRaw: string): Promise<boolean> => {
+export const authenticateBiometric = async (storedCredentialIdsRaw?: string | null): Promise<{ success: boolean, userId?: string }> => {
     try {
-        let credentialIds: string[] = [];
-        try {
-            credentialIds = JSON.parse(storedCredentialIdsRaw);
-            if (!Array.isArray(credentialIds)) credentialIds = [storedCredentialIdsRaw];
-        } catch {
-            credentialIds = [storedCredentialIdsRaw];
-        }
-
-        const allowCredentials = credentialIds.filter(id => id && id.trim() !== '').map(id => ({
-            id: base64ToUint8Array(id),
-            type: 'public-key',
-        }));
-
-        if (allowCredentials.length === 0) {
-            throw new Error("NO HAY CREDENCIALES VÁLIDAS.");
-        }
-
         const challenge = new Uint8Array(32);
         window.crypto.getRandomValues(challenge);
 
         const publicKeyCredentialRequestOptions: any = {
             challenge: challenge,
-            allowCredentials: allowCredentials,
             userVerification: "required",
             timeout: 60000,
         };
 
+        if (storedCredentialIdsRaw) {
+            let credentialIds: string[] = [];
+            try {
+                credentialIds = JSON.parse(storedCredentialIdsRaw);
+                if (!Array.isArray(credentialIds)) credentialIds = [storedCredentialIdsRaw];
+            } catch {
+                credentialIds = [storedCredentialIdsRaw];
+            }
+
+            const allowCredentials = credentialIds.filter(id => id && id.trim() !== '').map(id => ({
+                id: base64ToUint8Array(id),
+                type: 'public-key',
+            }));
+
+            if (allowCredentials.length > 0) {
+                publicKeyCredentialRequestOptions.allowCredentials = allowCredentials;
+            }
+        }
+
         const assertion = await navigator.credentials.get({
             publicKey: publicKeyCredentialRequestOptions,
-        });
+        }) as PublicKeyCredential;
 
-        return !!assertion;
+        if (!assertion) return { success: false };
+
+        let returnedUserId: string | undefined = undefined;
+        try {
+            const response = assertion.response as AuthenticatorAssertionResponse;
+            if (response.userHandle) {
+                // El userId lo guardamos con charCodeAt(0) en Uint8Array
+                const handleArr = new Uint8Array(response.userHandle);
+                returnedUserId = Array.from(handleArr).map(c => String.fromCharCode(c)).join('');
+            }
+        } catch (e) {
+            console.error("No se pudo extraer el userId del response", e);
+        }
+
+        return { success: true, userId: returnedUserId };
     } catch (error: any) {
         console.error("Error al autenticar biometría:", error);
         if (error.name === 'NotAllowedError') {

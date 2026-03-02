@@ -5,11 +5,11 @@ import {
     updateAgentPointsSupabase,
     updateAgentStreaksSupabase,
     confirmEventAttendanceSupabase as confirmEventAttendanceService,
-    fetchAcademyDataSupabase
+    fetchAcademyDataSupabase,
+    updateAgentAiProfileSupabase
 } from '../services/supabaseService';
 
 import {
-    updateAgentAiProfile,
     updateAgentAiPendingStatus,
     fetchDailyVerse,
     confirmDirectorAttendance
@@ -94,7 +94,7 @@ export const useTacticalLogic = (
             const { progress } = await fetchAcademyDataSupabase(currentUser.id);
             const result = await generateTacticalProfile(currentUser, progress, testAnswers);
             if (result) {
-                await updateAgentAiProfile(currentUser.id, result.stats, result.summary);
+                await updateAgentAiProfileSupabase(currentUser.id, result.stats, result.summary);
                 await updateAgentAiPendingStatus(currentUser.id, false);
                 if (awardedXp > 0 && currentUser.isAiProfilePending) {
                     await updateAgentPointsSupabase(currentUser.id, "XP", awardedXp);

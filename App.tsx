@@ -158,7 +158,8 @@ const App: React.FC = () => {
     userConfirmations, setUserConfirmations,
   } = dataSync;
 
-  // --- AUTOMATIC ABSENCE PENALTIES (RUNS ONCE PER SESSION FOR LEADERS) ---
+  /* 
+  // --- AUTOMATIC ABSENCE PENALTIES (DISABLED TEMPORARILY DUE TO MASSIVE XP DEDUCTION BUG) ---
   useEffect(() => {
     if (isLoggedIn && (currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER)) {
       applyAbsencePenaltiesSupabase().then(res => {
@@ -168,6 +169,7 @@ const App: React.FC = () => {
       }).catch(console.error);
     }
   }, [isLoggedIn, currentUser]);
+  */
 
   const { notificationPermission, setNotificationPermission, initFirebaseMessaging } = firebase;
 

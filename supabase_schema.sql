@@ -146,6 +146,9 @@ CREATE TABLE IF NOT EXISTS public.asistencia_visitas (
     agent_name TEXT NOT NULL,
     tipo TEXT NOT NULL,
     detalle TEXT,
+    referido_por_id TEXT,
+    referido_por_nombre TEXT,
+    xp_ganada INTEGER DEFAULT 0,
     registrado_en TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -158,8 +161,15 @@ CREATE POLICY "Update API anon asistencia" ON public.asistencia_visitas FOR UPDA
 
 
 -- ==========================================
--- ESTRUCTURAS DE FASE 3.5 (Nuevos Módulos)
+-- ESTRUCTURAS DE FASE 3.5 (Nuevos Módulos) y 4.0 (Visitantes)
 -- ==========================================
+
+-- Si la tabla asistencia_visitas ya existe, añade las columnas:
+/*
+ALTER TABLE public.asistencia_visitas ADD COLUMN IF NOT EXISTS referido_por_id TEXT;
+ALTER TABLE public.asistencia_visitas ADD COLUMN IF NOT EXISTS referido_por_nombre TEXT;
+ALTER TABLE public.asistencia_visitas ADD COLUMN IF NOT EXISTS xp_ganada INTEGER DEFAULT 0;
+*/
 
 -- 6. TABLA: versiculos_diarios
 CREATE TABLE IF NOT EXISTS public.versiculos_diarios (

@@ -53,7 +53,6 @@ import {
   updateAgentAiProfile,
   resetStudentAttempts,
   fetchDailyVerse,
-  registerBiometrics,
   verifyBiometrics,
   updateAgentAiPendingStatus,
   deleteAgent as deleteAgentService,
@@ -74,7 +73,8 @@ import {
   getSecurityQuestionSupabase as getSecurityQuestion,
   resetPasswordWithAnswerSupabase as resetPasswordWithAnswer,
   updateAgentPinSupabase as updateAgentPin,
-  fetchNotificationsSupabase
+  fetchNotificationsSupabase,
+  updateBiometricSupabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -140,6 +140,7 @@ const App: React.FC = () => {
     setCurrentUser, setIsLoggedIn, setShowSessionWarning, setShowQuickLogin,
     handleLogin, handleBiometricLogin, handleLogout, handleHardReset,
     resetSessionTimer, refreshCurrentUser,
+    handleForgotPasswordCheck, handleForgotPasswordAnswer,
   } = auth;
 
   const {
@@ -519,7 +520,7 @@ const App: React.FC = () => {
           biometricAvailable={biometricAvailable}
           isRegisteringBio={isRegisteringBio}
           registerBiometric={registerBiometric}
-          registerBiometrics={registerBiometrics}
+          registerBiometrics={updateBiometricSupabase}
           handleLogout={handleLogout}
           showAlert={showAlert}
           syncData={syncData}

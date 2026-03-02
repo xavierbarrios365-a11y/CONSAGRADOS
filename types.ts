@@ -98,6 +98,9 @@ export interface Visitor {
   visits?: number;
   absences?: number;
   status: string;
+  xp?: number;
+  referredBy?: string;
+  referrerName?: string;
 }
 
 export interface Course {

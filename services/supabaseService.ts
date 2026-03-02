@@ -196,6 +196,25 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
 };
 
 /**
+ * @description Actualiza el string de credencial biométrica en Supabase.
+ */
+export const updateBiometricSupabase = async (agentId: string, credentialString: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('agentes')
+            .update({ biometric_credential: credentialString })
+            .eq('id', agentId);
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ Error actualizando biometría en Supabase:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
  * @description Actualiza la racha de un agente en Supabase
  */
 export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
@@ -1156,20 +1175,57 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
 /**
  * @description Registra un nuevo visitante en la base de datos de Supabase.
  */
-export const registerVisitorSupabase = async (visitorId: string, visitorName: string, reporterName?: string): Promise<{ success: boolean, error?: string }> => {
+export const registerVisitorSupabase = async (visitorId: string, visitorName: string, reporterName?: string, referrerId?: string, referrerName?: string): Promise<{ success: boolean, error?: string }> => {
     try {
-        const id = `VISIT - ${new Date().getTime()}`;
+        const id = `VISIT-${new Date().getTime()}`;
 
         const { error } = await supabase.from('asistencia_visitas').insert({
             id,
             agent_id: visitorId,
             agent_name: visitorName,
             tipo: 'VISITANTE',
-            detalle: `Ingreso de invitado.Pasa por: ${reporterName || 'Sistema'}`,
+            detalle: `Ingreso de invitado. Procesado por: ${reporterName || 'Sistema'}. Referido por: ${referrerName || 'Nadie'}`,
+            referido_por_id: referrerId || null,
+            referido_por_nombre: referrerName || null,
+            xp_ganada: 0,
             registrado_en: new Date().toISOString()
         });
         if (error) throw error;
 
+        // If referred by someone, award Reclutador badge and points
+        if (referrerId) {
+            await supabase.from('insignias_otorgadas').insert({
+                agent_id: referrerId,
+                badge_type: 'RECLUTADOR',
+                label: `Trajo a ${visitorName}`,
+                otorgada_en: new Date().toISOString()
+            });
+            await updateAgentPointsSupabase(referrerId, 'XP', 25);
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * @description Agrega puntos de experiencia a un visitante, guardándolo en la tabla de asistencia como evento temporal.
+ */
+export const addVisitorXPSupabase = async (visitorId: string, visitorName: string, xp: number, reason: string): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const id = `VISIT-XP-${new Date().getTime()}`;
+
+        const { error } = await supabase.from('asistencia_visitas').insert({
+            id,
+            agent_id: visitorId,
+            agent_name: visitorName,
+            tipo: 'RECOMPENSA_VISITA',
+            detalle: reason,
+            xp_ganada: xp,
+            registrado_en: new Date().toISOString()
+        });
+        if (error) throw error;
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -1183,31 +1239,45 @@ export const fetchVisitorRadarSupabase = async (): Promise<any[]> => {
     try {
         const { data, error } = await supabase
             .from('asistencia_visitas')
-            .select('agent_id, agent_name')
-            .eq('tipo', 'VISITANTE')
+            .select('agent_id, agent_name, tipo, xp_ganada, referido_por_id, referido_por_nombre')
+            .in('tipo', ['VISITANTE', 'RECOMPENSA_VISITA'])
             .order('registrado_en', { ascending: false });
 
         if (error) throw error;
 
-        // Agrupar por ID para contar visitas
-        const visitorMap = new Map<string, { id: string, name: string, visits: number, status: string }>();
+        // Agrupar por ID para contar visitas y sumar XP
+        const visitorMap = new Map<string, { id: string, name: string, visits: number, status: string, xp: number, referredBy?: string, referrerName?: string }>();
 
         if (data) {
             data.forEach((v: any) => {
-                if (visitorMap.has(v.agent_id)) {
-                    visitorMap.get(v.agent_id)!.visits += 1;
-                } else {
+                if (!visitorMap.has(v.agent_id)) {
                     visitorMap.set(v.agent_id, {
                         id: v.agent_id,
                         name: v.agent_name,
-                        visits: 1,
-                        status: 'NUEVO'
+                        visits: 0,
+                        status: 'NUEVO',
+                        xp: 0,
+                        referredBy: v.referido_por_id,
+                        referrerName: v.referido_por_nombre
                     });
+                }
+
+                const record = visitorMap.get(v.agent_id)!;
+                if (v.tipo === 'VISITANTE') {
+                    record.visits += 1;
+                    if (v.referido_por_id && !record.referredBy) {
+                        record.referredBy = v.referido_por_id;
+                        record.referrerName = v.referido_por_nombre;
+                    }
+                }
+
+                if (v.xp_ganada) {
+                    record.xp += v.xp_ganada;
                 }
             });
         }
 
-        // Determinar status (ACTIVO > 5 visitas, RECURRENTE > 2, NUEVO = 1 o 2)
+        // Determinar status
         const visitors = Array.from(visitorMap.values()).map(v => {
             if (v.visits > 5) v.status = 'ACTIVO';
             else if (v.visits > 2) v.status = 'RECURRENTE';

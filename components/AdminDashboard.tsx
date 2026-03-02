@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Agent, UserRole } from '../types';
 import { supabase } from '../services/supabaseClient';
-import { fetchAgentsFromSheets, fetchDailyVerse, fetchNotifications, fetchBadges, fetchNewsFeed, fetchAcademyData } from '../services/sheetsService';
+import { fetchAgentsFromSheets, fetchDailyVerse, fetchNotifications, fetchNewsFeed, fetchAcademyData } from '../services/sheetsService';
 import { fetchTasksSupabase as fetchTasks, fetchActiveEventsSupabase as fetchActiveEvents, fetchTaskRecruitsSupabase as fetchTaskRecruits } from '../services/supabaseService';
-import { syncAllAgentsToSupabase, syncAcademyToSupabase, syncDailyVersesToSupabase, syncTasksToSupabase, syncAllHistoriesToSupabase } from '../services/supabaseService';
+import { syncAllAgentsToSupabase, syncAcademyToSupabase, syncDailyVersesToSupabase, syncTasksToSupabase, syncAllHistoriesToSupabase, computeBadgesSupabase } from '../services/supabaseService';
 import { Search, Save, X, RefreshCw, ShieldAlert, AlertTriangle, ShieldCheck, DatabaseBackup, BookOpen, Clock, Users } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -162,7 +162,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
             const [events, notifications, badges, news, taskProgress] = await Promise.all([
                 fetchActiveEvents(),
                 fetchNotifications(),
-                fetchBadges(),
+                computeBadgesSupabase(),
                 fetchNewsFeed(),
                 fetchTaskRecruits()
             ]);

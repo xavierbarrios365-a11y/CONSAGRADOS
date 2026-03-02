@@ -492,12 +492,7 @@ export const removeRecruitFromTask = async (taskId: string, agentId: string) => 
   return postToAction('remove_recruit_from_task', { taskId, agentId });
 };
 
-export const fetchBadges = async () => {
-  try {
-    const res = await postToAction('get_badges', {});
-    return res.success ? res.badges : [];
-  } catch (error: any) { return []; }
-};
+
 
 export const reconcileXP = async () => {
   try { return await postToAction('reconcile_xp', {}); }

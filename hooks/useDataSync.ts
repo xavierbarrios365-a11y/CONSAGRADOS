@@ -2,15 +2,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
 import { INITIAL_AGENTS } from '../mockData';
 import {
-    fetchNotifications,
-    fetchBadges
+    fetchNotifications
 } from '../services/sheetsService';
 import {
     fetchAgentsFromSupabase,
     fetchVisitorRadarSupabase as fetchVisitorRadar,
     fetchActiveEventsSupabase as fetchActiveEvents,
     fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations,
-    checkAndPublishBirthdays
+    checkAndPublishBirthdays,
+    computeBadgesSupabase
 } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
@@ -56,7 +56,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const events = await fetchActiveEvents();
             setActiveEvents(events || []);
 
-            const badgeData = await fetchBadges();
+            const badgeData = await computeBadgesSupabase();
             setBadges(badgeData || []);
 
             if (currentUser) {
@@ -117,7 +117,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
 
             // 3. Badges
-            const badgeData = await fetchBadges() || [];
+            const badgeData = await computeBadgesSupabase() || [];
             const badgeHeadlines = badgeData.slice(0, 5).map(b => `🎖️ LOGRO: ${b.agentName} ganó ${b.label} (${b.value})`);
 
             // Combine

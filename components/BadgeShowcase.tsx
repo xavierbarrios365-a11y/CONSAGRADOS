@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Target, Flame, Swords, GraduationCap, Medal, Sparkles } from 'lucide-react';
 import { Badge } from '../types';
-import { fetchBadges } from '../services/sheetsService';
+import { computeBadgesSupabase } from '../services/supabaseService';
 
 interface BadgeShowcaseProps {
     currentAgentId?: string;
@@ -52,7 +52,7 @@ const BadgeShowcase: React.FC<BadgeShowcaseProps> = ({ currentAgentId, currentAg
         const load = async () => {
             setLoading(true);
             try {
-                const data = await fetchBadges();
+                const data = await computeBadgesSupabase();
                 setBadges(data || []);
             } catch (e) { console.error(e); }
             setLoading(false);

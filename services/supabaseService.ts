@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { Agent } from '../types';
+import { Agent, Badge } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 
 /**
@@ -117,7 +117,7 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
             baptismStatus: d.baptism_status || 'NO',
             status: d.status || 'ACTIVO',
             userRole: String(d.nombre).toUpperCase().includes('SAHEL') ? 'DIRECTOR' : (d.user_role || (d.cargo === 'DIRECTOR' ? 'DIRECTOR' : d.cargo === 'LÍDER' ? 'LEADER' : 'STUDENT')),
-            idSignature: `V37-SIG-${d.id}`,
+            idSignature: `V37 - SIG - ${d.id} `,
             joinedDate: d.joined_date || '',
             birthday: d.birthday || '',
             relationshipWithGod: d.relationship_with_god || 'PENDIENTE',
@@ -231,12 +231,12 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
         try {
             let detalle = `Ha alcanzado una racha de ${newStreak} días consecutivos.`;
             if (verseText) {
-                detalle += ` [VERSE]: ${verseText}`;
-                if (verseRef) detalle += ` [REF]: ${verseRef}`;
+                detalle += ` [VERSE]: ${verseText} `;
+                if (verseRef) detalle += ` [REF]: ${verseRef} `;
             }
 
             await supabase.from('asistencia_visitas').insert({
-                id: `NEWS-${Date.now()}`,
+                id: `NEWS - ${Date.now()} `,
                 agent_id: agentId,
                 agent_name: agentName || 'Agente',
                 tipo: 'RACHA',
@@ -378,7 +378,7 @@ export const applyAbsencePenaltiesSupabase = async (): Promise<{ success: boolea
             .from('asistencia_visitas')
             .select('id')
             .eq('tipo', 'SANCION_AUTOMATICA')
-            .like('detalle', `%${lastAttendanceDay}%`)
+            .like('detalle', `% ${lastAttendanceDay}% `)
             .limit(1);
 
         if (penaltyCheck && penaltyCheck.length > 0) {
@@ -407,7 +407,7 @@ export const applyAbsencePenaltiesSupabase = async (): Promise<{ success: boolea
         if (agentsToPenalize.length === 0) {
             // Registrar que se evaluó para evitar recalcular
             await supabase.from('asistencia_visitas').insert({
-                id: `PEN-${Date.now()}`,
+                id: `PEN - ${Date.now()} `,
                 agent_id: 'SISTEMA',
                 tipo: 'SANCION_AUTOMATICA',
                 detalle: `Evaluación de inasistencia para ${lastAttendanceDay}: 0 agentes sancionados.`,
@@ -440,10 +440,10 @@ export const applyAbsencePenaltiesSupabase = async (): Promise<{ success: boolea
 
         // 5. Registrar ejecución de sanción global
         await supabase.from('asistencia_visitas').insert({
-            id: `PEN-${Date.now()}`,
+            id: `PEN - ${Date.now()} `,
             agent_id: 'SISTEMA',
             tipo: 'SANCION_AUTOMATICA',
-            detalle: `Evaluación de inasistencia para ${lastAttendanceDay}: ${count} agentes sancionados con -10 XP (base).`,
+            detalle: `Evaluación de inasistencia para ${lastAttendanceDay}: ${count} agentes sancionados con - 10 XP(base).`,
             registrado_en: now.toISOString()
         });
 
@@ -536,7 +536,7 @@ export const deleteEventSupabase = async (eventId: string): Promise<{ success: b
  */
 export const confirmEventAttendanceSupabase = async (data: { agentId: string; agentName: string; eventId: string; eventTitle: string }): Promise<{ success: boolean, error?: string }> => {
     try {
-        const id = `EVT-${new Date().getTime()}`;
+        const id = `EVT - ${new Date().getTime()} `;
 
         // 1. Verificar duplicados
         const { data: duplicates } = await supabase
@@ -544,7 +544,7 @@ export const confirmEventAttendanceSupabase = async (data: { agentId: string; ag
             .select('id')
             .eq('agent_id', data.agentId)
             .eq('tipo', 'EVENTO_CONFIRMADO')
-            .like('detalle', `%${data.eventTitle}%`);
+            .like('detalle', `% ${data.eventTitle}% `);
 
         if (duplicates && duplicates.length > 0) {
             return { success: false, error: "Ya estás confirmado para este evento." };
@@ -556,7 +556,7 @@ export const confirmEventAttendanceSupabase = async (data: { agentId: string; ag
             agent_id: data.agentId,
             agent_name: data.agentName,
             tipo: 'EVENTO_CONFIRMADO',
-            detalle: `Confirmación para evento: ${data.eventTitle}`,
+            detalle: `Confirmación para evento: ${data.eventTitle} `,
             registrado_en: new Date().toISOString()
         });
 
@@ -774,7 +774,7 @@ export const syncAcademyToSupabase = async (academyData: { courses: any[], lesso
             }, { onConflict: 'id' });
 
             if (error) {
-                console.error(`❌ Fallo sincronizando curso ${course.id}:`, error.message);
+                console.error(`❌ Fallo sincronizando curso ${course.id}: `, error.message);
                 failuresCount++;
             }
         }
@@ -792,7 +792,7 @@ export const syncAcademyToSupabase = async (academyData: { courses: any[], lesso
             }, { onConflict: 'id' });
 
             if (error) {
-                console.error(`❌ Fallo sincronizando lección ${lesson.id}:`, error.message);
+                console.error(`❌ Fallo sincronizando lección ${lesson.id}: `, error.message);
                 failuresCount++;
             }
         }
@@ -847,7 +847,7 @@ export const syncTasksToSupabase = async (tasks: any[]) => {
             }, { onConflict: 'id' });
 
             if (error) {
-                console.error(`❌ Fallo sincronizando tarea ${task.id}:`, error.message);
+                console.error(`❌ Fallo sincronizando tarea ${task.id}: `, error.message);
                 failuresCount++;
             }
         }
@@ -974,7 +974,7 @@ export const updateAgentPhotoSupabase = async (agentId: string, photoUrl: string
 
 export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean; newId?: string; newPin?: string; error?: string }> => {
     try {
-        const newId = `CON-${Math.floor(1000 + Math.random() * 9000)}`;
+        const newId = `CON - ${Math.floor(1000 + Math.random() * 9000)} `;
         const newPin = Math.floor(1000 + Math.random() * 9000).toString();
 
         const record = {
@@ -1112,7 +1112,7 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
         const { error: insertError } = await supabase
             .from('asistencia_visitas')
             .insert({
-                id: `TX-${Date.now()}`,
+                id: `TX - ${Date.now()} `,
                 agent_id: agentId,
                 agent_name: agentName,
                 tipo: tipo,
@@ -1126,7 +1126,7 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
         if (tipo === 'ASISTENCIA') {
             try {
                 await supabase.from('asistencia_visitas').insert({
-                    id: `NEWS-${Date.now()}`,
+                    id: `NEWS - ${Date.now()} `,
                     agent_id: agentId,
                     agent_name: agentName,
                     tipo: 'DESPLIEGUE',
@@ -1139,7 +1139,7 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
 
             // 7. Enviar notificaciones de Telegram y Push
             try {
-                await sendTelegramAlert(`✅ <b>NUEVA ASISTENCIA</b>\n\nAgente: <b>${agentName}</b> [<code>${agentId}</code>]\nBono Evento: <b>${eventMultiplier}x</b>\nReportadx por: ${reporterName || 'SISTEMA'}`);
+                await sendTelegramAlert(`✅ <b>NUEVA ASISTENCIA < /b>\n\nAgente: <b>${agentName}</b > [<code>${agentId} < /code>]\nBono Evento: <b>${eventMultiplier}x</b >\nReportadx por: ${reporterName || 'SISTEMA'}`);
                 await sendPushBroadcast(`REGISTRO TÁCTICO`, `El agente ${agentName} se ha reportado en el centro de operaciones.`);
             } catch (err) {
                 console.error("Fallo al enviar notificación de asistencia:", err);
@@ -1158,14 +1158,14 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
  */
 export const registerVisitorSupabase = async (visitorId: string, visitorName: string, reporterName?: string): Promise<{ success: boolean, error?: string }> => {
     try {
-        const id = `VISIT-${new Date().getTime()}`;
+        const id = `VISIT - ${new Date().getTime()}`;
 
         const { error } = await supabase.from('asistencia_visitas').insert({
             id,
             agent_id: visitorId,
             agent_name: visitorName,
             tipo: 'VISITANTE',
-            detalle: `Ingreso de invitado. Pasa por: ${reporterName || 'Sistema'}`,
+            detalle: `Ingreso de invitado.Pasa por: ${reporterName || 'Sistema'}`,
             registrado_en: new Date().toISOString()
         });
         if (error) throw error;
@@ -1963,5 +1963,185 @@ export const importBibleWarQuestions = async (questions: any[]): Promise<{ succe
     } catch (e: any) {
         console.error('❌ Error importando preguntas de Bible War:', e.message);
         return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Calcula insignias/badges basadas en rendimiento real de los agentes en Supabase.
+ * Insignias: CONSAGRADO_MES, RECLUTADOR, STREAKER, MISIONERO_ELITE, ACADEMICO
+ */
+export const computeBadgesSupabase = async (): Promise<Badge[]> => {
+    try {
+        const badges: Badge[] = [];
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const startOfMonth = new Date(currentYear, currentMonth, 1).toISOString();
+        const endOfMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
+
+        // 1. OBTENER ESTUDIANTES ACTIVOS Y REFERIDOS
+        const { data: allAgents, error: agentsErr } = await supabase
+            .from('agentes')
+            .select('id, nombre, rango, cargo, user_role, referido_por, joined_date, streak_count');
+
+        if (agentsErr || !allAgents) return [];
+
+        const isLeader = (a: any) => {
+            const rank = String(a.rango || '').toUpperCase();
+            const roleStr = String(a.user_role || a.cargo || '').toUpperCase();
+            return rank.includes('DIRECTOR') || rank.includes('LÍDER') || roleStr.includes('DIRECTOR') || roleStr.includes('ADMIN') || roleStr.includes('SUPERVISOR') || roleStr.includes('LEADER');
+        };
+
+        const students = allAgents.filter(a => !isLeader(a));
+
+        // --- RECLUTADOR DEL MES ---
+        const refCounts: Record<string, number> = {};
+        for (const a of allAgents) {
+            const ref = String(a.referido_por || '').trim();
+            if (!ref) continue;
+
+            const joinDateStr = a.joined_date;
+            if (joinDateStr && joinDateStr !== 'N/A') {
+                const joinDate = new Date(joinDateStr);
+                if (!isNaN(joinDate.getTime()) && joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear) {
+                    refCounts[ref] = (refCounts[ref] || 0) + 1;
+                }
+            }
+        }
+
+        // También ver visitantes que fueron referidos
+        const { data: visitantes } = await supabase
+            .from('asistencia_visitas')
+            .select('referido_por, registrado_en')
+            .neq('referido_por', '')
+            .neq('referido_por', null)
+            .gte('registrado_en', startOfMonth)
+            .lte('registrado_en', endOfMonth);
+
+        if (visitantes) {
+            for (const v of visitantes) {
+                const ref = String(v.referido_por || '').trim();
+                // Avoid self-references or empty
+                if (ref) {
+                    refCounts[ref] = (refCounts[ref] || 0) + 1;
+                }
+            }
+        }
+
+        let topRefName: string | null = null;
+        let topRefCount = 0;
+        for (const name in refCounts) {
+            if (refCounts[name] > topRefCount) {
+                topRefName = name;
+                topRefCount = refCounts[name];
+            }
+        }
+        if (topRefName && topRefCount > 0) {
+            badges.push({ type: 'RECLUTADOR', emoji: '🎯', label: 'Reclutador del Mes', agentName: topRefName, value: topRefCount });
+        }
+
+        // --- STREAKER ---
+        let topStreaker: any = null;
+        let topStreak = 0;
+        for (const s of students) {
+            const streak = parseInt(s.streak_count) || 0;
+            if (streak > topStreak) {
+                topStreak = streak;
+                topStreaker = s;
+            }
+        }
+        if (topStreaker && topStreak > 0) {
+            badges.push({ type: 'STREAKER', emoji: '🔥', label: 'Streaker', agentId: topStreaker.id, agentName: topStreaker.nombre, value: topStreak });
+        }
+
+        // --- MISIONERO ELITE ---
+        const { data: misiones } = await supabase
+            .from('progreso_tareas')
+            .select('agent_id, status, completed_at')
+            .eq('status', 'VERIFICADO')
+            .gte('completed_at', startOfMonth)
+            .lte('completed_at', endOfMonth);
+
+        if (misiones && misiones.length > 0) {
+            const missionCounts: Record<string, number> = {};
+            for (const m of misiones) {
+                const agId = String(m.agent_id).trim().toUpperCase();
+                missionCounts[agId] = (missionCounts[agId] || 0) + 1;
+            }
+
+            let topMissioner: any = null;
+            let topMissions = 0;
+            for (const s of students) {
+                const count = missionCounts[String(s.id).toUpperCase()] || 0;
+                if (count > topMissions) {
+                    topMissions = count;
+                    topMissioner = s;
+                }
+            }
+            if (topMissioner && topMissions > 0) {
+                badges.push({ type: 'MISIONERO_ELITE', emoji: '⚔️', label: 'Misionero Elite', agentId: topMissioner.id, agentName: topMissioner.nombre, value: topMissions });
+            }
+        }
+
+        // --- ACADEMICO ---
+        const { data: acadProgress } = await supabase
+            .from('academy_progress')
+            .select('agent_id, status')
+            .eq('status', 'COMPLETADO');
+
+        if (acadProgress && acadProgress.length > 0) {
+            const acadCounts: Record<string, number> = {};
+            for (const p of acadProgress) {
+                const agId = String(p.agent_id).trim().toUpperCase();
+                acadCounts[agId] = (acadCounts[agId] || 0) + 1;
+            }
+
+            let topAcad: any = null;
+            let topAcadCount = 0;
+            for (const s of students) {
+                const count = acadCounts[String(s.id).toUpperCase()] || 0;
+                if (count > topAcadCount) {
+                    topAcadCount = count;
+                    topAcad = s;
+                }
+            }
+            if (topAcad && topAcadCount > 0) {
+                badges.push({ type: 'ACADEMICO', emoji: '📚', label: 'Académico', agentId: topAcad.id, agentName: topAcad.nombre, value: topAcadCount });
+            }
+        }
+
+        // --- CONSAGRADO DEL MES ---
+        const { data: asistencias } = await supabase
+            .from('asistencia_visitas')
+            .select('agent_id')
+            .eq('tipo', 'ASISTENCIA')
+            .gte('registrado_en', startOfMonth)
+            .lte('registrado_en', endOfMonth);
+
+        if (asistencias && asistencias.length > 0) {
+            const attCounts: Record<string, number> = {};
+            for (const val of asistencias) {
+                const agId = String(val.agent_id).trim().toUpperCase();
+                attCounts[agId] = (attCounts[agId] || 0) + 1;
+            }
+
+            let topConsagrado: any = null;
+            let topAttCount = 0;
+            for (const s of students) {
+                const count = attCounts[String(s.id).toUpperCase()] || 0;
+                if (count > topAttCount) {
+                    topAttCount = count;
+                    topConsagrado = s;
+                }
+            }
+            if (topConsagrado && topAttCount > 0) {
+                badges.push({ type: 'CONSAGRADO_MES', emoji: '⭐', label: 'Consagrado del Mes', agentId: topConsagrado.id, agentName: topConsagrado.nombre, value: topAttCount });
+            }
+        }
+
+        return badges;
+    } catch (e: any) {
+        console.error("Error en computeBadgesSupabase:", e.message);
+        return [];
     }
 };

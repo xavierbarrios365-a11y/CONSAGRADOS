@@ -60,7 +60,7 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
             </div>
 
             {/* Navigation */}
-            <nav className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 ${scrolled ? 'bg-[#0F172A]/90 backdrop-blur-md py-3 border-b border-white/10 shadow-2xl' : 'bg-transparent py-6'}`}>
+            <nav className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 ${scrolled ? 'bg-[#0F172A]/90 backdrop-blur-md py-3 border-b border-white/10 shadow-2xl' : 'bg-transparent py-8 lg:py-6'}`}>
                 <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={() => scrollTo('inicio')}>
                         <img src="/logo_white.png" alt="Logo" className="h-10 group-hover:scale-110 transition-transform duration-500" />
@@ -127,7 +127,7 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
             <main className="relative z-10 font-roboto">
 
                 {/* PAGE 1: INICIO */}
-                <section id="inicio" className="min-h-screen flex items-center justify-center pt-20">
+                <section id="inicio" className="min-h-screen flex items-center justify-center pt-32 lg:pt-20">
                     <div className="max-w-7xl mx-auto px-6 w-full text-center">
                         <motion.div
                             initial={{ opacity: 0, y: 50 }}
@@ -135,8 +135,8 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                             transition={{ duration: 0.8 }}
                             viewport={{ once: true }}
                         >
-                            <span className="font-mono text-[#d97706] text-xs tracking-[10px] uppercase mb-8 block">TURÉN // VENEZUELA // 2026</span>
-                            <h1 className="font-oswald text-7xl md:text-9xl font-bold uppercase leading-[0.85] mb-8">
+                            <span className="font-mono text-[#d97706] text-[10px] lg:text-xs tracking-[5px] lg:tracking-[10px] uppercase mb-8 block">TURÉN // VENEZUELA // 2026</span>
+                            <h1 className="font-oswald text-5xl md:text-7xl lg:text-9xl font-bold uppercase leading-[1] lg:leading-[0.85] mb-8">
                                 FORJANDO LA <br />
                                 <span className="text-transparent" style={{ WebkitTextStroke: '2px white' }}>PRÓXIMA </span>
                                 GENERACIÓN
@@ -144,16 +144,22 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                             <p className="text-white/60 text-lg md:text-2xl max-w-3xl mx-auto font-light leading-relaxed mb-12">
                                 No entretenemos audiencias; entrenamos agentes de cambio. Un ecosistema educativo y espiritual de 52 semanas respaldado por gamificación, inteligencia artificial y discipulado táctico.
                             </p>
-                            <div className="flex flex-wrap justify-center gap-6">
+                            <div className="flex flex-wrap justify-center gap-4 lg:gap-6">
+                                <button
+                                    onClick={onLoginClick}
+                                    className="lg:hidden w-full font-bebas text-xl px-12 py-5 bg-[#b91c1c] text-white rounded flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(185,28,28,0.3)]"
+                                >
+                                    ACCESO AGENTES <ArrowRight size={20} />
+                                </button>
                                 <button
                                     onClick={() => scrollTo('programa')}
-                                    className="font-bebas text-xl px-12 py-5 bg-[#b91c1c] text-white rounded hover:shadow-[0_0_30px_rgba(185,28,28,0.4)] transition-all flex items-center gap-3"
+                                    className="font-bebas text-xl px-12 py-5 bg-white/10 lg:bg-[#b91c1c] text-white rounded hover:shadow-[0_0_30px_rgba(185,28,28,0.4)] transition-all flex items-center gap-3 justify-center"
                                 >
                                     VER EL PROGRAMA <ChevronRight size={20} />
                                 </button>
                                 <button
                                     onClick={onInvestmentClick}
-                                    className="font-bebas text-xl px-12 py-5 border border-white/20 text-white rounded hover:bg-white/5 transition-all"
+                                    className="font-bebas text-xl px-12 py-5 border border-white/20 text-white rounded hover:bg-white/5 transition-all text-center"
                                 >
                                     CONVERTIRSE EN SOCIO
                                 </button>
@@ -173,17 +179,17 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                 </section>
 
                 {/* Problem/Solution */}
-                <section className="py-32 bg-white/5 border-y border-white/5">
-                    <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-20">
-                        <div className="space-y-8">
-                            <h2 className="font-oswald text-4xl uppercase tracking-tighter">EL SISTEMA TRADICIONAL <span className="text-[#b91c1c]">ESTÁ FALLANDO</span></h2>
-                            <p className="text-white/50 text-xl leading-relaxed">
+                <section className="py-20 lg:py-32 bg-white/5 border-y border-white/5">
+                    <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 lg:gap-20">
+                        <div className="space-y-6 lg:space-y-8">
+                            <h2 className="font-oswald text-4xl uppercase tracking-tighter shadow-sm">EL SISTEMA TRADICIONAL <span className="text-[#b91c1c]">ESTÁ FALLANDO</span></h2>
+                            <p className="text-white/50 text-base lg:text-xl leading-relaxed">
                                 Los jóvenes hoy están sobre-estimulados digitalmente pero vacíos de propósito. La religión les ofrece reglas; el mundo les ofrece fragilidad.
                             </p>
                         </div>
-                        <div className="space-y-8 border-l-2 border-[#d97706] pl-10 md:pl-20">
+                        <div className="space-y-6 lg:space-y-8 border-l-2 border-[#d97706] pl-6 lg:pl-20">
                             <h2 className="font-oswald text-4xl uppercase tracking-tighter text-[#d97706]">LA SOLUCIÓN: <span className="text-white">CONSAGRADOS 2026</span></h2>
-                            <p className="text-white/80 text-xl leading-relaxed">
+                            <p className="text-white/80 text-base lg:text-xl leading-relaxed">
                                 Un campo de entrenamiento integral para jóvenes de 12 a 18 años. Operamos en la intersección donde la verdad innegociable se encuentra con la aplicación práctica de la vida real.
                             </p>
                         </div>
@@ -217,12 +223,12 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                 </section>
 
                 {/* PAGE 2: NUESTRO ADN */}
-                <section id="adn" className="py-40 relative overflow-hidden">
+                <section id="adn" className="py-20 lg:py-40 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#d97706]/5 blur-[150px] rounded-full" />
                     <div className="max-w-7xl mx-auto px-6">
-                        <div className="grid md:grid-cols-[1fr_1.5fr] gap-20">
+                        <div className="grid md:grid-cols-[1fr_1.5fr] gap-12 lg:gap-20">
                             <div>
-                                <h2 className="font-oswald text-6xl uppercase mb-12">NUESTRO <span className="text-[#d97706]">ADN</span></h2>
+                                <h2 className="font-oswald text-5xl lg:text-6xl uppercase mb-8 lg:mb-12">NUESTRO <span className="text-[#d97706]">ADN</span></h2>
                                 <div className="space-y-12">
                                     <div>
                                         <span className="font-mono text-[#d97706] text-xs uppercase tracking-[0.5em] mb-4 block">MISION</span>
@@ -268,10 +274,10 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                 </section>
 
                 {/* PAGE 3: EL PROGRAMA (52 SEMANAS) */}
-                <section id="programa" className="py-40 bg-[#0A101F]">
+                <section id="programa" className="py-20 lg:py-40 bg-[#0A101F]">
                     <div className="max-w-7xl mx-auto px-6">
-                        <div className="text-center mb-24">
-                            <h2 className="font-oswald text-6xl uppercase mb-6 italic">EL <span className="text-[#d97706]">PROGRAMA</span> ANUAL</h2>
+                        <div className="text-center mb-16 lg:mb-24">
+                            <h2 className="font-oswald text-5xl lg:text-6xl uppercase mb-6 italic">EL <span className="text-[#d97706]">PROGRAMA</span> ANUAL</h2>
                             <p className="text-white/40 max-w-2xl mx-auto">Un año de transformación dividido en 4 operaciones tácticas. Sin improvisación.</p>
                         </div>
 
@@ -324,11 +330,11 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                 </section>
 
                 {/* PAGE 4: LA ACADEMIA APP */}
-                <section id="academia" className="py-40 bg-black relative">
+                <section id="academia" className="py-20 lg:py-40 bg-black relative">
                     <div className="absolute inset-0 bg-blue-900/10 mix-blend-overlay" />
                     <div className="max-w-7xl mx-auto px-6 relative">
-                        <div className="max-w-3xl mb-24">
-                            <h2 className="font-oswald text-7xl uppercase italic leading-tight mb-8">LA <span className="text-[#d97706]">MISIÓN</span> NO TERMINA EL DOMINGO</h2>
+                        <div className="max-w-3xl mb-16 lg:mb-24">
+                            <h2 className="font-oswald text-5xl lg:text-7xl uppercase italic leading-[1.1] lg:leading-tight mb-8">LA <span className="text-[#d97706]">MISIÓN</span> NO TERMINA EL DOMINGO</h2>
                             <p className="text-white/60 text-xl leading-relaxed">
                                 Para conectar el aprendizaje del fin de semana con la vida diaria, desarrollamos una plataforma de gamificación educativa. Las rutinas espirituales se convierten en misiones.
                             </p>
@@ -417,12 +423,12 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                 </section>
 
                 {/* PAGE 5: SOCIOS E INVERSORES */}
-                <section id="socios" className="py-40 border-y border-white/10">
+                <section id="socios" className="py-20 lg:py-40 border-y border-white/10">
                     <div className="max-w-7xl mx-auto px-6">
-                        <div className="grid md:grid-cols-2 gap-20 items-center">
+                        <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
                             <div>
-                                <h2 className="font-oswald text-6xl uppercase italic leading-[0.9] mb-10">INVIERTA EN <span className="text-[#d97706]">LÍDERES</span>, <br /> NO EN ESTADÍSTICAS.</h2>
-                                <p className="text-white/50 text-xl leading-relaxed mb-12">
+                                <h2 className="font-oswald text-5xl lg:text-6xl uppercase italic leading-[1.1] lg:leading-[0.9] mb-10">INVIERTA EN <span className="text-[#d97706]">LÍDERES</span>, <br className="hidden lg:block" /> NO EN ESTADÍSTICAS.</h2>
+                                <p className="text-white/50 text-lg lg:text-xl leading-relaxed mb-12">
                                     Consagrados 2026 es un laboratorio de innovación social y espiritual. Su empresa puede ser el motor financiero que garantice la transformación de 30 jóvenes.
                                 </p>
 

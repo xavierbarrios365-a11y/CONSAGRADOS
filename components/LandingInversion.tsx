@@ -45,7 +45,7 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
 
             {/* Nav */}
-            <nav className="fixed top-0 left-0 w-full z-[100] bg-[#000810]/80 backdrop-blur-xl border-b border-white/10 py-4">
+            <nav className="fixed top-0 left-0 w-full z-[100] bg-[#000810]/80 backdrop-blur-xl border-b border-white/10 py-6 lg:py-4">
                 <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <img src="/logo_white.png" alt="Logo" className="h-10 drop-shadow-[0_0_8px_rgba(255,183,0,0.3)]" />
@@ -61,14 +61,14 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </nav>
 
             {/* Hero */}
-            <header className="pt-40 pb-20 px-6 text-center">
+            <header className="pt-48 lg:pt-40 pb-20 px-6 text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="max-w-5xl mx-auto"
                 >
-                    <span className="font-mono text-[#ffb700] text-xs tracking-[10px] uppercase mb-8 block">INVERSIÓN ESTRATÉGICA // 2026</span>
-                    <h1 className="font-bebas text-7xl md:text-9xl leading-[0.9] mb-8">
+                    <span className="font-mono text-[#ffb700] text-[10px] lg:text-xs tracking-[5px] lg:tracking-[10px] uppercase mb-8 block">INVERSIÓN ESTRATÉGICA // 2026</span>
+                    <h1 className="font-bebas text-5xl md:text-7xl lg:text-9xl leading-[1.1] lg:leading-[0.9] mb-8">
                         FORJANDO EL <span className="text-[#ffb700] block mt-4" style={{ WebkitTextStroke: '1px #ffb700', color: 'transparent' }}>CARÁCTER</span> DEL MAÑANA
                     </h1>
                     <p className="text-gray-400 text-lg md:text-2xl max-w-3xl mx-auto font-light leading-relaxed mb-12">
@@ -86,15 +86,15 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </header>
 
             {/* Manifiesto */}
-            <section id="proposito" className="py-24 px-6 max-w-7xl mx-auto">
-                <div className="grid md:grid-cols-[1.2fr_1fr] gap-20 items-center">
+            <section id="proposito" className="py-16 lg:py-24 px-6 max-w-7xl mx-auto">
+                <div className="grid md:grid-cols-[1.2fr_1fr] gap-12 lg:gap-20 items-center">
                     <motion.div
                         initial={{ opacity: 0, x: -30 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
                     >
-                        <h2 className="font-bebas text-5xl mb-8">EL <span className="text-[#ffb700]">MANIFIESTO</span> TÁCTICO</h2>
-                        <h3 className="text-3xl font-bebas text-[#ffb700] mb-6 leading-tight">EL MUNDO PREMIA LA FRAGILIDAD.<br />NOSOTROS FORJAMOS EL HONOR.</h3>
+                        <h2 className="font-bebas text-4xl lg:text-5xl mb-8">EL <span className="text-[#ffb700]">MANIFIESTO</span> TÁCTICO</h2>
+                        <h3 className="text-2xl lg:text-3xl font-bebas text-[#ffb700] mb-6 leading-tight">EL MUNDO PREMIA LA FRAGILIDAD.<br className="hidden lg:block" />NOSOTROS FORJAMOS EL HONOR.</h3>
                         <p className="text-gray-400 text-lg leading-relaxed">
                             En una era de sobre-estimulación y vacío de propósito, Consagrados opera como una unidad de élite para rescatar el potencial de cada agente. No somos un club social; somos un campo de entrenamiento de clase mundial.
                         </p>
@@ -118,9 +118,9 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </section>
 
             {/* Engineering Impact */}
-            <section id="metodologia" className="py-24 px-6 bg-black/40">
+            <section id="metodologia" className="py-16 lg:py-24 px-6 bg-black/40">
                 <div className="max-w-7xl mx-auto">
-                    <h2 className="font-bebas text-6xl text-center mb-20 text-white/90">INGENIERÍA DEL <span className="text-[#ffb700]">IMPACTO</span></h2>
+                    <h2 className="font-bebas text-5xl lg:text-6xl text-center mb-12 lg:mb-20 text-white/90">INGENIERÍA DEL <span className="text-[#ffb700]">IMPACTO</span></h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {[
                             { icon: Target, title: 'MENTORÍA O.I.A', desc: 'Observación, Interpretación y Aplicación real. Discipulado práctico bajo presión controlada.' },
@@ -146,8 +146,8 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </section>
 
             {/* Metrics */}
-            <section id="metricas" className="py-24 px-6 max-w-7xl mx-auto">
-                <h2 className="font-bebas text-5xl text-center mb-16">TRANSPARENCIA <span className="text-[#ffb700]">REAL</span></h2>
+            <section id="metricas" className="py-16 lg:py-24 px-6 max-w-7xl mx-auto">
+                <h2 className="font-bebas text-4xl lg:text-5xl text-center mb-12 lg:mb-16">TRANSPARENCIA <span className="text-[#ffb700]">REAL</span></h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 border border-white/10 divide-x divide-y divide-white/10">
                     {[
                         { val: '$2,410', label: 'PRESUPUESTO ANUAL' },
@@ -155,9 +155,9 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         { val: '100%', label: 'AUDITORÍA ABIERTA' },
                         { val: '30', label: 'CUPOS ÉLITE' }
                     ].map((m, idx) => (
-                        <div key={idx} className="p-12 text-center bg-black/20">
-                            <span className="font-bebas text-5xl text-[#ffb700] block mb-2">{m.val}</span>
-                            <span className="font-mono text-[10px] tracking-widest text-gray-500">{m.label}</span>
+                        <div key={idx} className="p-8 lg:p-12 text-center bg-black/20">
+                            <span className="font-bebas text-4xl lg:text-5xl text-[#ffb700] block mb-2">{m.val}</span>
+                            <span className="font-mono text-[9px] lg:text-[10px] tracking-widest text-gray-500">{m.label}</span>
                         </div>
                     ))}
                 </div>
@@ -169,8 +169,8 @@ const LandingInversion: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </section>
 
             {/* Tiers */}
-            <section id="inversion" className="py-24 px-6 max-w-7xl mx-auto">
-                <h2 className="font-bebas text-6xl text-center mb-20 uppercase">NIVELES DE <span className="text-[#ffb700]">ALIANZA</span></h2>
+            <section id="inversion" className="py-16 lg:py-24 px-6 max-w-7xl mx-auto">
+                <h2 className="font-bebas text-5xl lg:text-6xl text-center mb-12 lg:mb-20 uppercase">NIVELES DE <span className="text-[#ffb700]">ALIANZA</span></h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                     {[
                         { tier: 'PADRINO', title: 'PADRINO TÁCTICO', price: '$80', period: '/ anual', items: ['Beca completa un Agente', 'Acceso a Cuadro de Honor', 'Manual físico incluido'], btn: 'INVERTIR EN LÍDER' },

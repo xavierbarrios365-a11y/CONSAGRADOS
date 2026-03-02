@@ -71,7 +71,6 @@ export const registerBiometric = async (
                 { alg: -257, type: "public-key" }, // RS256 (mayor compatibilidad Android)
             ],
             authenticatorSelection: {
-                authenticatorAttachment: "platform",
                 userVerification: "required",
                 residentKey: "preferred",
             },

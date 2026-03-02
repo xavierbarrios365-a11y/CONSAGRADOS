@@ -728,7 +728,7 @@ const App: React.FC = () => {
                     onClick={() => {
                       setShowQuickLogin(false);
                       setRememberedUser(null);
-                      localStorage.removeItem('remembered_user');
+                      // localStorage.removeItem('remembered_user'); // DO NOT WIPE IT
                       setLoginId('');
                       setLoginPin('');
                       setLoginError({ field: null, message: null });

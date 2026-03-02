@@ -117,7 +117,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.9.5"; // Force Atomic Purge for Smart Fallbacks
+  const APP_VERSION = "1.9.6"; // Force Atomic Purge for Smart Fallbacks
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
   const auth = useAuth();
@@ -175,8 +175,13 @@ const App: React.FC = () => {
 
   const { showAlert } = useTacticalAlert();
 
-  // --- Remaining local state (view-specific, not worth extracting) ---
-  const [view, setView] = useState<AppView>(AppView.PUBLIC_WEB);
+  const hasSession = !!localStorage.getItem('consagrados_session');
+  const storedView = localStorage.getItem('current_view') as AppView | null;
+  const [view, setView] = useState<AppView>(hasSession ? (storedView || AppView.HOME) : AppView.PUBLIC_WEB);
+
+  useEffect(() => {
+    localStorage.setItem('current_view', view);
+  }, [view]);
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [showExpedienteFor, setShowExpedienteFor] = useState<Agent | null>(null);

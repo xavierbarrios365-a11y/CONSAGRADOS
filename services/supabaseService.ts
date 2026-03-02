@@ -2343,17 +2343,39 @@ export const getPromotionStatusSupabase = async (agentId: string): Promise<any> 
 
         if (agentError) throw agentError;
 
-        // 2. Obtener certificados (Módulos de academia completados)
+        // 2. Obtener progreso de lecciones (certificados = Módulos 100% completados)
         const { data: certData, error: certError } = await supabase
             .from('academy_progress')
-            .select('course_id')
+            .select('lesson_id, course_id')
             .eq('agent_id', agentId)
             .eq('is_completed', true);
 
         if (certError) throw certError;
 
-        const uniqueCourses = new Set(certData?.map(c => c.course_id));
-        const certCount = uniqueCourses.size;
+        // Necesitamos saber cuántas lecciones tiene cada curso para saber si lo completó al 100%
+        const { data: allLessons } = await supabase.from('academy_lessons').select('id, course_id');
+
+        let certCount = 0;
+        if (allLessons && certData) {
+            // Agrupar lecciones totales por curso
+            const totalLessonsPerCourse = allLessons.reduce((acc: any, val: any) => {
+                acc[val.course_id] = (acc[val.course_id] || 0) + 1;
+                return acc;
+            }, {});
+
+            // Agrupar lecciones completadas por curso
+            const completedLessonsPerCourse = certData.reduce((acc: any, val: any) => {
+                acc[val.course_id] = (acc[val.course_id] || 0) + 1;
+                return acc;
+            }, {});
+
+            // Un certificado se otorga si las lecciones completadas == lecciones totales del curso (y > 0)
+            for (const courseId in completedLessonsPerCourse) {
+                if (totalLessonsPerCourse[courseId] && completedLessonsPerCourse[courseId] >= totalLessonsPerCourse[courseId]) {
+                    certCount++;
+                }
+            }
+        }
 
         // 3. Obtener misiones completadas (VERIFICADO) y pendientes (ENTREGADO)
         const { data: tasksData, error: tasksError } = await supabase

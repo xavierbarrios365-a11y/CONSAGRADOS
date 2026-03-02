@@ -22,9 +22,10 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
             if (!agent?.photoUrl) return;
             const originalUrl = formatDriveUrl(agent.photoUrl);
             try {
-                // Agregar un proxy de CORS público para que la petición no sea bloqueada
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`;
+                // Usamos wsrv.nl como proxy robusto para habilitar CORS
+                const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(originalUrl)}`;
                 const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error("Proxy failed");
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -32,9 +33,8 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 };
                 reader.readAsDataURL(blob);
             } catch (err) {
-                console.error("Error al preparar imagen con proxy CORS:", err);
-                // Fallback a la url normal, y rogar que html-to-image lo maneje
-                setCapturedPhotoUrl(originalUrl);
+                console.warn("Fallo obteniendo imagen con proxy, se ignorará en la captura para evitar error CORS:", err);
+                setCapturedPhotoUrl(null); // NULL previene que el html-to-image crashee intentando leer origen cruzado
             }
         };
         prepareImage();
@@ -141,8 +141,8 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 cacheBust: true,
                 width: 1080,
                 height: 1920,
-                pixelRatio: 1.5,
-                skipFonts: true, // Bypass security errors with CSSRules on Google Fonts
+                pixelRatio: 1.5, // 1.5 previente problemas de memoria OutOfMemory en móviles (generaba imágenes de 3240x5760)
+                skipFonts: true, // Previene error de Security con el CSSRules de Google Fonts
                 backgroundColor: '#001f3f',
                 style: {
                     transform: 'none',
@@ -167,33 +167,26 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                     files: [file],
                 });
             } else {
-                // FALLBACK: Descarga automática y aviso mejorado
+                // FALLBACK: Detectar qué quiere hacer el usuario si no hay soporte nativo de archivos
                 const url = URL.createObjectURL(blob);
 
-                // Descarga forzada
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `logro-${agent?.name || 'agente'}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                // Copiar texto al portapapeles para facilitar el pegado
-                try {
-                    await navigator.clipboard.writeText(shareText);
-                } catch (e) { /* ignore */ }
-
-                // Notificar al usuario con instrucción de RED SOCIAL
-                alert("📂 IMAGEN DESCARGADA Y TEXTO COPIADO.\n\nTu dispositivo no permite compartir archivos directamente. Abre tu red social, pega el mensaje y adjunta la imagen que acabamos de guardar en tus descargas.");
-
+                // Si estamos en móvil pero no soporta archivos, al menos intentamos compartir texto
                 if (navigator.share) {
                     try {
                         await navigator.share({
                             title: 'Consagrados 2026',
-                            text: shareText
+                            text: shareText + "\n\n(Descarga tu medalla para compartirla en historias)"
                         });
                     } catch (e) { /* ignore */ }
                 }
+
+                // Descarga automática como respaldo seguro
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'logro-consagrados-pro.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }
         } catch (err) {
@@ -207,11 +200,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
         const text = newsItem?.verse
             ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
             : (newsItem?.message || '¡Nivel superado!');
-
-        // Recordar al usuario que descargue la imagen si no lo ha hecho
-        if (window.confirm("¡Casi listo! El enlace solo enviará el texto. ¿Deseas abrir WhatsApp ahora? (Recuerda que puedes descargar tu medalla para subirla como imagen)")) {
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-        }
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     const shareViaTelegram = () => {

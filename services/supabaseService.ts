@@ -2118,7 +2118,7 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
         // 1. OBTENER ESTUDIANTES ACTIVOS Y REFERIDOS
         const { data: allAgents, error: agentsErr } = await supabase
             .from('agentes')
-            .select('id, nombre, rango, cargo, user_role, referido_por, joined_date, streak_count');
+            .select('id, nombre, rango, cargo, user_role, joined_date, streak_count');
 
         if (agentsErr || !allAgents) return [];
 

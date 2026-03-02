@@ -138,7 +138,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 cacheBust: true,
                 width: 1080,
                 height: 1920,
-                pixelRatio: 3,
+                pixelRatio: 2,
                 backgroundColor: '#001f3f',
                 style: {
                     transform: 'none',
@@ -163,26 +163,28 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                     files: [file],
                 });
             } else {
-                // FALLBACK: Detectar qué quiere hacer el usuario si no hay soporte nativo de archivos
+                // FALLBACK: Descarga automática y aviso
                 const url = URL.createObjectURL(blob);
 
-                // Si estamos en móvil pero no soporta archivos, al menos intentamos compartir texto
+                // Descarga
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `logro-${agent?.name || 'agente'}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Notificar al usuario 
+                alert("¡FOTO GENERADA! Tu dispositivo no permite compartir la imagen directamente. La hemos guardado en tus descargas para que la subas a tus historias.");
+
                 if (navigator.share) {
                     try {
                         await navigator.share({
                             title: 'Consagrados 2026',
-                            text: shareText + "\n\n(Descarga tu medalla para compartirla en historias)"
+                            text: shareText
                         });
                     } catch (e) { /* ignore */ }
                 }
-
-                // Descarga automática como respaldo seguro
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'logro-consagrados-pro.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }
         } catch (err) {
@@ -196,7 +198,11 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
         const text = newsItem?.verse
             ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
             : (newsItem?.message || '¡Nivel superado!');
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+
+        // Recordar al usuario que descargue la imagen si no lo ha hecho
+        if (window.confirm("¡Casi listo! El enlace solo enviará el texto. ¿Deseas abrir WhatsApp ahora? (Recuerda que puedes descargar tu medalla para subirla como imagen)")) {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
     };
 
     const shareViaTelegram = () => {

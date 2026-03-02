@@ -165,7 +165,7 @@ export function useAuth() {
         }
 
         if (String(user.pin).trim() === loginPin.trim()) {
-            sessionStorage.setItem('consagrados_session', JSON.stringify(user));
+            localStorage.setItem('consagrados_session', JSON.stringify(user));
             localStorage.setItem('last_login_id', user.id);
             const now = Date.now();
             localStorage.setItem('last_active_time', String(now));
@@ -218,7 +218,7 @@ export function useAuth() {
 
                 const user = userToLogin;
 
-                sessionStorage.setItem('consagrados_session', JSON.stringify(user));
+                localStorage.setItem('consagrados_session', JSON.stringify(user));
                 localStorage.setItem('last_login_id', user.id);
                 const now = Date.now();
                 localStorage.setItem('last_active_time', String(now));
@@ -243,7 +243,7 @@ export function useAuth() {
 
     // --- Init: restore session, check biometrics, get IP ---
     useEffect(() => {
-        const storedUser = sessionStorage.getItem('consagrados_session');
+        const storedUser = localStorage.getItem('consagrados_session');
         const storedLastActive = localStorage.getItem('last_active_time');
         const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
@@ -260,7 +260,7 @@ export function useAuth() {
                     setLastActiveTime(now);
                 }
             } catch (e) {
-                sessionStorage.removeItem('consagrados_session');
+                localStorage.removeItem('consagrados_session');
             }
         }
 
@@ -412,13 +412,13 @@ export function useAuth() {
      * Avoids circular dependencies by reading session directly.
      */
     const refreshCurrentUser = useCallback((freshAgents: Agent[]) => {
-        const session = sessionStorage.getItem('consagrados_session');
+        const session = localStorage.getItem('consagrados_session');
         const sessionUser = session ? JSON.parse(session) : null;
         if (sessionUser) {
             const updatedSelf = freshAgents.find(a => String(a.id).toUpperCase() === String(sessionUser.id).toUpperCase());
             if (updatedSelf && JSON.stringify(updatedSelf) !== JSON.stringify(sessionUser)) {
                 setCurrentUser(updatedSelf);
-                sessionStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
+                localStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
             }
         }
     }, []);

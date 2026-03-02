@@ -24,7 +24,7 @@ export function useFirebaseMessaging(
             if (token) {
                 console.log("✅ FCM Token sincronizado.");
                 setNotificationPermission('granted');
-                const session = sessionStorage.getItem('consagrados_session');
+                const session = localStorage.getItem('consagrados_session');
                 const userId = session ? JSON.parse(session).id : null;
                 if (userId) {
                     syncFcmToken(userId, token).then(res => {

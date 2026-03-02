@@ -396,7 +396,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         if (res.success) {
           showAlert({
             title: "PUNTOS ACTUALIZADOS",
-            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + (points * (agent.streakCount >= 5 ? 1.25 : 1))} XP`,
+            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + (points * ((agent.streakCount || 0) >= 5 ? 1.25 : 1))} XP`,
             type: 'SUCCESS'
           });
           if (onUpdateNeeded) onUpdateNeeded();
@@ -1077,13 +1077,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         <RotateCcw size={12} />
                       </button>
                       <button
-                        onClick={() => handleUpdatePoints('LIDERAZGO', adjustmentAmount)}
-                        disabled={isUpdatingPoints}
-                        className="flex-1 py-2 bg-[#ffb700]/20 border border-[#ffb700]/30 text-[#ffb700] text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-[#ffb700]/30 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                        title="Asignar XP por Desempeño Táctico/IA"
+                        onClick={() => showAlert({ title: "ANÁLISIS VERIFICADO", message: "✅ Perfil verificado por el Director. Análisis fijado como 'Real'.", type: 'SUCCESS' })}
+                        className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        title="Verificar y Aprobar Análisis (Sin XP)"
                       >
-                        <Award size={12} />
-                        Premiar IA
+                        <CheckCircle2 size={12} />
+                        Aprobar Análisis
                       </button>
                     </div>
                   )}

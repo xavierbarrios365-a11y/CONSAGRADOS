@@ -117,7 +117,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.9.4"; // Force Atomic Purge for Smart Fallbacks
+  const APP_VERSION = "1.9.5"; // Force Atomic Purge for Smart Fallbacks
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
   const auth = useAuth();

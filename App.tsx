@@ -443,6 +443,7 @@ const App: React.FC = () => {
           resetSessionTimer={resetSessionTimer}
           setScannedAgentForPoints={setScannedAgentForPoints}
           showAlert={showAlert}
+          syncData={syncData}
         />
       );
     }

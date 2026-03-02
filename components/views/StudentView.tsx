@@ -42,6 +42,7 @@ interface StudentViewProps {
     resetSessionTimer: () => void;
     setScannedAgentForPoints: (agent: Agent | null) => void;
     showAlert: (config: { title: string, message: string, type: 'SUCCESS' | 'ERROR' | 'INFO' | 'CONFIRM', onConfirm?: () => void | Promise<void> }) => void;
+    syncData?: () => void | Promise<void>;
 }
 
 const viewVariants: any = {
@@ -57,7 +58,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         dailyVerse, handleVerseQuizComplete, headlines, agents, effectiveRole,
         setView, activeEvents, handleConfirmEventAttendance, isConfirmingEvent,
         userConfirmations, handleRefreshIntel, isRefreshingIntel, intelReport,
-        visitorRadar, resetSessionTimer, setScannedAgentForPoints, showAlert
+        visitorRadar, resetSessionTimer, setScannedAgentForPoints, showAlert, syncData
     } = props;
 
     switch (view) {
@@ -300,7 +301,10 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                         <CIUModule
                             agents={agents}
                             currentUser={currentUser}
-                            onUpdateNeeded={() => resetSessionTimer()} // Reemplaza syncData si se maneja en App
+                            onUpdateNeeded={async () => {
+                                if (syncData) await syncData();
+                                resetSessionTimer();
+                            }}
                             intelReport={intelReport}
                             setView={setView}
                             visitorCount={visitorRadar.length}

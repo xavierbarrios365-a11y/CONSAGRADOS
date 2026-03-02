@@ -115,8 +115,14 @@ export function useAuth() {
     const handleHardReset = useCallback(async () => {
         if (!window.confirm("⚠️ ¿EJECUTAR REINICIO MAESTRO TÁCTICO?\n\nEsto borrará TODA la memoria local, cachés y cerrará la sesión por completo.")) return;
         try {
+            const lastId = localStorage.getItem('last_login_id');
+            const remembered = localStorage.getItem('remembered_user');
+
             localStorage.clear();
             sessionStorage.clear();
+
+            if (lastId) localStorage.setItem('last_login_id', lastId);
+            if (remembered) localStorage.setItem('remembered_user', remembered);
             if ('caches' in window) {
                 const cacheNames = await caches.keys();
                 await Promise.all(cacheNames.map(name => caches.delete(name)));

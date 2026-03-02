@@ -168,13 +168,14 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
         const updates: any = { xp: Math.max(0, currentXp + adjustedAmount) };
 
         const safeVal = (val: any) => { const num = Number(val); return isNaN(num) ? 0 : num; };
+        const safeAmount = isNaN(Number(amount)) ? 0 : Number(amount);
 
         // CORRECCIÓN: Usar el monto real (amount) en lugar de counterChange (+1/-1)
-        if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + amount);
-        if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + amount);
+        if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + safeAmount);
+        if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + safeAmount);
         if (type === 'LIDERAZGO' || type === 'XP') {
             // Si es LIDERAZGO, actualizamos leadership. Si es XP, solo afectó a updates.xp arriba.
-            if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + amount);
+            if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + safeAmount);
         }
 
         const { error: updateError } = await supabase
@@ -2343,13 +2344,16 @@ export const getPromotionStatusSupabase = async (agentId: string): Promise<any> 
         if (agentError) throw agentError;
 
         // 2. Obtener certificados (Módulos de academia completados)
-        const { count: certCount, error: certError } = await supabase
+        const { data: certData, error: certError } = await supabase
             .from('academy_progress')
-            .select('*', { count: 'exact', head: true })
+            .select('course_id')
             .eq('agent_id', agentId)
             .eq('is_completed', true);
 
         if (certError) throw certError;
+
+        const uniqueCourses = new Set(certData?.map(c => c.course_id));
+        const certCount = uniqueCourses.size;
 
         // 3. Obtener misiones completadas (VERIFICADO) y pendientes (ENTREGADO)
         const { data: tasksData, error: tasksError } = await supabase

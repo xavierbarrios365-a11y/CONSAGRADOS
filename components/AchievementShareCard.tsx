@@ -22,7 +22,9 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
             if (!agent?.photoUrl) return;
             const originalUrl = formatDriveUrl(agent.photoUrl);
             try {
-                const response = await fetch(originalUrl);
+                // Agregar un proxy de CORS público para que la petición no sea bloqueada
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`;
+                const response = await fetch(proxyUrl);
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -30,7 +32,8 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 };
                 reader.readAsDataURL(blob);
             } catch (err) {
-                console.error("Error al preparar imagen para captura:", err);
+                console.error("Error al preparar imagen con proxy CORS:", err);
+                // Fallback a la url normal, y rogar que html-to-image lo maneje
                 setCapturedPhotoUrl(originalUrl);
             }
         };
@@ -138,7 +141,8 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 cacheBust: true,
                 width: 1080,
                 height: 1920,
-                pixelRatio: 2,
+                pixelRatio: 1.5,
+                skipFonts: true, // Bypass security errors with CSSRules on Google Fonts
                 backgroundColor: '#001f3f',
                 style: {
                     transform: 'none',

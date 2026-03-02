@@ -243,12 +243,12 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
 
                             <div className="bg-white/5 p-12 md:p-20 border-l border-white/10 relative">
                                 <Shield className="absolute top-10 right-10 text-white/5" size={150} />
-                                <h3 className="font-oswald text-4xl uppercase mb-10">EL <span className="text-[#d97706]">MANIFIESTO</span> (EL CÓDIGO)</h3>
+                                <h3 className="font-oswald text-4xl uppercase mb-10">NUESTRA <span className="text-[#d97706]">FILOSOFÍA</span></h3>
                                 <p className="text-2xl md:text-3xl font-light italic leading-snug text-white/90">
-                                    "No pedimos permiso para ser luz. Vivimos en un mundo que celebra lo superficial y premia lo frágil. Pero nosotros no somos de este mundo. Aquí no venimos a ser entretenidos; venimos a ser forjados."
+                                    "No pedimos permiso para ser luz. Vivimos en un mundo que celebra lo superficial, pero nosotros elegimos el camino del carácter. Aquí no venimos a ser entretenidos; venimos a descubrir quiénes somos realmente."
                                 </p>
                                 <div className="mt-12 h-px w-20 bg-[#d97706]" />
-                                <p className="mt-8 font-mono text-[#d97706] text-xs uppercase tracking-widest">RESISTENCIA CONTRA LA MEDIOCRIDAD</p>
+                                <p className="mt-8 font-mono text-[#d97706] text-xs uppercase tracking-widest">PROPÓSITO Y CARÁCTER</p>
                             </div>
                         </div>
 
@@ -261,7 +261,7 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                             <div className="order-1 md:order-2 space-y-8">
                                 <h2 className="font-oswald text-5xl italic uppercase">TEOLOGÍA: <span className="text-[#b91c1c]">GRACIA RADICAL</span></h2>
                                 <p className="text-white/60 text-lg leading-relaxed">
-                                    Entendemos que la conducta es el resultado de una identidad sanada. Si un joven cae, no lo amputamos; activamos protocolos de Búsqueda y Rescate. La disciplina sin amor es tiranía.
+                                    Entendemos que nuestra conducta es el resultado de una identidad sana. Si alguien tropieza, no lo juzgamos; activamos un protocolo de apoyo y restauración. En Consagrados, el acompañamiento siempre va antes que la crítica.
                                 </p>
                                 <div className="p-6 border border-[#b91c1c]/30 bg-[#b91c1c]/5 rounded-xl">
                                     <p className="text-[#ff6b6b] font-mono text-sm tracking-tighter">
@@ -318,11 +318,11 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                             </div>
                             <div className="space-y-6">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-white flex items-center justify-center text-[#0F172A] font-bebas text-2xl">03</div>
-                                    <h4 className="font-bebas text-3xl uppercase">DISCIPULADO 1 A 1</h4>
+                                    <div className="w-12 h-12 bg-white flex items-center justify-center text-[#0F172A] font-bebas text-2xl shrink-0">03</div>
+                                    <h4 className="font-bebas text-3xl uppercase">MENTORÍA PERSONALIZADA</h4>
                                 </div>
                                 <p className="text-white/50 text-sm leading-relaxed">
-                                    Primer sábado del mes. Operamos en células de 3 a 5 jóvenes para confesión, rendición de cuentas y contención pastoral íntima.
+                                    Espacios de conexión íntima en grupos de 3 a 5 jóvenes para apoyo mutuo, guía personal y construcción de amistades sólidas basadas en valores.
                                 </p>
                             </div>
                         </div>
@@ -343,9 +343,9 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                         <div className="grid md:grid-cols-2 gap-32 items-center">
                             <div className="space-y-16">
                                 {[
-                                    { icon: Zap, title: 'DOSIS DIARIA & RACHAS', desc: 'Lectura bíblica diaria que otorga Puntos de Experiencia (XP) pasiva.' },
-                                    { icon: BookOpen, title: 'CURSOS Y CERTIFICACIONES', desc: 'Academia de teología con quizzes interactivos.' },
-                                    { icon: BarChart3, title: 'RADAR PSICOMÉTRICO', desc: 'Evaluación DISC: León, Nutria, Castor, Golden.' }
+                                    { icon: Zap, title: 'ACTIVIDAD & RACHAS', desc: 'Lectura diaria y desafíos que otorgan Puntos de Experiencia (XP).' },
+                                    { icon: BookOpen, title: 'CURSOS Y TALLERES', desc: 'Módulos de aprendizaje con trivias interactivas.' },
+                                    { icon: BarChart3, title: 'PERFIL DE TALENTOS', desc: 'Descubre tu estilo de personalidad con el Radar Psicométrico.' }
                                 ].map((feature, i) => (
                                     <div key={i} className="flex gap-8 group">
                                         <div className="shrink-0 w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center text-[#d97706] group-hover:bg-[#d97706] group-hover:text-white transition-all">
@@ -362,14 +362,14 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                             <div className="relative">
                                 {/* Mockup visual representation of phone/app flow */}
                                 <div className="relative z-10 p-10 bg-[#0F172A] border border-[#d97706]/30 rounded-3xl backdrop-blur-3xl shadow-2xl">
-                                    <div className="flex justify-between items-end mb-8">
-                                        <div>
-                                            <span className="font-mono text-[10px] text-[#d97706]">STATUS: ACTIVO</span>
-                                            <h5 className="font-bebas text-4xl">AGENTE_01</h5>
+                                    <div className="flex justify-between items-end mb-8 gap-4 overflow-hidden">
+                                        <div className="min-w-0">
+                                            <span className="font-mono text-[10px] text-[#d97706] truncate block">STATUS: ACTIVO</span>
+                                            <h5 className="font-bebas text-3xl md:text-4xl truncate">AGENTE_01</h5>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="font-mono text-[10px] text-white/40 tracking-widest">RANK</span>
-                                            <div className="text-[#d97706] font-bebas text-3xl italic">CONSAGRADO</div>
+                                        <div className="text-right shrink-0">
+                                            <span className="font-mono text-[10px] text-white/40 tracking-widest block">RANK</span>
+                                            <div className="text-[#d97706] font-bebas text-2xl md:text-3xl italic">GRADUADO</div>
                                         </div>
                                     </div>
 
@@ -401,17 +401,17 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
                         {/* Ranks showcase */}
                         <div className="mt-40">
                             <h4 className="font-bebas text-4xl mb-12 uppercase tracking-widest text-center">SISTEMA DE <span className="text-[#d97706]">ASCENSOS</span></h4>
-                            <div className="flex flex-wrap justify-center gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 lg:gap-4 px-2">
                                 {[
                                     { rank: 'RECLUTA', xp: '0 XP', color: 'border-white/10' },
                                     { rank: 'ACTIVO', xp: '300 XP', color: 'border-white/20' },
-                                    { rank: 'CONSAGRADO', xp: '500 XP', color: 'border-[#d97706]/50' },
+                                    { rank: 'MIEMBRO', xp: '500 XP', color: 'border-[#d97706]/50' },
                                     { rank: 'REFERENTE', xp: '700 XP', color: 'border-[#d97706]' },
                                     { rank: 'LÍDER', xp: '1000 XP', color: 'border-[#b91c1c] shadow-[0_0_20px_rgba(185,28,28,0.3)]' }
                                 ].map((r, i) => (
-                                    <div key={i} className={`flex-1 min-w-[150px] p-8 text-center bg-white/5 border ${r.color}`}>
-                                        <h5 className="font-bebas text-2xl mb-1">{r.rank}</h5>
-                                        <span className="font-mono text-[10px] text-white/30">{r.xp}</span>
+                                    <div key={i} className={`p-4 lg:p-8 text-center bg-white/5 border ${r.color} flex flex-col justify-center min-w-0`}>
+                                        <h5 className="font-bebas text-lg lg:text-2xl mb-1 truncate">{r.rank}</h5>
+                                        <span className="font-mono text-[8px] lg:text-[10px] text-white/30">{r.xp}</span>
                                     </div>
                                 ))}
                             </div>
@@ -551,11 +551,11 @@ const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onLoginClick, onInvestmen
             <footer className="bg-black py-20 border-t border-white/5 relative z-10">
                 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10">
                     <div className="flex items-center gap-4">
-                        <div className="font-bebas text-3xl text-white tracking-widest border border-white/20 p-2">CONSAGRADOS</div>
-                        <div className="font-bebas text-xl text-white/30 tracking-widest">ECOSISTEMA // 2026</div>
+                        <div className="font-bebas text-2xl lg:text-3xl text-white tracking-widest border border-white/20 p-2">CONSAGRADOS</div>
+                        <div className="font-bebas text-lg lg:text-xl text-white/30 tracking-widest">ECOSISTEMA // 2026</div>
                     </div>
-                    <div className="text-right">
-                        <p className="font-mono text-[9px] text-white/20 uppercase tracking-[4px]">ESTE ARCHIVO ES PROPIEDAD DEL COMANDO TÁCTICO // TODOS LOS DERECHOS RESERVADOS</p>
+                    <div className="text-center md:text-right">
+                        <p className="font-mono text-[8px] lg:text-[9px] text-white/20 uppercase tracking-[2px] lg:tracking-[4px] leading-relaxed">ESTE ARCHIVO ES PROPIEDAD DEL COMANDO TÁCTICO // TODOS LOS DERECHOS RESERVADOS</p>
                     </div>
                 </div>
             </footer>

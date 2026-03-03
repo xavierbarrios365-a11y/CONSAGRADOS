@@ -2132,18 +2132,6 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
 
         // --- RECLUTADOR DEL MES ---
         const refCounts: Record<string, number> = {};
-        for (const a of allAgents) {
-            const ref = String(a.referido_por || '').trim();
-            if (!ref) continue;
-
-            const joinDateStr = a.joined_date;
-            if (joinDateStr && joinDateStr !== 'N/A') {
-                const joinDate = new Date(joinDateStr);
-                if (!isNaN(joinDate.getTime()) && joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear) {
-                    refCounts[ref] = (refCounts[ref] || 0) + 1;
-                }
-            }
-        }
 
         // También ver visitantes que fueron referidos
         const { data: visitantes } = await supabase

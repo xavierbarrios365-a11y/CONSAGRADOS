@@ -110,28 +110,32 @@ export const useTacticalLogic = (
         }
     }, [currentUser, syncData, refreshCurrentUser, showAlert]);
 
-    const handleVerseQuizComplete = useCallback(async () => {
-        if (!currentUser) return;
+    const handleVerseQuizComplete = useCallback(async (): Promise<boolean> => {
+        if (!currentUser) return false;
         const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
         const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
-        if (alreadyDone) return;
+        if (alreadyDone) return true;
 
         const updatedTasks = currentUser.weeklyTasks?.map(t =>
             t.id === 'bible' ? { ...t, completed: true } : t
         ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
-
-        const optimisticStreak = (currentUser.streakCount || 0) + 1;
 
         try {
             const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference);
             if (res.success && res.streak !== undefined) {
                 localStorage.setItem('verse_completed_date', localToday);
                 syncData(true);
+                return true;
+            } else {
+                showAlert({ title: "FALLO TÁCTICO", message: "❌ ERROR GUARDANDO RACHA: " + (res.error || "DESCONOCIDO"), type: 'ERROR' });
+                return false;
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Error sincronizando racha con servidor:", e);
+            showAlert({ title: "FALLO DE SISTEMA", message: "⚠️ ERROR DE RED AL GUARDAR RACHA. REINTENTE.", type: 'ERROR' });
+            return false;
         }
-    }, [currentUser, dailyVerse, syncData]);
+    }, [currentUser, dailyVerse, syncData, showAlert]);
 
     const handleConfirmEventAttendance = useCallback(async (event: any) => {
         if (!currentUser) return;

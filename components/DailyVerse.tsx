@@ -8,7 +8,7 @@ import AchievementShareCard from './AchievementShareCard';
 interface DailyVerseProps {
     verse: DailyVerseType | null;
     streakCount?: number;
-    onQuizComplete?: () => void;
+    onQuizComplete?: () => void | Promise<void | boolean>;
     agent?: Agent; // Añadido para compartir
 }
 
@@ -123,16 +123,29 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
         </div>
     );
 
-    const checkAnswer = () => {
+    const checkAnswer = async () => {
         if (inputValue.trim().toLowerCase() === missingWord.toLowerCase()) {
             if (navigator.vibrate) navigator.vibrate(100);
             setIsCorrect(true);
 
             // Al completar, avisar al padre (App.tsx) para que sincronice con el servidor
-            if (onQuizComplete) onQuizComplete();
-
-            // local set for immediate feedback
-            setQuizCompleted(true);
+            if (onQuizComplete) {
+                try {
+                    const success = await onQuizComplete();
+                    if ((success as unknown as boolean) !== false) {
+                        setQuizCompleted(true);
+                    } else {
+                        // Reseteamos en caso de fallo para que intente de nuevo
+                        setIsCorrect(null);
+                        setInputValue('');
+                    }
+                } catch (e) {
+                    setIsCorrect(null);
+                    setInputValue('');
+                }
+            } else {
+                setQuizCompleted(true);
+            }
         } else {
             setIsCorrect(false);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);

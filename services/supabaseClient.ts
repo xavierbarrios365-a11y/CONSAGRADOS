@@ -7,25 +7,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('⚠️ Supabase credentials missing. Parallel sync will be disabled.');
 }
 
-// BLINDAJE: Limpiar cualquier sesión zombi de Supabase Auth en localStorage.
-// persistSession:false solo previene NUEVAS sesiones. Si hay una vieja, sigue enviando
-// el JWT "authenticated" y Supabase bloquea las peticiones con 400/401.
+// BLINDAJE NUCLEAR: Eliminar TODAS las claves de Supabase Auth del localStorage
+// para garantizar que el cliente SIEMPRE use el rol 'anon' y nunca 'authenticated'.
+// Esto previene errores 401/403 "permission denied" en TODAS las tablas.
 if (typeof window !== 'undefined') {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
-            // Preservar las keys que NO son de auth
-            if (key.includes('auth-token') || key.includes('auth.')) {
-                keysToRemove.push(key);
-            }
+        if (key && key.startsWith('sb-')) {
+            keysToRemove.push(key);
         }
     }
-    keysToRemove.forEach(k => localStorage.removeItem(k));
+    if (keysToRemove.length > 0) {
+        console.warn(`🧹 Limpiando ${keysToRemove.length} claves de sesión Supabase zombi`);
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
 }
 
-// Only create the client if we have the credentials, or pass dummy ones if empty 
-// (though createClient will throw if url is empty, so we need to handle it)
 export const supabase = createClient(
     supabaseUrl || 'https://placeholder.supabase.co',
     supabaseAnonKey || 'placeholder',

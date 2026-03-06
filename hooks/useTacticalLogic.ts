@@ -116,21 +116,34 @@ export const useTacticalLogic = (
         const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
         if (alreadyDone) return true;
 
+        // SAFETY: Block if streakCount is suspiciously 0 but user has been active (data didn't load)
+        const safeStreak = currentUser.streakCount || 0;
+        const safeXp = currentUser.xp || 0;
+        if (safeStreak === 0 && currentUser.lastAttendance) {
+            console.warn('⚠️ Streak is 0 but agent has attendance history — skipping to prevent reset');
+            // Don't block the quiz, just don't update streak — let the fallback in the function handle it
+        }
+
         const updatedTasks = currentUser.weeklyTasks?.map(t =>
             t.id === 'bible' ? { ...t, completed: true } : t
         ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
 
+        // PRE-EMPTIVE LOCK: Mark as done BEFORE the call to prevent duplicate executions
+        localStorage.setItem('verse_completed_date', localToday);
+
         try {
-            const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference, currentUser.streakCount || 0, currentUser.xp || 0);
+            const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference, safeStreak, safeXp);
             if (res.success && res.streak !== undefined) {
-                localStorage.setItem('verse_completed_date', localToday);
                 syncData(true);
                 return true;
             } else {
+                // Rollback the lock on failure so user can retry
+                localStorage.removeItem('verse_completed_date');
                 showAlert({ title: "FALLO TÁCTICO", message: "❌ ERROR GUARDANDO RACHA: " + (res.error || "DESCONOCIDO"), type: 'ERROR' });
                 return false;
             }
         } catch (e: any) {
+            localStorage.removeItem('verse_completed_date');
             console.error("Error sincronizando racha con servidor:", e);
             showAlert({ title: "FALLO DE SISTEMA", message: "⚠️ ERROR DE RED AL GUARDAR RACHA. REINTENTE.", type: 'ERROR' });
             return false;

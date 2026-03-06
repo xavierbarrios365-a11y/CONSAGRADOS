@@ -135,7 +135,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                         </div>
 
                         {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
-                            <IntelFeed headlines={headlines} agents={agents} userRole={effectiveRole} />
+                            <IntelFeed headlines={headlines} agents={agents} userRole={effectiveRole} currentUser={currentUser} />
                         )}
 
                         {/* RADAR DE DESERCIÓN RÁPIDO */}

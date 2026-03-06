@@ -1,42 +1,67 @@
--- ========================================================
--- FIX: PERMISOS PARA EL ROL 'authenticated'
--- ========================================================
+-- =====================================================
+-- GRANT ALL PERMISSIONS TO 'authenticated' ROLE
+-- This ensures the app works whether the browser sends
+-- an anon key or an authenticated JWT token
+-- =====================================================
 
--- 1. Permisos de Rol (Equivalentes a anon)
-GRANT SELECT (
-  id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, 
-  joined_date, created_at, updated_at, bible, notes, leadership, 
-  streak_count, last_attendance, baptism_status, birthday, 
-  relationship_with_god, must_change_password,
-  biometric_credential, last_course
-) ON public.agentes TO authenticated;
+-- 1. FULL TABLE PERMISSIONS (match what anon has)
+GRANT SELECT ON public.agentes TO authenticated;
+GRANT INSERT ON public.agentes TO authenticated;
+GRANT UPDATE ON public.agentes TO authenticated;
 
-GRANT INSERT, UPDATE ON public.agentes TO authenticated;
-
-GRANT SELECT, INSERT, UPDATE ON public.eventos TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.notificaciones_push TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.insignias_otorgadas TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.asistencia_visitas TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.versiculos_diarios TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.academy_courses TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.academy_lessons TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.asistencia_visitas TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.noticia_likes TO authenticated;
+GRANT SELECT ON public.academy_courses TO authenticated;
+GRANT SELECT ON public.academy_lessons TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.academy_progress TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.tareas TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.progreso_tareas TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.recursos_tacticos TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.misiones TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.progreso_misiones TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.banners TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.noticia_likes TO authenticated;
 
--- 2. Políticas de Seguridad RLS
-DROP POLICY IF EXISTS "Lectura Pública de Perfiles (Auth)" ON public.agentes;
-CREATE POLICY "Lectura Pública de Perfiles (Auth)" ON public.agentes 
-FOR SELECT TO authenticated USING (status = 'ACTIVO');
+-- 2. RPC PERMISSIONS (match anon grants from supabase_secure_rpcs.sql)
+GRANT EXECUTE ON FUNCTION public.sync_agent_profile(JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_agent_pin(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_agent_fcm(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_agent_streak(TEXT, INTEGER, TEXT, JSONB, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_agent_biometric(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_agent_admin(TEXT, TEXT, INTEGER, TEXT, TEXT, TEXT, TEXT, TEXT) TO authenticated;
 
-DROP POLICY IF EXISTS "Escritura de Perfiles (Auth)" ON public.agentes;
-CREATE POLICY "Escritura de Perfiles (Auth)" ON public.agentes 
-FOR ALL TO authenticated USING (true);
+-- 3. RPC from security_hardening.sql
+GRANT EXECUTE ON FUNCTION public.verify_agent_pin(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.recovery_agent_pin(TEXT, TEXT) TO authenticated;
 
--- 3. Refrescar explícitamente el caché de esquemas de PostgREST
+-- 4. RLS POLICIES for authenticated (if not already existing)
+DO $$
+BEGIN
+    -- agentes policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_select_agentes') THEN
+        EXECUTE 'CREATE POLICY "auth_select_agentes" ON public.agentes FOR SELECT TO authenticated USING (true)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_insert_agentes') THEN
+        EXECUTE 'CREATE POLICY "auth_insert_agentes" ON public.agentes FOR INSERT TO authenticated WITH CHECK (true)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_update_agentes') THEN
+        EXECUTE 'CREATE POLICY "auth_update_agentes" ON public.agentes FOR UPDATE TO authenticated USING (true) WITH CHECK (true)';
+    END IF;
+
+    -- asistencia_visitas policies
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_all_asistencia') THEN
+        EXECUTE 'CREATE POLICY "auth_all_asistencia" ON public.asistencia_visitas FOR ALL TO authenticated USING (true) WITH CHECK (true)';
+    END IF;
+
+    -- noticia_likes policies  
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_all_likes') THEN
+        EXECUTE 'CREATE POLICY "auth_all_likes" ON public.noticia_likes FOR ALL TO authenticated USING (true) WITH CHECK (true)';
+    END IF;
+
+    -- academy tables
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_select_courses') THEN
+        EXECUTE 'CREATE POLICY "auth_select_courses" ON public.academy_courses FOR SELECT TO authenticated USING (true)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_select_lessons') THEN
+        EXECUTE 'CREATE POLICY "auth_select_lessons" ON public.academy_lessons FOR SELECT TO authenticated USING (true)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auth_all_progress') THEN
+        EXECUTE 'CREATE POLICY "auth_all_progress" ON public.academy_progress FOR ALL TO authenticated USING (true) WITH CHECK (true)';
+    END IF;
+END $$;
+
+-- 5. Reload schema cache
 NOTIFY pgrst, 'reload schema';

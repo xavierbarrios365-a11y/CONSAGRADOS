@@ -23,6 +23,7 @@ interface NewsFeedProps {
     headlines?: string[];
     agents?: Agent[];
     userRole?: UserRole;
+    currentUser?: Agent | null;
 }
 
 const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -37,7 +38,7 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
     'CUMPLEAÑOS': { icon: <Gift size={16} />, color: '#ec4899', label: 'CUMPLEAÑOS' }, // Pink color for birthday
 };
 
-const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole }) => {
+const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser }) => {
     const { showAlert } = useTacticalAlert();
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,9 +51,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         newsItem?: NewsFeedItem;
     } | null>(null);
 
-    const currentUser = agents.find(a => String(a.name).toUpperCase().includes('SAHEL') || userRole === UserRole.DIRECTOR); // Simple detection for current user locally
-    // In a real scenario, currentUser should be passed as prop. 
-    // Let's assume the first agent in the list matching the name or a specific ID.
+
 
     const PAGE_SIZE = 5;
     const totalPages = Math.ceil(news.length / PAGE_SIZE);
@@ -74,10 +73,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             const mostLiked = await getMostLikedAgentSupabase();
             if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
 
-            // If we have a way to know current user ID:
-            const firstAgent = agents.find(a => a.userRole === UserRole.DIRECTOR || a.userRole === UserRole.LEADER);
-            if (firstAgent) {
-                const userL = await fetchUserLikesSupabase(firstAgent.id);
+            // Fetch current user's likes
+            if (currentUser) {
+                const userL = await fetchUserLikesSupabase(currentUser.id);
                 setUserLikes(userL);
             }
         } catch (e) { console.error(e); }
@@ -85,11 +83,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     };
 
     const handleToggleLike = async (noticiaId: string) => {
-        // Ideally we need currentAgentId
-        const currentAgent = agents.find(a => a.userRole === UserRole.DIRECTOR || a.userRole === UserRole.LEADER);
-        if (!currentAgent) return;
+        if (!currentUser) return;
 
-        const res = await toggleLikeSupabase(noticiaId, currentAgent.id);
+        const res = await toggleLikeSupabase(noticiaId, currentUser.id, currentUser.name);
         if (res.success) {
             // Update local state
             setUserLikes(prev => res.liked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
@@ -296,8 +292,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                             handleToggleLike(item.id);
                                                         }}
                                                         className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userLikes.includes(item.id)
-                                                                ? 'bg-[#ff4d00]/10 border-[#ff4d00]/30 text-[#ff4d00]'
-                                                                : 'bg-white/5 border-white/10 text-white/40 hover:text-white/60'
+                                                            ? 'bg-[#ff4d00]/10 border-[#ff4d00]/30 text-[#ff4d00]'
+                                                            : 'bg-white/5 border-white/10 text-white/40 hover:text-white/60'
                                                             }`}
                                                     >
                                                         <Heart size={12} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />

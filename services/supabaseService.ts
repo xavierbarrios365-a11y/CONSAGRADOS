@@ -2558,7 +2558,7 @@ export const createStorySupabase = async (agentId: string, imageUrl: string): Pr
     }
 };
 
-export const toggleLikeSupabase = async (noticiaId: string, agentId: string): Promise<{ success: boolean; liked?: boolean; error?: string }> => {
+export const toggleLikeSupabase = async (noticiaId: string, agentId: string, agentName?: string): Promise<{ success: boolean; liked?: boolean; error?: string }> => {
     try {
         // Check if already liked
         const { data, error: fetchError } = await supabase
@@ -2571,7 +2571,7 @@ export const toggleLikeSupabase = async (noticiaId: string, agentId: string): Pr
         if (fetchError) throw fetchError;
 
         if (data) {
-            // Unlike
+            // Unlike — no notification needed
             const { error: deleteError } = await supabase
                 .from('noticia_likes')
                 .delete()
@@ -2587,6 +2587,40 @@ export const toggleLikeSupabase = async (noticiaId: string, agentId: string): Pr
                     agent_id: agentId
                 });
             if (insertError) throw insertError;
+
+            // --- PUSH NOTIFICATION: Notify the post owner ---
+            try {
+                // 1. Find the post owner from asistencia_visitas
+                const { data: post } = await supabase
+                    .from('asistencia_visitas')
+                    .select('agent_id, agent_name')
+                    .eq('id', noticiaId)
+                    .single();
+
+                if (post && post.agent_id && post.agent_id !== agentId) {
+                    // 2. Get the owner's FCM token
+                    const { data: owner } = await supabase
+                        .from('agentes')
+                        .select('fcm_token, nombre')
+                        .eq('id', post.agent_id)
+                        .single();
+
+                    if (owner?.fcm_token) {
+                        // 3. Send targeted push
+                        const likerName = agentName || 'Un agente';
+                        const { sendPushBroadcast } = await import('./notifyService');
+                        sendPushBroadcast(
+                            '❤️ NUEVO LIKE',
+                            `${likerName} reaccionó a tu publicación en el Intel Feed.`,
+                            owner.fcm_token
+                        ).catch(() => { }); // Fire-and-forget, don't block the like
+                    }
+                }
+            } catch (pushErr) {
+                // Don't fail the like if push fails
+                console.warn('Push notification skipped:', pushErr);
+            }
+
             return { success: true, liked: true };
         }
     } catch (error: any) {

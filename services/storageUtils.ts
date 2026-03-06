@@ -53,6 +53,9 @@ export const formatDriveUrl = (url: string | undefined, name?: string) => {
 
     if (!url || typeof url !== 'string' || url.trim() === '' || url === 'N/A' || url === 'PENDIENTE') return DEFAULT_AVATAR;
 
+    // BLINDAJE: Rechazar strings enormes (base64 crudo guardado por error) y placeholders
+    if (url.length > 2000 || url.includes('unsplash.com')) return DEFAULT_AVATAR;
+
     if (url.includes('supabase.co') || url.includes('unsplash.com') || url.includes('ui-avatars.com') || (url.startsWith('http') && !url.includes('drive.google.com') && !url.includes('docs.google.com'))) {
         return url;
     }

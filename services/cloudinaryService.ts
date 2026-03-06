@@ -12,8 +12,9 @@ export const uploadToCloudinary = async (file: File | string): Promise<{ success
         const formData = new FormData();
 
         if (typeof file === 'string') {
-            // Base64 data URI - Cloudinary accepts this directly as the 'file' parameter
-            formData.append('file', file);
+            // Cloudinary necesita el prefijo data URI completo para base64
+            const base64Data = file.startsWith('data:') ? file : `data:image/jpeg;base64,${file}`;
+            formData.append('file', base64Data);
         } else {
             formData.append('file', file);
         }

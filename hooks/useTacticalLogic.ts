@@ -114,7 +114,26 @@ export const useTacticalLogic = (
         if (!currentUser) return false;
         const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
         const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
-        if (alreadyDone) return true;
+
+        // También verificar con la fecha del servidor para prevenir abuso entre dispositivos/sesiones
+        let serverAlreadyDone = false;
+        if (currentUser.lastStreakDate) {
+            const raw = currentUser.lastStreakDate;
+            const numVal = Number(raw);
+            let lastMs = 0;
+            if (!isNaN(numVal) && numVal > 1e12) lastMs = numVal;
+            else { const pd = new Date(raw); if (!isNaN(pd.getTime())) lastMs = pd.getTime(); }
+            if (lastMs > 0) {
+                const serverDateStr = new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                serverAlreadyDone = serverDateStr === localToday;
+            }
+        }
+
+        if (alreadyDone || serverAlreadyDone) {
+            // Asegurar localStorage sincronizado para evitar re-cálculos
+            localStorage.setItem('verse_completed_date', localToday);
+            return true;
+        }
 
         // MARK AS DONE IMMEDIATELY — never block the UI
         localStorage.setItem('verse_completed_date', localToday);

@@ -86,7 +86,9 @@ export function useAuth() {
         if (!fullPurge) {
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && (key.startsWith('read_notifications_') || key.startsWith('deleted_notifications_'))) {
+                if (key && (key.startsWith('read_notifications_') ||
+                    key.startsWith('deleted_notifications_') ||
+                    key === 'verse_completed_date')) {
                     const v = localStorage.getItem(key);
                     if (v) backup[key] = v;
                 }

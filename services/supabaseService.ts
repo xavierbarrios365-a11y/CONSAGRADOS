@@ -94,7 +94,7 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
         // SEGURIDAD: Solo seleccionamos las columnas permitidas por el protocolo de blindaje
         const { data, error } = await supabase
             .from('agentes')
-            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance');
+            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks');
         if (error) {
             console.error('❌ Error obteniendo agentes de Supabase:', error);
             return [];
@@ -315,25 +315,29 @@ export const updateBiometricSupabase = async (agentId: string, credentialString:
 export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string, currentStreak?: number, currentXp?: number): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
     try {
         const now = new Date();
+        const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 
         // SAFETY: If currentStreak is 0 or undefined, do a safe fallback read to prevent accidental resets
         let safeStreak = currentStreak || 0;
         let safeXp = currentXp || 0;
-        if (safeStreak === 0) {
-            try {
-                const { data: fallback } = await supabase
-                    .from('agentes')
-                    .select('streak_count, xp')
-                    .eq('id', agentId)
-                    .single();
-                if (fallback) {
-                    safeStreak = fallback.streak_count || 0;
-                    safeXp = fallback.xp || 0;
+
+        // Fetch current state from DB to be absolutely sure we have the latest and haven't updated today
+        const { data: dbAgent } = await supabase
+            .from('agentes')
+            .select('streak_count, xp, last_streak_date')
+            .eq('id', agentId)
+            .single();
+
+        if (dbAgent) {
+            // Check if already updated today in server time (Caracas)
+            if (dbAgent.last_streak_date) {
+                const dbLastDate = new Date(dbAgent.last_streak_date).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                if (dbLastDate === todayStr) {
+                    return { success: true, streak: dbAgent.streak_count, lastStreakDate: dbAgent.last_streak_date };
                 }
-            } catch (e) {
-                // If fallback read also fails, use 0 — the RPC will still work
-                console.warn('Streak fallback read failed, using provided values');
             }
+            safeStreak = Math.max(safeStreak, dbAgent.streak_count || 0);
+            safeXp = Math.max(safeXp, dbAgent.xp || 0);
         }
 
         const newStreak = safeStreak + 1;
@@ -358,7 +362,7 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
             }
 
             await supabase.from('asistencia_visitas').insert({
-                id: `NEWS-${Date.now()}`,
+                id: `NEWS-${Date.now()}-${Math.floor(random() * 1000)}`,
                 agent_id: agentId,
                 agent_name: agentName || 'Agente',
                 tipo: 'RACHA',
@@ -375,6 +379,8 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
         return { success: false, error: error.message };
     }
 };
+
+const random = () => Math.random();
 
 /**
  * @description Actualiza el perfil de IA (estadísticas y resumen táctico) del agente en Supabase.
@@ -2331,10 +2337,10 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
 
 export const updateNotifPrefsSupabase = async (agentId: string, prefs: { read: string[]; deleted: string[] }): Promise<{ success: boolean; error?: string }> => {
     try {
-        const { error } = await supabase
-            .from('agentes')
-            .update({ notif_prefs: prefs })
-            .eq('id', agentId);
+        const { error } = await supabase.rpc('update_agent_notif_prefs', {
+            p_id: agentId,
+            p_prefs: prefs
+        });
 
         if (error) throw error;
         return { success: true };
@@ -2546,6 +2552,9 @@ export const submitInversionLead = async (lead: { nombre: string; email?: string
 
 export const fetchActiveStoriesSupabase = async (): Promise<any[]> => {
     try {
+        // Cleanup expired stories (48h) — fire-and-forget
+        supabase.rpc('cleanup_expired_stories').then(() => { }).catch(() => { });
+
         const { data, error } = await supabase
             .from('historias')
             .select(`
@@ -2553,6 +2562,12 @@ export const fetchActiveStoriesSupabase = async (): Promise<any[]> => {
                 agentes (
                     nombre,
                     foto_url
+                ),
+                historia_reactions (
+                    id,
+                    agent_id,
+                    agent_name,
+                    emoji
                 )
             `)
             .gt('expires_at', new Date().toISOString())
@@ -2576,6 +2591,108 @@ export const createStorySupabase = async (agentId: string, imageUrl: string): Pr
             });
 
         if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * @description Reaccionar a una historia (toggle). Envía push al dueño.
+ */
+export const reactToStorySupabase = async (
+    storyId: string, storyOwnerId: string, agentId: string, agentName: string, emoji: string
+): Promise<{ success: boolean; reacted: boolean; error?: string }> => {
+    try {
+        // Check if already reacted with this emoji
+        const { data: existing } = await supabase
+            .from('historia_reactions')
+            .select('id')
+            .eq('historia_id', storyId)
+            .eq('agent_id', agentId)
+            .eq('emoji', emoji)
+            .maybeSingle();
+
+        if (existing) {
+            // Un-react
+            await supabase.from('historia_reactions').delete().eq('id', existing.id);
+            return { success: true, reacted: false };
+        } else {
+            // React
+            const { error } = await supabase.from('historia_reactions').insert({
+                historia_id: storyId,
+                agent_id: agentId,
+                agent_name: agentName,
+                emoji: emoji
+            });
+            if (error) throw error;
+
+            // Push notification al dueño (fire-and-forget, no auto-notificación)
+            if (storyOwnerId !== agentId) {
+                try {
+                    const { data: owner } = await supabase
+                        .from('agentes')
+                        .select('fcm_token')
+                        .eq('id', storyOwnerId)
+                        .single();
+                    if (owner?.fcm_token) {
+                        const { sendPushBroadcast } = await import('./notifyService');
+                        sendPushBroadcast(
+                            `${emoji} REACCIÓN A TU HISTORIA`,
+                            `${agentName} reaccionó a tu historia`,
+                            owner.fcm_token
+                        ).catch(() => { });
+                    }
+                } catch (e) { /* silent */ }
+            }
+
+            return { success: true, reacted: true };
+        }
+    } catch (error: any) {
+        return { success: false, reacted: false, error: error.message };
+    }
+};
+
+/**
+ * @description Enviar respuesta a una historia via el chat general + push al dueño
+ */
+export const sendStoryReplySupabase = async (
+    storyOwnerId: string, storyOwnerName: string,
+    agentId: string, agentName: string, message: string
+): Promise<{ success: boolean; error?: string }> => {
+    try {
+        // Insertar mensaje en el chat general (Firebase Firestore — misma colección que TacticalChat)
+        const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+        const { db } = await import('../firebase-config');
+
+        const chatMessage = `📸 Respondiendo a la historia de ${storyOwnerName}: "${message}"`;
+        await addDoc(collection(db, 'messages'), {
+            senderId: agentId,
+            senderName: agentName,
+            text: chatMessage,
+            type: 'text',
+            timestamp: serverTimestamp()
+        });
+
+        // Push al dueño de la historia (fire-and-forget)
+        if (storyOwnerId !== agentId) {
+            try {
+                const { data: owner } = await supabase
+                    .from('agentes')
+                    .select('fcm_token')
+                    .eq('id', storyOwnerId)
+                    .single();
+                if (owner?.fcm_token) {
+                    const { sendPushBroadcast } = await import('./notifyService');
+                    sendPushBroadcast(
+                        '💬 RESPUESTA A TU HISTORIA',
+                        `${agentName}: "${message}"`,
+                        owner.fcm_token
+                    ).catch(() => { });
+                }
+            } catch (e) { /* silent */ }
+        }
+
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };

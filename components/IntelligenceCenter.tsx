@@ -966,7 +966,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     </div>
                   )}
 
-                  {userRole === UserRole.DIRECTOR && (
+                  {(userRole === UserRole.DIRECTOR || agent.id === currentUser?.id) && (
                     <div
                       onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
                       className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}

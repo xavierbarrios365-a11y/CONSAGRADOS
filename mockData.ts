@@ -5,7 +5,7 @@ export const INITIAL_AGENTS: Agent[] = [
   {
     id: '20389331',
     name: 'SAHEL XAVIER BARRIOS MERCADO',
-    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+    photoUrl: '',
     role: 'DIRECTOR',
     talent: 'SISTEMAS',
     baptismStatus: 'SÍ',

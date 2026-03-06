@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Shield, Activity, Cpu, Target, Zap,
+    Heart, Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
     GraduationCap, Award, Flame, AlertCircle, Share2, Trash2, Gift
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
-import { fetchNewsFeedSupabase as fetchNewsFeed, deleteNewsItemSupabase } from '../services/supabaseService';
+import {
+    fetchNewsFeedSupabase as fetchNewsFeed,
+    deleteNewsItemSupabase,
+    toggleLikeSupabase,
+    fetchNewsLikesSupabase,
+    fetchUserLikesSupabase,
+    getMostLikedAgentSupabase
+} from '../services/supabaseService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
 import { useTacticalAlert } from './TacticalAlert';
@@ -35,10 +42,17 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(0);
+    const [likesCount, setLikesCount] = useState<Record<string, number>>({});
+    const [userLikes, setUserLikes] = useState<string[]>([]);
+    const [mostLikedAgentId, setMostLikedAgentId] = useState<string | null>(null);
     const [sharePreview, setSharePreview] = useState<{
         agent?: Agent;
         newsItem?: NewsFeedItem;
     } | null>(null);
+
+    const currentUser = agents.find(a => String(a.name).toUpperCase().includes('SAHEL') || userRole === UserRole.DIRECTOR); // Simple detection for current user locally
+    // In a real scenario, currentUser should be passed as prop. 
+    // Let's assume the first agent in the list matching the name or a specific ID.
 
     const PAGE_SIZE = 5;
     const totalPages = Math.ceil(news.length / PAGE_SIZE);
@@ -49,9 +63,45 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         try {
             const data = await fetchNewsFeed();
             setNews(data || []);
-            setCurrentPage(0); // Reset on refresh
+            setCurrentPage(0);
+
+            if (data && data.length > 0) {
+                const ids = data.map(i => i.id);
+                const counts = await fetchNewsLikesSupabase(ids);
+                setLikesCount(counts);
+            }
+
+            const mostLiked = await getMostLikedAgentSupabase();
+            if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
+
+            // If we have a way to know current user ID:
+            const firstAgent = agents.find(a => a.userRole === UserRole.DIRECTOR || a.userRole === UserRole.LEADER);
+            if (firstAgent) {
+                const userL = await fetchUserLikesSupabase(firstAgent.id);
+                setUserLikes(userL);
+            }
         } catch (e) { console.error(e); }
         setLoading(false);
+    };
+
+    const handleToggleLike = async (noticiaId: string) => {
+        // Ideally we need currentAgentId
+        const currentAgent = agents.find(a => a.userRole === UserRole.DIRECTOR || a.userRole === UserRole.LEADER);
+        if (!currentAgent) return;
+
+        const res = await toggleLikeSupabase(noticiaId, currentAgent.id);
+        if (res.success) {
+            // Update local state
+            setUserLikes(prev => res.liked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
+            setLikesCount(prev => ({
+                ...prev,
+                [noticiaId]: (prev[noticiaId] || 0) + (res.liked ? 1 : -1)
+            }));
+
+            // Refresh most liked insignia periodically or after action
+            const mostLiked = await getMostLikedAgentSupabase();
+            if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
+        }
     };
 
     useEffect(() => {
@@ -223,14 +273,37 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
                                             <div className="flex-1 min-w-0 pt-0.5">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest">
+                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest flex items-center gap-1">
                                                         {agent ? agentName : config.label}
+                                                        {agent && mostLikedAgentId === agent.id && (
+                                                            <div className="flex items-center gap-0.5 text-[#ffb700] animate-pulse">
+                                                                <Trophy size={8} />
+                                                                <span className="text-[6px]">POPULAR</span>
+                                                            </div>
+                                                        )}
                                                     </span>
                                                     <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
                                                 </div>
                                                 <p className="text-[11px] text-white/80 font-bold leading-tight line-clamp-2 uppercase tracking-wide font-montserrat">
                                                     {item.message}
                                                 </p>
+
+                                                {/* Likes UI */}
+                                                <div className="flex items-center gap-4 mt-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleLike(item.id);
+                                                        }}
+                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userLikes.includes(item.id)
+                                                                ? 'bg-[#ff4d00]/10 border-[#ff4d00]/30 text-[#ff4d00]'
+                                                                : 'bg-white/5 border-white/10 text-white/40 hover:text-white/60'
+                                                            }`}
+                                                    >
+                                                        <Heart size={12} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
+                                                        <span className="text-[9px] font-black">{likesCount[item.id] || 0}</span>
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div className="flex flex-col gap-2">

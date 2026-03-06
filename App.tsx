@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
 import { AppView, Agent, UserRole, Visitor, Guide, Badge } from './types';
 import DigitalIdCard from './components/DigitalIdCard';
-import { formatDriveUrl } from './services/storageUtils';
+import { formatDriveUrl, compressImage } from './services/storageUtils';
+import { uploadToCloudinary } from './services/cloudinaryService';
 import IntelFeed from './components/IntelFeed';
 import AcademyModule from './components/AcademyModule';
 import CIUModule from './components/IntelligenceCenter';
@@ -921,6 +922,122 @@ const App: React.FC = () => {
             />
           )}
         </div>
+      </div>
+    );
+  }
+
+  // INTERCEPT: Prompt for photo upload if agent has no photo
+  const needsPhoto = isLoggedIn && currentUser && (!currentUser.photoUrl || currentUser.photoUrl.trim() === '');
+  const [showPhotoPrompt, setShowPhotoPrompt] = useState(true);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    try {
+      const compressed = await compressImage(file);
+      setPhotoPreview(compressed);
+    } catch (err) {
+      console.error('Error compressing:', err);
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoPreview || !currentUser) return;
+    setPhotoUploading(true);
+    try {
+      const result = await uploadToCloudinary(photoPreview);
+      if (result.success && result.url) {
+        await updateAgentPhotoSupabase(currentUser.id, result.url);
+        await syncData();
+        setShowPhotoPrompt(false);
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      alert('Error al subir foto: ' + err.message);
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  if (needsPhoto && showPhotoPrompt) {
+    return (
+      <div className="min-h-screen bg-[#000c19] flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Radar Background */}
+        <div className="absolute inset-0 z-0 opacity-10">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-amber-500/20 rounded-full animate-pulse" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-amber-500/10 rounded-full" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-amber-500/5 rounded-full" />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative z-10 w-full max-w-md text-center"
+        >
+          {/* Icon */}
+          <div className="mx-auto w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-700/20 border-2 border-amber-500/50 flex items-center justify-center mb-6 overflow-hidden">
+            {photoPreview ? (
+              <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            )}
+          </div>
+
+          <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: 'Conthrax, sans-serif' }}>
+            FOTO DE PERFIL REQUERIDA
+          </h2>
+          <p className="text-gray-400 text-sm mb-6">
+            Agente <span className="text-amber-400 font-bold">{currentUser?.name}</span>, tu expediente necesita una foto de identificación para completar tu perfil táctico.
+          </p>
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+
+          {!photoPreview ? (
+            <button
+              onClick={() => photoInputRef.current?.click()}
+              className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-lg tracking-wider hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20 mb-4"
+            >
+              📷 TOMAR / SELECCIONAR FOTO
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <button
+                onClick={handlePhotoUpload}
+                disabled={photoUploading}
+                className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg tracking-wider hover:from-green-400 hover:to-emerald-500 transition-all duration-300 shadow-lg shadow-green-500/20 disabled:opacity-50"
+              >
+                {photoUploading ? '⏳ SUBIENDO...' : '✅ CONFIRMAR Y SUBIR'}
+              </button>
+              <button
+                onClick={() => { setPhotoPreview(null); photoInputRef.current?.click(); }}
+                className="w-full py-3 px-6 rounded-xl border border-gray-600 text-gray-400 text-sm hover:border-amber-500 hover:text-amber-400 transition-all"
+              >
+                🔄 ELEGIR OTRA FOTO
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowPhotoPrompt(false)}
+            className="mt-6 text-gray-500 text-xs hover:text-gray-300 transition-colors underline"
+          >
+            OMITIR POR AHORA
+          </button>
+        </motion.div>
       </div>
     );
   }

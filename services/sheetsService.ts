@@ -1,5 +1,5 @@
-
 import { Agent, UserRole, InboxNotification } from "../types";
+import { uploadToCloudinary } from "./cloudinaryService";
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7d1GqCkxSDU1jbLUh2vyxP1jxgQGw_lwP4Z6vlIbc0-ZHmUweWMaLHweAGbJN8WNs/exec";
 
@@ -212,16 +212,7 @@ export const fetchAgentsFromSheets = async (): Promise<Agent[]> => {
 };
 
 export const uploadImage = async (base64File: string, file: File): Promise<{ success: boolean; url?: string; error?: string }> => {
-  try {
-    const response = await postToAction('upload_image', {
-      file: base64File,
-      mimeType: file.type,
-      filename: file.name
-    });
-    return response.success ? { success: true, url: response.url } : { success: false, error: response.error };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+  return uploadToCloudinary(file);
 };
 
 export const enrollAgent = async (formData: any): Promise<{ success: boolean; error?: string }> => {

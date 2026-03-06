@@ -32,10 +32,6 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const sheetAgents = await fetchAgentsFromSupabase();
             console.log(`🔄 SYNC (Supabase): Received ${sheetAgents?.length || 0} agents`);
             if (sheetAgents && sheetAgents.length > 0) {
-                // Log first 3 agents' XP for verification
-                sheetAgents.slice(0, 3).forEach(a =>
-                    console.log(`  📊 ${a.name}: XP=${a.xp} Rank=${a.rank}`)
-                );
                 setAgents(sheetAgents);
 
                 // Run birthday check once per day locally

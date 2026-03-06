@@ -281,7 +281,10 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
 
         // Cargar gladiadores si cambiaron (v4.0)
         if (newState.gladiator_a_id !== session?.gladiator_a_id || newState.gladiator_b_id !== session?.gladiator_b_id) {
-            const { data: rawAgents } = await supabase.from('agentes').select('*').in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
+            const { data: rawAgents } = await supabase
+                .from('agentes')
+                .select('id, nombre, xp, rango, cargo, foto_url')
+                .in('id', [newState.gladiator_a_id, newState.gladiator_b_id].filter(Boolean));
 
             // Mapeo manual de snake_case (DB) a camelCase (Frontend)
             const mappedAgents = (rawAgents || []).map(d => ({
@@ -347,7 +350,10 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
 
         // Siempre refrescar gladiadores por si hubo cambio de puntos
         if (data?.gladiator_a_id || data?.gladiator_b_id) {
-            const { data: rawAgents } = await supabase.from('agentes').select('*').in('id', [data.gladiator_a_id, data.gladiator_b_id].filter(Boolean));
+            const { data: rawAgents } = await supabase
+                .from('agentes')
+                .select('id, nombre, xp, rango, cargo, foto_url')
+                .in('id', [data.gladiator_a_id, data.gladiator_b_id].filter(Boolean));
             const mappedAgents = (rawAgents || []).map(d => ({
                 id: d.id,
                 name: d.nombre,

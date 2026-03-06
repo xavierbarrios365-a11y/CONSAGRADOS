@@ -13,6 +13,7 @@ import IntelFeed from '../IntelFeed';
 import AcademyModule from '../AcademyModule';
 import CIUModule from '../IntelligenceCenter';
 import TrainingCenter from '../TrainingCenter';
+import StoriesBar from '../StoriesBar';
 import { formatDriveUrl } from '../../services/storageUtils';
 import { parseAttendanceDate } from '../../utils/dateUtils';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from '../../services/calendarService';
@@ -121,6 +122,8 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 </button>
                             </div>
                         )}
+
+                        <StoriesBar currentUser={currentUser} />
 
                         <div className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
                             <DailyVerse

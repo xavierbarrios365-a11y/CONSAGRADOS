@@ -11,6 +11,7 @@ import { compressImage } from '../services/storageUtils';
 import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
 import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase } from '../services/supabaseService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
@@ -364,7 +365,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     setPhotoStatus('UPLOADING');
     try {
       const compressed = await compressImage(file);
-      const uploadResult = await uploadImage(compressed, file);
+      const uploadResult = await uploadToCloudinary(compressed);
       if (uploadResult.success && uploadResult.url) {
         setPhotoStatus('SAVING');
         const updateResult = await updateAgentPhotoSupabase(agent.id, uploadResult.url);

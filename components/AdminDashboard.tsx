@@ -30,7 +30,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
     const fetchAgents = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase.from('agentes').select('*').order('nombre', { ascending: true });
+            const { data, error } = await supabase
+                .from('agentes')
+                .select('id, nombre, xp, rango, cargo, foto_url, pin, whatsapp, is_ai_profile_pending, tactical_stats, tactor_summary')
+                .order('nombre', { ascending: true });
             if (error) throw error;
 
             if (data) {
@@ -62,15 +65,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         if (!editingAgent) return;
         setIsSaving(true);
         try {
-            const { error } = await supabase.from('agentes').update({
-                nombre: editingAgent.name,
-                xp: editingAgent.xp,
-                rango: editingAgent.rank,
-                cargo: editingAgent.role,
-                whatsapp: editingAgent.whatsapp,
-                pin: editingAgent.pin,
-                foto_url: editingAgent.photoUrl
-            }).eq('id', editingAgent.id);
+            const { error } = await supabase.rpc('update_agent_admin', {
+                p_id: editingAgent.id,
+                p_nombre: editingAgent.name,
+                p_xp: editingAgent.xp,
+                p_rango: editingAgent.rank,
+                p_cargo: editingAgent.role,
+                p_whatsapp: editingAgent.whatsapp,
+                p_pin: editingAgent.pin,
+                p_foto_url: editingAgent.photoUrl
+            });
 
             if (error) throw error;
 

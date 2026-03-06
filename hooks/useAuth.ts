@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Agent, UserRole } from '../types';
-import { resetPasswordWithAnswerSupabase as resetPasswordWithAnswer, updateAgentPinSupabase as updateAgentPin } from '../services/supabaseService';
+import { resetPasswordWithAnswerSupabase as resetPasswordWithAnswer, updateAgentPinSupabase as updateAgentPin, verifyAgentPinSupabase, recoveryAgentPinSupabase } from '../services/supabaseService';
 import { isBiometricAvailable, authenticateBiometric } from '../services/BiometricService';
 import { trackEvent } from '../firebase-config';
 
@@ -149,7 +149,7 @@ export function useAuth() {
     }, [isLoggedIn, showSessionWarning]);
 
     // --- Login ---
-    const handleLogin = useCallback((e?: React.FormEvent, overrideId?: string) => {
+    const handleLogin = useCallback(async (e?: React.FormEvent, overrideId?: string) => {
         if (e) e.preventDefault();
         const rawId = (overrideId || loginId).trim();
         const effectiveId = rawId.toUpperCase();
@@ -170,7 +170,9 @@ export function useAuth() {
             return;
         }
 
-        if (String(user.pin).trim() === loginPin.trim()) {
+        const isPinValid = await verifyAgentPinSupabase(user.id, loginPin);
+
+        if (isPinValid) {
             localStorage.setItem('consagrados_session', JSON.stringify(user));
             localStorage.setItem('last_login_id', user.id);
             const now = Date.now();
@@ -191,6 +193,7 @@ export function useAuth() {
             trackEvent('login_fail', { id: user.id, reason: 'wrong_pin' });
         }
     }, [loginId, loginPin]);
+    // Note: handleLogin is async now
 
     // --- Biometric login ---
     const handleBiometricLogin = useCallback(async (overrideId?: string) => {
@@ -353,11 +356,10 @@ export function useAuth() {
         }
 
         // Check if the answer matches what we have in memory (or we can call backend)
-        const agentAnswer = user.securityAnswer?.trim().toLowerCase();
-        const inputAnswer = securityAnswerInput.trim().toLowerCase();
+        const recoveredPin = await recoveryAgentPinSupabase(user.id, securityAnswerInput);
 
-        if (agentAnswer && agentAnswer === inputAnswer) {
-            setRevealedPin(user.pin);
+        if (recoveredPin) {
+            setRevealedPin(recoveredPin);
             setForgotPasswordStep('SUCCESS');
         } else {
             setResetError('RESPUESTA INCORRECTA. ACCESO DENEGADO.');

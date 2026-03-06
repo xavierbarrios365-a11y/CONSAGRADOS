@@ -8,44 +8,44 @@ import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
  */
 export const syncAgentToSupabase = async (agent: Agent) => {
     try {
-        const { error } = await supabase
-            .from('agentes')
-            .upsert({
-                id: agent.id,
-                nombre: agent.name,
-                xp: agent.xp || 0,
-                rango: agent.rank,
-                cargo: agent.accessLevel || agent.role,
-                whatsapp: agent.whatsapp,
-                foto_url: agent.photoUrl,
-                pin: agent.pin,
-                is_ai_profile_pending: agent.isAiProfilePending || false,
-                tactical_stats: agent.tacticalStats || {},
-                tactor_summary: agent.tacticalSummary || '',
-                talent: agent.talent,
-                baptism_status: agent.baptismStatus,
-                status: agent.status,
-                bible: agent.bible,
-                notes: agent.notes,
-                leadership: agent.leadership,
-                user_role: agent.userRole,
-                joined_date: agent.joinedDate,
-                birthday: agent.birthday,
-                relationship_with_god: agent.relationshipWithGod,
-                security_question: agent.securityQuestion,
-                security_answer: agent.securityAnswer,
-                must_change_password: agent.mustChangePassword,
-                biometric_credential: agent.biometricCredential,
-                streak_count: agent.streakCount,
-                last_streak_date: agent.lastStreakDate,
-                last_attendance: agent.lastAttendance,
-                weekly_tasks: agent.weeklyTasks || [],
-                notif_prefs: agent.notifPrefs || { read: [], deleted: [] },
-                last_course: agent.lastCourse
-            }, { onConflict: 'id' });
+        const payload = {
+            id: agent.id,
+            nombre: agent.name,
+            xp: agent.xp || 0,
+            rango: agent.rank,
+            cargo: agent.accessLevel || agent.role,
+            whatsapp: agent.whatsapp,
+            foto_url: agent.photoUrl,
+            pin: agent.pin,
+            is_ai_profile_pending: agent.isAiProfilePending || false,
+            tactical_stats: agent.tacticalStats || {},
+            tactor_summary: agent.tacticalSummary || '',
+            talent: agent.talent,
+            baptism_status: agent.baptismStatus,
+            status: agent.status,
+            bible: agent.bible,
+            notes: agent.notes,
+            leadership: agent.leadership,
+            user_role: agent.userRole,
+            joined_date: agent.joinedDate,
+            birthday: agent.birthday,
+            relationship_with_god: agent.relationshipWithGod,
+            security_question: agent.securityQuestion,
+            security_answer: agent.securityAnswer,
+            must_change_password: agent.mustChangePassword,
+            biometric_credential: agent.biometricCredential,
+            streak_count: agent.streakCount,
+            last_streak_date: agent.lastStreakDate,
+            last_attendance: agent.lastAttendance,
+            weekly_tasks: agent.weeklyTasks || [],
+            notif_prefs: agent.notifPrefs || { read: [], deleted: [] },
+            last_course: agent.lastCourse
+        };
+
+        const { error } = await supabase.rpc('sync_agent_profile', { payload });
 
         if (error) {
-            console.error('❌ Error sincronizando agente a Supabase:', error.message);
+            console.error('❌ Error sincronizando agente vía RPC:', error.message);
             return { success: false, error: error.message };
         }
         return { success: true };
@@ -91,7 +91,10 @@ export const syncAllAgentsToSupabase = async (agents: Agent[]) => {
  */
 export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
     try {
-        const { data, error } = await supabase.from('agentes').select('*');
+        // SEGURIDAD: Solo seleccionamos las columnas permitidas por el protocolo de blindaje
+        const { data, error } = await supabase
+            .from('agentes')
+            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance');
         if (error) {
             console.error('❌ Error obteniendo agentes de Supabase:', error);
             return [];
@@ -143,6 +146,40 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
 };
 
 /**
+ * @description Verifica de forma segura un PIN usando RPC (blindaje).
+ */
+export const verifyAgentPinSupabase = async (agentId: string, pin: string): Promise<boolean> => {
+    try {
+        const { data, error } = await supabase.rpc('verify_agent_pin', {
+            p_id: agentId,
+            p_pin: pin
+        });
+        if (error) throw error;
+        return !!data;
+    } catch (e) {
+        console.error('❌ Error verificando PIN:', e);
+        return false;
+    }
+};
+
+/**
+ * @description Recupera el PIN de forma segura tras validar la respuesta (blindaje).
+ */
+export const recoveryAgentPinSupabase = async (agentId: string, answer: string): Promise<string | null> => {
+    try {
+        const { data, error } = await supabase.rpc('recovery_agent_pin', {
+            p_id: agentId,
+            p_answer: answer
+        });
+        if (error) throw error;
+        return data as string;
+    } catch (e) {
+        console.error('❌ Error recuperando PIN:', e);
+        return null;
+    }
+};
+
+/**
  * @description Actualiza puntos específicos de un agente en Supabase (XP, Biblia, etc.)
  */
 export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number = 10): Promise<{ success: boolean, error?: string }> => {
@@ -170,11 +207,9 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
         const safeVal = (val: any) => { const num = Number(val); return isNaN(num) ? 0 : num; };
         const safeAmount = isNaN(Number(amount)) ? 0 : Number(amount);
 
-        // CORRECCIÓN: Usar el monto real (amount) en lugar de counterChange (+1/-1)
         if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + safeAmount);
         if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + safeAmount);
         if (type === 'LIDERAZGO' || type === 'XP') {
-            // Si es LIDERAZGO, actualizamos leadership. Si es XP, solo afectó a updates.xp arriba.
             if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + safeAmount);
         }
 
@@ -246,10 +281,10 @@ export const deleteBannerSupabase = async (id: string): Promise<{ success: boole
  */
 export const updateBiometricSupabase = async (agentId: string, credentialString: string): Promise<{ success: boolean; error?: string }> => {
     try {
-        const { error } = await supabase
-            .from('agentes')
-            .update({ biometric_credential: credentialString })
-            .eq('id', agentId);
+        const { error } = await supabase.rpc('update_agent_biometric', {
+            p_id: agentId,
+            p_credential: credentialString
+        });
 
         if (error) throw error;
 
@@ -280,15 +315,13 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
         const newStreak = (currentData.streak_count || 0) + 1;
         const newXp = (currentData.xp || 0) + 5; // Recompensa base por racha diaria
 
-        const { error: updateError } = await supabase
-            .from('agentes')
-            .update({
-                streak_count: newStreak,
-                last_streak_date: now.toISOString(),
-                weekly_tasks: tasks,
-                xp: newXp
-            })
-            .eq('id', agentId);
+        const { error: updateError } = await supabase.rpc('update_agent_streak', {
+            p_id: agentId,
+            p_streak: newStreak,
+            p_date: now.toISOString(),
+            p_tasks: tasks,
+            p_xp: newXp
+        });
 
         if (updateError) throw updateError;
 
@@ -810,10 +843,7 @@ export const updateTaskStatusSupabase = async (data: { taskId: string; agentId: 
  */
 export const updateAgentPinSupabase = async (agentId: string, newPin: string): Promise<{ success: boolean, error?: string }> => {
     try {
-        const { error } = await supabase
-            .from('agentes')
-            .update({ pin: newPin })
-            .eq('id', agentId);
+        const { error } = await supabase.rpc('update_agent_pin', { p_id: agentId, p_pin: newPin });
         if (error) throw error;
         return { success: true };
     } catch (error: any) {
@@ -1085,7 +1115,7 @@ export const enrollAgentSupabase = async (data: any): Promise<{ success: boolean
             security_answer: data.respuestaSeguridad || 'Azul',
             must_change_password: true,
             user_role: data.nivel === 'DIRECTOR' ? 'DIRECTOR' : data.nivel === 'LÍDER' ? 'LEADER' : 'STUDENT',
-            referido_por: data.referidoPor || ''
+            referido_por_id: data.referidoPor || ''
         };
 
         const { error } = await supabase
@@ -2136,15 +2166,15 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
         // También ver visitantes que fueron referidos
         const { data: visitantes } = await supabase
             .from('asistencia_visitas')
-            .select('referido_por, registrado_en')
-            .neq('referido_por', '')
-            .neq('referido_por', null)
+            .select('referido_por_id, registrado_en')
+            .neq('referido_por_id', '')
+            .neq('referido_por_id', null)
             .gte('registrado_en', startOfMonth)
             .lte('registrado_en', endOfMonth);
 
         if (visitantes) {
             for (const v of visitantes) {
-                const ref = String(v.referido_por || '').trim();
+                const ref = String(v.referido_por_id || '').trim();
                 // Avoid self-references or empty
                 if (ref) {
                     refCounts[ref] = (refCounts[ref] || 0) + 1;
@@ -2210,8 +2240,8 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
         // --- ACADEMICO ---
         const { data: acadProgress } = await supabase
             .from('academy_progress')
-            .select('agent_id, status')
-            .eq('status', 'COMPLETADO');
+            .select('agent_id, is_completed')
+            .eq('is_completed', true);
 
         if (acadProgress && acadProgress.length > 0) {
             const acadCounts: Record<string, number> = {};
@@ -2458,11 +2488,7 @@ export const resetPasswordWithAnswerSupabase = async (agentId: string, answer: s
  */
 export const syncFcmTokenSupabase = async (agentId: string, token: string): Promise<{ success: boolean, error?: string }> => {
     try {
-        const { error } = await supabase
-            .from('agentes')
-            .update({ fcm_token: token })
-            .eq('id', agentId);
-
+        const { error } = await supabase.rpc('update_agent_fcm', { p_id: agentId, p_token: token });
         if (error) throw error;
         return { success: true };
     } catch (e: any) {
@@ -2492,3 +2518,159 @@ export const submitInversionLead = async (lead: { nombre: string; email?: string
         return { success: false, error: error.message };
     }
 };
+
+
+export const fetchActiveStoriesSupabase = async (): Promise<any[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('historias')
+            .select(`
+                *,
+                agentes (
+                    nombre,
+                    foto_url
+                )
+            `)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (e) {
+        console.error("Error fetching stories:", e);
+        return [];
+    }
+};
+
+export const createStorySupabase = async (agentId: string, imageUrl: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('historias')
+            .insert({
+                agent_id: agentId,
+                image_url: imageUrl
+            });
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+};
+
+export const toggleLikeSupabase = async (noticiaId: string, agentId: string): Promise<{ success: boolean; liked?: boolean; error?: string }> => {
+    try {
+        // Check if already liked
+        const { data, error: fetchError } = await supabase
+            .from('noticia_likes')
+            .select('id')
+            .eq('noticia_id', noticiaId)
+            .eq('agent_id', agentId)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        if (data) {
+            // Unlike
+            const { error: deleteError } = await supabase
+                .from('noticia_likes')
+                .delete()
+                .eq('id', data.id);
+            if (deleteError) throw deleteError;
+            return { success: true, liked: false };
+        } else {
+            // Like
+            const { error: insertError } = await supabase
+                .from('noticia_likes')
+                .insert({
+                    noticia_id: noticiaId,
+                    agent_id: agentId
+                });
+            if (insertError) throw insertError;
+            return { success: true, liked: true };
+        }
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+};
+
+export const fetchNewsLikesSupabase = async (noticiaIds: string[]): Promise<Record<string, number>> => {
+    try {
+        if (noticiaIds.length === 0) return {};
+
+        const { data, error } = await supabase
+            .from('noticia_likes')
+            .select('noticia_id')
+            .in('noticia_id', noticiaIds);
+
+        if (error) throw error;
+
+        const counts: Record<string, number> = {};
+        data.forEach((like: any) => {
+            counts[like.noticia_id] = (counts[like.noticia_id] || 0) + 1;
+        });
+        return counts;
+    } catch (e) {
+        console.error("Error fetching news likes:", e);
+        return {};
+    }
+};
+
+export const fetchUserLikesSupabase = async (agentId: string): Promise<string[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('noticia_likes')
+            .select('noticia_id')
+            .eq('agent_id', agentId);
+
+        if (error) throw error;
+        return data.map((l: any) => l.noticia_id);
+    } catch (e) {
+        return [];
+    }
+};
+
+export const getMostLikedAgentSupabase = async (): Promise<{ agentId: string; likes: number } | null> => {
+    try {
+        // Step 1: Get all likes
+        const { data: likesData, error: likesError } = await supabase
+            .from('noticia_likes')
+            .select('noticia_id');
+
+        if (likesError) throw likesError;
+        if (!likesData || likesData.length === 0) return null;
+
+        // Step 2: Count likes per noticia_id
+        const noticiaLikeCounts: Record<string, number> = {};
+        likesData.forEach((l: any) => {
+            noticiaLikeCounts[l.noticia_id] = (noticiaLikeCounts[l.noticia_id] || 0) + 1;
+        });
+
+        // Step 3: Get the top noticia_ids and find their owners in asistencia_visitas
+        const topNoticiaIds = Object.keys(noticiaLikeCounts);
+        const { data: noticias, error: noticiasError } = await supabase
+            .from('asistencia_visitas')
+            .select('id, agent_id')
+            .in('id', topNoticiaIds);
+
+        if (noticiasError) throw noticiasError;
+
+        // Step 4: Map likes to agents
+        const agentLikes: Record<string, number> = {};
+        (noticias || []).forEach((n: any) => {
+            if (n.agent_id && n.agent_id !== 'SISTEMA') {
+                agentLikes[n.agent_id] = (agentLikes[n.agent_id] || 0) + (noticiaLikeCounts[n.id] || 0);
+            }
+        });
+
+        const sorted = Object.entries(agentLikes).sort((a, b) => b[1] - a[1]);
+        if (sorted.length > 0) {
+            return { agentId: sorted[0][0], likes: sorted[0][1] };
+        }
+        return null;
+    } catch (e) {
+        console.error("Error getting most liked agent:", e);
+        return null;
+    }
+};
+

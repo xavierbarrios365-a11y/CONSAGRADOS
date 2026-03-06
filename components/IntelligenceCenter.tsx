@@ -967,24 +967,33 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   )}
 
                   {(userRole === UserRole.DIRECTOR || agent.id === currentUser?.id) && (
-                    <div
-                      onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
-                      className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
-                    >
-                      {photoStatus === 'IDLE' ? (
-                        <>
-                          <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
-                          <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
-                          <p className="text-[9px] text-white font-black uppercase tracking-widest">
-                            {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    <>
+                      <div
+                        onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                        className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
+                      >
+                        {photoStatus === 'IDLE' ? (
+                          <>
+                            <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
+                            <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
+                            <p className="text-[9px] text-white font-black uppercase tracking-widest">
+                              {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {/* Mobile tap target — always visible */}
+                      <button
+                        onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                        className="absolute bottom-2 right-2 z-20 bg-[#ffb700] p-2 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-transform md:hidden"
+                      >
+                        <Camera size={16} className="text-black" />
+                      </button>
+                    </>
                   )}
                   <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
                 </div>

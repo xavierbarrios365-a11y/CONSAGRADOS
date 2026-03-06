@@ -1003,7 +1003,6 @@ const App: React.FC = () => {
             ref={photoInputRef}
             type="file"
             accept="image/*"
-            capture="user"
             onChange={handlePhotoSelect}
             className="hidden"
           />

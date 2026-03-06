@@ -1,0 +1,33 @@
+=== AUDITORIA DE RACHAS (2026-03-06T06:45:12.543Z) ===
+Total agentes: 27
+
+CON RACHA > 0:
+  21 dias - SAHEL XAVIER BARRIOS MERCADO
+  13 dias - Lorelis Mavare
+  12 dias - Valeria Petit
+  9 dias - JAIHELYER YAIR MEZA CARVAJAL
+  7 dias - David Joel Mercado Barrios
+  4 dias - NAILETH GEORGINA TORRES
+  2 dias - Xavier Mercado
+  2 dias - Antonella Cusato
+  2 dias - Jhonder Jose Torres Cordero
+  2 dias - YAIDELIS KATIUSCA MIRIAN COLMENAREZ
+  2 dias - Devid cordero
+  1 dias - PAOLA VALENTINA RODRIGUEZ TORIN
+  1 dias - Solisbeth  Barrios
+
+SIN RACHA (0):
+  0 dias - Milehaxis Meza
+  0 dias - ARON TORREZ
+  0 dias - Jugador 2 Test
+  0 dias - Dinos cordero 
+  0 dias - LUISMAR ANDREINA VAZQUEZ
+  0 dias - Wilkerson Jiménez 
+  0 dias - JOSE VARGAS
+  0 dias - Carlos vazquez
+  0 dias - Jugador 1 Test
+  0 dias - Test Agent
+  0 dias - Anthony Rodriguez 
+  0 dias - LUISANGELIS ALBERLISMAR LINARES ALDAZORA
+  0 dias - Jadheily chirinos 
+  0 dias - YOIBER SANTIAGO GÓMEZ BECERRA

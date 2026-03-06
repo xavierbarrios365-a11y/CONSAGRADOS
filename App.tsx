@@ -197,6 +197,42 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Photo upload prompt state (must be before any conditional returns)
+  const [showPhotoPrompt, setShowPhotoPrompt] = useState(true);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    try {
+      const compressed = await compressImage(file);
+      setPhotoPreview(compressed);
+    } catch (err) {
+      console.error('Error compressing:', err);
+    }
+  }, [currentUser]);
+
+  const handlePhotoUpload = useCallback(async () => {
+    if (!photoPreview || !currentUser) return;
+    setPhotoUploading(true);
+    try {
+      const result = await uploadToCloudinary(photoPreview);
+      if (result.success && result.url) {
+        await updateAgentPhotoSupabase(currentUser.id, result.url);
+        await syncData();
+        setShowPhotoPrompt(false);
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      alert('Error al subir foto: ' + err.message);
+    } finally {
+      setPhotoUploading(false);
+    }
+  }, [photoPreview, currentUser, syncData]);
+
   // --- Tactical Logic Hook ---
   const tactical = useTacticalLogic(
     currentUser,
@@ -928,40 +964,6 @@ const App: React.FC = () => {
 
   // INTERCEPT: Prompt for photo upload if agent has no photo
   const needsPhoto = isLoggedIn && currentUser && (!currentUser.photoUrl || currentUser.photoUrl.trim() === '');
-  const [showPhotoPrompt, setShowPhotoPrompt] = useState(true);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !currentUser) return;
-    try {
-      const compressed = await compressImage(file);
-      setPhotoPreview(compressed);
-    } catch (err) {
-      console.error('Error compressing:', err);
-    }
-  };
-
-  const handlePhotoUpload = async () => {
-    if (!photoPreview || !currentUser) return;
-    setPhotoUploading(true);
-    try {
-      const result = await uploadToCloudinary(photoPreview);
-      if (result.success && result.url) {
-        await updateAgentPhotoSupabase(currentUser.id, result.url);
-        await syncData();
-        setShowPhotoPrompt(false);
-      } else {
-        throw new Error(result.error || 'Upload failed');
-      }
-    } catch (err: any) {
-      alert('Error al subir foto: ' + err.message);
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
 
   if (needsPhoto && showPhotoPrompt) {
     return (

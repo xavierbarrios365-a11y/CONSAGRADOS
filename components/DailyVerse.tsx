@@ -108,7 +108,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                 ? candidates[Math.floor(Math.random() * candidates.length)]
                 : words[Math.floor(words.length / 2)];
 
-            const cleanTarget = target.replace(/[.,;]/g, '');
+            const cleanTarget = target.replace(/[.,;¡!¿?:"']/g, '');
             setMissingWord(cleanTarget);
 
             const newDisplay = verse.verse.replace(target, '__________');
@@ -123,8 +123,20 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
         </div>
     );
 
+    const normalizeText = (text: string) => {
+        return text
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+            .replace(/[.,;¡!¿?:"']/g, "")    // Eliminar puntuación
+            .trim();
+    };
+
     const checkAnswer = async () => {
-        if (inputValue.trim().toLowerCase() === missingWord.toLowerCase()) {
+        const inputNorm = normalizeText(inputValue);
+        const targetNorm = normalizeText(missingWord);
+
+        if (inputNorm === targetNorm) {
             if (navigator.vibrate) navigator.vibrate(100);
             setIsCorrect(true);
 

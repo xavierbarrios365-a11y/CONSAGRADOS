@@ -121,7 +121,7 @@ export const useTacticalLogic = (
         ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
 
         try {
-            const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference);
+            const res = await updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference, currentUser.streakCount || 0, currentUser.xp || 0);
             if (res.success && res.streak !== undefined) {
                 localStorage.setItem('verse_completed_date', localToday);
                 syncData(true);

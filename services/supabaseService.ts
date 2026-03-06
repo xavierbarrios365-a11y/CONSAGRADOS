@@ -298,22 +298,32 @@ export const updateBiometricSupabase = async (agentId: string, credentialString:
 /**
  * @description Actualiza la racha de un agente en Supabase
  */
-export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
+export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string, currentStreak?: number, currentXp?: number): Promise<{ success: boolean, streak?: number, lastStreakDate?: string, error?: string }> => {
     try {
-        const { data: currentData, error: fetchError } = await supabase
-            .from('agentes')
-            .select('streak_count, last_streak_date, xp')
-            .eq('id', agentId)
-            .single();
-
-        if (fetchError) throw fetchError;
-
         const now = new Date();
-        const localToday = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 
-        // Calcular nueva racha
-        const newStreak = (currentData.streak_count || 0) + 1;
-        const newXp = (currentData.xp || 0) + 5; // Recompensa base por racha diaria
+        // SAFETY: If currentStreak is 0 or undefined, do a safe fallback read to prevent accidental resets
+        let safeStreak = currentStreak || 0;
+        let safeXp = currentXp || 0;
+        if (safeStreak === 0) {
+            try {
+                const { data: fallback } = await supabase
+                    .from('agentes')
+                    .select('streak_count, xp')
+                    .eq('id', agentId)
+                    .single();
+                if (fallback) {
+                    safeStreak = fallback.streak_count || 0;
+                    safeXp = fallback.xp || 0;
+                }
+            } catch (e) {
+                // If fallback read also fails, use 0 — the RPC will still work
+                console.warn('Streak fallback read failed, using provided values');
+            }
+        }
+
+        const newStreak = safeStreak + 1;
+        const newXp = safeXp + 5; // Recompensa base por racha diaria
 
         const { error: updateError } = await supabase.rpc('update_agent_streak', {
             p_id: agentId,
@@ -325,7 +335,7 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
 
         if (updateError) throw updateError;
 
-        // Generar noticia de racha
+        // Generar noticia de racha (fire-and-forget)
         try {
             let detalle = `Ha alcanzado una racha de ${newStreak} días consecutivos.`;
             if (verseText) {
@@ -334,7 +344,7 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
             }
 
             await supabase.from('asistencia_visitas').insert({
-                id: `NEWS - ${Date.now()} `,
+                id: `NEWS-${Date.now()}`,
                 agent_id: agentId,
                 agent_name: agentName || 'Agente',
                 tipo: 'RACHA',

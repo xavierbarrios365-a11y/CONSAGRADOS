@@ -50,7 +50,7 @@ BEGIN
   )
   ON CONFLICT (id) DO UPDATE SET
     nombre = EXCLUDED.nombre,
-    xp = GREATEST(EXCLUDED.xp, agentes.xp),
+    xp = EXCLUDED.xp,
     rango = EXCLUDED.rango,
     cargo = EXCLUDED.cargo,
     -- BLINDAJE: Nunca sobrescribir campos sensibles con valores vacíos
@@ -63,9 +63,9 @@ BEGIN
     talent = EXCLUDED.talent,
     baptism_status = EXCLUDED.baptism_status,
     status = EXCLUDED.status,
-    bible = GREATEST(EXCLUDED.bible, agentes.bible),
-    notes = GREATEST(EXCLUDED.notes, agentes.notes),
-    leadership = GREATEST(EXCLUDED.leadership, agentes.leadership),
+    bible = EXCLUDED.bible,
+    notes = EXCLUDED.notes,
+    leadership = EXCLUDED.leadership,
     user_role = EXCLUDED.user_role,
     joined_date = EXCLUDED.joined_date,
     birthday = EXCLUDED.birthday,
@@ -74,9 +74,9 @@ BEGIN
     security_answer = COALESCE(NULLIF(EXCLUDED.security_answer, ''), agentes.security_answer),
     must_change_password = EXCLUDED.must_change_password,
     biometric_credential = COALESCE(NULLIF(EXCLUDED.biometric_credential, ''), agentes.biometric_credential),
-    -- BLINDAJE: Nunca sobrescribir streak/asistencia con valores inferiores
-    streak_count = GREATEST(EXCLUDED.streak_count, agentes.streak_count),
-    last_streak_date = CASE WHEN EXCLUDED.streak_count >= agentes.streak_count THEN EXCLUDED.last_streak_date ELSE agentes.last_streak_date END,
+    -- BLINDAJE: NUNCA tocar streak desde el sync — solo update_agent_streak lo maneja
+    streak_count = agentes.streak_count,
+    last_streak_date = agentes.last_streak_date,
     last_attendance = EXCLUDED.last_attendance,
     weekly_tasks = EXCLUDED.weekly_tasks,
     notif_prefs = EXCLUDED.notif_prefs,

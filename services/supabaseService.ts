@@ -128,7 +128,21 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
             securityAnswer: d.security_answer || '',
             mustChangePassword: d.must_change_password || false,
             biometricCredential: d.biometric_credential || '',
-            streakCount: d.streak_count || 0,
+            streakCount: (() => {
+                const raw = d.last_streak_date || '';
+                if (!raw || (d.streak_count || 0) === 0) return 0;
+                try {
+                    const now = new Date();
+                    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                    const ts = Number(raw);
+                    const lastDate = (!isNaN(ts) && ts > 1e12) ? new Date(ts) : new Date(raw);
+                    const lastDateStr = lastDate.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                    return (lastDateStr === todayStr || lastDateStr === yesterdayStr) ? (d.streak_count || 0) : 0;
+                } catch { return 0; }
+            })(),
             lastStreakDate: d.last_streak_date || '',
             lastAttendance: d.last_attendance || '',
             weeklyTasks: d.weekly_tasks || [],

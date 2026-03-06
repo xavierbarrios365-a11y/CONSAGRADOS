@@ -15,7 +15,8 @@ export const syncAgentToSupabase = async (agent: Agent) => {
             rango: agent.rank,
             cargo: agent.accessLevel || agent.role,
             whatsapp: agent.whatsapp,
-            foto_url: agent.photoUrl,
+            // BLINDAJE: Solo sincronizar foto_url si es una URL real (Cloudinary/Supabase), nunca placeholders
+            foto_url: (agent.photoUrl && (agent.photoUrl.includes('cloudinary.com') || agent.photoUrl.includes('supabase.co'))) ? agent.photoUrl : '',
             pin: agent.pin,
             is_ai_profile_pending: agent.isAiProfilePending || false,
             tactical_stats: agent.tacticalStats || {},

@@ -55,7 +55,7 @@ BEGIN
     cargo = EXCLUDED.cargo,
     -- BLINDAJE: Nunca sobrescribir campos sensibles con valores vacíos
     whatsapp = COALESCE(NULLIF(EXCLUDED.whatsapp, ''), agentes.whatsapp),
-    foto_url = EXCLUDED.foto_url,
+    foto_url = COALESCE(NULLIF(EXCLUDED.foto_url, ''), agentes.foto_url),
     pin = COALESCE(NULLIF(EXCLUDED.pin, ''), agentes.pin),
     is_ai_profile_pending = EXCLUDED.is_ai_profile_pending,
     tactical_stats = EXCLUDED.tactical_stats,

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Agent } from '../types';
 import { syncFcmTokenSupabase as syncFcmToken } from '../services/supabaseService';
+import { subscribeToTopic } from '../services/notifyService';
 import { requestForToken, onMessageListener, db } from '../firebase-config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -32,11 +33,13 @@ export function useFirebaseMessaging(
                     });
                 }
 
-                // (La suscripción al topic de Vercel fue removida porque sus endpoints de IID están deprecados por Google 
-                // y ahora almacenamos el token de forma nativa en Supabase para envíos punto-a-punto).
+                // Suscripción al tópico global all_agents
+                subscribeToTopic(token).then(success => {
+                    if (success) console.log("✅ Suscrito a anuncios globales.");
+                });
             }
 
-            onMessageListener().then((payload: any) => {
+            onMessageListener((payload: any) => {
                 console.log("📩 Push recibido:", payload?.notification?.title);
 
                 if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {

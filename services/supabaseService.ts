@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+export { supabase };
 import { Agent, Badge, InboxNotification } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 

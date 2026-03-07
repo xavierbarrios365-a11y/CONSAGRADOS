@@ -91,13 +91,11 @@ export const requestForToken = async () => {
     }
 };
 
-export const onMessageListener = () => {
-    if (!messaging) return new Promise(() => { }); // Never resolves if no messaging
-    return new Promise((resolve) => {
-        onMessage(messaging, (payload) => {
-            console.log('📩 Notificación recibida:', payload?.notification?.title || 'Sin título');
-            resolve(payload);
-        });
+export const onMessageListener = (callback: (payload: any) => void) => {
+    if (!messaging) return;
+    return onMessage(messaging, (payload) => {
+        console.log('📩 Notificación recibida:', payload?.notification?.title || 'Sin título');
+        callback(payload);
     });
 };
 

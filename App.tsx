@@ -240,6 +240,39 @@ const App: React.FC = () => {
   const [showInbox, setShowInbox] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // --- NAVIGATION HISTORY logic ---
+  // Sincronizar el estado del navegador con la vista de la app
+  useEffect(() => {
+    // Si la vista cambia, empujamos un nuevo estado a la historia si no viene de un popstate
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.view) {
+        setView(event.state.view);
+      } else {
+        // Si no hay estado (estamos al inicio de la historia), 
+        // y el usuario intenta ir atrás desde Home, mostramos modal
+        if (view === AppView.HOME || view === AppView.PUBLIC_WEB) {
+          setShowExitModal(true);
+          // Re-push para "bloquear" la salida y mantener el modal
+          window.history.pushState({ view }, "", "");
+        } else {
+          setView(AppView.HOME);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [view]);
+
+  // Actualizar historia cuando la vista cambia manualmente
+  useEffect(() => {
+    const currentState = window.history.state;
+    if (!currentState || currentState.view !== view) {
+      window.history.pushState({ view }, "", "");
+    }
+  }, [view]);
 
   // Photo upload prompt state (must be before any conditional returns)
   const [showPhotoPrompt, setShowPhotoPrompt] = useState(true);
@@ -1073,6 +1106,48 @@ const App: React.FC = () => {
 
   return (
     <>
+      {/* MODAL DE CONFIRMACIÓN DE SALIDA */}
+      <AnimatePresence>
+        {showExitModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-sm bg-[#000810] border border-white/10 rounded-[2.5rem] p-8 space-y-6 text-center shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                <LogOut className="text-red-500" size={24} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bebas text-white tracking-widest uppercase">¿SALIR DE LA APP?</h3>
+                <p className="text-[10px] text-white/60 font-medium uppercase tracking-[0.1em]">¿ESTÁS SEGURO QUE DESEAS CERRAR LA CONEXIÓN TÁCTICA Y SALIR?</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowExitModal(false)}
+                  className="py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  onClick={() => {
+                    // En web no se puede "cerrar" la pestaña fácilmente por seguridad, 
+                    // pero podemos redirigir o simplemente cerrar sesión. 
+                    // Para una PWA instalada, esto suele ser suficiente para que el usuario salga.
+                    setShowExitModal(false);
+                    handleLogout(true);
+                  }}
+                  className="py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                >
+                  SALIR
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <Layout
         activeView={view}
         setView={(newView) => {

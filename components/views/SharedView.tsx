@@ -21,7 +21,7 @@ interface SharedViewProps {
     biometricAvailable: boolean;
     isRegisteringBio: boolean;
     registerBiometric: (id: string, name: string, credentials: string[]) => Promise<string>;
-    registerBiometrics: (id: string, credentialId: string) => Promise<{ success: boolean }>;
+    registerBiometrics: (id: string, credentialId: string) => Promise<{ success: boolean; error?: string }>;
     handleLogout: (purge: boolean) => void;
     showAlert: (config: any) => void;
     syncData: (force?: boolean) => any;
@@ -184,6 +184,8 @@ const SharedView: React.FC<SharedViewProps> = (props) => {
                                                 if (res.success) {
                                                     showAlert({ title: "ÉXITO", message: "NUEVO DISPOSITIVO BIOMÉTRICO ASIGNADO.", type: 'SUCCESS' });
                                                     syncData();
+                                                } else {
+                                                    showAlert({ title: "FALLO DE REGISTRO", message: res.error || "LA BASE DE DATOS NO PUDO GUARDAR LA CREDENCIAL.", type: 'ERROR' });
                                                 }
                                             }
                                         } catch (err: any) {

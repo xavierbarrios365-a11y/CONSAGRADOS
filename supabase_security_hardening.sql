@@ -23,7 +23,8 @@ GRANT SELECT (
   joined_date, created_at, updated_at, bible, notes, leadership, 
   streak_count, last_attendance, baptism_status, birthday, 
   relationship_with_god, must_change_password,
-  last_streak_date, weekly_tasks
+  last_streak_date, weekly_tasks, pin, whatsapp,
+  is_ai_profile_pending, tactical_stats, tactor_summary
 ) ON public.agentes TO anon;
 
 -- Permisos de escritura (Permitir sync total para el agente)

@@ -95,7 +95,7 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
         // SEGURIDAD: Solo seleccionamos las columnas permitidas por el protocolo de blindaje
         const { data, error } = await supabase
             .from('agentes')
-            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks');
+            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks, pin, whatsapp');
         if (error) {
             console.error('❌ Error obteniendo agentes de Supabase:', error);
             return [];

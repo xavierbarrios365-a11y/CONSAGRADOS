@@ -32,7 +32,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         try {
             const { data, error } = await supabase
                 .from('agentes')
-                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary')
+                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp')
                 .order('nombre', { ascending: true });
             if (error) throw error;
 

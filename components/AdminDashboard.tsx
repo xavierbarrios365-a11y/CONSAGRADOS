@@ -67,13 +67,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         try {
             const { error } = await supabase.rpc('update_agent_admin', {
                 p_id: editingAgent.id,
-                p_nombre: editingAgent.name,
-                p_xp: editingAgent.xp,
-                p_rango: editingAgent.rank,
-                p_cargo: editingAgent.role,
-                p_whatsapp: editingAgent.whatsapp,
-                p_pin: editingAgent.pin,
-                p_foto_url: editingAgent.photoUrl
+                p_nombre: editingAgent.name || null,
+                p_xp: editingAgent.xp ?? 0,
+                p_rango: editingAgent.rank || null,
+                p_cargo: editingAgent.role || null,
+                p_whatsapp: editingAgent.whatsapp || null,
+                p_pin: editingAgent.pin || null,
+                p_foto_url: editingAgent.photoUrl || null
             });
 
             if (error) throw error;
@@ -83,9 +83,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
             setEditingAgent(null);
             // Trigger global refresh so app stays in sync
             onRefreshGlobalData();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error saving agent:', err);
-            alert('Error guardando cambios');
+            alert(`Error guardando cambios: ${err.message || 'Error desconocido'}`);
         } finally {
             setIsSaving(false);
         }

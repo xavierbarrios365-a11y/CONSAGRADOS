@@ -87,6 +87,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
 
         <div className="flex items-center gap-4">
           <motion.div
+            id="nav-notifications"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={onOpenInbox}
@@ -130,6 +131,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
             {filteredNavItems.map((item) => (
               <motion.button
                 key={item.id}
+                id={`nav-${item.id}`}
                 whileHover={{ x: 5 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setView(item.id)}
@@ -163,6 +165,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
         {mobileVisibleItems.map((item) => (
           <button
             key={item.id}
+            id={`nav-mobile-${item.id}`}
             onClick={() => setView(item.id)}
             className={`flex flex-col items-center relative transition-all duration-300 py-1 ${activeView === item.id ? 'text-[#ffb700] scale-110' : 'text-gray-500'
               }`}
@@ -233,8 +236,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
                       setIsMobileMenuOpen(false);
                     }}
                     className={`flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all active:scale-95 ${activeView === item.id
-                        ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_10px_30px_rgba(255,183,0,0.3)]'
-                        : 'bg-black/40 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/20'
+                      ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_10px_30px_rgba(255,183,0,0.3)]'
+                      : 'bg-black/40 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/20'
                       }`}
                   >
                     <div className={activeView === item.id ? 'scale-125 transition-transform' : ''}>

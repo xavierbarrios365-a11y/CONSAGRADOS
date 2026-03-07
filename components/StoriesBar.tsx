@@ -26,6 +26,12 @@ interface Story {
     }[];
 }
 
+interface ActiveHeart {
+    id: number;
+    name: string;
+    x: number;
+}
+
 interface StoriesBarProps {
     currentUser: Agent | null;
     onStoryView?: (story: Story) => void;
@@ -41,6 +47,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
     const [isSendingReply, setIsSendingReply] = useState(false);
     const [showReactions, setShowReactions] = useState(false);
     const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
+    const [activeHearts, setActiveHearts] = useState<ActiveHeart[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const progressRef = useRef<HTMLDivElement>(null);
@@ -138,6 +145,19 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         if (!story || !currentUser || reactingEmoji) return;
 
         setReactingEmoji(emoji);
+
+        if (emoji === '❤️') {
+            const newHeart = {
+                id: Date.now(),
+                name: currentUser.name.split(' ')[0],
+                x: Math.random() * 60 - 30 // Random offset
+            };
+            setActiveHearts(prev => [...prev, newHeart]);
+            setTimeout(() => {
+                setActiveHearts(prev => prev.filter(h => h.id !== newHeart.id));
+            }, 2000);
+        }
+
         // Pause timer while reacting
         if (timerRef.current) clearTimeout(timerRef.current);
 
@@ -322,8 +342,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                             <div
                                                 key={r.emoji}
                                                 className={`flex items-center gap-1 px-2.5 py-1 rounded-full backdrop-blur-md border text-xs shadow-lg ${r.myReaction
-                                                        ? 'bg-[#ffb700]/30 border-[#ffb700]/40'
-                                                        : 'bg-black/40 border-white/10'
+                                                    ? 'bg-[#ffb700]/30 border-[#ffb700]/40'
+                                                    : 'bg-black/40 border-white/10'
                                                     }`}
                                             >
                                                 <span>{r.emoji}</span>
@@ -335,7 +355,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
 
                                 {/* Reaction Animation */}
                                 <AnimatePresence>
-                                    {reactingEmoji && (
+                                    {reactingEmoji && reactingEmoji !== '❤️' && (
                                         <motion.div
                                             initial={{ scale: 0, opacity: 1 }}
                                             animate={{ scale: 3, opacity: 0, y: -100 }}
@@ -346,6 +366,25 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                             {reactingEmoji}
                                         </motion.div>
                                     )}
+                                </AnimatePresence>
+
+                                {/* Floating TikTok Hearts */}
+                                <AnimatePresence>
+                                    {activeHearts.map(heart => (
+                                        <motion.div
+                                            key={heart.id}
+                                            initial={{ y: 0, opacity: 1, scale: 0.5, x: heart.x }}
+                                            animate={{ y: -400, opacity: 0, scale: 1.5, x: heart.x + (Math.random() * 40 - 20) }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 1.5, ease: "easeOut" }}
+                                            className="absolute bottom-20 right-10 flex flex-col items-center pointer-events-none z-50"
+                                        >
+                                            <Heart fill="#ff4d00" className="text-[#ff4d00]" size={40} />
+                                            <span className="text-[10px] font-black text-white bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10 mt-1 whitespace-nowrap">
+                                                {heart.name}
+                                            </span>
+                                        </motion.div>
+                                    ))}
                                 </AnimatePresence>
                             </div>
 
@@ -403,7 +442,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                     to { width: 100%; }
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 

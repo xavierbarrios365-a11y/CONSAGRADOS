@@ -14,6 +14,8 @@ import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import EliteRecruitmentTest from './components/EliteRecruitmentTest';
 import TacticalProfileDetail from './components/TacticalProfileDetail';
+import BibleWarArena from './components/BibleWarArena';
+import TutorialOverlay from './components/TutorialOverlay';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import TacticalExpediente from './components/TacticalExpediente';
 import ContentModule from './components/ContentModule';
@@ -159,7 +161,7 @@ const App: React.FC = () => {
     userConfirmations, setUserConfirmations,
   } = dataSync;
 
-  /* 
+  /*
   // --- AUTOMATIC ABSENCE PENALTIES (DISABLED TEMPORARILY DUE TO MASSIVE XP DEDUCTION BUG) ---
   useEffect(() => {
     if (isLoggedIn && (currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER)) {
@@ -186,7 +188,10 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [showExpedienteFor, setShowExpedienteFor] = useState<Agent | null>(null);
-  const [showCertificate, setShowCertificate] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [hasCompletedTutorial, setHasCompletedTutorial] = useState(() => {
+    return localStorage.getItem('tutorial_completed') === 'true';
+  });
   const [logoError, setLogoError] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null);
@@ -372,6 +377,24 @@ const App: React.FC = () => {
       refreshCurrentUser(dataSync.agents);
     }
   }, [dataSync.agents, refreshCurrentUser]);
+
+  // --- Tutorial Logic ---
+  useEffect(() => {
+    if (isLoggedIn && currentUser && currentUser.userRole === UserRole.STUDENT && !hasCompletedTutorial) {
+      // Assuming `currentUser.isFirstLogin` is a property indicating a new student
+      // This property would need to be set during the enrollment/login process.
+      // For now, we'll use a placeholder or assume it's handled elsewhere.
+      // If `isFirstLogin` is true, show the tutorial.
+      // For this instruction, we'll trigger it if `hasCompletedTutorial` is false.
+      setShowTutorial(true);
+    }
+  }, [isLoggedIn, currentUser, hasCompletedTutorial]);
+
+  const handleTutorialComplete = useCallback(() => {
+    setHasCompletedTutorial(true);
+    localStorage.setItem('tutorial_completed', 'true');
+    setShowTutorial(false);
+  }, []);
 
   // --- QR Scanner ---
   useEffect(() => {
@@ -1199,6 +1222,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      {showTutorial && <TutorialOverlay onComplete={handleTutorialComplete} />}
     </>
   );
 };

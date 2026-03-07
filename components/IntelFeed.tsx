@@ -119,7 +119,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     }
 
     return (
-        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
+        <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
             {/* Intel Header */}
             <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">

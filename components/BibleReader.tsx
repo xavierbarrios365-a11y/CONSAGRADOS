@@ -20,22 +20,24 @@ import { createStorySupabase, publishNewsSupabase } from '../services/supabaseSe
 import { Agent } from '../types';
 
 interface BibleBook {
-    pk: number;
-    name: string;
+    names: string[];
+    abrev: string;
     chapters: number;
+    testament: string;
 }
 
 interface BibleVerse {
-    pk: number;
-    verse: number;
-    text: string;
+    number: number;
+    verse: string;
+    study?: string | null;
+    id: number;
 }
 
 interface BibleReaderProps {
     currentUser: Agent | null;
 }
 
-const BIBLE_VERSION = 'RV1960';
+const BIBLE_VERSION = 'rv1960';
 
 const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const [books, setBooks] = useState<BibleBook[]>([]);
@@ -53,7 +55,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
         const fetchBooks = async () => {
             try {
                 setLoading(true);
-                const res = await fetch(`https://bolls.life/get-books/${BIBLE_VERSION}/`);
+                const res = await fetch(`https://bible-api.deno.dev/api/books`);
                 const data = await res.json();
                 setBooks(data);
             } catch (err) {
@@ -66,13 +68,18 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     }, []);
 
     // 2. Cargar Versículos
-    const fetchVerses = useCallback(async (bookPk: number, chapter: number) => {
+    const fetchVerses = useCallback(async (bookName: string, chapter: number) => {
         try {
             setLoading(true);
-            const res = await fetch(`https://bolls.life/get-text/${BIBLE_VERSION}/${bookPk}/${chapter}/`);
+            // El API espera el nombre del libro en minúsculas (slug)
+            const bookSlug = bookName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const res = await fetch(`https://bible-api.deno.dev/api/read/${BIBLE_VERSION}/${bookSlug}/${chapter}`);
             const data = await res.json();
-            setVerses(data);
-            setViewState('VERSES');
+            // La nueva API devuelve un objeto con la propiedad 'vers'
+            if (data && data.vers) {
+                setVerses(data.vers);
+                setViewState('VERSES');
+            }
         } catch (err) {
             console.error('Error fetching verses:', err);
         } finally {
@@ -88,7 +95,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const handleSelectChapter = (chapter: number) => {
         setSelectedChapter(chapter);
         if (selectedBook) {
-            fetchVerses(selectedBook.pk, chapter);
+            fetchVerses(selectedBook.names[0], chapter);
         }
     };
 
@@ -97,15 +104,17 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
         else if (viewState === 'CHAPTERS') setViewState('BOOKS');
     };
 
+    const getBookName = (book: BibleBook | null) => book?.names[0] || '';
+
     const copyToClipboard = (text: string, verseNum: number) => {
-        const fullText = `"${text}" - ${selectedBook?.name} ${selectedChapter}:${verseNum} (Consagrados)`;
+        const fullText = `"${text}" - ${getBookName(selectedBook)} ${selectedChapter}:${verseNum} (Consagrados)`;
         navigator.clipboard.writeText(fullText);
         setCopiedVerse(verseNum);
         setTimeout(() => setCopiedVerse(null), 2000);
     };
 
     const shareToWhatsApp = (verse: BibleVerse) => {
-        const text = `📖 *${selectedBook?.name} ${selectedChapter}:${verse.verse}*\n\n"${verse.text}"\n\n_Consagrados 2026_`;
+        const text = `📖 *${getBookName(selectedBook)} ${selectedChapter}:${verse.number}*\n\n"${verse.verse}"\n\n_Consagrados 2026_`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
@@ -114,7 +123,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
         const confirm = window.confirm("¿Publicar este versículo en tus historias?");
         if (!confirm) return;
 
-        const content = `📖 ${selectedBook?.name} ${selectedChapter}:${verse.verse}\n\n"${verse.text}"`;
+        const content = `📖 ${getBookName(selectedBook)} ${selectedChapter}:${verse.number}\n\n"${verse.verse}"`;
         const res = await createStorySupabase(currentUser.id, 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=2070&auto=format&fit=crop', content);
 
         if (res.success) alert("✅ Publicado en Historias");
@@ -126,14 +135,14 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
         const confirm = window.confirm("¿Compartir este versículo en el Intel Feed? (Se ignorará el límite de caracteres)");
         if (!confirm) return;
 
-        const message = `📖 *${selectedBook?.name} ${selectedChapter}:${verse.verse}*\n\n"${verse.text}"`;
+        const message = `📖 *${getBookName(selectedBook)} ${selectedChapter}:${verse.number}*\n\n"${verse.verse}"`;
         const res = await publishNewsSupabase(currentUser.id, currentUser.name, 'BIBLE_SHARE', message);
 
         if (res.success) alert("🚀 Compartido en Intel Feed");
         else alert("❌ Error al compartir");
     };
 
-    const filteredBooks = books.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredBooks = books.filter(b => b.names.some(n => n.toLowerCase().includes(searchTerm.toLowerCase())));
 
     return (
         <div className="flex flex-col h-full bg-[#000814] text-white font-montserrat relative overflow-hidden">
@@ -198,7 +207,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                         className="flex items-center gap-3 mt-4"
                     >
                         <div className="h-4 w-[2px] bg-amber-500 rounded-full" />
-                        <span className="text-[11px] font-black text-amber-500 uppercase tracking-widest">{selectedBook.name}</span>
+                        <span className="text-[11px] font-black text-amber-500 uppercase tracking-widest">{getBookName(selectedBook)}</span>
                         {selectedChapter && (
                             <>
                                 <ChevronRight className="text-white/20" size={12} />
@@ -237,7 +246,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                         >
                             {filteredBooks.map((book, idx) => (
                                 <motion.button
-                                    key={book.pk}
+                                    key={book.names[0]}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.01 } }}
                                     whileHover={{ y: -5, scale: 1.02 }}
@@ -255,7 +264,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                                             <Book className="text-white/20 group-hover:text-amber-500 group-hover:scale-110 transition-all duration-500" size={24} />
                                         </div>
                                         <div className="text-left">
-                                            <h3 className="text-lg font-black uppercase tracking-widest leading-none mb-1 group-hover:text-amber-400 transition-colors">{book.name}</h3>
+                                            <h3 className="text-lg font-black uppercase tracking-widest leading-none mb-1 group-hover:text-amber-400 transition-colors">{book.names[0]}</h3>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[9px] font-bold text-white/30 group-hover:text-amber-500/60 transition-colors uppercase tracking-[0.2em]">{book.chapters} Capítulos</span>
                                             </div>
@@ -293,7 +302,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                         >
                             {verses.map((v, idx) => (
                                 <motion.div
-                                    key={v.pk}
+                                    key={v.id}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
                                     className="group relative"
@@ -301,22 +310,27 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                                     <div className="flex gap-6 items-start">
                                         <div className="pt-1.5">
                                             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-500/10 border border-amber-500/20 text-amber-500 font-bebas text-lg shadow-[0_0_15px_rgba(245,158,11,0.1)] group-hover:bg-amber-500 group-hover:text-black transition-all duration-300">
-                                                {v.verse}
+                                                {v.number}
                                             </div>
                                         </div>
                                         <div className="flex-1 space-y-4">
+                                            {v.study && (
+                                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60 mb-2 font-montserrat">
+                                                    {v.study}
+                                                </h4>
+                                            )}
                                             <p className="text-xl md:text-2xl font-montserrat font-medium leading-[1.8] text-white/90 selection:bg-amber-500 selection:text-black">
-                                                {v.text}
+                                                {v.verse}
                                             </p>
 
                                             {/* Acciones Premium al Hover */}
                                             <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0">
                                                 <button
-                                                    onClick={() => copyToClipboard(v.text, v.verse)}
+                                                    onClick={() => copyToClipboard(v.verse, v.number)}
                                                     className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/40 hover:text-white transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest backdrop-blur-sm"
                                                 >
-                                                    {copiedVerse === v.verse ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
-                                                    {copiedVerse === v.verse ? 'Copiado' : 'Copiar'}
+                                                    {copiedVerse === v.number ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                                                    {copiedVerse === v.number ? 'Copiado' : 'Copiar'}
                                                 </button>
                                                 <button
                                                     onClick={() => shareToWhatsApp(v)}

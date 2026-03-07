@@ -14,7 +14,10 @@ import {
     toggleLikeSupabase,
     fetchNewsLikesSupabase,
     fetchUserLikesSupabase,
-    getMostLikedAgentSupabase
+    getMostLikedAgentSupabase,
+    supabase,
+    validateContent,
+    toggleDislikeSupabase
 } from '../services/supabaseService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
@@ -48,6 +51,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [currentPage, setCurrentPage] = useState(0);
     const [likesCount, setLikesCount] = useState<Record<string, number>>({});
     const [userLikes, setUserLikes] = useState<string[]>([]);
+    const [userDislikes, setUserDislikes] = useState<string[]>([]);
+    const [dislikesCount, setDislikesCount] = useState<Record<string, number>>({});
     const [mostLikedAgentId, setMostLikedAgentId] = useState<string | null>(null);
     const [sharePreview, setSharePreview] = useState<{
         agent?: Agent;
@@ -59,6 +64,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [isPublishing, setIsPublishing] = useState(false);
     const [mentions, setMentions] = useState<Agent[]>([]);
     const [showMentions, setShowMentions] = useState(false);
+    const [expandedThread, setExpandedThread] = useState<string | null>(null);
 
     const PAGE_SIZE = 20;
 
@@ -80,6 +86,13 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 const ids = data.map(i => i.id);
                 const counts = await fetchNewsLikesSupabase(ids);
                 setLikesCount(counts);
+
+                // Mapear dislikes desde la data (si fetchNewsFeed los trae)
+                const dCounts: Record<string, number> = {};
+                data.forEach(item => {
+                    if (item.dislikesCount !== undefined) dCounts[item.id] = item.dislikesCount;
+                });
+                setDislikesCount(dCounts);
             }
 
             const mostLiked = await getMostLikedAgentSupabase();
@@ -88,6 +101,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             if (currentUser) {
                 const userL = await fetchUserLikesSupabase(currentUser.id);
                 setUserLikes(userL);
+
+                // Fetch user dislikes (necesitaríamos un servicio similar a fetchUserLikes)
+                // Por ahora asumimos que los dislikes se gestionan reactivamente
             }
         } catch (e) { console.error(e); }
         setLoading(false);
@@ -97,6 +113,17 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         if (!currentUser || !socialMessage.trim() || isPublishing) return;
         if (socialMessage.length > 128) {
             showAlert({ title: "OPERACIÓN DENEGADA", message: "EL MENSAJE EXCEDE EL LÍMITE TÁCTICO DE 128 CARACTERES.", type: 'ERROR' });
+            return;
+        }
+
+        // 1. Validación de Censura Local
+        const validation = validateContent(socialMessage);
+        if (!validation.valid) {
+            showAlert({
+                title: "DETECTADA INFRACCIÓN",
+                message: `TU MENSAJE CONTIENE TÉRMINOS NO PERMITIDOS [${validation.word}]. POR FAVOR, REVISA LAS POLÍTICAS DE CONVIVENCIA.`,
+                type: 'ERROR'
+            });
             return;
         }
 
@@ -134,10 +161,65 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         }
     };
 
+    const handleToggleDislike = async (noticiaId: string) => {
+        if (!currentUser) return;
+
+        const res = await toggleDislikeSupabase(noticiaId, currentUser.id);
+        if (res.success) {
+            setUserDislikes(prev => res.disliked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
+            setDislikesCount(prev => ({
+                ...prev,
+                [noticiaId]: (prev[noticiaId] || 0) + (res.disliked ? 1 : -1)
+            }));
+
+            // Si el post se auto-eliminó por el trigger de 5 dislikes, loadNews refrescará el feed
+            if (res.disliked && (dislikesCount[noticiaId] || 0) + 1 >= 5) {
+                setTimeout(loadNews, 500);
+            }
+        }
+    };
+
     useEffect(() => {
         loadNews();
-        const heartBeat = setInterval(loadNews, 30000);
-        return () => clearInterval(heartBeat);
+
+        // Suscripción Realtime (Estilo Pro)
+        const channel = supabase
+            .channel('social_feed_changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'asistencia_visitas'
+            }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const item = payload.new;
+                    const mappedItem: NewsFeedItem = {
+                        id: item.id,
+                        agentId: item.agent_id,
+                        agentName: item.agent_name,
+                        type: item.tipo,
+                        message: item.detalle || '',
+                        parentId: item.parent_id,
+                        date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }).toUpperCase()
+                    };
+                    setNews(prev => {
+                        // Evitar duplicados
+                        if (prev.find(p => p.id === mappedItem.id)) return prev;
+                        return [mappedItem, ...prev];
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setNews(prev => prev.filter(p => p.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     if (loading) {
@@ -373,46 +455,89 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         <span className="text-[9px] font-black">{likesCount[item.id] || 0}</span>
                                                     </button>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); setReplyTo(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                                                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-white/5 border-white/10 text-white/40 hover:text-white/60 transition-all"
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleDislike(item.id); }}
+                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userDislikes.includes(item.id) ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-white/5 border-white/10 text-white/40'}`}
                                                     >
-                                                        <MessageCircle size={12} />
-                                                        <span className="text-[8px] font-black uppercase">Responder</span>
+                                                        <AtSign size={12} className={userDislikes.includes(item.id) ? "animate-pulse" : ""} />
+                                                        <span className="text-[9px] font-black">{dislikesCount[item.id] || 0}</span>
                                                     </button>
                                                 </div>
                                             </div>
 
-                                            <button onClick={() => setSharePreview({ agent, newsItem: item })} className="shrink-0 p-2 text-white/20 hover:text-[#ffb700] transition-colors"><Share2 size={16} /></button>
+                                            <div className="flex flex-col gap-2">
+                                                <button onClick={() => setSharePreview({ agent, newsItem: item })} className="p-2 text-white/20 hover:text-[#ffb700] transition-colors"><Share2 size={16} /></button>
+                                                {(userRole === UserRole.DIRECTOR) && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            showAlert({
+                                                                title: "ELIMINAR MENSAJE (DIRECTOR)",
+                                                                message: "¿ESTÁS SEGURO? ESTA ACCIÓN ES IRREVERSIBLE.",
+                                                                type: 'CONFIRM',
+                                                                onConfirm: async () => {
+                                                                    const res = await deleteNewsItemSupabase(item.id);
+                                                                    if (res.success) {
+                                                                        showAlert({ title: "ÉXITO", message: "MENSAJE ELIMINADO", type: 'SUCCESS' });
+                                                                        loadNews();
+                                                                    }
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="p-2 text-red-500/40 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Nested Comments */}
                                         <div className="mt-2 space-y-2">
-                                            {news.filter(comment => comment.parentId === item.id).map(comment => (
-                                                <div key={comment.id} className="ml-8 p-3 bg-white/5 rounded-2xl border border-white/5 flex items-start gap-3 shadow-inner">
-                                                    <img
-                                                        src={formatDriveUrl(agents.find(a => a.id === comment.agentId)?.photoUrl || '', comment.agentName || '')}
-                                                        className="w-6 h-6 rounded-lg object-cover border border-white/10"
-                                                        alt={comment.agentName}
-                                                        onError={(e) => {
-                                                            const target = e.currentTarget as HTMLImageElement;
-                                                            if (!target.src.includes('ui-avatars.com')) {
-                                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.agentName || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
-                                                            }
-                                                        }}
-                                                    />
-                                                    <div className="flex-1 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[8px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
-                                                            <span className="text-[6px] text-white/20 font-black uppercase">{comment.date}</span>
-                                                        </div>
-                                                        <p className="text-[10px] text-white/70 font-medium leading-tight font-montserrat">
-                                                            {comment.message.split(' ').map((word, i) =>
-                                                                word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                            {(() => {
+                                                const threadComments = news.filter(comment => comment.parentId === item.id);
+                                                const showAll = expandedThread === item.id;
+                                                const visibleComments = showAll ? threadComments : threadComments.slice(0, 10);
+
+                                                return (
+                                                    <>
+                                                        {visibleComments.map(comment => (
+                                                            <div key={comment.id} className="ml-8 p-3 bg-white/5 rounded-2xl border border-white/5 flex items-start gap-3 shadow-inner">
+                                                                <img
+                                                                    src={formatDriveUrl(agents.find(a => a.id === comment.agentId)?.photoUrl || '', comment.agentName || '')}
+                                                                    className="w-6 h-6 rounded-lg object-cover border border-white/10"
+                                                                    alt={comment.agentName}
+                                                                    onError={(e) => {
+                                                                        const target = e.currentTarget as HTMLImageElement;
+                                                                        if (!target.src.includes('ui-avatars.com')) {
+                                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.agentName || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <div className="flex-1 space-y-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[8px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
+                                                                        <span className="text-[6px] text-white/20 font-black uppercase">{comment.date}</span>
+                                                                    </div>
+                                                                    <p className="text-[10px] text-white/70 font-medium leading-tight font-montserrat">
+                                                                        {comment.message.split(' ').map((word, i) =>
+                                                                            word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+
+                                                        {threadComments.length > 10 && !showAll && (
+                                                            <button
+                                                                onClick={() => setExpandedThread(item.id)}
+                                                                className="ml-8 w-full py-2 bg-[#ffb700]/10 border border-dashed border-[#ffb700]/20 rounded-xl text-[8px] text-[#ffb700] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 transition-all"
+                                                            >
+                                                                Ver hilo completo ({threadComments.length} comentarios)
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </motion.div>
                                 </div>

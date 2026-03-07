@@ -1417,14 +1417,77 @@ export const fetchVisitorRadarSupabase = async (): Promise<any[]> => {
 };
 
 
+// Lista de censura: Sexual + Jerga Ofensiva Venezuela
+const CENSORED_WORDS = [
+    // Sexuales/Vulgares
+    'PUTA', 'PUTO', 'MAMAGUEVO', 'MAMAGUEBO', 'GUEVO', 'GUEBO', 'COÑO', 'MALDITA', 'MALDITO',
+    'SINGAR', 'SINGON', 'SINGONA', 'VERGA', 'PENDEJO', 'PENDEJA', 'ZORRA', 'PERRA', 'MAMAR',
+    'ORTO', 'CULO', 'TETAS', 'PINGA', 'CHUPAR', 'SEX', 'PORN', 'XXX',
+    // Jerga Venezuela Ofensiva
+    'GUEVON', 'GUEBON', 'MADRE', 'HIJO DE PUTA', 'HDP', 'MARICO', 'MARICA', 'MARICON',
+    'MALPARIDO', 'MALPARIDA', 'CARETABLA', 'LADRON', 'CHABESTIA', 'ESCUALIDO'
+];
+
+/**
+ * @description Valida si el contenido contiene palabras censuradas
+ */
+export const validateContent = (text: string): { valid: boolean; word?: string } => {
+    const upperText = text.toUpperCase();
+    for (const word of CENSORED_WORDS) {
+        if (upperText.includes(word)) {
+            return { valid: false, word };
+        }
+    }
+    return { valid: true };
+};
+
+/**
+ * @description Alterna un dislike en una noticia
+ */
+export const toggleDislikeSupabase = async (noticiaId: string, agentId: string): Promise<{ success: boolean; disliked?: boolean; error?: any }> => {
+    try {
+        // Verificar si ya existe el dislike
+        const { data: existing } = await supabase
+            .from('asistencia_visitas_dislikes')
+            .select('*')
+            .eq('noticia_id', noticiaId)
+            .eq('agent_id', agentId)
+            .single();
+
+        if (existing) {
+            // Quitar dislike
+            await supabase
+                .from('asistencia_visitas_dislikes')
+                .delete()
+                .eq('id', existing.id);
+            return { success: true, disliked: false };
+        } else {
+            // Puntos de control antes de insertar dislike
+            const { error } = await supabase
+                .from('asistencia_visitas_dislikes')
+                .insert([{ noticia_id: noticiaId, agent_id: agentId }]);
+
+            if (error) throw error;
+            return { success: true, disliked: true };
+        }
+    } catch (err: any) {
+        console.error("Error toggleDislike:", err);
+        return { success: false, error: err.message };
+    }
+};
+
 /**
  * @description Obtiene el feed de noticias desde la tabla de actividad asistencia_visitas
  */
 export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
     try {
+        // TTL: 48 horas (48 * 60 * 60 * 1000 ms)
+        const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
         const { data, error } = await supabase
             .from('asistencia_visitas')
             .select('*')
+            .gte('registrado_en', fortyEightHoursAgo)
             .order('registrado_en', { ascending: false })
             .limit(100); // Traer suficientes para paginación y filtrado
 
@@ -2557,7 +2620,7 @@ export const submitInversionLead = async (lead: { nombre: string; email?: string
 export const fetchActiveStoriesSupabase = async (): Promise<any[]> => {
     try {
         // Cleanup expired stories (48h) — fire-and-forget
-        supabase.rpc('cleanup_expired_stories').then(() => { }).catch(() => { });
+        Promise.resolve(supabase.rpc('cleanup_expired_stories')).catch(() => { });
 
         const { data, error } = await supabase
             .from('historias')

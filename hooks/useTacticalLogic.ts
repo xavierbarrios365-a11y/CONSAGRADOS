@@ -6,14 +6,12 @@ import {
     updateAgentStreaksSupabase,
     confirmEventAttendanceSupabase as confirmEventAttendanceService,
     fetchAcademyDataSupabase,
-    updateAgentAiProfileSupabase
+    updateAgentAiProfileSupabase,
+    updateAgentAiPendingStatusSupabase,
+    fetchDailyVerseSupabase,
+    confirmDirectorAttendanceSupabase
 } from '../services/supabaseService';
 
-import {
-    updateAgentAiPendingStatus,
-    fetchDailyVerse,
-    confirmDirectorAttendance
-} from '../services/sheetsService';
 
 import { generateTacticalProfile, getTacticalAnalysis } from '../services/geminiService';
 
@@ -96,7 +94,7 @@ export const useTacticalLogic = (
             const result = await generateTacticalProfile(currentUser, progress, testAnswers);
             if (result) {
                 await updateAgentAiProfileSupabase(currentUser.id, result.stats, result.summary);
-                await updateAgentAiPendingStatus(currentUser.id, false);
+                await updateAgentAiPendingStatusSupabase(currentUser.id, false);
                 if (awardedXp > 0 && currentUser.isAiProfilePending) {
                     await updateAgentPointsSupabase(currentUser.id, "XP", awardedXp);
                 }
@@ -164,7 +162,7 @@ export const useTacticalLogic = (
                     updateAgentLocalState({
                         ...currentUser,
                         streakCount: res.newStreak !== undefined ? res.newStreak : safeStreak,
-                        lastStreakDate: Date.now(), // Usar timestamp exacto para evitar errores de zona horaria
+                        lastStreakDate: String(Date.now()), // Usar string para complacer el tipo Agent
                         weeklyTasks: updatedTasks
                     });
                 }
@@ -211,7 +209,7 @@ export const useTacticalLogic = (
     const handleConfirmDirectorAttendance = useCallback(async () => {
         if (!currentUser || currentUser.userRole !== UserRole.DIRECTOR) return;
         try {
-            const res = await confirmDirectorAttendance(currentUser.id, currentUser.name);
+            const res: any = await confirmDirectorAttendanceSupabase(currentUser.id, currentUser.name);
             if (res.alreadyDone) {
                 showAlert({ title: "ESTATUS NOMINAL", message: "✅ YA HAS CONFIRMADO TU ASISTENCIA HOY.", type: 'INFO' });
             } else if (res.success) {

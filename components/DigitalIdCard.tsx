@@ -5,8 +5,8 @@ import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake,
 import { motion, AnimatePresence } from 'framer-motion';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
-import { updateAgentAiProfile, updateAgentPoints } from '../services/sheetsService';
-import { fetchAcademyDataSupabase } from '../services/supabaseService';
+import { fetchAcademyDataSupabase, updateAgentAiProfileSupabase, updateAgentPointsSupabase, updateAgentPhotoSupabase } from '../services/supabaseService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -81,7 +81,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUs
     if (window.confirm("⚠️ ¿RE-EVALUACIÓN TÁCTICA?\nSe borrará tu perfil actual y deberás completar el test de élite nuevamente para acceder.")) {
       setIsUpdating(true);
       try {
-        await updateAgentAiProfile(agent.id, null, null);
+        await updateAgentAiProfileSupabase(agent.id, null, null);
         window.location.reload(); // Esto activará el bloqueo global al recargar
       } catch (err) {
         alert("Fallo al resetear perfil.");
@@ -265,12 +265,9 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUs
 
                         setIsUpdating(true);
                         try {
-                          const { uploadToCloudinary } = await import('../services/cloudinaryService');
-                          const { updateAgentPhoto } = await import('../services/sheetsService');
-
                           const uploadRes = await uploadToCloudinary(file);
                           if (uploadRes.success && uploadRes.url) {
-                            const res = await updateAgentPhoto(agent.id, uploadRes.url);
+                            const res = await updateAgentPhotoSupabase(agent.id, uploadRes.url);
                             if (res.success) {
                               window.location.reload();
                             }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
 import { fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase, submitQuizResultSupabase, resetStudentAttemptsSupabase, saveBulkAcademyDataSupabase } from '../services/supabaseService';
-import { uploadImage } from '../services/sheetsService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 import { updateAgentAiProfileSupabase } from '../services/supabaseService';
 import { fetchAgentsFromSupabase } from '../services/supabaseService';
 import { useTacticalAlert } from './TacticalAlert';
@@ -147,7 +147,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
         try {
             const reader = new FileReader();
             reader.onloadend = async () => {
-                const res = await uploadImage(reader.result as string, file);
+                const res = await uploadToCloudinary(file);
                 if (res.success && res.url) {
                     const course = courses.find(c => c.id === courseId);
                     if (course) {

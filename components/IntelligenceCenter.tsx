@@ -8,7 +8,6 @@ import { db } from '../firebase-config';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
-import { reconstructDatabase, uploadImage, updateAgentAiPendingStatus, resetSyncBackoff } from '../services/sheetsService';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
 import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
@@ -334,29 +333,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   };
 
 
-  const handleImportInscriptions = async () => {
-    showAlert({
-      title: "RECONSTRUCCIÓN BASE",
-      message: "⚠️ ¿RECONSTRUIR BASE DE DATOS?\n\nEsto sincronizará la hoja de cálculo con la base local.",
-      type: 'CONFIRM',
-      onConfirm: async () => {
-        setIsReconstructing(true);
-        try {
-          const res = await reconstructDatabase();
-          if (res.success) {
-            showAlert({ title: "SINCRONIZACIÓN", message: "✅ SINCRONIZACIÓN EXITOSA", type: 'SUCCESS' });
-            if (onUpdateNeeded) onUpdateNeeded();
-          } else {
-            showAlert({ title: "ERROR", message: "❌ ERROR: " + (res.error || "Fallo desconocido"), type: 'ERROR' });
-          }
-        } catch (err) {
-          showAlert({ title: "ERROR", message: "❌ FALLO DE COMUNICACIÓN CON EL NÚCLEO", type: 'ERROR' });
-        } finally {
-          setIsReconstructing(false);
-        }
-      }
-    });
-  };
 
   const handlePhotoUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

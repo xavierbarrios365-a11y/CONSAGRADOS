@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { uploadImage } from '../services/sheetsService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 import { enrollAgentSupabase } from '../services/supabaseService';
 import { compressImage } from '../services/storageUtils';
 import { sendTelegramAlert } from '../services/notifyService';
@@ -75,8 +75,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
     if (selectedFile) {
       setStatus('UPLOADING');
       try {
-        const compressedBase64 = await compressImage(selectedFile, 800, 0.8);
-        const uploadResult = await uploadImage(compressedBase64, selectedFile);
+        const uploadResult = await uploadToCloudinary(selectedFile);
         if (uploadResult.success && uploadResult.url) {
           photoUrl = uploadResult.url;
         } else {

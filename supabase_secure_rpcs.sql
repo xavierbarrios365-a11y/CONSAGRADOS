@@ -50,7 +50,11 @@ BEGIN
   )
   ON CONFLICT (id) DO UPDATE SET
     nombre = EXCLUDED.nombre,
-    xp = EXCLUDED.xp,
+    -- BLINDAJE: Solo actualizar si el valor recibido es mayor (anti-reset de Sheets)
+    xp = GREATEST(agentes.xp, EXCLUDED.xp),
+    bible = GREATEST(agentes.bible, EXCLUDED.bible),
+    notes = GREATEST(agentes.notes, EXCLUDED.notes),
+    leadership = GREATEST(agentes.leadership, EXCLUDED.leadership),
     rango = EXCLUDED.rango,
     cargo = EXCLUDED.cargo,
     -- BLINDAJE: Nunca sobrescribir campos sensibles con valores vacíos
@@ -63,9 +67,6 @@ BEGIN
     talent = EXCLUDED.talent,
     baptism_status = EXCLUDED.baptism_status,
     status = EXCLUDED.status,
-    bible = EXCLUDED.bible,
-    notes = EXCLUDED.notes,
-    leadership = EXCLUDED.leadership,
     user_role = EXCLUDED.user_role,
     joined_date = EXCLUDED.joined_date,
     birthday = EXCLUDED.birthday,

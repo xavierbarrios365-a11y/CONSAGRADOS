@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Guide, UserRole } from '../types';
-import { uploadFile } from '../services/sheetsService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 import { fetchTacticalResourcesSupabase, addTacticalResourceSupabase, deleteTacticalResourceSupabase } from '../services/supabaseService';
 import { compressImage } from '../services/storageUtils';
 import { BookOpen, Download, Upload, Plus, X, FileText, Loader2, Search, Trash2, Link } from 'lucide-react';
@@ -95,19 +95,7 @@ const ContentModule: React.FC<ContentModuleProps> = ({ userRole }) => {
             setUploadStatuses(newStatuses);
             const uploadPromises = selectedFiles.map(async (file, index) => {
                 try {
-                    let finalBase64 = '';
-                    if (file.type.startsWith('image/')) {
-                        finalBase64 = await compressImage(file, 1200, 0.7);
-                    } else {
-                        const reader = new FileReader();
-                        finalBase64 = await new Promise<string>((resolve, reject) => {
-                            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-                            reader.onerror = reject;
-                            reader.readAsDataURL(file);
-                        });
-                    }
-
-                    const uploadRes = await uploadFile(finalBase64, file);
+                    const uploadRes = await uploadToCloudinary(file);
 
                     if (uploadRes.success && uploadRes.url) {
                         // Usar el nombre base + index si hay varios, o solo el nombre si es uno

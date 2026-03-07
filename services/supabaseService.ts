@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 export { supabase };
-import { Agent, Badge, InboxNotification, UserRole, Rank } from '../types';
+import { Agent, Badge, InboxNotification, UserRole, Rank, DailyVerse as DailyVerseType } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 
 /**
@@ -380,7 +380,7 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
             console.error("Error al publicar noticia de racha:", e);
         }
 
-        return { success: true, streak: newStreak, lastStreakDate: now.toISOString() };
+        return { success: true, streak: newStreak, lastStreakDate: String(now.toISOString()) };
     } catch (error: any) {
         console.error('❌ Error actualizando racha en Supabase:', error.message);
         return { success: false, error: error.message };
@@ -975,6 +975,57 @@ export const syncDailyVersesToSupabase = async (verses: any[]) => {
         return { success: true, count: verses.length };
     } catch (e: any) {
         console.error('❌ Fallo crítico en syncDailyVersesToSupabase:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Obtiene el versículo de hoy desde Supabase
+ */
+export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> => {
+    try {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+        const { data, error } = await supabase
+            .from('versiculos_diarios')
+            .select('*')
+            .eq('fecha', today)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) return null;
+
+        return {
+            date: data.fecha,
+            reference: data.cita,
+            verse: data.texto
+        };
+    } catch (e) {
+        console.error('❌ Error al obtener versículo diario:', e);
+        return null;
+    }
+};
+
+/**
+ * @description Confirma la asistencia del director usando transacciones de Supabase
+ */
+export const confirmDirectorAttendanceSupabase = async (agentId: string, agentName: string) => {
+    try {
+        // Primero verificar si ya asistió hoy
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+        const { data, error: checkError } = await supabase
+            .from('asistencia_visitas')
+            .select('id')
+            .eq('agent_id', agentId)
+            .eq('tipo', 'DIRECTOR_ASISTENCIA')
+            .gte('registrado_en', today + 'T00:00:00-04:00') // Use ISO string for comparison
+            .lte('registrado_en', today + 'T23:59:59-04:00') // Use ISO string for comparison
+            .maybeSingle();
+
+        if (data) return { success: true, alreadyDone: true };
+
+        // Si no ha asistido, registrar transacción
+        return await submitTransactionSupabase(agentId, 'DIRECTOR_ASISTENCIA', agentName);
+    } catch (e: any) {
         return { success: false, error: e.message };
     }
 };

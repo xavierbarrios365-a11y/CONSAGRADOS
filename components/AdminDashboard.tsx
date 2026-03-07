@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Agent, UserRole } from '../types';
 import { supabase } from '../services/supabaseClient';
-import { fetchAgentsFromSheets, fetchDailyVerse, fetchNotifications, fetchNewsFeed, fetchAcademyData } from '../services/sheetsService';
-import { fetchTasksSupabase as fetchTasks, fetchActiveEventsSupabase as fetchActiveEvents, fetchTaskRecruitsSupabase as fetchTaskRecruits } from '../services/supabaseService';
-import { syncAllAgentsToSupabase, syncAcademyToSupabase, syncDailyVersesToSupabase, syncTasksToSupabase, syncAllHistoriesToSupabase, computeBadgesSupabase } from '../services/supabaseService';
 import { Search, Save, X, RefreshCw, ShieldAlert, AlertTriangle, ShieldCheck, DatabaseBackup, BookOpen, Clock, Users } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -19,9 +16,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
     const [isLoading, setIsLoading] = useState(true);
     const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [isForceSyncing, setIsForceSyncing] = useState(false);
-    const [isForceSyncingAcademy, setIsForceSyncingAcademy] = useState(false);
-    const [isForceSyncingHistories, setIsForceSyncingHistories] = useState(false);
 
     useEffect(() => {
         fetchAgents();
@@ -91,101 +85,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         }
     };
 
-    const handleForceCloning = async () => {
-        if (!confirm('¿CONFIRMAS iniciar la clonación absoluta desde Google Sheets a Supabase? Esto tardará unos segundos.')) return;
-        setIsForceSyncing(true);
-        try {
-            // 1. Traer todo de Sheets
-            const allSheetsAgents = await fetchAgentsFromSheets();
-            if (!allSheetsAgents || allSheetsAgents.length === 0) {
-                alert('No se pudieron leer los agentes de Google Sheets.');
-                return;
-            }
-
-            // 2. Empujar masivamente a Supabase
-            const result = await syncAllAgentsToSupabase(allSheetsAgents);
-            if (result.success) {
-                alert(`¡Clonación exitosa! ${result.count} agentes migrados al 100% a Supabase.`);
-                // 3. Refrescar lista local
-                fetchAgents();
-            } else {
-                alert(`Hubo fallos menores: se clonaron ${result.count} agentes.`);
-            }
-        } catch (e: any) {
-            alert('Error en clonación: ' + e.message);
-        } finally {
-            setIsForceSyncing(false);
-        }
-    };
-
-    const handleForceAcademyCloning = async () => {
-        if (!confirm('¿CONFIRMAS iniciar la clonación absoluta de la Academia y Versículos desde Google Sheets a Supabase? Esto sobrescribirá las tablas.')) return;
-        setIsForceSyncingAcademy(true);
-        try {
-            const academyData = await fetchAcademyData();
-            if (!academyData || !academyData.courses || academyData.courses.length === 0) {
-                alert('No se pudieron leer los cursos de Google Sheets.');
-                // Continuar intentando con versículos de todas formas
-            } else {
-                const academyResult = await syncAcademyToSupabase(academyData);
-                if (academyResult.success) {
-                    console.log('✅ Academia clonada a Supabase');
-                } else {
-                    alert('Hubo fallos al clonar Academia: ' + academyResult.error);
-                }
-            }
-
-            // 2. Obtener y Clonar Tareas
-            const tasksData = await fetchTasks();
-            if (tasksData && tasksData.length > 0) {
-                const tasksResult = await syncTasksToSupabase(tasksData);
-                if (tasksResult.success) {
-                    console.log(`✅ ${tasksResult.count} Tareas clonadas a Supabase`);
-                } else {
-                    alert('Hubo fallos al clonar Tareas: ' + tasksResult.error);
-                }
-            } else {
-                console.log('No se encontraron tareas en Sheets para clonar.');
-            }
-
-            // 3. Obtener Versículos (el Sheets devuelve un arreglo con el histórico si se configuró, o tomamos el actual)
-            // Ya que `fetchDailyVerse` actualmente trae un solo versículo, asumimos que se re-sincronizarán progresivamente
-            // Para asegurar la versatilidad de este botón ahora, avisaremos del éxito general.
-            alert('¡Clonación de Módulos Secundarios (Academia y Tareas) Finalizada! Revisa la consola y los datos en Supabase.');
-        } catch (e: any) {
-            alert('Error en clonación secundaria: ' + e.message);
-        } finally {
-            setIsForceSyncingAcademy(false);
-        }
-    };
-
-    const handleForceHistoriesCloning = async () => {
-        if (!confirm('¿CONFIRMAS clonar todo el historial de Eventos, Asistencias, Notificaciones, Misiones e Insignias?')) return;
-        setIsForceSyncingHistories(true);
-        try {
-            const [events, notifications, badges, news, taskProgress] = await Promise.all([
-                fetchActiveEvents(),
-                fetchNotifications(),
-                computeBadgesSupabase(),
-                fetchNewsFeed(),
-                fetchTaskRecruits()
-            ]);
-
-            const result = await syncAllHistoriesToSupabase({
-                events, notifications, badges, news, taskProgress
-            });
-
-            if (result.success) {
-                alert('¡Todos los historiales se migraron a Supabase exitosamente!');
-            } else {
-                alert(`Migración finalizada con ${result.failures} errores menores. Revisa la consola para más detalles.`);
-            }
-        } catch (e: any) {
-            alert('Error en clonación de historiales: ' + e.message);
-        } finally {
-            setIsForceSyncingHistories(false);
-        }
-    };
 
     if (currentUser?.userRole !== UserRole.DIRECTOR) {
         return (
@@ -337,39 +236,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                 )}
             </div>
 
-            {/* ZONA DE MIGRACIÓN SUPABASE */}
-            <div className="bg-[#ffb700]/5 border border-[#ffb700]/30 rounded-3xl p-6 shadow-[0_0_30px_rgba(255,183,0,0.05)]">
-                <h3 className="text-lg font-bebas text-[#ffb700] uppercase flex items-center gap-2 mb-4"><DatabaseBackup size={16} /> HERRAMIENTAS DE BASE DE DATOS (MIGRACIÓN A SUPABASE)</h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                        onClick={handleForceCloning}
-                        disabled={isForceSyncing}
-                        className="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffb700]/20 hover:border-[#ffb700]/50 transition-all font-bold text-white text-[10px] uppercase tracking-widest disabled:opacity-50"
-                    >
-                        {isForceSyncing ? <RefreshCw size={16} className="animate-spin text-[#ffb700]" /> : <Users size={16} className="text-[#ffb700]" />}
-                        {isForceSyncing ? 'MIGRANDO AGENTES...' : 'MIGRAR AGENTES (SHEETS -> SUPABASE)'}
-                    </button>
-
-                    <button
-                        onClick={handleForceAcademyCloning}
-                        disabled={isForceSyncingAcademy}
-                        className="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffb700]/20 hover:border-[#ffb700]/50 transition-all font-bold text-white text-[10px] uppercase tracking-widest disabled:opacity-50"
-                    >
-                        {isForceSyncingAcademy ? <RefreshCw size={16} className="animate-spin text-[#ffb700]" /> : <BookOpen size={16} className="text-[#ffb700]" />}
-                        {isForceSyncingAcademy ? 'MIGRANDO ACADEMIA...' : 'MIGRAR ACADEMIA (SHEETS -> SUPABASE)'}
-                    </button>
-
-                    <button
-                        onClick={handleForceHistoriesCloning}
-                        disabled={isForceSyncingHistories}
-                        className="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ffb700]/20 hover:border-[#ffb700]/50 transition-all font-bold text-white text-[10px] uppercase tracking-widest disabled:opacity-50"
-                    >
-                        {isForceSyncingHistories ? <RefreshCw size={16} className="animate-spin text-[#ffb700]" /> : <Clock size={16} className="text-[#ffb700]" />}
-                        {isForceSyncingHistories ? 'MIGRANDO HISTORIALES...' : 'MIGRAR HISTORIALES (ASIST., EVENTOS)'}
-                    </button>
-                </div>
-            </div>
 
             <div className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6">
                 <h3 className="text-lg font-bebas text-red-500 uppercase flex items-center gap-2 mb-2"><AlertTriangle size={16} /> PRECAUCIÓN DE COMANDO</h3>

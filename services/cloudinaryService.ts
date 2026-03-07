@@ -12,15 +12,13 @@ export const uploadToCloudinary = async (file: File | string): Promise<{ success
         const formData = new FormData();
 
         if (typeof file === 'string') {
-            // Cloudinary necesita el prefijo data URI completo para base64
-            const base64Data = file.startsWith('data:') ? file : `data:image/jpeg;base64,${file}`;
-            formData.append('file', base64Data);
+            formData.append('file', file);
         } else {
             formData.append('file', file);
         }
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
             method: 'POST',
             body: formData,
         });

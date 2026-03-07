@@ -3,7 +3,7 @@ import { collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp,
 import { db } from '../firebase-config';
 import { Agent, UserRole } from '../types';
 import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, Check, CheckCheck, Loader2, Download, MoreVertical, Trash2, Pencil, Smile } from 'lucide-react';
-import { uploadFile, uploadImage } from '../services/sheetsService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendPushBroadcast } from '../services/notifyService';
 import { compressImage } from '../services/storageUtils';
 
@@ -194,35 +194,11 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
         setIsUploading(true);
         try {
-            let res;
             const fileType = file.type;
-
-            if (fileType.startsWith('image/')) {
-                const base64 = await compressImage(file);
-                res = await uploadImage(base64, file);
-                if (res.success && res.url) {
-                    await handleSendMessage(undefined, { url: res.url, type: 'image', name: file.name });
-                }
-            } else if (fileType.startsWith('video/')) {
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    const base64 = (event.target?.result as string).split(',')[1];
-                    res = await uploadFile(base64, file);
-                    if (res.success && res.url) {
-                        await handleSendMessage(undefined, { url: res.url, type: 'video', name: file.name });
-                    }
-                };
-                reader.readAsDataURL(file);
-            } else {
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    const base64 = (event.target?.result as string).split(',')[1];
-                    res = await uploadFile(base64, file);
-                    if (res.success && res.url) {
-                        await handleSendMessage(undefined, { url: res.url, type: 'document', name: file.name });
-                    }
-                };
-                reader.readAsDataURL(file);
+            const res = await uploadToCloudinary(file);
+            if (res.success && res.url) {
+                const type = fileType.startsWith('image/') ? 'image' : (fileType.startsWith('video/') ? 'video' : 'document');
+                await handleSendMessage(undefined, { url: res.url, type, name: file.name });
             }
         } catch (error) {
             console.error("❌ ERROR CARGANDO ARCHIVO:", error);

@@ -1079,6 +1079,7 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         notificationCount={unreadNotifications}
         onOpenInbox={() => setShowInbox(true)}
+        onOpenChat={() => setIsChatOpen(true)}
       >
         <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
           <AnimatePresence mode="wait">
@@ -1102,17 +1103,7 @@ const App: React.FC = () => {
         <TacticalChat currentUser={currentUser} agents={agents} onClose={() => setIsChatOpen(false)} />
       )}
 
-      {isLoggedIn && !isChatOpen && (
-        <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-[45]">
-          <button
-            onClick={() => setIsChatOpen(true)}
-            className="p-4 bg-indigo-600 text-white rounded-full shadow-2xl hover:bg-indigo-500 transition-all active:scale-95 animate-in fade-in"
-            title="Chat Táctico"
-          >
-            <MessageSquare size={24} />
-          </button>
-        </div>
-      )}
+
 
       {scannedAgentForPoints && (
         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-6 animate-in fade-in">

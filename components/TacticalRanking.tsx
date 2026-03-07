@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Agent, UserRole } from '../types';
-import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDriveUrl } from '../services/storageUtils';
 import { PROMOTION_RULES } from '../constants';
@@ -31,47 +31,52 @@ const getPromotionStatus = (agent: Agent): string => {
 };
 
 const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }) => {
-    const [activeCategory, setActiveCategory] = useState<'AGENTS' | 'LEADERS'>('AGENTS');
-    const [activeTier, setActiveTier] = useState<string>('RECLUTA');
+    const [activeTab, setActiveTab] = useState<string>('RECLUTA');
 
-    const tiers = ['RECLUTA', 'ACTIVO', 'CONSAGRADO', 'REFERENTE', 'LÍDER'];
+    const rankingTabs = [
+        { id: 'RECLUTA', label: 'Reclutas', icon: <Shield size={14} />, color: 'gray' },
+        { id: 'ACTIVO', label: 'Activos', icon: <Target size={14} />, color: 'blue-sky' },
+        { id: 'CONSAGRADO', label: 'Consagrados', icon: <Award size={14} />, color: 'purple' },
+        { id: 'REFERENTE', label: 'Referentes', icon: <Star size={14} />, color: 'gold' },
+        { id: 'LIDER', label: 'Líderes', icon: <Crown size={14} />, color: 'red' }
+    ];
 
     const filteredAgents = agents.filter(a => {
-        // Ocultar perfiles de prueba del ranking
+        // Ocultar perfiles de prueba
         if (a.id === 'CON-TEST1' || a.id === 'CON-TEST2') return false;
 
-        if (activeCategory === 'LEADERS') {
-            return a.role === 'LIDER' || a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR;
-        } else {
-            const agentRank = (a.rank || 'RECLUTA').toUpperCase();
-            return agentRank === activeTier && (a.userRole === UserRole.STUDENT || !a.userRole);
-        }
+        // Normalización Táctica: Ignorar acentos y mayúsculas para el filtrado
+        const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+        const agentRank = normalize(a.rank || 'RECLUTA');
+        const targetRank = normalize(activeTab);
+
+        return agentRank === targetRank;
     });
 
     const sortedAgents = [...filteredAgents]
         .sort((a, b) => b.xp - a.xp)
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
-    // --- POSITION CHANGE TRACKING (ESTABILIZADO) ---
+    // --- POSITION CHANGE TRACKING ---
     const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>(() => {
         try {
-            const saved = localStorage.getItem(`ranking_snapshot_${activeCategory}_${activeTier}`);
+            const saved = localStorage.getItem(`ranking_v2_snapshot_${activeTab}`);
             return saved ? JSON.parse(saved) : {};
         } catch { return {}; }
     });
 
     React.useEffect(() => {
-        const key = `ranking_snapshot_${activeCategory}_${activeTier}`;
+        const key = `ranking_v2_snapshot_${activeTab}`;
         const saved = localStorage.getItem(key);
 
-        // Refrescar snapshot si no existe
         if (!saved && sortedAgents.length > 0) {
             const currentRanks: Record<string, number> = {};
             sortedAgents.forEach((a, idx) => { currentRanks[a.id] = idx + 1; });
             setSnapshotRanks(currentRanks);
             localStorage.setItem(key, JSON.stringify(currentRanks));
         }
-    }, [activeCategory, activeTier, sortedAgents.length]);
+    }, [activeTab, sortedAgents.length]);
 
     const getPositionChange = (agentId: string, currentPos: number): number => {
         const oldPos = snapshotRanks[agentId];
@@ -99,7 +104,7 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
     const restOfAgents = sortedAgents.slice(3);
 
     const getRankColor = (position: number) => {
-        if (activeCategory === 'LEADERS') return 'text-blue-400';
+        if (activeTab === 'LIDER' || activeTab === 'LÍDER') return 'text-red-400';
         switch (position) {
             case 1: return 'text-[#FFB700]';
             case 2: return 'text-gray-400';
@@ -114,49 +119,38 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
             <div className="relative overflow-hidden bg-[#001f3f] border border-[#FFB700]/20 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl">
                 <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-[#FFB700]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
 
-                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8">
+                <div className="relative flex flex-col items-center text-center gap-8">
                     <div className="space-y-3 md:space-y-4">
-                        <div className="inline-flex items-center gap-2 bg-[#FFB700]/10 border border-[#FFB700]/30 px-3 py-1 rounded-full">
+                        <div className="inline-flex items-center gap-2 bg-[#FFB700]/10 border border-[#FFB700]/30 px-3 py-1 rounded-full mx-auto">
                             <Trophy size={12} className="text-[#FFB700]" />
                             <span className="text-[8px] md:text-[10px] font-black text-[#FFB700] uppercase tracking-[0.2em] font-bebas">Escuadrón de Élite</span>
                         </div>
                         <h2 className="text-4xl md:text-7xl font-bebas text-white uppercase leading-none tracking-tight">
                             CUADRO DE <span className="text-[#FFB700] drop-shadow-[0_0_15px_rgba(255,183,0,0.4)]">HONOR</span>
                         </h2>
-                        <p className="text-[10px] md:text-sm text-white/50 font-montserrat max-w-md uppercase font-black tracking-widest leading-relaxed">
-                            {activeCategory === 'LEADERS' ? 'Los capitanes que comandan la victoria.' : 'El escalafón de los guerreros más letales.'}
+                        <p className="text-[10px] md:text-sm text-white/50 font-montserrat max-w-md uppercase font-black tracking-widest leading-relaxed mx-auto">
+                            {(activeTab === 'LIDER' || activeTab === 'LÍDER') ? 'Los capitanes que comandan la victoria.' : 'El escalafón de los guerreros más letales.'}
                         </p>
                     </div>
 
-                    <div className="flex flex-col gap-4 md:gap-6">
-                        <div className="flex bg-black/60 p-1.5 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl backdrop-blur-xl">
-                            <button
-                                onClick={() => setActiveCategory('AGENTS')}
-                                className={`flex-1 py-3 md:py-4 px-6 md:px-8 rounded-[1rem] md:rounded-[1.5rem] text-[9px] md:text-[11px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 md:gap-3 ${activeCategory === 'AGENTS' ? 'bg-[#FFB700] text-[#001f3f] shadow-[0_0_20px_rgba(255,183,0,0.3)]' : 'text-white/40 hover:text-white'}`}
-                            >
-                                <Users size={14} /> Agentes
-                            </button>
-                            <button
-                                onClick={() => setActiveCategory('LEADERS')}
-                                className={`flex-1 py-3 md:py-4 px-6 md:px-8 rounded-[1rem] md:rounded-[1.5rem] text-[9px] md:text-[11px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 md:gap-3 ${activeCategory === 'LEADERS' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' : 'text-white/40 hover:text-white'}`}
-                            >
-                                <Crown size={14} /> Líderes
-                            </button>
+                    {/* Unified Ranking Navigation */}
+                    <div className="w-full max-w-4xl">
+                        <div className="flex bg-black/40 p-1.5 rounded-[1.5rem] md:rounded-[2.5rem] border border-white/10 shadow-2xl backdrop-blur-xl overflow-x-auto no-scrollbar">
+                            {rankingTabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 py-3 md:py-5 px-4 md:px-8 rounded-[1rem] md:rounded-[2rem] text-[9px] md:text-[11px] font-black uppercase transition-all whitespace-nowrap flex items-center justify-center gap-2 md:gap-3
+                                        ${activeTab === tab.id
+                                            ? 'bg-[#FFB700] text-[#001f3f] shadow-[0_0_25px_rgba(255,183,0,0.25)] scale-[1.02]'
+                                            : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                                        }`}
+                                >
+                                    {tab.icon}
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
-
-                        {activeCategory === 'AGENTS' && (
-                            <div className="flex gap-2 p-1.5 bg-black/30 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-full">
-                                {tiers.map(tier => (
-                                    <button
-                                        key={tier}
-                                        onClick={() => setActiveTier(tier)}
-                                        className={`flex-1 py-2 px-3 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${activeTier === tier ? 'bg-white/10 text-white border-white/30 shadow-lg' : 'text-white/20 hover:text-white/40 border-transparent'}`}
-                                    >
-                                        {tier}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
@@ -232,7 +226,7 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                             }
                                         }}
                                     />
-                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${activeCategory === 'LEADERS' ? 'bg-blue-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex flex-col items-center justify-center ${activeCategory === 'LEADERS' ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
+                                    <div className={`absolute -bottom-1 -right-1 md:-bottom-4 md:-right-4 w-8 h-8 md:w-14 md:h-14 ${(activeTab === 'LIDER' || activeTab === 'LÍDER') ? 'bg-red-600' : 'bg-[#FFB700]'} border-2 md:border-4 border-[#001f3f] rounded-lg md:rounded-2xl flex flex-col items-center justify-center ${(activeTab === 'LIDER' || activeTab === 'LÍDER') ? 'text-white' : 'text-[#001f3f]'} shadow-2xl`}>
                                         <span className="font-bebas text-lg md:text-3xl font-black leading-none">1</span>
                                         <RankingIndicator change={getPositionChange(topThree[0].id, 1)} />
                                     </div>
@@ -254,8 +248,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                         <span className="text-[10px] md:text-xl font-black">{topThree[0].xp} XP</span>
                                     </div>
                                 </div>
-                                <div className={`w-full h-20 md:h-56 bg-gradient-to-b ${activeCategory === 'LEADERS' ? 'from-blue-600/20' : 'from-[#FFB700]/10'} via-black/40 to-transparent rounded-t-xl md:rounded-t-[3rem] border-t border-x ${activeCategory === 'LEADERS' ? 'border-blue-600/40' : 'border-[#FFB700]/30'} flex flex-col items-center justify-end pb-4 shadow-2xl`}>
-                                    <Star size={14} className={`md:size-8 ${activeCategory === 'LEADERS' ? 'text-blue-400' : 'text-[#FFB700]'}`} />
+                                <div className={`w-full h-20 md:h-56 bg-gradient-to-b ${(activeTab === 'LIDER' || activeTab === 'LÍDER') ? 'from-red-600/20' : 'from-[#FFB700]/10'} via-black/40 to-transparent rounded-t-xl md:rounded-t-[3rem] border-t border-x ${(activeTab === 'LIDER' || activeTab === 'LÍDER') ? 'border-red-600/40' : 'border-[#FFB700]/30'} flex flex-col items-center justify-end pb-4 shadow-2xl`}>
+                                    <Star size={14} className={`md:size-8 ${(activeTab === 'LIDER' || activeTab === 'LÍDER') ? 'text-red-400' : 'text-[#FFB700]'}`} />
                                 </div>
                             </motion.div>
                         )}
@@ -405,7 +399,7 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                         <Users size={32} className="text-white/20" />
                     </div>
                     <h3 className="text-xl md:text-2xl font-bebas text-white uppercase tracking-widest">Operación en Espera</h3>
-                    <p className="text-[8px] md:text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] max-w-sm mx-auto">Aún no hay agentes clasificados en <span className="text-[#FFB700]">{activeTier}</span>.</p>
+                    <p className="text-[8px] md:text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] max-w-sm mx-auto">Aún no hay agentes clasificados en <span className="text-[#FFB700]">{activeTab}</span>.</p>
                 </div>
             )}
 

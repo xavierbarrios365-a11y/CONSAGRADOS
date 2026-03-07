@@ -108,7 +108,27 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
             id: d.id,
             name: d.nombre,
             xp: d.xp || 0,
-            rank: d.rango || 'RECLUTA',
+            rank: (() => {
+                const name = String(d.nombre || '').toUpperCase();
+                const role = String(d.user_role || '').toUpperCase();
+                const cargo = String(d.cargo || '').toUpperCase();
+                const dbRank = (d.rango || 'RECLUTA').toUpperCase();
+
+                // 1. Prioridad: Staff conocido SOLAMENTE
+                const knownStaffNames = ['SAHEL', 'SOLISBETH', 'NAILETH', 'ANTONELLA', 'DAVID JOEL'];
+                if (knownStaffNames.some(sn => name.includes(sn))) return Rank.LIDER;
+
+                // 2. Cargos de Dirección (Staff)
+                // Usamos términos más específicos para no atrapar a Referentes Académicos
+                const staffKeywords = ['DIRECTOR', 'DIRECTORA', 'PASTORAL', 'IDENTIDAD', 'DINÁMICAS', 'EVIDENCIA', 'CENTRO DE OPERACIÓN', 'ADMINISTRADOR', 'ADMINISTRADORA'];
+                if (staffKeywords.some(kw => cargo.includes(kw) || role.includes(kw))) {
+                    return Rank.LIDER;
+                }
+
+                // 3. Respetar estrictamente el rango de la DB para todos los demás
+                // Esto deshace el ascenso por XP sin permiso
+                return dbRank;
+            })(),
             role: d.cargo || 'ESTUDIANTE',
             whatsapp: d.whatsapp || '',
             photoUrl: d.foto_url || '',
@@ -126,8 +146,17 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
                 const role = String(d.user_role || '').toUpperCase();
                 const cargo = String(d.cargo || '').toUpperCase();
 
+                // Director check
                 if (name.includes('SAHEL') || role === 'DIRECTOR' || cargo === 'DIRECTOR') return UserRole.DIRECTOR;
-                if (role === 'LEADER' || role === 'LIDER' || cargo === 'LIDER' || cargo === 'LÍDER') return UserRole.LEADER;
+
+                // Staff / Leader checks
+                const staffKeywords = ['LIDER', 'LÍDER', 'LEADER', 'PASTORAL', 'IDENTIDAD', 'DINÁMICAS', 'EVIDENCIA', 'ADMIN'];
+                const isStaffKeyword = staffKeywords.some(kw => cargo.includes(kw) || role.includes(kw));
+                const knownStaffNames = ['SOLISBETH', 'NAILETH', 'ANTONELLA', 'DAVID JOEL'];
+                const isKnownStaff = knownStaffNames.some(sn => name.includes(sn));
+
+                if (isStaffKeyword || isKnownStaff) return UserRole.LEADER;
+
                 return UserRole.STUDENT;
             })(),
             idSignature: `V37-SIG-${d.id}`,

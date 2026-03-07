@@ -229,28 +229,36 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     };
 
     return (
-        <div className="fixed bottom-0 right-0 w-full md:bottom-4 md:right-4 md:w-[400px] h-[100dvh] md:h-[600px] bg-[#000c19] border-l md:border border-white/10 md:rounded-[2.5rem] shadow-2xl flex flex-col z-[60] overflow-hidden animate-in slide-in-from-bottom-10 duration-500 ease-out">
+        <div className="fixed bottom-0 right-0 w-full md:bottom-20 md:right-6 md:w-[420px] h-[100dvh] md:h-[700px] bg-[#000810]/95 backdrop-blur-2xl border-l md:border border-white/10 md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col z-[60] overflow-hidden animate-in slide-in-from-bottom-10 duration-500 ease-out">
+            {/* Ambient background glows */}
+            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-20">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/10 blur-[100px] rounded-full"></div>
+            </div>
             {/* Header: WhatsApp Style with Official Logo */}
-            <div className="pt-[max(env(safe-area-inset-top),16px)] pb-4 px-4 bg-[#001f3f] flex items-center justify-between text-white border-b border-white/5 relative z-10 shadow-lg">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <div className="w-10 h-10 rounded-full border border-[#ffb700]/30 overflow-hidden bg-white/5 flex items-center justify-center">
-                            <Shield className="w-6 h-6 text-[#ffb700] opacity-80" />
+            <div className="pt-[max(env(safe-area-inset-top),20px)] pb-5 px-6 bg-white/5 backdrop-blur-md flex items-center justify-between text-white border-b border-white/10 relative z-10 shadow-2xl">
+                <div className="flex items-center gap-4">
+                    <div className="relative group">
+                        <div className="w-12 h-12 rounded-2xl border border-[#ffb700]/30 overflow-hidden bg-gradient-to-br from-blue-600/20 to-indigo-600/20 flex items-center justify-center shadow-[0_0_20px_rgba(255,183,0,0.1)] group-hover:border-[#ffb700]/60 transition-all duration-500">
+                            <Shield className="w-7 h-7 text-[#ffb700] drop-shadow-[0_0_8px_rgba(255,183,0,0.5)]" />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#001f3f] animate-pulse"></div>
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-[#000810] shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                     </div>
-                    <div>
-                        <h3 className="font-black text-sm tracking-widest uppercase">CANAL GRUPAL</h3>
-                        <p className="text-[9px] text-[#ffb700] uppercase font-bold tracking-widest opacity-80">Conexión Segura: {agents.length} Miembros</p>
+                    <div className="flex flex-col gap-0.5">
+                        <h3 className="font-bebas text-lg tracking-[0.15em] text-white">CENTRO DE OPERACIONES</h3>
+                        <div className="flex items-center gap-2">
+                            <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            <p className="text-[8px] text-[#ffb700] uppercase font-black tracking-widest opacity-90">{agents.length} AGENTES ACTIVOS</p>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-red-500/20 rounded-xl transition-all text-white/80 hover:text-red-400 border border-white/10 active:scale-95"
-                        title="SALIR DEL CANAL"
+                        className="w-11 h-11 flex items-center justify-center bg-white/5 hover:bg-red-500/20 rounded-2xl transition-all text-white/60 hover:text-red-400 border border-white/10 active:scale-90"
+                        title="EXPULSIÓN SEGURA"
                     >
-                        <X size={22} strokeWidth={3} />
+                        <X size={24} strokeWidth={2.5} />
                     </button>
                 </div>
             </div>
@@ -291,9 +299,9 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                 <div className={`max-w-[80%] flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
                                     {/* Message Bubble */}
                                     <div
-                                        className={`relative p-3 rounded-2xl shadow-sm transition-all duration-300 ${isMe
-                                            ? 'bg-blue-600 text-white rounded-tr-none hover:bg-blue-500'
-                                            : 'bg-white/5 text-slate-200 border border-white/10 rounded-tl-none hover:bg-white/10'}`}
+                                        className={`relative p-3.5 rounded-2xl shadow-lg transition-all duration-300 backdrop-blur-sm ${isMe
+                                            ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-tr-none hover:shadow-blue-500/20'
+                                            : 'bg-white/10 text-slate-100 border border-white/10 rounded-tl-none hover:bg-white/15'}`}
                                         onDoubleClick={(e) => { e.stopPropagation(); setShowReactions(showReactions === msg.id ? null : msg.id); }}
                                         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); if (isOwnerOrMod) setActiveMenu(activeMenu === msg.id ? null : msg.id); }}
                                     >
@@ -487,48 +495,50 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             )}
 
             {/* Input: Premium Design */}
-            <div className="p-4 md:p-6 bg-[#001f3f] border-t border-white/5 relative z-10">
+            <div className="p-5 md:p-7 bg-white/5 backdrop-blur-xl border-t border-white/10 relative z-10">
                 <form
                     onSubmit={handleSendMessage}
-                    className="flex items-center gap-3"
+                    className="flex items-center gap-4"
                 >
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
 
-                    <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        className="p-3 text-white/60 hover:text-[#ffb700] transition-colors hover:bg-white/5 rounded-full"
-                    >
-                        <Paperclip size={20} />
-                    </button>
+                    <div className="flex gap-1">
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="p-3 text-white/40 hover:text-[#ffb700] transition-all hover:bg-white/5 rounded-xl active:scale-90"
+                        >
+                            <Paperclip size={22} />
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className={`p-3 transition-colors hover:bg-white/5 rounded-full ${showEmojiPicker ? 'text-[#ffb700]' : 'text-white/60 hover:text-[#ffb700]'}`}
-                    >
-                        <Smile size={20} />
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className={`p-3 transition-all hover:bg-white/5 rounded-xl active:scale-90 ${showEmojiPicker ? 'text-[#ffb700] bg-white/5' : 'text-white/40 hover:text-[#ffb700]'}`}
+                        >
+                            <Smile size={22} />
+                        </button>
+                    </div>
 
                     <div className="flex-1 relative group">
                         <input
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Mensaje seguro..."
+                            placeholder="TRANSMITIR MENSAJE..."
                             disabled={isUploading}
                             onFocus={() => setShowEmojiPicker(false)}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 px-5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#ffb700]/50 focus:bg-white/10 transition-all font-medium"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-[#ffb700]/40 focus:bg-white/10 transition-all font-bold tracking-widest uppercase shadow-inner"
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={!newMessage.trim() || isUploading}
-                        className="p-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 hover:shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-30 disabled:hover:shadow-none transition-all active:scale-90 flex items-center justify-center"
+                        className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl hover:from-blue-400 hover:to-indigo-500 shadow-[0_10px_20px_rgba(37,99,235,0.3)] disabled:opacity-20 disabled:shadow-none transition-all active:scale-90 flex items-center justify-center group"
                     >
-                        <Send size={20} className={newMessage.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />
+                        <Send size={22} className={`transition-transform duration-300 ${newMessage.trim() ? "translate-x-0.5 -translate-y-0.5 group-hover:scale-110" : ""}`} />
                     </button>
                 </form>
             </div>

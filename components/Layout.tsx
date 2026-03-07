@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield, Settings, Zap, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield, Settings, Zap, Menu, X, MessageSquare } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -14,11 +14,12 @@ interface LayoutProps {
   onHardReset?: () => void;
   notificationCount: number;
   onOpenInbox: () => void;
+  onOpenChat?: () => void;
 }
 
 const OFFICIAL_LOGO = "/logo_white.png";
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, onHardReset, notificationCount, onOpenInbox }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, onHardReset, notificationCount, onOpenInbox, onOpenChat }) => {
   const [logoError, setLogoError] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -103,6 +104,20 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
                   {notificationCount > 9 ? '+9' : notificationCount}
                 </span>
               )}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={onOpenChat}
+              className="relative cursor-pointer group p-2 text-gray-500 hover:text-[#ffb700] transition-colors"
+              title="Chat Táctico"
+            >
+              <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
             </motion.div>
 
             {/* BOTÓN DE MENÚ LATERAL (REEMPLAZA PURGA) */}

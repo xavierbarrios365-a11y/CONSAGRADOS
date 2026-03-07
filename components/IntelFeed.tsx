@@ -143,11 +143,21 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 const senderName = currentUser.name;
 
                 // 2. Notificaciones de Mención (@usuario)
-                const mentionMatches = socialMessage.match(/@(\w+)/g);
+                // Regex mejorado para soportar acentos, puntos, guiones y caracteres latinos
+                const mentionMatches = socialMessage.match(/@([\wáéíóúñÁÉÍÓÚÑ._-]+)/g);
                 if (mentionMatches) {
                     mentionMatches.forEach(tag => {
                         const cleanTag = tag.slice(1).toLowerCase();
-                        const targetAgent = agents.find(a => a.name.replace(/\s/g, '').toLowerCase().includes(cleanTag));
+                        // Búsqueda más robusta: quitamos espacios y acentos para comparar
+                        const targetAgent = agents.find(a => {
+                            const normalizedName = a.name.toLowerCase()
+                                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                                .replace(/\s/g, '');
+                            const normalizedTag = cleanTag.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                            return normalizedName.includes(normalizedTag) || normalizedTag.includes(normalizedName);
+                        });
+
                         if (targetAgent && targetAgent.id !== currentUser.id) {
                             sendSocialNotification('MENTION', targetAgent.id, { senderName, messageSnippet });
                         }

@@ -2521,6 +2521,7 @@ export const fetchNotificationsSupabase = async (): Promise<InboxNotification[]>
             fecha: n.created_at,
             titulo: n.titulo,
             mensaje: n.mensaje,
+            agent_id: n.agent_id, // Añadido para filtrado correcto
             categoria: (n.tipo && n.tipo !== 'general') ? String(n.tipo).toUpperCase() : 'INFO',
             emisor: n.emisor || 'Comando Central'
         })) as InboxNotification[];

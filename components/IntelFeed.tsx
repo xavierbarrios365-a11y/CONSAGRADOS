@@ -215,7 +215,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         setShowMentions(false);
                                     }
                                 }}
-                                placeholder={isReply ? "Escribe tu respuesta..." : "¿Qué está pasando en el sector?"}
+                                placeholder={isReply ? "Escribe tu respuesta..." : "¿Qué quieres compartir hoy? ¿De qué quieres hablar? ¿Cómo te sientes hoy?"}
                                 maxLength={128}
                                 className="w-full bg-transparent border-none text-white text-[12px] font-medium placeholder:text-white/20 outline-none resize-none min-h-[60px] no-scrollbar font-montserrat"
                                 spellCheck="true"

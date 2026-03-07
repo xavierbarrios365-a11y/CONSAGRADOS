@@ -60,6 +60,7 @@ export interface Agent {
 export interface DailyVerse {
   verse: string;
   reference: string;
+  date?: string;
   version?: string; // e.g., "RVR1960"
   lastStreakDate?: string;
 }

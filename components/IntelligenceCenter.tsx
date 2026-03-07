@@ -9,7 +9,7 @@ import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
@@ -1034,7 +1034,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         onClick={async (e) => {
                           e.stopPropagation();
                           if (window.confirm(`⚠️ ¿ACTIVAR RE-EVALUACIÓN ÉLITE PARA ${agent.name.toUpperCase()}?\n\nEl agente deberá completar el test táctico la próxima vez que inicie sesión, pero conservará su perfil actual hasta completar el nuevo.`)) {
-                            const res = await updateAgentAiPendingStatus(agent.id, true);
+                            const res = await updateAgentAiPendingStatusSupabase(agent.id, true);
                             if (res.success) {
                               showAlert({ title: "ÉXITO", message: "✅ RE-EVALUACIÓN ACTIVADA.", type: 'SUCCESS' });
                               if (onUpdateNeeded) onUpdateNeeded();
@@ -1050,7 +1050,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         onClick={async (e) => {
                           e.stopPropagation();
                           if (window.confirm(`⚠️ ¿FORZAR RE-INICIO TOTAL DE PERFIL PARA ${agent.name.toUpperCase()}?\n\n¡ALERTA! Esto BORRARÁ el perfil actual de inmediato.`)) {
-                            const res = await updateAgentAiProfile(agent.id, null, null);
+                            const res = await updateAgentAiProfileSupabase(agent.id, null, null);
                             if (res.success) {
                               alert("✅ PERFIL RESETEADO. TEST REQUERIDO DE INMEDIATO.");
                               if (onUpdateNeeded) onUpdateNeeded();
@@ -1412,7 +1412,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                           const response = await getSpiritualCounseling(agent, `[COMANDO TÁCTICO]: ${input}`);
                           if (response) {
                             // Persistence: Save the AI response to the agent's profile
-                            await updateAgentAiProfile(agent.id, agent.tacticalStats || {}, response);
+                            await updateAgentAiProfileSupabase(agent.id, agent.tacticalStats || {}, response);
                             alert(`CENTRO DE MANDO: ${response}\n\n✅ RESPUESTA GUARDADA EN PERFIL.`);
                             if (onUpdateNeeded) onUpdateNeeded();
                           }

@@ -59,6 +59,8 @@ import {
   updateAgentPinSupabase as updateAgentPin,
   fetchNotificationsSupabase,
   updateBiometricSupabase,
+  fetchDailyVerseSupabase,
+  deleteAgentSupabase,
   supabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
@@ -301,6 +303,10 @@ const App: React.FC = () => {
     localStorage.setItem('app_version', APP_VERSION);
   }, []);
 
+  const deleteAgentService = async (id: string) => {
+    return await deleteAgentSupabase(id);
+  };
+
   // --- ROUTING VIA URL PARAMS ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -342,9 +348,9 @@ const App: React.FC = () => {
   useEffect(() => {
     initRemoteConfig();
 
-    fetchDailyVerse().then(res => {
-      if (res.success && res.data) {
-        setDailyVerse(res.data);
+    fetchDailyVerseSupabase().then(res => {
+      if (res) {
+        setDailyVerse(res);
       } else {
         setDailyVerse({ verse: 'Porque donde están dos o tres congregados en mi nombre, allí estoy yo en medio de ellos.', reference: 'Mateo 18:20' });
       }

@@ -69,7 +69,7 @@ consagrados-2026/
 │   ├── EnrollmentForm.tsx     # Formulario inscripción
 │   └── IntelligenceCenter.tsx # Dashboard directores
 ├── services/
-│   ├── sheetsService.ts       # API Google Sheets
+│   ├── supabaseService.ts     # Núcleo de datos Supabase
 │   └── geminiService.ts       # Gemini AI
 └── backend/
     └── Code.gs                # Backend Apps Script

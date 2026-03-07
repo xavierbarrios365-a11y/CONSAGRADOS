@@ -167,6 +167,24 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
 };
 
 /**
+ * @description Elimina un agente de Supabase.
+ */
+export const deleteAgentSupabase = async (agentId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('agentes')
+            .delete()
+            .eq('id', agentId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        console.error('❌ Error eliminando agente en Supabase:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
  * @description Verifica de forma segura un PIN usando RPC (blindaje).
  */
 export const verifyAgentPinSupabase = async (agentId: string, pin: string): Promise<boolean> => {

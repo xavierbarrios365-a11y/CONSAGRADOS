@@ -30,6 +30,7 @@ interface NewsFeedProps {
     agents?: Agent[];
     userRole?: UserRole;
     currentUser?: Agent | null;
+    filterType?: string; // Nuevo: Para filtrar por SOCIAL u otros
 }
 
 const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -45,7 +46,7 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
     'SOCIAL': { icon: <MessageCircle size={16} />, color: '#6366f1', label: 'SOCIAL' },
 };
 
-const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser }) => {
+const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser, filterType }) => {
     const { showAlert } = useTacticalAlert();
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,9 +71,12 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const PAGE_SIZE = 20;
 
     // Filtramos para mostrar solo los mensajes principales (sin parentId) en el feed general
-    // Pero si estamos en una página de "hilo" (que aquí manejamos inline), el filtro cambia.
-    // El usuario quiere ver todo el feed expandido de 10 a 20.
-    const rootNews = news.filter(item => !item.parentId);
+    // Y opcionalmente por tipo (ej: SOCIAL para el feed de hilos)
+    const rootNews = news.filter(item => {
+        const isRoot = !item.parentId;
+        const matchesType = filterType ? item.type === filterType : true;
+        return isRoot && matchesType;
+    });
     const totalPages = Math.ceil(rootNews.length / PAGE_SIZE);
     const displayedNews = rootNews.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 

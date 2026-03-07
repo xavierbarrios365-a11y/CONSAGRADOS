@@ -166,143 +166,115 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
     };
 
     return (
-        <div className="w-full bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-3xl p-5 relative overflow-hidden group">
-            <div className="absolute top-[-20px] right-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
-                <Quote size={120} className="text-[#ffb700]" />
+        <div className="w-full bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-2xl p-3 relative overflow-hidden group">
+            <div className="absolute top-[-10px] right-[-10px] opacity-5 group-hover:scale-110 transition-transform duration-700">
+                <Quote size={80} className="text-[#ffb700]" />
             </div>
 
-            <div className="relative z-10 flex flex-col items-center text-center space-y-4">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="flex items-center gap-2">
-                        <BookOpen size={14} className="text-[#ffb700]" />
-                        <span className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.3em] font-bebas">Versículo del Día</span>
-                        {quizCompleted && <CheckCircle2 size={14} className="text-green-500" />}
+            <div className="relative z-10 flex flex-col md:flex-row items-center md:justify-between gap-3">
+                <div className="flex flex-col items-center md:items-start text-center md:text-left flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        <BookOpen size={12} className="text-[#ffb700]" />
+                        <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-widest font-bebas">Versículo del Día</span>
+                        {quizCompleted && <CheckCircle2 size={12} className="text-green-500" />}
+                        {streakCount > 0 && (
+                            <div className="flex items-center gap-1 bg-[#ffb700] text-[#001f3f] px-1.5 py-0.5 rounded-full border border-white/10 ml-2">
+                                <Flame size={8} className={quizCompleted ? "animate-bounce" : "animate-pulse"} />
+                                <span className="text-[8px] font-black uppercase font-bebas">{streakCount} DÍAS</span>
+                            </div>
+                        )}
                     </div>
-                    {streakCount > 0 && (
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            whileHover={{ scale: 1.05 }}
-                            className="flex items-center gap-1.5 bg-[#ffb700] text-[#001f3f] px-2.5 py-0.5 rounded-full border border-white/20 shadow-lg relative overflow-hidden"
-                        >
-                            <AnimatePresence>
-                                {quizCompleted && (
-                                    <motion.div
-                                        initial={{ scale: 0, opacity: 1 }}
-                                        animate={{ scale: 4, opacity: 0 }}
-                                        transition={{ duration: 0.8, ease: "easeOut" }}
-                                        className="absolute inset-0 bg-white rounded-full"
-                                    />
-                                )}
-                            </AnimatePresence>
-                            <Flame size={10} className={quizCompleted ? "animate-bounce" : "animate-pulse"} />
-                            <span className="text-[9px] font-black uppercase tracking-widest font-bebas">RACHA: {streakCount} DÍAS</span>
-                        </motion.div>
-                    )}
-                </div>
 
-                {!showQuiz || quizCompleted ? (
-                    <>
-                        <p className="text-sm md:text-base text-white font-bold italic leading-relaxed font-montserrat px-4">
-                            "{verse.verse}"
-                        </p>
-
-                        <div className="pt-2">
-                            <span className="px-4 py-1.5 bg-[#ffb700] text-[#001f3f] text-[9px] font-black uppercase tracking-widest rounded-full font-bebas">
+                    {!showQuiz || quizCompleted ? (
+                        <div className="flex flex-col md:flex-row items-center md:items-baseline gap-2">
+                            <p className="text-[11px] md:text-xs text-white font-bold italic leading-tight font-montserrat line-clamp-2 md:line-clamp-1">
+                                "{verse.verse}"
+                            </p>
+                            <span className="shrink-0 text-[8px] font-black uppercase tracking-widest bg-[#ffb700]/10 text-[#ffb700] px-2 py-0.5 rounded-full border border-[#ffb700]/20 font-bebas">
                                 {verse.reference}
                             </span>
                         </div>
-                    </>
-                ) : (
-                    <div className="py-6 flex flex-col items-center justify-center space-y-2 opacity-50">
-                        <Quote size={40} className="text-gray-500 animate-pulse" />
-                        <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">¿Recordaste el mensaje base?</p>
-                    </div>
-                )}
-
-                {/* Quiz Duolingo-Style */}
-                {!quizCompleted && !showQuiz && (
-                    <motion.button
-                        whileHover={{ scale: 1.05, backgroundColor: "rgba(34, 197, 94, 0.3)" }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setShowQuiz(true)}
-                        className="mt-4 flex items-center gap-2 bg-green-500/20 border border-green-500/40 px-6 py-3 rounded-2xl text-green-500 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-green-900/10"
-                    >
-                        <Sparkles size={14} />
-                        Marcar como Leído
-                    </motion.button>
-                )}
-
-                {showQuiz && !quizCompleted && (
-                    <div className="w-full mt-2 space-y-4 animate-in slide-in-from-bottom-2 bg-black/40 p-6 rounded-[2rem] border border-[#ffb700]/30 shadow-[0_0_30px_rgba(255,183,0,0.1)]">
-                        <div className="flex flex-col items-center gap-1 mb-2">
-                            <Sparkles className="text-[#ffb700] animate-bounce" size={20} />
-                            <p className="text-[11px] text-[#ffb700] font-black uppercase tracking-widest">Reto de Memoria Táctica</p>
-                            <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">Escribe la palabra que falta</p>
+                    ) : (
+                        <div className="flex items-center gap-2 py-1 opacity-50">
+                            <Quote size={16} className="text-gray-500 animate-pulse" />
+                            <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none">¿Recordaste el mensaje base?</p>
                         </div>
+                    )}
+                </div>
 
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-4">
-                            <p className="text-xs text-white/80 italic font-montserrat leading-relaxed">
-                                {displayVerse}
-                            </p>
-                        </div>
+                {/* Acciones Compactas */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {!quizCompleted && !showQuiz && (
+                        <motion.button
+                            whileHover={{ scale: 1.05, backgroundColor: "rgba(34, 197, 94, 0.3)" }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowQuiz(true)}
+                            className="bg-green-500/20 border border-green-500/10 px-3 py-1.5 rounded-xl text-green-500 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                        >
+                            <Sparkles size={12} />
+                            Validar Recon
+                        </motion.button>
+                    )}
 
-                        <div className="relative">
+                    {showQuiz && !quizCompleted && (
+                        <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-[#ffb700]/30">
                             <input
                                 type="text"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
-                                placeholder="Escribe aquí..."
-                                className={`w-full bg-black/50 border ${isCorrect === false ? 'border-red-500' : 'border-white/10'} rounded-xl py-4 px-4 text-white text-[10px] font-black uppercase tracking-widest focus:border-[#ffb700] focus:ring-1 focus:ring-[#ffb700] outline-none transition-all placeholder:text-white/20`}
+                                placeholder="Palabra..."
+                                className={`w-24 bg-black/50 border ${isCorrect === false ? 'border-red-500' : 'border-white/10'} rounded-lg py-1 px-2 text-white text-[9px] font-black uppercase tracking-widest focus:border-[#ffb700] outline-none transition-all placeholder:text-white/20`}
                                 autoFocus
                             />
                             <button
                                 onClick={checkAnswer}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#ffb700] text-[#001f3f] px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                                className="bg-[#ffb700] text-[#001f3f] px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest"
                             >
-                                Validar
+                                <Sparkles size={10} />
                             </button>
                         </div>
+                    )}
 
-                        {isCorrect === false && (
-                            <p className="text-red-500 text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1 animate-bounce">
-                                <XCircle size={12} /> Palabra incorrecta. ¡Concéntrate!
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {quizCompleted && (
-                    <div className="flex flex-col items-center gap-3 mt-4 animate-in zoom-in duration-500">
-                        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-4 py-2 rounded-full">
-                            <CheckCircle2 size={12} className="text-green-500" />
-                            <p className="text-green-500 text-[9px] font-black uppercase tracking-widest">Racha Diaria Asegurada</p>
-                        </div>
-
-                        {timeLeft && (
-                            <div className="flex flex-col items-center gap-1 mt-1">
-                                <p className="text-[8px] text-white/40 font-bold uppercase tracking-[0.2em]">Próximo Objetivo Recon en:</p>
-                                <div className="flex items-center gap-2 text-xl font-bebas text-[#ffb700] tracking-widest bg-black/40 px-6 py-2 rounded-2xl border border-white/5 shadow-inner">
-                                    <Calendar size={14} className="animate-pulse" />
-                                    {timeLeft}
+                    {quizCompleted && (
+                        <div className="flex items-center gap-2">
+                            {timeLeft && (
+                                <div className="hidden xs:flex items-center gap-1.5 px-3 py-1.5 bg-black/40 border border-[#ffb700]/20 rounded-xl">
+                                    <Calendar size={10} className="text-[#ffb700]" />
+                                    <span className="text-xs font-bebas text-[#ffb700] tracking-widest">{timeLeft}</span>
                                 </div>
-                            </div>
-                        )}
-                        {quizCompleted && agent && (
-                            <motion.button
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                onClick={() => setShowShareModal(true)}
-                                className="flex items-center justify-center gap-2 px-6 py-3 bg-[#ffb700] text-[#001f3f] font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-[#ffb700]/90 transition-all shadow-lg active:scale-95 font-bebas w-full mt-4"
-                            >
-                                <Share2 size={16} />
-                                Compartir Victoria Diaria
-                            </motion.button>
-                        )}
-                    </div>
-                )}
+                            )}
+                            {agent && (
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setShowShareModal(true)}
+                                    className="p-2 bg-[#ffb700] text-[#001f3f] rounded-xl shadow-lg active:scale-95 group"
+                                    title="Compartir Victoria"
+                                >
+                                    <Share2 size={16} className="group-hover:rotate-12 transition-transform" />
+                                </motion.button>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
+
+            {/* Alerta de Error Compacta */}
+            <AnimatePresence>
+                {isCorrect === false && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute bottom-1 left-0 right-0 flex justify-center"
+                    >
+                        <p className="text-red-500 text-[7px] font-black uppercase tracking-widest bg-black/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <XCircle size={8} /> Palabra incorrecta
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Modal de Compartir Personalizado para el Versículo */}
             {showShareModal && agent && (

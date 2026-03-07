@@ -1,8 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Agent, NewsFeedItem } from '../types';
-import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote, MessageSquare, Send, Gift } from 'lucide-react';
+import { ShieldCheck, Award, Share2, Download, X, Flame, Star, Loader2, Target, Trophy, GraduationCap, Shield, Quote, MessageSquare, Send, Gift, Layout, Image as ImageIcon } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
+import { publishNewsSupabase, createStorySupabase } from '../services/supabaseService';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 
 interface AchievementShareCardProps {
     agent?: Agent;
@@ -13,8 +15,11 @@ interface AchievementShareCardProps {
 const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, newsItem, onClose }) => {
     const exportRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isPublishingFeed, setIsPublishingFeed] = useState(false);
+    const [isPublishingStory, setIsPublishingStory] = useState(false);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0, scale: 0.3 });
     const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+    const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'SUCCESS' | 'ERROR' } | null>(null);
 
     // Pre-cargar imagen en Base64 para evitar bloqueos de CORS al exportar
     useEffect(() => {
@@ -43,7 +48,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
     useEffect(() => {
         const updateScale = () => {
             const isMobile = window.innerWidth <= 768;
-            const verticalPadding = isMobile ? 220 : 250; // Más espacio para controles
+            const verticalPadding = isMobile ? 300 : 250; // Más espacio para controles en móvil
             const horizontalPadding = isMobile ? 30 : 100;
             const availableHeight = window.innerHeight - verticalPadding;
             const availableWidth = window.innerWidth - horizontalPadding;
@@ -133,25 +138,31 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
     const agentName = agent?.name || 'RECLUTA PRO';
     const nameFontSize = getAgentNameFontSize(agentName);
 
+    const generateImageData = async () => {
+        if (!exportRef.current) return null;
+        return await toPng(exportRef.current, {
+            cacheBust: true,
+            width: 1080,
+            height: 1920,
+            pixelRatio: 1.5,
+            skipFonts: true,
+            backgroundColor: '#001f3f',
+            style: {
+                transform: 'none',
+                transformOrigin: 'top left',
+                width: '1080px',
+                height: '1920px',
+                borderRadius: '0'
+            }
+        });
+    };
+
     const handleShare = async () => {
-        if (!exportRef.current) return;
         setIsGenerating(true);
+        setStatusMessage(null);
         try {
-            const dataUrl = await toPng(exportRef.current, {
-                cacheBust: true,
-                width: 1080,
-                height: 1920,
-                pixelRatio: 1.5, // 1.5 previente problemas de memoria OutOfMemory en móviles (generaba imágenes de 3240x5760)
-                skipFonts: true, // Previene error de Security con el CSSRules de Google Fonts
-                backgroundColor: '#001f3f',
-                style: {
-                    transform: 'none',
-                    transformOrigin: 'top left',
-                    width: '1080px',
-                    height: '1920px',
-                    borderRadius: '0'
-                }
-            });
+            const dataUrl = await generateImageData();
+            if (!dataUrl) return;
 
             const res = await fetch(dataUrl);
             const blob = await res.blob();
@@ -167,10 +178,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                     files: [file],
                 });
             } else {
-                // FALLBACK: Detectar qué quiere hacer el usuario si no hay soporte nativo de archivos
                 const url = URL.createObjectURL(blob);
-
-                // Si estamos en móvil pero no soporta archivos, al menos intentamos compartir texto
                 if (navigator.share) {
                     try {
                         await navigator.share({
@@ -179,8 +187,6 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                         });
                     } catch (e) { /* ignore */ }
                 }
-
-                // Descarga automática como respaldo seguro
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = 'logro-consagrados-pro.png';
@@ -191,8 +197,62 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
             }
         } catch (err) {
             console.error('Error sharing achievement:', err);
+            setStatusMessage({ text: 'Error al generar imagen', type: 'ERROR' });
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleShareToFeed = async () => {
+        if (!agent || !newsItem) return;
+        setIsPublishingFeed(true);
+        setStatusMessage(null);
+        try {
+            // El versículo completo supera los 128 caracteres, pero como se publica vía servicio, no hay restricción
+            const longMessage = newsItem.verse
+                ? `${newsItem.message}\n\n"${newsItem.verse}" — ${newsItem.reference}`
+                : newsItem.message;
+
+            const res = await publishNewsSupabase(agent.id, agent.name, 'RACHA', longMessage);
+            if (res.success) {
+                setStatusMessage({ text: 'Publicado en Intel Feed correctamente', type: 'SUCCESS' });
+            } else {
+                throw new Error(res.error);
+            }
+        } catch (e: any) {
+            setStatusMessage({ text: `Error: ${e.message}`, type: 'ERROR' });
+        } finally {
+            setIsPublishingFeed(false);
+        }
+    };
+
+    const handleShareToStory = async () => {
+        if (!agent || !newsItem) return;
+        setIsPublishingStory(true);
+        setStatusMessage(null);
+        try {
+            const dataUrl = await generateImageData();
+            if (!dataUrl) throw new Error("No se pudo generar la imagen");
+
+            // Subir a Cloudinary
+            const uploadRes = await uploadToCloudinary(dataUrl);
+            if (!uploadRes.success || !uploadRes.url) throw new Error(uploadRes.error || "Fallo en subida");
+
+            // Crear historia en Supabase
+            const storyContent = newsItem.verse
+                ? `¡Victoria Diaria! ${newsItem.reference}`
+                : newsItem.message;
+
+            const dbRes = await createStorySupabase(agent.id, uploadRes.url, storyContent);
+            if (dbRes.success) {
+                setStatusMessage({ text: 'Añadido a tus Historias', type: 'SUCCESS' });
+            } else {
+                throw new Error(dbRes.error);
+            }
+        } catch (e: any) {
+            setStatusMessage({ text: `Error: ${e.message}`, type: 'ERROR' });
+        } finally {
+            setIsPublishingStory(false);
         }
     };
 
@@ -203,28 +263,49 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
-    const shareViaTelegram = () => {
-        const text = newsItem?.verse
-            ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
-            : (newsItem?.message || '¡Nivel superado!');
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(text)}`, '_blank');
-    };
-
     return (
         <div className="fixed inset-0 z-[9999] bg-black/98 flex flex-col items-center justify-center animate-in fade-in backdrop-blur-3xl overflow-hidden p-4">
 
             {/* Header Controls (Fixed top layout) */}
-            <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center px-2 mb-4 shrink-0 relative z-[10000] gap-4">
+            <div className="w-full max-w-5xl flex flex-col md:flex-row justify-between items-center px-2 mb-4 shrink-0 relative z-[10000] gap-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#ffb700]/10 flex items-center justify-center border border-[#ffb700]/30 shadow-[0_0_20px_rgba(255,183,0,0.2)]">
                         <Award className="text-[#ffb700]" size={20} />
                     </div>
-                    <div className="xs:block">
+                    <div>
                         <span className="text-white font-black uppercase tracking-[0.4em] text-[10px] md:text-[14px] font-bebas block leading-none">Command Center</span>
                         <span className="text-[#ffb700] font-black uppercase tracking-[0.2em] text-[6px] md:text-[8px] font-montserrat block mt-1">Soberanía Táctica 2026</span>
                     </div>
                 </div>
+
+                {statusMessage && (
+                    <div className={`px-4 py-2 rounded-full text-[10px] font-black border ${statusMessage.type === 'SUCCESS' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'} animate-bounce`}>
+                        {statusMessage.text}
+                    </div>
+                )}
+
                 <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+                    {/* Share to App Options */}
+                    <button
+                        onClick={handleShareToStory}
+                        disabled={isPublishingStory}
+                        className="p-3 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-xl border border-purple-500/30 transition-all flex items-center gap-2 disabled:opacity-50"
+                        title="Publicar en Historias de la App"
+                    >
+                        {isPublishingStory ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+                        <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest font-bebas">Historias</span>
+                    </button>
+
+                    <button
+                        onClick={handleShareToFeed}
+                        disabled={isPublishingFeed}
+                        className="p-3 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-xl border border-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-50"
+                        title="Publicar en Intel Feed"
+                    >
+                        {isPublishingFeed ? <Loader2 size={16} className="animate-spin" /> : <Layout size={16} />}
+                        <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest font-bebas">Feed Social</span>
+                    </button>
+
                     <button
                         onClick={shareViaWhatsApp}
                         className="p-3 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 rounded-xl border border-[#25D366]/30 transition-all flex items-center gap-2"
@@ -233,14 +314,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                         <MessageSquare size={16} />
                         <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest font-bebas">WhatsApp</span>
                     </button>
-                    <button
-                        onClick={shareViaTelegram}
-                        className="p-3 bg-[#0088cc]/10 text-[#0088cc] hover:bg-[#0088cc]/20 rounded-xl border border-[#0088cc]/30 transition-all flex items-center gap-2"
-                        title="Compartir en Telegram"
-                    >
-                        <Send size={16} />
-                        <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest font-bebas">Telegram</span>
-                    </button>
+
                     <button
                         onClick={handleShare}
                         disabled={isGenerating}
@@ -249,6 +323,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                         {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
                         <span>{navigator.share ? 'COMPARTIR' : 'DESCARGAR'}</span>
                     </button>
+
                     <button
                         onClick={onClose}
                         className="p-3 md:p-4 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 rounded-xl md:rounded-2xl transition-all border border-white/10"

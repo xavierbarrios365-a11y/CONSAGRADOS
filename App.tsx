@@ -319,48 +319,7 @@ const App: React.FC = () => {
 
   // --- SISTEMA DE PURGA TÁCTICA (FORCE REFRESH ON UPDATE) ---
   useEffect(() => {
-    const checkVersionAndPurge = async () => {
-      const storedVersion = localStorage.getItem('app_version');
-      if (storedVersion && storedVersion !== APP_VERSION) {
-        console.warn(`🚀 NUEVA VERSIÓN DETECTADA (${storedVersion} -> ${APP_VERSION}). EJECUTANDO PURGA TÁCTICA...`);
-
-        try {
-          if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map(name => caches.delete(name)));
-          }
-          if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map(reg => reg.unregister()));
-          }
-
-          const lastId = localStorage.getItem('last_login_id');
-          const remembered = localStorage.getItem('remembered_user');
-          const notifBackup: Record<string, string> = {};
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && (k.startsWith('read_notifications_') || k.startsWith('deleted_notifications_'))) {
-              notifBackup[k] = localStorage.getItem(k)!;
-            }
-          }
-
-          localStorage.clear();
-          if (lastId) localStorage.setItem('last_login_id', lastId);
-          if (remembered) localStorage.setItem('remembered_user', remembered);
-          Object.entries(notifBackup).forEach(([k, v]) => localStorage.setItem(k, v));
-          localStorage.setItem('app_version', APP_VERSION);
-
-          window.location.reload();
-        } catch (e) {
-          console.error("Fallo en purga:", e);
-          localStorage.setItem('app_version', APP_VERSION);
-          window.location.reload();
-        }
-      } else {
-        localStorage.setItem('app_version', APP_VERSION);
-      }
-    };
-    checkVersionAndPurge();
+    localStorage.setItem('app_version', APP_VERSION);
   }, []);
 
   // --- ROUTING VIA URL PARAMS ---
@@ -972,25 +931,6 @@ const App: React.FC = () => {
                 >
                   ¿Olvidaste tu PIN de Seguridad?
                 </button>
-                <button
-                  type="button"
-                  className="text-[8px] text-red-500/70 font-black uppercase tracking-widest hover:text-red-400 transition-colors"
-                  onClick={() => {
-                    if (window.confirm("¿Seguro que deseas purgar la caché y recargar? Esto resolverá problemas de sincronización con la base de datos.")) {
-                      if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(regs => {
-                          for (let reg of regs) { reg.unregister(); }
-                        });
-                      }
-                      localStorage.clear();
-                      sessionStorage.clear();
-                      alert("Caché purgada. El sistema se reiniciará en modo limpio.");
-                      setTimeout(() => { window.location.reload(); }, 500);
-                    }
-                  }}
-                >
-                  🚑 PULSAR AQUÍ EN CASO DE ERRORES 400 (PURGAR CACHÉ)
-                </button>
               </div>
 
               <div className="pt-6 border-t border-white/5 mt-4 space-y-3">
@@ -1151,7 +1091,6 @@ const App: React.FC = () => {
         userRole={effectiveRole}
         userName={currentUser?.name || 'Agente'}
         onLogout={handleLogout}
-        onHardReset={handleHardReset}
         notificationCount={unreadNotifications}
         onOpenInbox={() => setShowInbox(true)}
       >

@@ -330,8 +330,22 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                 </motion.div>
             );
 
-        case AppView.ASCENSO:
         case AppView.CONTENT:
+            return (
+                <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="social_feed" className="h-full">
+                    <div className="p-5 md:p-8 pb-24 max-w-2xl mx-auto font-montserrat">
+                        <IntelFeed
+                            headlines={headlines}
+                            agents={agents}
+                            userRole={effectiveRole}
+                            currentUser={currentUser}
+                            filterType="SOCIAL" // Solo hilos
+                        />
+                    </div>
+                </motion.div>
+            );
+
+        case AppView.ASCENSO:
         case AppView.TAREAS:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="training" className="h-full">
@@ -341,8 +355,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                             setView={setView}
                             onUpdateNeeded={() => resetSessionTimer()}
                             initialTab={
-                                view === AppView.CONTENT ? 'material' :
-                                    view === AppView.TAREAS ? 'misiones' : 'ascenso'
+                                view === AppView.TAREAS ? 'misiones' : 'ascenso'
                             }
                         />
                     ) : null}

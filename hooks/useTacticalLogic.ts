@@ -164,7 +164,7 @@ export const useTacticalLogic = (
                     updateAgentLocalState({
                         ...currentUser,
                         streakCount: res.newStreak !== undefined ? res.newStreak : safeStreak,
-                        lastStreakDate: localToday,
+                        lastStreakDate: Date.now(), // Usar timestamp exacto para evitar errores de zona horaria
                         weeklyTasks: updatedTasks
                     });
                 }

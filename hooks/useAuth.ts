@@ -425,8 +425,9 @@ export function useAuth() {
     // --- Sync notification preferences from cloud on login ---
     useEffect(() => {
         if (isLoggedIn && currentUser && currentUser.id) {
-            const READ_KEY = `read_notifications_${currentUser.id}`;
-            const DELETED_KEY = `deleted_notifications_${currentUser.id}`;
+            const agentId = currentUser.id.toUpperCase();
+            const READ_KEY = `read_notifications_${agentId}`;
+            const DELETED_KEY = `deleted_notifications_${agentId}`;
             if (currentUser.notifPrefs) {
                 if (!localStorage.getItem(READ_KEY) && currentUser.notifPrefs.read?.length > 0) {
                     localStorage.setItem(READ_KEY, JSON.stringify(currentUser.notifPrefs.read));

@@ -13,8 +13,8 @@ interface NotificationInboxProps {
 }
 
 const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate, onRequestPermission, agentId, currentUser, onSyncPrefs }) => {
-    const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
-    const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
+    const READ_KEY = agentId ? `read_notifications_${agentId.toUpperCase()}` : 'read_notifications';
+    const DELETED_KEY = agentId ? `deleted_notifications_${agentId.toUpperCase()}` : 'deleted_notifications';
 
     const [notifications, setNotifications] = useState<InboxNotification[]>([]);
     const [loading, setLoading] = useState(true);
@@ -49,7 +49,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         loadNotifications();
     }, []);
 
-    // Redundancia y Sincronización: Si LocalStorage está vacío o desactualizado respecto al backend, sincronizar
+    // Proactive Synchronization: Ensure local state and backend state are in harmony
     useEffect(() => {
         if (currentUser?.notifPrefs && agentId) {
             const backendRead = currentUser.notifPrefs.read || [];
@@ -58,25 +58,31 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
             const localReadStr = localStorage.getItem(READ_KEY);
             const localDeletedStr = localStorage.getItem(DELETED_KEY);
 
-            let finalRead = readIds;
-            let finalDeleted = deletedIds;
-            let changed = false;
+            let localRead = localReadStr ? JSON.parse(localReadStr) : [];
+            let localDeleted = localDeletedStr ? JSON.parse(localDeletedStr) : [];
 
-            if (!localReadStr && backendRead.length > 0) {
-                finalRead = backendRead;
-                localStorage.setItem(READ_KEY, JSON.stringify(backendRead));
-                changed = true;
-            }
-            if (!localDeletedStr && backendDeleted.length > 0) {
-                finalDeleted = backendDeleted;
-                localStorage.setItem(DELETED_KEY, JSON.stringify(backendDeleted));
-                changed = true;
-            }
+            // Merge local and backend (union of sets)
+            const finalRead = Array.from(new Set([...localRead, ...backendRead]));
+            const finalDeleted = Array.from(new Set([...localDeleted, ...backendDeleted]));
 
-            if (changed) {
+            const hasChanges =
+                finalRead.length !== localRead.length ||
+                finalDeleted.length !== localDeleted.length ||
+                finalRead.length !== backendRead.length ||
+                finalDeleted.length !== backendDeleted.length;
+
+            if (hasChanges) {
+                // Update Local
                 setReadIds(finalRead);
                 setDeletedIds(finalDeleted);
+                localStorage.setItem(READ_KEY, JSON.stringify(finalRead));
+                localStorage.setItem(DELETED_KEY, JSON.stringify(finalDeleted));
                 updateBadge(notifications, finalRead, finalDeleted);
+
+                // Update Backend if local was behind or different
+                if (finalRead.length > backendRead.length || finalDeleted.length > backendDeleted.length) {
+                    updateNotifPrefsSupabase(agentId, { read: finalRead, deleted: finalDeleted });
+                }
             }
         }
     }, [currentUser, agentId, READ_KEY, DELETED_KEY, notifications, updateBadge]);

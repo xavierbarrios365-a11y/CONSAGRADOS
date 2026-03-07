@@ -2413,7 +2413,7 @@ export const updateNotifPrefsSupabase = async (agentId: string, prefs: { read: s
         const { error } = await supabase
             .from('agentes')
             .update({ notif_prefs: prefs })
-            .eq('id', agentId);
+            .eq('id', agentId.toUpperCase());
 
         if (error) throw error;
         return { success: true };

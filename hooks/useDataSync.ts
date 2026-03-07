@@ -83,16 +83,21 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         try {
             // 1. Notifications
             const notifs = await fetchNotificationsSupabase() || [];
-            const agentId = currentUser?.id;
+            const agentId = currentUser?.id?.toUpperCase();
+
             const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
             const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
 
-            const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
-            const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
+            // FALLBACK: Si no hay nada en localStorage para este usuario, usamos lo que viene del backend
+            const localRead = localStorage.getItem(READ_KEY);
+            const localDeleted = localStorage.getItem(DELETED_KEY);
+
+            const readIds = localRead ? JSON.parse(localRead) : (currentUser?.notifPrefs?.read || []);
+            const delIds = localDeleted ? JSON.parse(localDeleted) : (currentUser?.notifPrefs?.deleted || []);
 
             // Filtrar: Dirigidas a mí o Globales + No leída + No borrada
             const unreadNotifs = notifs.filter(n => {
-                const isMyNotif = !n.agent_id || n.agent_id === agentId;
+                const isMyNotif = !n.agent_id || n.agent_id.toUpperCase() === agentId;
                 const isNotRead = !readIds.includes(n.id);
                 const isNotDeleted = !delIds.includes(n.id);
                 return isMyNotif && isNotRead && isNotDeleted;

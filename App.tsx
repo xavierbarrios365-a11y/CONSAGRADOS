@@ -515,6 +515,7 @@ const App: React.FC = () => {
           visitorRadar={visitorRadar}
           resetSessionTimer={resetSessionTimer}
           setScannedAgentForPoints={setScannedAgentForPoints}
+          onAgentClick={setShowExpedienteFor} // <--- ADDED
           showAlert={showAlert}
           syncData={syncData}
         />
@@ -560,7 +561,11 @@ const App: React.FC = () => {
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="ranking" className="h-full">
             <div className="space-y-0 min-h-full">
               <div className="p-6">
-                <TacticalRanking agents={agents} currentUser={currentUser} />
+                <TacticalRanking
+                  agents={agents}
+                  currentUser={currentUser}
+                  onAgentClick={setShowExpedienteFor} // <--- ADDED
+                />
               </div>
             </div>
           </motion.div>
@@ -594,9 +599,9 @@ const App: React.FC = () => {
           setView={setView}
           agents={agents}
           currentUser={currentUser}
+          onAgentClick={setShowExpedienteFor}
           directorySearch={directorySearch}
           setDirectorySearch={setDirectorySearch}
-          setFoundAgent={setFoundAgent}
           badges={badges}
           biometricAvailable={biometricAvailable}
           isRegisteringBio={isRegisteringBio}

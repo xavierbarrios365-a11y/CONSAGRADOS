@@ -187,7 +187,7 @@ export interface TaskProgress {
 
 export interface NewsFeedItem {
   id: string;
-  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION' | 'INSIGNIA' | 'CUMPLEAÑOS' | 'SOCIAL';
+  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION' | 'INSIGNIA' | 'CUMPLEAÑOS' | 'SOCIAL' | 'BIBLE_SHARE';
   message: string;
   date: string;
   agentId?: string;

@@ -4,7 +4,7 @@ import {
     Heart, Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
     GraduationCap, Award, Flame, AlertCircle, Share2, Trash2, Gift,
-    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown
+    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown, BookOpen
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
 import {
@@ -17,7 +17,8 @@ import {
     getMostLikedAgentSupabase,
     supabase,
     validateContent,
-    toggleDislikeSupabase
+    toggleDislikeSupabase,
+    parseNewsMessage
 } from '../services/supabaseService';
 import { sendSocialNotification } from '../services/notifyService';
 import { formatDriveUrl } from '../services/storageUtils';
@@ -31,6 +32,7 @@ interface NewsFeedProps {
     userRole?: UserRole;
     currentUser?: Agent | null;
     filterType?: string; // Nuevo: Para filtrar por SOCIAL u otros
+    onAgentClick?: (agent: Agent) => void;
 }
 
 const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -44,9 +46,10 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
     'OPERACION': { icon: <Activity size={16} />, color: '#00ffff', label: 'OPERACIÓN' },
     'CUMPLEAÑOS': { icon: <Gift size={16} />, color: '#ec4899', label: 'CUMPLEAÑOS' },
     'SOCIAL': { icon: <MessageCircle size={16} />, color: '#6366f1', label: 'SOCIAL' },
+    'BIBLE_SHARE': { icon: <BookOpen size={16} />, color: '#ffb700', label: 'REFLEXIÓN' },
 };
 
-const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser, filterType }) => {
+const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser, filterType, onAgentClick }) => {
     const { showAlert } = useTacticalAlert();
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -326,12 +329,15 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             }, (payload) => {
                 if (payload.eventType === 'INSERT') {
                     const item = payload.new;
+                    const { message, verse, reference } = parseNewsMessage(item.detalle || '');
                     const mappedItem: NewsFeedItem = {
                         id: item.id,
                         agentId: item.agent_id,
                         agentName: item.agent_name,
                         type: item.tipo,
-                        message: item.detalle || '',
+                        message: message,
+                        verse: verse,
+                        reference: reference,
                         parentId: item.parent_id,
                         date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
                             day: '2-digit',
@@ -427,7 +433,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         <img
                                                             src={photoUrl}
                                                             alt={agent?.name || 'Agente'}
-                                                            className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform"
+                                                            onClick={() => agent && onAgentClick?.(agent)}
+                                                            className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                                                         />
                                                         <div
                                                             className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
@@ -448,17 +455,46 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
                                             <div className="flex-1 min-w-0 pt-0.5">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter hover:underline cursor-pointer">
+                                                    <span
+                                                        onClick={() => agent && onAgentClick?.(agent)}
+                                                        className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter hover:underline cursor-pointer"
+                                                    >
                                                         {agent ? agentName : config.label}
                                                     </span>
                                                     {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
                                                     <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">• {item.date}</span>
                                                 </div>
-                                                <p className="text-[13px] text-white/90 font-medium leading-relaxed tracking-tight font-montserrat">
-                                                    {item.message.split(' ').map((word, i) =>
-                                                        word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black hover:underline cursor-pointer">{word} </span> : word + ' '
-                                                    )}
-                                                </p>
+                                                {item.type === 'BIBLE_SHARE' && item.verse ? (
+                                                    <div className="relative mt-2 mb-3 px-6 py-6 bg-gradient-to-br from-[#ffb700]/10 to-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl overflow-hidden group/bible shadow-2xl">
+                                                        {/* Decorative Background Icon */}
+                                                        <BookOpen size={100} className="absolute -bottom-6 -right-6 text-[#ffb700]/5 -rotate-12 group-hover/bible:scale-110 transition-transform duration-700" />
+
+                                                        {/* Quote Icon */}
+                                                        <div className="text-[#ffb700]/30 font-serif text-6xl absolute -top-2 left-2 h-8 leading-none opacity-50">“</div>
+
+                                                        <div className="relative z-10 space-y-4">
+                                                            <p className="text-[15px] md:text-[18px] text-white font-medium leading-relaxed tracking-tight italic font-montserrat pr-4 drop-shadow-sm">
+                                                                {item.verse}
+                                                            </p>
+
+                                                            <div className="flex items-center gap-3 pt-2">
+                                                                <div className="h-[1.5px] w-10 bg-[#ffb700]/50" />
+                                                                <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-[0.25em] font-bebas">
+                                                                    {item.reference}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Bottom Glow */}
+                                                        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-[#ffb700]/20 to-transparent" />
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[13px] text-white/90 font-medium leading-relaxed tracking-tight font-montserrat">
+                                                        {item.message.split(' ').map((word, i) =>
+                                                            word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black hover:underline cursor-pointer">{word} </span> : word + ' '
+                                                        )}
+                                                    </p>
+                                                )}
 
                                                 <div className="flex items-center gap-6 mt-4">
                                                     <button

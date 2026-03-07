@@ -42,6 +42,7 @@ interface StudentViewProps {
     visitorRadar: any[];
     resetSessionTimer: () => void;
     setScannedAgentForPoints: (agent: Agent | null) => void;
+    onAgentClick: (agent: Agent) => void;
     showAlert: (config: { title: string, message: string, type: 'SUCCESS' | 'ERROR' | 'INFO' | 'CONFIRM', onConfirm?: () => void | Promise<void> }) => void;
     syncData?: (force?: boolean) => any;
 }
@@ -59,7 +60,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         dailyVerse, handleVerseQuizComplete, headlines, agents, effectiveRole,
         setView, activeEvents, handleConfirmEventAttendance, isConfirmingEvent,
         userConfirmations, handleRefreshIntel, isRefreshingIntel, intelReport,
-        visitorRadar, resetSessionTimer, setScannedAgentForPoints, showAlert, syncData
+        visitorRadar, resetSessionTimer, setScannedAgentForPoints, onAgentClick, showAlert, syncData
     } = props;
 
     switch (view) {
@@ -83,7 +84,13 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                         </div>
 
                         {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
-                            <IntelFeed headlines={headlines} agents={agents} userRole={effectiveRole} currentUser={currentUser} />
+                            <IntelFeed
+                                headlines={headlines}
+                                agents={agents}
+                                userRole={effectiveRole}
+                                currentUser={currentUser}
+                                onAgentClick={onAgentClick}
+                            />
                         )}
 
                         {/* RADAR DE DESERCIÓN RÁPIDO */}
@@ -283,6 +290,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                             agents={agents}
                             userRole={effectiveRole}
                             currentUser={currentUser}
+                            onAgentClick={onAgentClick}
                             filterType="SOCIAL" // Solo hilos
                         />
                     </div>

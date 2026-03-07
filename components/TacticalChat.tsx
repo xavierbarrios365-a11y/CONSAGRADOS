@@ -6,6 +6,7 @@ import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, 
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendPushBroadcast } from '../services/notifyService';
 import { compressImage } from '../services/storageUtils';
+import { supabase } from '../services/supabaseService';
 
 // Emoji database for reactions
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '💯'];
@@ -28,6 +29,8 @@ interface Message {
     fileName?: string;
     reactions?: { [emoji: string]: string[] }; // emoji -> array of user IDs
     editedAt?: Timestamp;
+    storyId?: string;
+    storyImageUrl?: string;
 }
 
 interface Props {
@@ -35,6 +38,39 @@ interface Props {
     agents: Agent[];
     onClose: () => void;
 }
+
+const StoryPreview: React.FC<{ storyId: string; imageUrl: string }> = ({ storyId, imageUrl }) => {
+    const [isActive, setIsActive] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            const { data, error } = await supabase
+                .from('historias')
+                .select('id')
+                .eq('id', storyId)
+                .gt('expires_at', new Date().toISOString())
+                .single();
+
+            setIsActive(!!data && !error);
+        };
+        checkStatus();
+    }, [storyId]);
+
+    if (!isActive) return null;
+
+    return (
+        <div className="mb-2 rounded-xl overflow-hidden border border-white/20 bg-black/40 shadow-xl group/story">
+            <div className="relative aspect-video">
+                <img src={imageUrl} className="w-full h-full object-cover group-hover/story:scale-110 transition-transform duration-700" alt="Historia" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Historia Activa</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -310,6 +346,11 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                             <p className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter mb-1.5 truncate max-w-full">
                                                 {msg.senderName}
                                             </p>
+                                        )}
+
+                                        {/* Story Preview Integration */}
+                                        {msg.storyId && msg.storyImageUrl && (
+                                            <StoryPreview storyId={msg.storyId} imageUrl={msg.storyImageUrl} />
                                         )}
 
                                         {/* File Content */}

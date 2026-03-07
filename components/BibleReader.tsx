@@ -13,7 +13,8 @@ import {
     Copy,
     CheckCircle2,
     ExternalLink,
-    Sparkles
+    Sparkles,
+    X
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { createStorySupabase, publishNewsSupabase } from '../services/supabaseService';
@@ -48,7 +49,8 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [viewState, setViewState] = useState<'BOOKS' | 'CHAPTERS' | 'VERSES'>('BOOKS');
     const [activeTestament, setActiveTestament] = useState<'OT' | 'NT'>('OT');
-    const [copiedVerse, setCopiedVerse] = useState<number | null>(null);
+    const [copiedVerse, setCopiedVerse] = useState<boolean>(false);
+    const [selectedVerses, setSelectedVerses] = useState<BibleVerse[]>([]);
 
     // 0. Cargar Estado Persistente
     useEffect(() => {
@@ -138,40 +140,89 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
 
     const getBookName = (book: BibleBook | null) => book?.names[0] || '';
 
-    const copyToClipboard = (text: string, verseNum: number) => {
-        const fullText = `"${text}" - ${getBookName(selectedBook)} ${selectedChapter}:${verseNum} (Consagrados)`;
-        navigator.clipboard.writeText(fullText);
-        setCopiedVerse(verseNum);
-        setTimeout(() => setCopiedVerse(null), 2000);
+    const toggleVerseSelection = (verse: BibleVerse) => {
+        if (selectedVerses.some(v => v.id === verse.id)) {
+            setSelectedVerses(selectedVerses.filter(v => v.id !== verse.id));
+        } else {
+            setSelectedVerses([...selectedVerses, verse].sort((a, b) => a.number - b.number));
+        }
     };
 
-    const shareToWhatsApp = (verse: BibleVerse) => {
-        const text = `📖 *${getBookName(selectedBook)} ${selectedChapter}:${verse.number}*\n\n"${verse.verse}"\n\n_Consagrados 2026_`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const handleCopySelection = () => {
+        if (selectedVerses.length === 0) return;
+        const bookName = getBookName(selectedBook);
+        const chapter = selectedChapter;
+
+        let textToCopy = "";
+        if (selectedVerses.length === 1) {
+            textToCopy = `"${selectedVerses[0].verse}" - ${bookName} ${chapter}:${selectedVerses[0].number}`;
+        } else {
+            const verseNumbers = selectedVerses.map(v => v.number).join(', ');
+            const combinedText = selectedVerses.map(v => `${v.number}. ${v.verse}`).join('\n');
+            textToCopy = `${bookName} ${chapter}:${verseNumbers}\n\n${combinedText}`;
+        }
+
+        navigator.clipboard.writeText(textToCopy + "\n\n(Consagrados 2026)");
+        setCopiedVerse(true);
+        setTimeout(() => setCopiedVerse(false), 2000);
     };
 
-    const shareToStories = async (verse: BibleVerse) => {
-        if (!currentUser) return;
-        const confirm = window.confirm("¿Publicar este versículo en tus historias?");
+    const handleWhatsAppShare = () => {
+        if (selectedVerses.length === 0 || selectedVerses.length > 2) return;
+        const bookName = getBookName(selectedBook);
+        const chapter = selectedChapter;
+
+        let shareText = "";
+        if (selectedVerses.length === 1) {
+            shareText = `📖 *${bookName} ${chapter}:${selectedVerses[0].number}*\n\n"${selectedVerses[0].verse}"`;
+        } else {
+            shareText = `📖 *${bookName} ${chapter}:${selectedVerses[0].number}-${selectedVerses[1].number}*\n\n1. ${selectedVerses[0].verse}\n2. ${selectedVerses[1].verse}`;
+        }
+
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText + "\n\n_Consagrados 2026_")}`, '_blank');
+    };
+
+    const handleStoriesShare = async () => {
+        if (!currentUser || selectedVerses.length === 0 || selectedVerses.length > 2) return;
+        const confirm = window.confirm(`¿Publicar ${selectedVerses.length} versículo(s) en tus historias?`);
         if (!confirm) return;
 
-        const content = `📖 ${getBookName(selectedBook)} ${selectedChapter}:${verse.number}\n\n"${verse.verse}"`;
-        const res = await createStorySupabase(currentUser.id, 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?q=80&w=2070&auto=format&fit=crop', content);
+        const bookName = getBookName(selectedBook);
+        const chapter = selectedChapter;
+        const versesText = selectedVerses.map(v => v.verse).join(' ');
+        const reference = `${bookName} ${chapter}:${selectedVerses[0].number}${selectedVerses.length > 1 ? '-' + selectedVerses[1].number : ''}`;
 
-        if (res.success) alert("✅ Publicado en Historias");
-        else alert("❌ Error al publicar");
+        // Formato para Story - Usamos un separador especial para renderizado pro en StoriesBar
+        const storyContent = `${versesText} | ${reference}`;
+
+        // Imagen Premium: Fondo Tactical Moody (Biblia/Oscuro)
+        const PREMIUM_BIBLE_BG = 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2073&auto=format&fit=crop';
+
+        const res = await createStorySupabase(currentUser.id, PREMIUM_BIBLE_BG, storyContent);
+        if (res.success) {
+            alert("✅ Publicado en Historias");
+            setSelectedVerses([]);
+        } else alert("❌ Error al publicar");
     };
 
-    const shareToIntelFeed = async (verse: BibleVerse) => {
-        if (!currentUser) return;
-        const confirm = window.confirm("¿Compartir este versículo en el Intel Feed? (Se ignorará el límite de caracteres)");
+    const handleIntelFeedShare = async () => {
+        if (!currentUser || selectedVerses.length === 0 || selectedVerses.length > 2) return;
+        const confirm = window.confirm("¿Compartir selección en el Intel Feed?");
         if (!confirm) return;
 
-        const message = `📖 *${getBookName(selectedBook)} ${selectedChapter}:${verse.number}*\n\n"${verse.verse}"`;
-        const res = await publishNewsSupabase(currentUser.id, currentUser.name, 'BIBLE_SHARE', message);
+        const bookName = getBookName(selectedBook);
+        const chapter = selectedChapter;
+        const versesText = selectedVerses.map(v => v.verse).join(' ');
+        const reference = `${bookName} ${chapter}:${selectedVerses[0].number}${selectedVerses.length > 1 ? '-' + selectedVerses[1].number : ''}`;
 
-        if (res.success) alert("🚀 Compartido en Intel Feed");
-        else alert("❌ Error al compartir");
+        // Formato compitible con fetchNewsFeedSupabase parser
+        const feedContent = `[BIBLE]: Reflexión Diaria [VERSE]: ${versesText} [REF]: ${reference}`;
+
+        const res = await publishNewsSupabase(currentUser.id, currentUser.name, 'BIBLE_SHARE', feedContent);
+        if (res.success) {
+            alert("🚀 Compartido en Intel Feed");
+            setSelectedVerses([]);
+        } else alert("❌ Error al compartir");
     };
 
     const filteredBooks = books.filter(b => {
@@ -366,64 +417,38 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                                     handleSelectChapter(selectedChapter + 1);
                                 }
                             }}
-                            className="max-w-3xl mx-auto space-y-12 pb-64 touch-none"
+                            className="max-w-3xl mx-auto space-y-12 pb-64"
                         >
-                            {verses.map((v, idx) => (
-                                <motion.div
-                                    key={v.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
-                                    className="group relative"
-                                >
-                                    <div className="flex gap-6 items-start">
-                                        <div className="pt-1.5">
-                                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-500/10 border border-amber-500/20 text-amber-500 font-bebas text-lg shadow-[0_0_15px_rgba(245,158,11,0.1)] group-hover:bg-amber-500 group-hover:text-black transition-all duration-300">
-                                                {v.number}
+                            {verses.map((v, idx) => {
+                                const isSelected = selectedVerses.some(sv => sv.id === v.id);
+                                return (
+                                    <motion.div
+                                        key={v.id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
+                                        onClick={() => toggleVerseSelection(v)}
+                                        className={`group relative p-4 -mx-4 rounded-3xl transition-all duration-300 cursor-pointer ${isSelected ? 'bg-amber-500/10 border-l-4 border-amber-500 shadow-[inset_0_0_20px_rgba(245,158,11,0.1)]' : 'hover:bg-white/5 border-l-4 border-transparent'}`}
+                                    >
+                                        <div className="flex gap-6 items-start">
+                                            <div className="pt-1.5">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bebas text-lg shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-all duration-300 ${isSelected ? 'bg-amber-500 text-black' : 'bg-amber-500/10 border border-amber-500/20 text-amber-500 group-hover:bg-amber-500/30'}`}>
+                                                    {v.number}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 space-y-4">
+                                                {v.study && (
+                                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60 mb-2 font-montserrat">
+                                                        {v.study}
+                                                    </h4>
+                                                )}
+                                                <p className={`text-xl md:text-2xl font-montserrat font-medium leading-[1.8] transition-colors ${isSelected ? 'text-white' : 'text-white/80'}`}>
+                                                    {v.verse}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="flex-1 space-y-4">
-                                            {v.study && (
-                                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/60 mb-2 font-montserrat">
-                                                    {v.study}
-                                                </h4>
-                                            )}
-                                            <p className="text-xl md:text-2xl font-montserrat font-medium leading-[1.8] text-white/90 selection:bg-amber-500 selection:text-black">
-                                                {v.verse}
-                                            </p>
-
-                                            {/* Acciones Premium al Hover y en Móvil */}
-                                            <div className="flex flex-wrap gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-500 translate-y-0 md:translate-y-2 md:group-hover:translate-y-0 pt-2">
-                                                <button
-                                                    onClick={() => copyToClipboard(v.verse, v.number)}
-                                                    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white/80 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-lg"
-                                                >
-                                                    {copiedVerse === v.number ? <CheckCircle2 size={14} className="text-green-400" /> : <Copy size={14} />}
-                                                    {copiedVerse === v.number ? 'Copiado' : 'Copiar'}
-                                                </button>
-                                                <button
-                                                    onClick={() => shareToWhatsApp(v)}
-                                                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
-                                                >
-                                                    <MessageCircle size={14} /> WhatsApp
-                                                </button>
-                                                <button
-                                                    onClick={() => shareToStories(v)}
-                                                    className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
-                                                >
-                                                    <Sparkles size={14} /> Historia
-                                                </button>
-                                                <button
-                                                    onClick={() => shareToIntelFeed(v)}
-                                                    className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-xl text-indigo-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
-                                                >
-                                                    <Zap size={14} /> Intel Feed
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="absolute -left-12 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-white/5 to-transparent" />
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                );
+                            })}
 
                             {/* Final del Capítulo - Estética Refinada */}
                             <div className="flex flex-col items-center py-20 opacity-20">
@@ -435,6 +460,95 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* TACTICAL CAPSULE: BARRA DE ACCIONES ELITE */}
+            <AnimatePresence>
+                {selectedVerses.length > 0 && (
+                    <motion.div
+                        initial={{ y: 50, x: '-50%', opacity: 0, scale: 0.9 }}
+                        animate={{ y: 0, x: '-50%', opacity: 1, scale: 1 }}
+                        exit={{ y: 50, x: '-50%', opacity: 0, scale: 0.9 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        className="fixed bottom-8 left-1/2 z-[100] w-auto pointer-events-none"
+                    >
+                        <div className="bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/10 rounded-full px-2 py-2 shadow-[0_20px_40px_rgba(0,0,0,0.6)] flex items-center gap-1.5 pointer-events-auto overflow-hidden ring-1 ring-white/5">
+                            {/* Selection Count - Tactical Hex Look */}
+                            <div className="flex items-center gap-3 pl-4 pr-3 border-r border-white/5 mr-1">
+                                <div className="relative group">
+                                    <div className="absolute -inset-1 bg-amber-500/20 rounded-full blur group-hover:bg-amber-500/30 transition-all" />
+                                    <span className="relative w-8 h-8 bg-amber-500 text-black rounded-lg flex items-center justify-center font-black text-sm tracking-tighter">
+                                        {selectedVerses.length}
+                                    </span>
+                                </div>
+                                <div className="hidden md:block">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white leading-none">Protocolo</p>
+                                    <p className="text-[7px] font-bold uppercase tracking-widest text-amber-500/60 mt-1">Selección</p>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons Capsule */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={handleCopySelection}
+                                    title="Copiar Selección"
+                                    className="p-3.5 rounded-full hover:bg-white/10 transition-all group relative overflow-hidden"
+                                >
+                                    {copiedVerse ? <CheckCircle2 className="text-green-400 scale-110" size={20} /> : <Copy className="text-white/60 group-hover:text-white" size={20} />}
+                                    {copiedVerse && <motion.div layoutId="glow" className="absolute inset-0 bg-green-400/10 blur-xl" />}
+                                </button>
+
+                                <div className="w-[1px] h-6 bg-white/5 mx-1" />
+
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        disabled={selectedVerses.length > 2}
+                                        onClick={handleWhatsAppShare}
+                                        className={`p-3.5 rounded-full transition-all group relative ${selectedVerses.length > 2 ? 'opacity-20 grayscale pointer-events-none' : 'hover:bg-green-500/10'}`}
+                                    >
+                                        <MessageCircle className="text-green-400/60 group-hover:text-green-400" size={20} />
+                                    </button>
+                                    <button
+                                        disabled={selectedVerses.length > 2}
+                                        onClick={handleStoriesShare}
+                                        className={`p-3.5 rounded-full transition-all group relative ${selectedVerses.length > 2 ? 'opacity-20 grayscale pointer-events-none' : 'hover:bg-purple-500/10'}`}
+                                    >
+                                        <Sparkles className="text-purple-400/60 group-hover:text-purple-400" size={20} />
+                                    </button>
+                                    <button
+                                        disabled={selectedVerses.length > 2}
+                                        onClick={handleIntelFeedShare}
+                                        className={`p-3.5 rounded-full transition-all group relative ${selectedVerses.length > 2 ? 'opacity-20 grayscale pointer-events-none' : 'hover:bg-indigo-500/10'}`}
+                                    >
+                                        <Zap className="text-indigo-400/60 group-hover:text-indigo-400" size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="w-[1px] h-6 bg-white/5 mx-1" />
+
+                                <button
+                                    onClick={() => setSelectedVerses([])}
+                                    className="p-3.5 rounded-full hover:bg-red-500/10 group transition-all"
+                                >
+                                    <X className="text-white/20 group-hover:text-red-400" size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Limit Warning - Elite HUD Style */}
+                        {selectedVerses.length > 2 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                className="mt-3 flex justify-center"
+                            >
+                                <div className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full backdrop-blur-xl flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
+                                    <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em]">Restricción: Máx 2 Versículos</span>
+                                </div>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Decorative Bottom / Footer "Aesthetic" */}
             <div className="absolute bottom-0 left-0 w-full p-12 pointer-events-none z-20">

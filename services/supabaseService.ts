@@ -1572,6 +1572,30 @@ export const toggleDislikeSupabase = async (noticiaId: string, agentId: string):
 };
 
 /**
+ * @description Parsea un mensaje de noticia para extraer versículos y referencias si existen.
+ */
+export const parseNewsMessage = (rawMessage: string) => {
+    let message = rawMessage;
+    let verse = undefined;
+    let reference = undefined;
+
+    if (message.includes('[VERSE]:')) {
+        const parts = message.split(' [VERSE]: ');
+        message = parts[0];
+        if (parts[1]) {
+            if (parts[1].includes(' [REF]: ')) {
+                const refParts = parts[1].split(' [REF]: ');
+                verse = refParts[0];
+                reference = refParts[1];
+            } else {
+                verse = parts[1];
+            }
+        }
+    }
+    return { message, verse, reference };
+};
+
+/**
  * @description Obtiene el feed de noticias desde la tabla de actividad asistencia_visitas
  */
 export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
@@ -1590,23 +1614,7 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
 
         // Mapear de Supabase (snake_case) a NewsFeedItem (camelCase)
         return (data || []).map(item => {
-            let message = item.detalle || '';
-            let verse = undefined;
-            let reference = undefined;
-
-            if (message.includes('[VERSE]:')) {
-                const parts = message.split(' [VERSE]: ');
-                message = parts[0];
-                if (parts[1]) {
-                    if (parts[1].includes(' [REF]: ')) {
-                        const refParts = parts[1].split(' [REF]: ');
-                        verse = refParts[0];
-                        reference = refParts[1];
-                    } else {
-                        verse = parts[1];
-                    }
-                }
-            }
+            const { message, verse, reference } = parseNewsMessage(item.detalle || '');
 
             return {
                 id: item.id,
@@ -1769,10 +1777,10 @@ export const fetchAcademyDataSupabase = async (agentId?: string) => {
                     agentId: p.agent_id,
                     lessonId: p.lesson_id,
                     courseId: p.course_id,
-                    isCompleted: p.is_completed,
-                    score: p.score,
-                    attempts: p.attempts,
-                    completedAt: p.completed_at
+                    status: p.is_completed ? 'COMPLETADO' : 'FALLIDO',
+                    score: p.score || 0,
+                    attempts: p.attempts || 0,
+                    date: p.completed_at || p.created_at || new Date().toISOString()
                 }));
             }
         }
@@ -2734,7 +2742,8 @@ export const createStorySupabase = async (agentId: string, imageUrl: string, con
             .insert({
                 agent_id: agentId,
                 image_url: imageUrl,
-                content: content
+                content: content,
+                expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
             });
 
         if (error) throw error;
@@ -2805,7 +2814,8 @@ export const reactToStorySupabase = async (
  */
 export const sendStoryReplySupabase = async (
     storyOwnerId: string, storyOwnerName: string,
-    agentId: string, agentName: string, message: string
+    agentId: string, agentName: string, message: string,
+    storyId?: string, storyImageUrl?: string
 ): Promise<{ success: boolean; error?: string }> => {
     try {
         // Insertar mensaje en el chat general (Firebase Firestore — misma colección que TacticalChat)
@@ -2818,6 +2828,8 @@ export const sendStoryReplySupabase = async (
             senderName: agentName,
             text: chatMessage,
             type: 'text',
+            storyId: storyId || null,
+            storyImageUrl: storyImageUrl || null,
             timestamp: serverTimestamp()
         });
 

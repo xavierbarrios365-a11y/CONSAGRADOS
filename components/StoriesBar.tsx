@@ -193,7 +193,9 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
             await sendStoryReplySupabase(
                 story.agent_id, story.agentes.nombre,
                 currentUser.id, currentUser.name,
-                replyText.trim()
+                replyText.trim(),
+                story.id,
+                story.image_url
             );
             setReplyText('');
         } catch (e) {
@@ -333,11 +335,36 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                             {/* Story Context Overlay */}
                             {getCurrentStory()?.content && (
                                 <div className="absolute top-20 inset-x-0 px-6 py-4 z-10">
-                                    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl">
-                                        <p className="text-white text-xs font-medium leading-relaxed italic text-center">
-                                            "{getCurrentStory()?.content}"
-                                        </p>
-                                    </div>
+                                    {getCurrentStory()?.content?.includes(' | ') ? (
+                                        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden group/bible_story">
+                                            {/* Decorative Background Icon */}
+                                            <div className="absolute -bottom-6 -right-6 opacity-10 group-hover/bible_story:scale-110 transition-transform duration-1000">
+                                                <BookOpen size={120} className="text-[#ffb700] -rotate-12" />
+                                            </div>
+
+                                            <div className="relative z-10 space-y-4">
+                                                {/* Quote Mark */}
+                                                <div className="text-[#ffb700] font-serif text-6xl h-8 leading-none opacity-40">“</div>
+
+                                                <p className="text-white text-base md:text-xl font-medium leading-relaxed italic text-center pr-2">
+                                                    {getCurrentStory()?.content?.split(' | ')[0]}
+                                                </p>
+
+                                                <div className="flex flex-col items-center gap-2 pt-2">
+                                                    <div className="h-px w-12 bg-gradient-to-r from-transparent via-[#ffb700]/40 to-transparent" />
+                                                    <span className="text-[10px] font-black text-[#ffb700] uppercase tracking-[0.3em]">
+                                                        {getCurrentStory()?.content?.split(' | ')[1]}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl">
+                                            <p className="text-white text-xs font-medium leading-relaxed italic text-center">
+                                                "{getCurrentStory()?.content}"
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

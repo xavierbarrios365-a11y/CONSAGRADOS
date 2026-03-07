@@ -16,7 +16,7 @@ interface SharedViewProps {
     currentUser: Agent | null;
     directorySearch: string;
     setDirectorySearch: (s: string) => void;
-    setFoundAgent: (a: Agent | null) => void;
+    onAgentClick: (a: Agent) => void;
     badges: any[];
     biometricAvailable: boolean;
     isRegisteringBio: boolean;
@@ -39,7 +39,7 @@ const viewVariants: any = {
 const SharedView: React.FC<SharedViewProps> = (props) => {
     const {
         view, setView, agents, currentUser, directorySearch, setDirectorySearch,
-        setFoundAgent, badges, biometricAvailable, isRegisteringBio,
+        onAgentClick, badges, biometricAvailable, isRegisteringBio,
         registerBiometric, registerBiometrics, handleLogout, showAlert,
         syncData, viewingAsRole, setViewingAsRole
     } = props;
@@ -57,7 +57,7 @@ const SharedView: React.FC<SharedViewProps> = (props) => {
                     {list.map((a, idx) => (
                         <div
                             key={a.id}
-                            onClick={() => setFoundAgent(a)}
+                            onClick={() => onAgentClick(a)}
                             className={`group relative aspect-square rounded-3xl overflow-hidden border-2 ${borderClass} transition-all p-1 active:scale-90 cursor-pointer shadow-lg hover:shadow-2xl hover:-translate-y-1`}
                         >
                             <img

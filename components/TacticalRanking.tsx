@@ -8,6 +8,7 @@ import { PROMOTION_RULES } from '../constants';
 interface TacticalRankingProps {
     agents: Agent[];
     currentUser: Agent | null;
+    onAgentClick: (agent: Agent) => void;
 }
 
 // Estados de promoción
@@ -30,7 +31,7 @@ const getPromotionStatus = (agent: Agent): string => {
     return PROMOTION_STATUS.NONE;
 };
 
-const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }) => {
+const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, onAgentClick }) => {
     const [activeTab, setActiveTab] = useState<string>('RECLUTA');
 
     const rankingTabs = [
@@ -170,7 +171,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                 <div className="relative shadow-2xl">
                                     <img
                                         src={formatDriveUrl(topThree[1].photoUrl, topThree[1].name)}
-                                        className="w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale"
+                                        onClick={() => onAgentClick(topThree[1])}
+                                        className="w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 border-gray-400/30 object-cover grayscale hover:grayscale-0 transition-all cursor-pointer hover:scale-105 active:scale-95"
                                         onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
                                             if (!target.src.includes('ui-avatars.com')) {
@@ -194,7 +196,12 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                     )}
                                 </div>
                                 <div className="text-center">
-                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-20 sm:w-24 md:w-auto">{topThree[1].name}</h3>
+                                    <h3
+                                        onClick={() => onAgentClick(topThree[1])}
+                                        className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-20 sm:w-24 md:w-auto cursor-pointer hover:text-[#FFB700] transition-colors"
+                                    >
+                                        {topThree[1].name}
+                                    </h3>
                                     <div className="flex items-center justify-center gap-1 text-gray-400">
                                         <Zap size={8} className="md:size-3" fill="currentColor" />
                                         <span className="text-[8px] md:text-[11px] font-black">{topThree[1].xp} </span>
@@ -218,7 +225,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                     <Crown className="absolute -top-4 md:-top-10 left-1/2 -translate-x-1/2 text-[#FFB700] w-6 h-6 md:w-16 md:h-16 drop-shadow-[0_0_20px_rgba(255,183,0,0.6)] animate-pulse" />
                                     <img
                                         src={formatDriveUrl(topThree[0].photoUrl, topThree[0].name)}
-                                        className="w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)]"
+                                        onClick={() => onAgentClick(topThree[0])}
+                                        className="w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-full border-2 md:border-4 border-[#FFB700] object-cover shadow-[0_0_40px_rgba(255,183,0,0.3)] cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                                         onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
                                             if (!target.src.includes('ui-avatars.com')) {
@@ -242,7 +250,12 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                     )}
                                 </div>
                                 <div className="text-center">
-                                    <h3 className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase truncate w-24 sm:w-32 md:w-auto drop-shadow-md">{topThree[0].name}</h3>
+                                    <h3
+                                        onClick={() => onAgentClick(topThree[0])}
+                                        className="text-[12px] sm:text-sm md:text-2xl font-bebas text-[#FFB700] uppercase truncate w-24 sm:w-32 md:w-auto drop-shadow-md cursor-pointer hover:scale-105 transition-all"
+                                    >
+                                        {topThree[0].name}
+                                    </h3>
                                     <div className="flex items-center justify-center gap-1 text-[#FFB700]">
                                         <Flame size={10} className="md:size-5" fill="currentColor" />
                                         <span className="text-[10px] md:text-xl font-black">{topThree[0].xp} XP</span>
@@ -265,7 +278,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                 <div className="relative shadow-2xl">
                                     <img
                                         src={formatDriveUrl(topThree[2].photoUrl, topThree[2].name)}
-                                        className="w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale"
+                                        onClick={() => onAgentClick(topThree[2])}
+                                        className="w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full border-2 md:border-4 border-orange-800/20 object-cover grayscale hover:grayscale-0 transition-all cursor-pointer hover:scale-105 active:scale-95"
                                         onError={(e) => {
                                             const target = e.currentTarget as HTMLImageElement;
                                             if (!target.src.includes('ui-avatars.com')) {
@@ -289,7 +303,12 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                     )}
                                 </div>
                                 <div className="text-center">
-                                    <h3 className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-16 sm:w-20 md:w-auto">{topThree[2].name}</h3>
+                                    <h3
+                                        onClick={() => onAgentClick(topThree[2])}
+                                        className="text-[10px] sm:text-xs md:text-lg font-bebas text-white uppercase truncate w-16 sm:w-20 md:w-auto cursor-pointer hover:text-orange-800 transition-colors"
+                                    >
+                                        {topThree[2].name}
+                                    </h3>
                                     <div className="flex items-center justify-center gap-1 text-orange-800/60">
                                         <Zap size={8} className="md:size-3" fill="currentColor" />
                                         <span className="text-[8px] md:text-[10px] font-black">{topThree[2].xp} XP</span>
@@ -323,11 +342,12 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser }
                                             }}
                                             exit={{ opacity: 0, scale: 0.95 }}
                                             key={agent.id}
-                                            className={`relative group flex items-center justify-between p-3 md:p-6 rounded-2xl transition-all duration-300 mb-2
+                                            className={`relative group flex items-center justify-between p-3 md:p-6 rounded-2xl transition-all duration-300 mb-2 cursor-pointer
                                                 ${agent.id === currentUser?.id
                                                     ? 'bg-[#FFB700]/15 border border-[#FFB700]/30 shadow-[0_0_20px_rgba(255,183,0,0.1)]'
                                                     : 'bg-white/5 hover:bg-white/[0.08] border border-transparent hover:border-white/10'
                                                 }`}
+                                            onClick={() => onAgentClick(agent)}
                                         >
                                             <div className="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
                                                 {/* Position Badge */}

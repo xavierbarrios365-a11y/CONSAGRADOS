@@ -67,46 +67,35 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
                     <div className="max-w-2xl mx-auto pt-4 pb-24 ig-container font-montserrat">
-                        {/* ENCABEZADO INTEGRADO (IG STYLE) */}
-                        <div className="flex flex-col gap-4 mb-2">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
-                                        <div
-                                            className={`w-1.5 h-1.5 rounded-full ${isOnline && notificationPermission === 'granted' ? 'bg-[#ffb700] shadow-[0_0_8px_rgba(255,183,0,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} animate-pulse`}
-                                            title={isOnline && notificationPermission === 'granted' ? 'CONECTADO' : 'DESCONECTADO'}
-                                        />
-                                    </div>
-                                    <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
-                                        {currentUser?.name
-                                            ? currentUser.name.split(' ').slice(0, 2).join(' ')
-                                            : 'Agente'}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
-                                        <BadgeShowcase
-                                            currentAgentId={currentUser?.id}
-                                            currentAgentName={currentUser?.name}
-                                            mode="profile"
-                                            compact={true}
-                                        />
-                                    </div>
+                        {/* ENCABEZADO INTEGRADO (IG STYLE - HORIZONTAL) */}
+                        <div className="flex items-center gap-4 mb-2 bg-[#001f3f]/10 p-4 rounded-[2rem] border border-white/5">
+                            {/* LADO IZQUIERDO: PERFIL */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                                    <div
+                                        className={`w-1.5 h-1.5 rounded-full ${isOnline && notificationPermission === 'granted' ? 'bg-[#ffb700] shadow-[0_0_8px_rgba(255,183,0,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} animate-pulse`}
+                                        title={isOnline && notificationPermission === 'granted' ? 'CONECTADO' : 'DESCONECTADO'}
+                                    />
                                 </div>
-
-                                {currentUser && (
-                                    <div className="shrink-0">
-                                        <PromotionProgressCard
-                                            agentId={currentUser.id}
-                                            currentRank={currentUser.rank}
-                                            compact={true}
-                                        />
-                                    </div>
-                                )}
+                                <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
+                                    {currentUser?.name
+                                        ? currentUser.name.split(' ').slice(0, 2).join(' ')
+                                        : 'Agente'}
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
+                                    <BadgeShowcase
+                                        currentAgentId={currentUser?.id}
+                                        currentAgentName={currentUser?.name}
+                                        mode="profile"
+                                        compact={true}
+                                    />
+                                </div>
                             </div>
 
-                            {/* HISTORIAS AL LADO DEL NOMBRE (MOBILE OPTIMIZED) */}
-                            <div id="tutorial-stories" className="-mx-5 px-5 overflow-x-auto no-scrollbar">
+                            {/* LADO DERECHO: HISTORIAS (COMPACTAS) */}
+                            <div className="shrink-0 flex items-center">
                                 <StoriesBar currentUser={currentUser} />
                             </div>
                         </div>

@@ -227,8 +227,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
     };
 
     return (
-        <div className="w-full py-4 bg-transparent overflow-hidden">
-            <div className="flex items-center gap-4 px-4 overflow-x-auto no-scrollbar">
+        <div className="bg-transparent overflow-hidden">
+            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
                 {/* My Story / Upload Button */}
                 <div className="flex flex-col items-center gap-1 shrink-0">
                     <div

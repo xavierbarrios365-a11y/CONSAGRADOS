@@ -75,8 +75,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const totalPages = Math.ceil(rootNews.length / PAGE_SIZE);
     const displayedNews = rootNews.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
-    const loadNews = async () => {
-        setLoading(true);
+    const loadNews = async (silent = false) => {
+        if (!silent || news.length === 0) setLoading(true);
         try {
             const data = await fetchNewsFeed();
             setNews(data || []);
@@ -133,7 +133,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             if (res.success) {
                 setSocialMessage('');
                 setReplyTo(null);
-                loadNews();
+                loadNews(true); // Silent refresh
                 if (onActivity) onActivity();
             } else {
                 throw new Error(res.error);
@@ -174,7 +174,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
             // Si el post se auto-eliminó por el trigger de 5 dislikes, loadNews refrescará el feed
             if (res.disliked && (dislikesCount[noticiaId] || 0) + 1 >= 5) {
-                setTimeout(loadNews, 500);
+                setTimeout(() => loadNews(true), 500);
             }
         }
     };
@@ -255,7 +255,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={loadNews} className="p-2 text-white/40 hover:text-[#ffb700] transition-colors"><RefreshCw size={14} /></button>
+                    <button onClick={() => loadNews()} className="p-2 text-white/40 hover:text-[#ffb700] transition-colors"><RefreshCw size={14} /></button>
                     {totalPages > 1 && (
                         <div className="flex items-center gap-1">
                             <button
@@ -314,6 +314,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                     placeholder={replyTo ? "Escribe tu respuesta..." : "¿Qué está pasando en el sector?"}
                                     maxLength={128}
                                     className="w-full bg-transparent border-none text-white text-[12px] font-medium placeholder:text-white/20 outline-none resize-none min-h-[60px] no-scrollbar font-montserrat"
+                                    spellCheck="true"
+                                    autoCapitalize="sentences"
+                                    autoCorrect="on"
                                 />
                                 {showMentions && (
                                     <div className="absolute left-0 bottom-full mb-2 w-full max-h-32 overflow-y-auto bg-[#001f3f] border border-white/10 rounded-xl shadow-2xl z-50 no-scrollbar">
@@ -390,7 +393,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         const res = await deleteNewsItemSupabase(item.id);
                                                         if (res.success) {
                                                             showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
-                                                            loadNews();
+                                                            loadNews(true);
                                                         } else {
                                                             showAlert({ title: "FALLO TÁCTICO", message: `ERROR DE PERMISOS`, type: 'ERROR' });
                                                         }
@@ -440,7 +443,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                     </span>
                                                     <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
                                                 </div>
-                                                <p className="text-[11px] text-white/80 font-bold leading-tight uppercase tracking-wide font-montserrat">
+                                                <p className="text-[11px] text-white/80 font-bold leading-tight tracking-wide font-montserrat">
                                                     {item.message.split(' ').map((word, i) =>
                                                         word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
                                                     )}
@@ -461,6 +464,13 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         <AtSign size={12} className={userDislikes.includes(item.id) ? "animate-pulse" : ""} />
                                                         <span className="text-[9px] font-black">{dislikesCount[item.id] || 0}</span>
                                                     </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setReplyTo(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-white/5 border-white/10 text-white/40 hover:text-white/60 transition-all font-montserrat"
+                                                    >
+                                                        <MessageCircle size={12} />
+                                                        <span className="text-[8px] font-black uppercase">Responder</span>
+                                                    </button>
                                                 </div>
                                             </div>
 
@@ -478,7 +488,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                                     const res = await deleteNewsItemSupabase(item.id);
                                                                     if (res.success) {
                                                                         showAlert({ title: "ÉXITO", message: "MENSAJE ELIMINADO", type: 'SUCCESS' });
-                                                                        loadNews();
+                                                                        loadNews(true);
                                                                     }
                                                                 }
                                                             });

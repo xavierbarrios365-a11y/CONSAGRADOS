@@ -48,7 +48,6 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [viewState, setViewState] = useState<'BOOKS' | 'CHAPTERS' | 'VERSES'>('BOOKS');
     const [copiedVerse, setCopiedVerse] = useState<number | null>(null);
-    const [sharingVerse, setSharingVerse] = useState<BibleVerse | null>(null);
 
     // 1. Cargar Libros
     useEffect(() => {
@@ -71,11 +70,9 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const fetchVerses = useCallback(async (bookName: string, chapter: number) => {
         try {
             setLoading(true);
-            // El API espera el nombre del libro en minúsculas (slug)
             const bookSlug = bookName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const res = await fetch(`https://bible-api.deno.dev/api/read/${BIBLE_VERSION}/${bookSlug}/${chapter}`);
             const data = await res.json();
-            // La nueva API devuelve un objeto con la propiedad 'vers'
             if (data && data.vers) {
                 setVerses(data.vers);
                 setViewState('VERSES');
@@ -163,7 +160,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                             <BookOpen className="text-[#000814]" size={28} />
                         </motion.div>
                         <div>
-                            <h1 className="text-3xl font-black uppercase tracking-[0.15em] font-bebas text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/40">Nodo Biblia</h1>
+                            <h1 className="text-3xl font-black uppercase tracking-[0.15em] font-bebas text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/40">Biblia</h1>
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                                 <p className="text-[9px] text-amber-500/80 font-black uppercase tracking-[0.3em] font-montserrat">Sincronización Divina • RVR1960</p>
@@ -242,7 +239,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                         <motion.div
                             key="books"
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-6 pb-32"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-32"
                         >
                             {filteredBooks.map((book, idx) => (
                                 <motion.button
@@ -297,8 +294,19 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                     ) : (
                         <motion.div
                             key="verses"
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="max-w-3xl mx-auto space-y-12 pb-64"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0 }}
+                            onDragEnd={(e, info) => {
+                                if (info.offset.x > 100 && selectedChapter && selectedChapter > 1) {
+                                    handleSelectChapter(selectedChapter - 1);
+                                } else if (info.offset.x < -100 && selectedChapter && selectedBook && selectedChapter < selectedBook.chapters) {
+                                    handleSelectChapter(selectedChapter + 1);
+                                }
+                            }}
+                            className="max-w-3xl mx-auto space-y-12 pb-64 touch-none"
                         >
                             {verses.map((v, idx) => (
                                 <motion.div
@@ -323,30 +331,30 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                                                 {v.verse}
                                             </p>
 
-                                            {/* Acciones Premium al Hover */}
-                                            <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0">
+                                            {/* Acciones Premium al Hover y en Móvil */}
+                                            <div className="flex flex-wrap gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-500 translate-y-0 md:translate-y-2 md:group-hover:translate-y-0 pt-2">
                                                 <button
                                                     onClick={() => copyToClipboard(v.verse, v.number)}
-                                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/40 hover:text-white transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest backdrop-blur-sm"
+                                                    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white/80 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-lg"
                                                 >
-                                                    {copiedVerse === v.number ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                                                    {copiedVerse === v.number ? <CheckCircle2 size={14} className="text-green-400" /> : <Copy size={14} />}
                                                     {copiedVerse === v.number ? 'Copiado' : 'Copiar'}
                                                 </button>
                                                 <button
                                                     onClick={() => shareToWhatsApp(v)}
-                                                    className="px-4 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-xl text-green-500 transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                                                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-xl text-green-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
                                                 >
                                                     <MessageCircle size={14} /> WhatsApp
                                                 </button>
                                                 <button
                                                     onClick={() => shareToStories(v)}
-                                                    className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl text-purple-500 transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                                                    className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
                                                 >
                                                     <Sparkles size={14} /> Historia
                                                 </button>
                                                 <button
                                                     onClick={() => shareToIntelFeed(v)}
-                                                    className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl text-indigo-500 transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                                                    className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-xl text-indigo-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg"
                                                 >
                                                     <Zap size={14} /> Intel Feed
                                                 </button>

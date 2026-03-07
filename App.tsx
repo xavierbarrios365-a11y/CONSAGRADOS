@@ -12,6 +12,7 @@ import BibleWarDisplay from './components/BibleWar/BibleWarDisplay';
 import BibleWarStudent from './components/BibleWar/BibleWarStudent';
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
+import BibleReader from './components/BibleReader';
 import EliteRecruitmentTest from './components/EliteRecruitmentTest';
 import TacticalProfileDetail from './components/TacticalProfileDetail';
 import TutorialOverlay from './components/TutorialOverlay';
@@ -78,7 +79,8 @@ import {
   resetPasswordWithAnswerSupabase as resetPasswordWithAnswer,
   updateAgentPinSupabase as updateAgentPin,
   fetchNotificationsSupabase,
-  updateBiometricSupabase
+  updateBiometricSupabase,
+  supabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
 import { requestForToken, onMessageListener, db, trackEvent } from './firebase-config';
@@ -586,7 +588,14 @@ const App: React.FC = () => {
     }
 
     // Shared Views
-    if ([AppView.DIRECTORY, AppView.PROFILE, AppView.BIBLE_WAR_DISPLAY, AppView.RANKING, AppView.ENROLLMENT, AppView.BIBLE_WAR_ARENA, AppView.BIBLE_WAR_STUDENT].includes(view)) {
+    if ([AppView.DIRECTORY, AppView.PROFILE, AppView.BIBLE_WAR_DISPLAY, AppView.RANKING, AppView.ENROLLMENT, AppView.BIBLE_WAR_ARENA, AppView.BIBLE_WAR_STUDENT, AppView.BIBLE].includes(view)) {
+      if (view === AppView.BIBLE) {
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="bible" className="h-full">
+            <BibleReader currentUser={currentUser} />
+          </motion.div>
+        );
+      }
       if (view === AppView.RANKING) {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="ranking" className="h-full">

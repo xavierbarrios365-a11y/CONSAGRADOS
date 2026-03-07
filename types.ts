@@ -91,6 +91,7 @@ export enum AppView {
   BIBLE_WAR_DISPLAY = 'BIBLE_WAR_DISPLAY',
   BIBLE_WAR_ARENA = 'BIBLE_WAR_ARENA',
   BIBLE_WAR_STUDENT = 'BIBLE_WAR_STUDENT',
+  BIBLE = 'bible',
   PUBLIC_WEB = 'public_web'
 }
 

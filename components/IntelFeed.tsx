@@ -112,7 +112,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
     const handlePublishSocial = async (parentId?: string) => {
         if (!currentUser || !socialMessage.trim() || isPublishing) return;
-        if (socialMessage.length > 128) {
+        if (socialMessage.length > 128 && !socialMessage.startsWith('📖')) {
             showAlert({ title: "OPERACIÓN DENEGADA", message: "EL MENSAJE EXCEDE EL LÍMITE TÁCTICO DE 128 CARACTERES.", type: 'ERROR' });
             return;
         }

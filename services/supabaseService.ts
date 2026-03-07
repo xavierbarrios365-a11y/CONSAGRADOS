@@ -1543,7 +1543,7 @@ export const toggleDislikeSupabase = async (noticiaId: string, agentId: string):
     try {
         // Verificar si ya existe el dislike
         const { data: existing } = await supabase
-            .from('asistencia_visitas_dislikes')
+            .from('noticia_dislikes')
             .select('*')
             .eq('noticia_id', noticiaId)
             .eq('agent_id', agentId)
@@ -1552,14 +1552,14 @@ export const toggleDislikeSupabase = async (noticiaId: string, agentId: string):
         if (existing) {
             // Quitar dislike
             await supabase
-                .from('asistencia_visitas_dislikes')
+                .from('noticia_dislikes')
                 .delete()
                 .eq('id', existing.id);
             return { success: true, disliked: false };
         } else {
             // Puntos de control antes de insertar dislike
             const { error } = await supabase
-                .from('asistencia_visitas_dislikes')
+                .from('noticia_dislikes')
                 .insert([{ noticia_id: noticiaId, agent_id: agentId }]);
 
             if (error) throw error;

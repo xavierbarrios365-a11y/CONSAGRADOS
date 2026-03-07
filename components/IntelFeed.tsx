@@ -70,6 +70,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [mentions, setMentions] = useState<Agent[]>([]);
     const [showMentions, setShowMentions] = useState(false);
     const [expandedThread, setExpandedThread] = useState<string | null>(null);
+    const [newItemsCount, setNewItemsCount] = useState(0);
+    const [isAtTop, setIsAtTop] = useState(true);
 
     const PAGE_SIZE = 20;
 
@@ -212,6 +214,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                         )}
                         <div className="relative">
                             <textarea
+                                id="social-input"
+                                name="social-input"
                                 value={socialMessage}
                                 onChange={(e) => {
                                     const val = e.target.value;
@@ -279,22 +283,31 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const handleToggleLike = async (noticiaId: string) => {
         if (!currentUser) return;
 
+        // Optimistic UI
+        const isCurrentlyLiked = userLikes.includes(noticiaId);
+        setUserLikes(prev => isCurrentlyLiked ? prev.filter(id => id !== noticiaId) : [...prev, noticiaId]);
+        setLikesCount(prev => ({
+            ...prev,
+            [noticiaId]: Math.max(0, (prev[noticiaId] || 0) + (isCurrentlyLiked ? -1 : 1))
+        }));
+
         const res = await toggleLikeSupabase(noticiaId, currentUser.id, currentUser.name);
-        if (res.success) {
-            setUserLikes(prev => res.liked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
+        if (!res.success) {
+            // Rollback on failure
+            setUserLikes(prev => isCurrentlyLiked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
             setLikesCount(prev => ({
                 ...prev,
-                [noticiaId]: (prev[noticiaId] || 0) + (res.liked ? 1 : -1)
+                [noticiaId]: (prev[noticiaId] || 0) + (isCurrentlyLiked ? 1 : -1)
             }));
-
-            // Notificación de Like
+            showAlert({ title: "FALLO DE REACCIÓN", message: "NO SE PUDO REGISTRAR TU REACCIÓN.", type: 'ERROR' });
+        } else {
+            // Notificación de Like (solo si no se hizo rollback)
             if (res.liked) {
                 const post = news.find(n => n.id === noticiaId);
                 if (post && post.agentId !== currentUser.id) {
                     sendSocialNotification('LIKE', post.agentId, { senderName: currentUser.name });
                 }
             }
-
             const mostLiked = await getMostLikedAgentSupabase();
             if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
         }
@@ -303,14 +316,24 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const handleToggleDislike = async (noticiaId: string) => {
         if (!currentUser) return;
 
+        // Optimistic UI
+        const isCurrentlyDisliked = userDislikes.includes(noticiaId);
+        setUserDislikes(prev => isCurrentlyDisliked ? prev.filter(id => id !== noticiaId) : [...prev, noticiaId]);
+        setDislikesCount(prev => ({
+            ...prev,
+            [noticiaId]: Math.max(0, (prev[noticiaId] || 0) + (isCurrentlyDisliked ? -1 : 1))
+        }));
+
         const res = await toggleDislikeSupabase(noticiaId, currentUser.id);
-        if (res.success) {
-            setUserDislikes(prev => res.disliked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
+        if (!res.success) {
+            // Rollback
+            setUserDislikes(prev => isCurrentlyDisliked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
             setDislikesCount(prev => ({
                 ...prev,
-                [noticiaId]: (prev[noticiaId] || 0) + (res.disliked ? 1 : -1)
+                [noticiaId]: (prev[noticiaId] || 0) + (isCurrentlyDisliked ? 1 : -1)
             }));
-
+            showAlert({ title: "FALLO DE REACCIÓN", message: "NO SE PUDO REGISTRAR TU REACCIÓN.", type: 'ERROR' });
+        } else {
             // Notificación de Dislike
             if (res.disliked) {
                 const post = news.find(n => n.id === noticiaId);
@@ -319,7 +342,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 }
             }
 
-            // Si el post se auto-eliminó por el trigger de 5 dislikes, loadNews refrescará el feed
             if (res.disliked && (dislikesCount[noticiaId] || 0) + 1 >= 5) {
                 setTimeout(() => loadNews(true), 500);
             }
@@ -329,48 +351,102 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     useEffect(() => {
         loadNews();
 
-        // Suscripción Realtime (Estilo Pro)
-        const channel = supabase
-            .channel('social_feed_changes')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'asistencia_visitas'
-            }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    const item = payload.new;
-                    const { message, verse, reference } = parseNewsMessage(item.detalle || '');
-                    const mappedItem: NewsFeedItem = {
-                        id: item.id,
-                        agentId: item.agent_id,
-                        agentName: item.agent_name,
-                        type: item.tipo,
-                        message: message,
-                        verse: verse,
-                        reference: reference,
-                        parentId: item.parent_id,
-                        date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }).toUpperCase()
-                    };
-                    setNews(prev => {
-                        // Evitar duplicados
-                        if (prev.find(p => p.id === mappedItem.id)) return prev;
-                        return [mappedItem, ...prev];
-                    });
-                } else if (payload.eventType === 'DELETE') {
-                    setNews(prev => prev.filter(p => p.id !== payload.old.id));
-                }
-            })
-            .subscribe();
+        // 1. Monitorizar Scroll para el botón de "Nuevos Mensajes"
+        const container = document.getElementById('intel-feed-scroll-container');
+        const handleScroll = () => {
+            if (container) {
+                const atTop = container.scrollTop < 50;
+                setIsAtTop(atTop);
+                if (atTop) setNewItemsCount(0);
+            }
+        };
+        container?.addEventListener('scroll', handleScroll);
+
+        // 2. Suscripción Realtime Unificada (Estilo Pro)
+        const channel = supabase.channel('social_realtime_nexus');
+
+        // Escuchar MENSAJES (INSERT/DELETE/UPDATE)
+        channel.on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'asistencia_visitas'
+        }, (payload) => {
+            if (payload.eventType === 'INSERT') {
+                const item = payload.new;
+                const { message, verse, reference } = parseNewsMessage(item.detalle || '');
+                const mappedItem: NewsFeedItem = {
+                    id: item.id,
+                    agentId: item.agent_id,
+                    agentName: item.agent_name,
+                    type: item.tipo,
+                    message: message,
+                    verse: verse,
+                    reference: reference,
+                    parentId: item.parent_id,
+                    date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
+                        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                    }).toUpperCase()
+                };
+
+                setNews(prev => {
+                    if (prev.find(p => p.id === mappedItem.id)) return prev;
+                    // Si el usuario no está arriba, le mostramos un contador
+                    if (!isAtTop && !mappedItem.parentId) {
+                        setNewItemsCount(c => c + 1);
+                    }
+                    return [mappedItem, ...prev];
+                });
+            } else if (payload.eventType === 'DELETE') {
+                setNews(prev => prev.filter(p => p.id !== payload.old.id));
+            } else if (payload.eventType === 'UPDATE') {
+                // Actualizar detalle si cambió
+                setNews(prev => prev.map(p => p.id === payload.new.id ? { ...p, message: parseNewsMessage(payload.new.detalle).message } : p));
+            }
+        });
+
+        // Escuchar LIKES (INSERT/DELETE)
+        channel.on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'noticia_likes'
+        }, (payload) => {
+            const like = (payload.new as any) || (payload.old as any);
+            if (!like?.noticia_id) return;
+
+            // Si el like es mío, lo ignoro porque ya lo procesé optimísticamente
+            if (like.agent_id === currentUser?.id) return;
+
+            setLikesCount(prev => ({
+                ...prev,
+                [like.noticia_id]: Math.max(0, (prev[like.noticia_id] || 0) + (payload.eventType === 'INSERT' ? 1 : -1))
+            }));
+        });
+
+        // Escuchar DISLIKES (INSERT/DELETE)
+        channel.on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'noticia_dislikes'
+        }, (payload) => {
+            const dislike = (payload.new as any) || (payload.old as any);
+            if (!dislike?.noticia_id) return;
+
+            // Si el dislike es mío, lo ignoro
+            if (dislike.agent_id === currentUser?.id) return;
+
+            setDislikesCount(prev => ({
+                ...prev,
+                [dislike.noticia_id]: Math.max(0, (prev[dislike.noticia_id] || 0) + (payload.eventType === 'INSERT' ? 1 : -1))
+            }));
+        });
+
+        channel.subscribe();
 
         return () => {
+            container?.removeEventListener('scroll', handleScroll);
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [isAtTop]); // Dependemos de isAtTop para decidir el contador de nuevos items
 
     if (loading) {
         return (
@@ -384,258 +460,284 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     }
 
     return (
-        <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
+        <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700 h-full flex flex-col">
             {/* Social Post Area (Main) - Integrated directly */}
             {!replyTo && renderPostArea()}
 
-            <div className="grid grid-cols-1 gap-2 relative">
+            {/* New Messages Indicator */}
+            <AnimatePresence>
+                {newItemsCount > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="sticky top-4 z-[60] flex justify-center pointer-events-none"
+                    >
+                        <button
+                            onClick={() => {
+                                const container = document.getElementById('intel-feed-scroll-container');
+                                container?.scrollTo({ top: 0, behavior: 'smooth' });
+                                setNewItemsCount(0);
+                            }}
+                            className="pointer-events-auto bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 group hover:scale-105 transition-transform"
+                        >
+                            <RefreshCw size={14} className="animate-spin-slow group-hover:rotate-180 transition-transform duration-500" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Nuevos Mensajes ({newItemsCount})</span>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                <AnimatePresence mode="popLayout">
-                    {displayedNews.length > 0 ? (
-                        displayedNews.map((item, idx) => {
-                            const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
-                            let agent = agents.find(a => String(a.id) === String(item.agentId));
-                            if (!agent && item.message) {
-                                agent = agents.find(a => item.message.toUpperCase().includes(a.name.toUpperCase()));
-                            }
+            <div id="intel-feed-scroll-container" className="flex-1 overflow-y-auto pr-2 no-scrollbar space-y-4">
+                <div className="grid grid-cols-1 gap-2 relative">
 
-                            const photoUrl = agent?.photoUrl ? formatDriveUrl(agent.photoUrl) : null;
-                            const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
+                    <AnimatePresence mode="popLayout">
+                        {displayedNews.length > 0 ? (
+                            displayedNews.map((item, idx) => {
+                                const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
+                                let agent = agents.find(a => String(a.id) === String(item.agentId));
+                                if (!agent && item.message) {
+                                    agent = agents.find(a => item.message.toUpperCase().includes(a.name.toUpperCase()));
+                                }
 
-                            return (
-                                <div key={item.id || idx} className="relative ml-4">
-                                    <motion.div
-                                        layout
-                                        drag={(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) ? "x" : false}
-                                        dragDirectionLock
-                                        dragListener
-                                        dragConstraints={{ left: -100, right: 0 }}
-                                        dragElastic={0.1}
-                                        onDragEnd={(event, info) => {
-                                            if (info.offset.x < -60 || info.velocity.x < -500) {
-                                                showAlert({
-                                                    title: "ELIMINAR NOTICIA",
-                                                    message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
-                                                    type: 'CONFIRM',
-                                                    onConfirm: async () => {
-                                                        const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
-                                                        if (res.success) {
-                                                            showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
-                                                            loadNews(true);
-                                                        } else {
-                                                            showAlert({ title: "FALLO TÁCTICO", message: `ERROR DE PERMISOS`, type: 'ERROR' });
+                                const photoUrl = agent?.photoUrl ? formatDriveUrl(agent.photoUrl) : null;
+                                const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
+
+                                return (
+                                    <div key={item.id || idx} className="relative ml-4">
+                                        <motion.div
+                                            layout
+                                            drag={(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) ? "x" : false}
+                                            dragDirectionLock
+                                            dragListener
+                                            dragConstraints={{ left: -100, right: 0 }}
+                                            dragElastic={0.1}
+                                            onDragEnd={(event, info) => {
+                                                if (info.offset.x < -60 || info.velocity.x < -500) {
+                                                    showAlert({
+                                                        title: "ELIMINAR NOTICIA",
+                                                        message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
+                                                        type: 'CONFIRM',
+                                                        onConfirm: async () => {
+                                                            const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
+                                                            if (res.success) {
+                                                                showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
+                                                                loadNews(true);
+                                                            } else {
+                                                                showAlert({ title: "FALLO TÁCTICO", message: `ERROR DE PERMISOS`, type: 'ERROR' });
+                                                            }
                                                         }
-                                                    }
-                                                });
-                                            }
-                                        }}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        className="relative p-6 pt-8 bg-transparent border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-grab active:cursor-grabbing touch-pan-y"
-                                    >
-                                        <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 pointer-events-none" />
+                                                    });
+                                                }
+                                            }}
+                                            initial={{ opacity: 0, y: -20, scale: 0.98 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: idx * 0.05, duration: 0.4 } }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            className="relative p-6 pt-8 bg-transparent border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-grab active:cursor-grabbing touch-pan-y"
+                                        >
+                                            <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 pointer-events-none" />
 
-                                        <div className="flex items-start gap-4">
-                                            <div className="relative shrink-0">
-                                                {photoUrl ? (
-                                                    <div className="relative">
-                                                        <img
-                                                            src={photoUrl}
-                                                            alt={agent?.name || 'Agente'}
-                                                            onClick={() => agent && onAgentClick?.(agent)}
-                                                            className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
-                                                        />
-                                                        <div
-                                                            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
-                                                            style={{ backgroundColor: config.color, color: '#001f3f' }}
-                                                        >
-                                                            {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg border border-white/10"
-                                                        style={{ backgroundColor: `${config.color}15`, color: config.color }}
-                                                    >
-                                                        {config.icon}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="flex-1 min-w-0 pt-0.5">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span
-                                                        onClick={() => agent && onAgentClick?.(agent)}
-                                                        className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter hover:underline cursor-pointer"
-                                                    >
-                                                        {agent ? agentName : config.label}
-                                                    </span>
-                                                    {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
-                                                    <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">• {item.date}</span>
-                                                </div>
-                                                {item.type === 'BIBLE_SHARE' && item.verse ? (
-                                                    <div className="relative mt-2 mb-3 px-6 py-6 bg-gradient-to-br from-[#ffb700]/10 to-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl overflow-hidden group/bible shadow-2xl">
-                                                        {/* Decorative Background Icon */}
-                                                        <BookOpen size={100} className="absolute -bottom-6 -right-6 text-[#ffb700]/5 -rotate-12 group-hover/bible:scale-110 transition-transform duration-700" />
-
-                                                        {/* Quote Icon */}
-                                                        <div className="text-[#ffb700]/30 font-serif text-6xl absolute -top-2 left-2 h-8 leading-none opacity-50">“</div>
-
-                                                        <div className="relative z-10 space-y-4">
-                                                            <p className="text-[15px] md:text-[18px] text-white font-medium leading-relaxed tracking-tight italic font-montserrat pr-4 drop-shadow-sm">
-                                                                {item.verse}
-                                                            </p>
-
-                                                            <div className="flex items-center gap-3 pt-2">
-                                                                <div className="h-[1.5px] w-10 bg-[#ffb700]/50" />
-                                                                <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-[0.25em] font-bebas">
-                                                                    {item.reference}
-                                                                </span>
+                                            <div className="flex items-start gap-4">
+                                                <div className="relative shrink-0">
+                                                    {photoUrl ? (
+                                                        <div className="relative">
+                                                            <img
+                                                                src={photoUrl}
+                                                                alt={agent?.name || 'Agente'}
+                                                                onClick={() => agent && onAgentClick?.(agent)}
+                                                                className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                                                            />
+                                                            <div
+                                                                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
+                                                                style={{ backgroundColor: config.color, color: '#001f3f' }}
+                                                            >
+                                                                {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
                                                             </div>
                                                         </div>
-
-                                                        {/* Bottom Glow */}
-                                                        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-[#ffb700]/20 to-transparent" />
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-[13px] text-white/90 font-medium leading-relaxed tracking-tight font-montserrat">
-                                                        {item.message.split(' ').map((word, i) =>
-                                                            word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black hover:underline cursor-pointer">{word} </span> : word + ' '
-                                                        )}
-                                                    </p>
-                                                )}
-
-                                                <div className="flex items-center gap-6 mt-4">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleToggleLike(item.id); }}
-                                                        className={`flex items-center gap-2 group transition-all ${userLikes.includes(item.id) ? 'text-[#ff4d00]' : 'text-white/30 hover:text-[#ff4d00]'}`}
-                                                    >
-                                                        <div className={`p-2 rounded-full transition-colors ${userLikes.includes(item.id) ? 'bg-[#ff4d00]/10' : 'group-hover:bg-[#ff4d00]/10'}`}>
-                                                            <ThumbsUp size={14} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
+                                                    ) : (
+                                                        <div
+                                                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg border border-white/10"
+                                                            style={{ backgroundColor: `${config.color}15`, color: config.color }}
+                                                        >
+                                                            {config.icon}
                                                         </div>
-                                                        <span className="text-[10px] font-black">{likesCount[item.id] || 0}</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleToggleDislike(item.id); }}
-                                                        className={`flex items-center gap-2 group transition-all ${userDislikes.includes(item.id) ? 'text-red-500' : 'text-white/30 hover:text-red-500'}`}
-                                                    >
-                                                        <div className={`p-2 rounded-full transition-colors ${userDislikes.includes(item.id) ? 'bg-red-500/10' : 'group-hover:bg-red-500/10'}`}>
-                                                            <ThumbsDown size={14} />
-                                                        </div>
-                                                        <span className="text-[10px] font-black">{dislikesCount[item.id] || 0}</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setReplyTo(item); }}
-                                                        className="flex items-center gap-2 text-white/30 hover:text-blue-400 group transition-all"
-                                                    >
-                                                        <div className="p-2 rounded-full group-hover:bg-blue-400/10 transition-colors">
-                                                            <MessageCircle size={14} />
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase">Responder</span>
-                                                    </button>
+                                                    )}
                                                 </div>
-                                                {/* In-line Reply Area */}
-                                                {replyTo?.id === item.id && (
-                                                    <div className="mt-4 border-l-2 border-[#ffb700]/20 pl-4 animate-in slide-in-from-left-2">
-                                                        {renderPostArea(item.id)}
+
+                                                <div className="flex-1 min-w-0 pt-0.5">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span
+                                                            onClick={() => agent && onAgentClick?.(agent)}
+                                                            className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter hover:underline cursor-pointer"
+                                                        >
+                                                            {agent ? agentName : config.label}
+                                                        </span>
+                                                        {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
+                                                        <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">• {item.date}</span>
                                                     </div>
-                                                )}
-                                            </div>
+                                                    {item.type === 'BIBLE_SHARE' && item.verse ? (
+                                                        <div className="relative mt-2 mb-3 px-6 py-6 bg-gradient-to-br from-[#ffb700]/10 to-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl overflow-hidden group/bible shadow-2xl">
+                                                            {/* Decorative Background Icon */}
+                                                            <BookOpen size={100} className="absolute -bottom-6 -right-6 text-[#ffb700]/5 -rotate-12 group-hover/bible:scale-110 transition-transform duration-700" />
 
-                                            <div className="flex flex-col gap-2">
-                                                <button onClick={() => setSharePreview({ agent, newsItem: item })} className="p-2 text-white/20 hover:text-[#ffb700] transition-colors"><Share2 size={16} /></button>
-                                                {(userRole === UserRole.DIRECTOR) && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            showAlert({
-                                                                title: "ELIMINAR MENSAJE (DIRECTOR)",
-                                                                message: "¿ESTÁS SEGURO? ESTA ACCIÓN ES IRREVERSIBLE.",
-                                                                type: 'CONFIRM',
-                                                                onConfirm: async () => {
-                                                                    const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
-                                                                    if (res.success) {
-                                                                        showAlert({ title: "ÉXITO", message: "MENSAJE ELIMINADO", type: 'SUCCESS' });
-                                                                        loadNews(true);
-                                                                    }
-                                                                }
-                                                            });
-                                                        }}
-                                                        className="p-2 text-red-500/40 hover:text-red-500 transition-colors"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
+                                                            {/* Quote Icon */}
+                                                            <div className="text-[#ffb700]/30 font-serif text-6xl absolute -top-2 left-2 h-8 leading-none opacity-50">“</div>
 
-                                        {/* Nested Comments with Thread lines */}
-                                        <div className="relative">
-                                            {(() => {
-                                                const threadComments = news.filter(comment => comment.parentId === item.id);
-                                                if (threadComments.length === 0) return null;
+                                                            <div className="relative z-10 space-y-4">
+                                                                <p className="text-[15px] md:text-[18px] text-white font-medium leading-relaxed tracking-tight italic font-montserrat pr-4 drop-shadow-sm">
+                                                                    {item.verse}
+                                                                </p>
 
-                                                const showAll = expandedThread === item.id;
-                                                const visibleComments = showAll ? threadComments : threadComments.slice(0, 5);
-
-                                                return (
-                                                    <div className="mt-2 space-y-4">
-                                                        {/* Thread line connecting main post to comments */}
-                                                        <div className="absolute left-[36px] top-[-20px] bottom-10 w-[2px] bg-white/5" />
-
-                                                        {visibleComments.map(comment => (
-                                                            <div key={comment.id} className="relative ml-8 flex items-start gap-3 group">
-                                                                {/* Horizontal connector to the thread line */}
-                                                                <div className="absolute left-[-16px] top-4 w-4 h-[2px] bg-white/5" />
-
-                                                                <img
-                                                                    src={formatDriveUrl(agents.find(a => a.id === comment.agentId)?.photoUrl || '', comment.agentName || '')}
-                                                                    className="w-8 h-8 rounded-lg object-cover border border-white/10 shadow-lg relative z-10"
-                                                                    alt={comment.agentName}
-                                                                    onError={(e) => {
-                                                                        const target = e.currentTarget as HTMLImageElement;
-                                                                        if (!target.src.includes('ui-avatars.com')) {
-                                                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.agentName || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                <div className="flex-1 py-1">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[9px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
-                                                                        <span className="text-[7px] text-white/20 font-black uppercase tracking-widest">• {comment.date}</span>
-                                                                    </div>
-                                                                    <p className="text-[12px] text-white/70 font-medium leading-relaxed font-montserrat">
-                                                                        {comment.message.split(' ').map((word, i) =>
-                                                                            word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
-                                                                        )}
-                                                                    </p>
+                                                                <div className="flex items-center gap-3 pt-2">
+                                                                    <div className="h-[1.5px] w-10 bg-[#ffb700]/50" />
+                                                                    <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-[0.25em] font-bebas">
+                                                                        {item.reference}
+                                                                    </span>
                                                                 </div>
                                                             </div>
-                                                        ))}
 
-                                                        {threadComments.length > 5 && !showAll && (
-                                                            <button
-                                                                onClick={() => setExpandedThread(item.id)}
-                                                                className="ml-11 flex items-center gap-2 py-2 text-[9px] text-blue-400 font-black uppercase tracking-widest hover:underline transition-all"
-                                                            >
-                                                                <RefreshCw size={10} className="animate-pulse" /> Mostrar más respuestas ({threadComments.length - 5})
-                                                            </button>
-                                                        )}
+                                                            {/* Bottom Glow */}
+                                                            <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-[#ffb700]/20 to-transparent" />
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[13px] text-white/90 font-medium leading-relaxed tracking-tight font-montserrat">
+                                                            {item.message.split(' ').map((word, i) =>
+                                                                word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black hover:underline cursor-pointer">{word} </span> : word + ' '
+                                                            )}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="flex items-center gap-6 mt-4">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleToggleLike(item.id); }}
+                                                            className={`flex items-center gap-2 group transition-all ${userLikes.includes(item.id) ? 'text-[#ff4d00]' : 'text-white/30 hover:text-[#ff4d00]'}`}
+                                                        >
+                                                            <div className={`p-2 rounded-full transition-colors ${userLikes.includes(item.id) ? 'bg-[#ff4d00]/10' : 'group-hover:bg-[#ff4d00]/10'}`}>
+                                                                <ThumbsUp size={14} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
+                                                            </div>
+                                                            <span className="text-[10px] font-black">{likesCount[item.id] || 0}</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleToggleDislike(item.id); }}
+                                                            className={`flex items-center gap-2 group transition-all ${userDislikes.includes(item.id) ? 'text-red-500' : 'text-white/30 hover:text-red-500'}`}
+                                                        >
+                                                            <div className={`p-2 rounded-full transition-colors ${userDislikes.includes(item.id) ? 'bg-red-500/10' : 'group-hover:bg-red-500/10'}`}>
+                                                                <ThumbsDown size={14} />
+                                                            </div>
+                                                            <span className="text-[10px] font-black">{dislikesCount[item.id] || 0}</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setReplyTo(item); }}
+                                                            className="flex items-center gap-2 text-white/30 hover:text-blue-400 group transition-all"
+                                                        >
+                                                            <div className="p-2 rounded-full group-hover:bg-blue-400/10 transition-colors">
+                                                                <MessageCircle size={14} />
+                                                            </div>
+                                                            <span className="text-[10px] font-black uppercase">Responder</span>
+                                                        </button>
                                                     </div>
-                                                );
-                                            })()}
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <div className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                            <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Sin actividad operativa reciente</p>
-                        </div>
-                    )}
-                </AnimatePresence>
+                                                    {/* In-line Reply Area */}
+                                                    {replyTo?.id === item.id && (
+                                                        <div className="mt-4 border-l-2 border-[#ffb700]/20 pl-4 animate-in slide-in-from-left-2">
+                                                            {renderPostArea(item.id)}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex flex-col gap-2">
+                                                    <button onClick={() => setSharePreview({ agent, newsItem: item })} className="p-2 text-white/20 hover:text-[#ffb700] transition-colors"><Share2 size={16} /></button>
+                                                    {(userRole === UserRole.DIRECTOR) && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                showAlert({
+                                                                    title: "ELIMINAR MENSAJE (DIRECTOR)",
+                                                                    message: "¿ESTÁS SEGURO? ESTA ACCIÓN ES IRREVERSIBLE.",
+                                                                    type: 'CONFIRM',
+                                                                    onConfirm: async () => {
+                                                                        const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
+                                                                        if (res.success) {
+                                                                            showAlert({ title: "ÉXITO", message: "MENSAJE ELIMINADO", type: 'SUCCESS' });
+                                                                            loadNews(true);
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className="p-2 text-red-500/40 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Nested Comments with Thread lines */}
+                                            <div className="relative">
+                                                {(() => {
+                                                    const threadComments = news.filter(comment => comment.parentId === item.id);
+                                                    if (threadComments.length === 0) return null;
+
+                                                    const showAll = expandedThread === item.id;
+                                                    const visibleComments = showAll ? threadComments : threadComments.slice(0, 5);
+
+                                                    return (
+                                                        <div className="mt-2 space-y-4">
+                                                            {/* Thread line connecting main post to comments */}
+                                                            <div className="absolute left-[36px] top-[-20px] bottom-10 w-[2px] bg-white/5" />
+
+                                                            {visibleComments.map(comment => (
+                                                                <div key={comment.id} className="relative ml-8 flex items-start gap-3 group">
+                                                                    {/* Horizontal connector to the thread line */}
+                                                                    <div className="absolute left-[-16px] top-4 w-4 h-[2px] bg-white/5" />
+
+                                                                    <img
+                                                                        src={formatDriveUrl(agents.find(a => a.id === comment.agentId)?.photoUrl || '', comment.agentName || '')}
+                                                                        className="w-8 h-8 rounded-lg object-cover border border-white/10 shadow-lg relative z-10"
+                                                                        alt={comment.agentName}
+                                                                        onError={(e) => {
+                                                                            const target = e.currentTarget as HTMLImageElement;
+                                                                            if (!target.src.includes('ui-avatars.com')) {
+                                                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.agentName || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <div className="flex-1 py-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[9px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
+                                                                            <span className="text-[7px] text-white/20 font-black uppercase tracking-widest">• {comment.date}</span>
+                                                                        </div>
+                                                                        <p className="text-[12px] text-white/70 font-medium leading-relaxed font-montserrat">
+                                                                            {comment.message.split(' ').map((word, i) =>
+                                                                                word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+
+                                                            {threadComments.length > 5 && !showAll && (
+                                                                <button
+                                                                    onClick={() => setExpandedThread(item.id)}
+                                                                    className="ml-11 flex items-center gap-2 py-2 text-[9px] text-blue-400 font-black uppercase tracking-widest hover:underline transition-all"
+                                                                >
+                                                                    <RefreshCw size={10} className="animate-pulse" /> Mostrar más respuestas ({threadComments.length - 5})
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Sin actividad operativa reciente</p>
+                            </div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {sharePreview && (

@@ -71,8 +71,8 @@ export const formatDriveUrl = (url: string | undefined, name?: string) => {
     }
 
     if (fileId) {
-        // Restore standard Drive thumbnail endpoint (lh3 fails for non-Photo drive IDs with 403)
-        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+        // Use the lh3.googleusercontent.com endpoint which is more stable for cross-origin loading (CORB)
+        return `https://lh3.googleusercontent.com/d/${fileId}=w1000`;
     }
 
     if (url.startsWith('http') || url.startsWith('/')) return url;

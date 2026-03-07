@@ -71,8 +71,8 @@ const SpiritualAdvisor: React.FC<Props> = ({ currentUser, onClose }) => {
                     {messages.map((msg, i) => (
                         <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] p-4 rounded-3xl ${msg.role === 'user'
-                                    ? 'bg-indigo-600 text-white rounded-br-none shadow-lg'
-                                    : 'bg-white/5 border border-white/10 text-slate-200 rounded-bl-none'
+                                ? 'bg-indigo-600 text-white rounded-br-none shadow-lg'
+                                : 'bg-white/5 border border-white/10 text-slate-200 rounded-bl-none'
                                 }`}>
                                 {msg.role === 'ai' && (
                                     <div className="flex items-center gap-2 mb-2">
@@ -98,6 +98,8 @@ const SpiritualAdvisor: React.FC<Props> = ({ currentUser, onClose }) => {
                 <form onSubmit={handleSend} className="p-6 bg-[#001429] border-t border-white/5">
                     <div className="relative group">
                         <input
+                            id="advisor-input"
+                            name="advisor-input"
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}

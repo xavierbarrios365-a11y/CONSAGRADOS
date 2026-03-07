@@ -384,6 +384,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                         {editingMsg === msg.id ? (
                                             <div className="flex gap-2">
                                                 <input
+                                                    id="chat-edit-input"
+                                                    name="chat-edit-input"
                                                     ref={editInputRef}
                                                     type="text"
                                                     value={editText}
@@ -541,7 +543,14 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                     onSubmit={handleSendMessage}
                     className="flex items-center gap-4"
                 >
-                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                    <input
+                        id="chat-file-input"
+                        name="chat-file-input"
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
 
                     <div className="flex gap-1">
                         <button
@@ -564,6 +573,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
                     <div className="flex-1 relative group">
                         <input
+                            id="chat-message-input"
+                            name="chat-message-input"
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}

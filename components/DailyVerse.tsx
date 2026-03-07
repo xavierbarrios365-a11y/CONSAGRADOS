@@ -240,6 +240,8 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                 <div className="w-full max-w-md space-y-6">
                     <div className="relative">
                         <input
+                            id="quiz-input"
+                            name="quiz-input"
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}

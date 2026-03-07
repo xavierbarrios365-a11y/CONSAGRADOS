@@ -229,12 +229,16 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                         <button onClick={() => setShowCreate(false)} className="text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
                     </div>
                     <input
+                        id="task-title"
+                        name="task-title"
                         value={newTask.title}
                         onChange={e => setNewTask({ ...newTask, title: e.target.value })}
                         placeholder="Título de la misión..."
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:border-[#ffb700]/50 focus:outline-none transition-colors"
                     />
                     <textarea
+                        id="task-description"
+                        name="task-description"
                         value={newTask.description}
                         onChange={e => setNewTask({ ...newTask, description: e.target.value })}
                         placeholder="Descripción (opcional)..."
@@ -245,6 +249,8 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                         <div>
                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Área</label>
                             <select
+                                id="task-area"
+                                name="task-area"
                                 value={newTask.area}
                                 onChange={e => setNewTask({ ...newTask, area: e.target.value })}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-[#ffb700]/50"
@@ -255,6 +261,8 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                         <div>
                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Nivel Mínimo</label>
                             <select
+                                id="task-level"
+                                name="task-level"
                                 value={newTask.requiredLevel}
                                 onChange={e => setNewTask({ ...newTask, requiredLevel: e.target.value })}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-[#ffb700]/50"
@@ -265,6 +273,8 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                         <div>
                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">XP Recompensa</label>
                             <input
+                                id="task-reward"
+                                name="task-reward"
                                 type="number"
                                 min={1}
                                 value={newTask.xpReward}
@@ -276,6 +286,8 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
                         <div>
                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Cupos (0=∞)</label>
                             <input
+                                id="task-slots"
+                                name="task-slots"
                                 type="number"
                                 min={0}
                                 value={newTask.maxSlots}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart, BookOpen } from 'lucide-react';
 import { Agent } from '../types';
 import { fetchActiveStoriesSupabase, createStorySupabase, reactToStorySupabase, sendStoryReplySupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
@@ -252,6 +252,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                             </>
                         )}
                         <input
+                            id="story-file-input"
+                            name="story-file-input"
                             type="file"
                             ref={fileInputRef}
                             className="hidden"
@@ -265,6 +267,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                 {isUploading && (
                     <div className="flex flex-col gap-2 min-w-[150px]">
                         <input
+                            id="story-context-input"
+                            name="story-context-input"
                             type="text"
                             placeholder="Añadir contexto..."
                             value={storyContext}

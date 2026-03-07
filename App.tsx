@@ -1161,6 +1161,8 @@ const App: React.FC = () => {
           <TacticalExpediente
             agent={showExpedienteFor}
             onClose={() => setShowExpedienteFor(null)}
+            currentUser={currentUser}
+            userRole={currentUser?.userRole}
           />
         </div>
       )}

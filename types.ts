@@ -183,13 +183,14 @@ export interface TaskProgress {
 
 export interface NewsFeedItem {
   id: string;
-  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION' | 'INSIGNIA' | 'CUMPLEAÑOS';
+  type: 'CURSO_COMPLETADO' | 'ASCENSO' | 'CERTIFICADO' | 'RACHA' | 'RANKING' | 'TAREA' | 'DESPLIEGUE' | 'OPERACION' | 'INSIGNIA' | 'CUMPLEAÑOS' | 'SOCIAL';
   message: string;
   date: string;
   agentId?: string;
   agentName?: string;
   verse?: string;
   reference?: string;
+  parentId?: string; // Para hilos/respuestas
 }
 
 export interface Badge {

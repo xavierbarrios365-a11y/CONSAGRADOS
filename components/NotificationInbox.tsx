@@ -48,22 +48,37 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         loadNotifications();
     }, []);
 
-    // Redundancia: Si LocalStorage está vacío pero el usuario tiene prefs en el backend, sincronizar
+    // Redundancia y Sincronización: Si LocalStorage está vacío o desactualizado respecto al backend, sincronizar
     useEffect(() => {
         if (currentUser?.notifPrefs && agentId) {
-            const localRead = localStorage.getItem(READ_KEY);
-            const localDeleted = localStorage.getItem(DELETED_KEY);
+            const backendRead = currentUser.notifPrefs.read || [];
+            const backendDeleted = currentUser.notifPrefs.deleted || [];
 
-            if (!localRead && currentUser.notifPrefs.read?.length > 0) {
-                setReadIds(currentUser.notifPrefs.read);
-                localStorage.setItem(READ_KEY, JSON.stringify(currentUser.notifPrefs.read));
+            const localReadStr = localStorage.getItem(READ_KEY);
+            const localDeletedStr = localStorage.getItem(DELETED_KEY);
+
+            let finalRead = readIds;
+            let finalDeleted = deletedIds;
+            let changed = false;
+
+            if (!localReadStr && backendRead.length > 0) {
+                finalRead = backendRead;
+                localStorage.setItem(READ_KEY, JSON.stringify(backendRead));
+                changed = true;
             }
-            if (!localDeleted && currentUser.notifPrefs.deleted?.length > 0) {
-                setDeletedIds(currentUser.notifPrefs.deleted);
-                localStorage.setItem(DELETED_KEY, JSON.stringify(currentUser.notifPrefs.deleted));
+            if (!localDeletedStr && backendDeleted.length > 0) {
+                finalDeleted = backendDeleted;
+                localStorage.setItem(DELETED_KEY, JSON.stringify(backendDeleted));
+                changed = true;
+            }
+
+            if (changed) {
+                setReadIds(finalRead);
+                setDeletedIds(finalDeleted);
+                updateBadge(notifications, finalRead, finalDeleted);
             }
         }
-    }, [currentUser, agentId, READ_KEY, DELETED_KEY]);
+    }, [currentUser, agentId, READ_KEY, DELETED_KEY, notifications, updateBadge]);
 
     const loadNotifications = async () => {
         setLoading(true);

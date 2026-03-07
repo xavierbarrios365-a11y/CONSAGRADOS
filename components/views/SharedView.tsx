@@ -149,7 +149,7 @@ const SharedView: React.FC<SharedViewProps> = (props) => {
                             </div>
                         </div>
 
-                        {currentUser && <DigitalIdCard agent={currentUser} onClose={() => setView(AppView.HOME)} />}
+                        {currentUser && <DigitalIdCard agent={currentUser} currentUser={currentUser} userRole={currentUser.userRole} onClose={() => setView(AppView.HOME)} />}
 
                         {currentUser?.userRole === UserRole.DIRECTOR && (
                             <div className="w-full space-y-2 mt-6">

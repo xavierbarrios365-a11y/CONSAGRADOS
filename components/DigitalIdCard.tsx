@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { Agent } from '../types';
-import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2, RefreshCw, Award, Share2, Download, Check, X, ArrowUpCircle } from 'lucide-react';
+import { Agent, UserRole } from '../types';
+import { ShieldCheck, Zap, Star, Fingerprint, UserCheck, Shield, RotateCw, Cake, Waves, Heart, Phone, Sparkles, Loader2, RefreshCw, Award, Share2, Download, Check, X, ArrowUpCircle, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TacticalRadar from './TacticalRadar';
 import { generateTacticalProfile } from '../services/geminiService';
@@ -15,11 +15,13 @@ import EliteRecruitmentTest from './EliteRecruitmentTest';
 interface DigitalIdCardProps {
   agent: Agent;
   onClose?: () => void;
+  currentUser?: Agent | null;
+  userRole?: UserRole;
 }
 
 
 
-const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
+const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUser, userRole }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -235,7 +237,7 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
             </div>
 
             <div className="flex flex-col items-center px-6 mt-2">
-              <div className="relative mb-3">
+              <div className="relative mb-3 group/photo">
                 <div className="absolute inset-0 bg-[#ffb700] blur-2xl opacity-10"></div>
                 <img
                   src={capturedPhotoUrl || formatDriveUrl(agent.photoUrl, agent.name)}
@@ -248,6 +250,46 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose }) => {
                     }
                   }}
                 />
+
+                {/* Botón de cambio de foto para el dueño del perfil o Director */}
+                {(currentUser?.id === agent.id || userRole === UserRole.DIRECTOR) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = async (ie) => {
+                        const file = (ie.target as HTMLInputElement).files?.[0];
+                        if (!file) return;
+
+                        setIsUpdating(true);
+                        try {
+                          const { uploadToCloudinary } = await import('../services/cloudinaryService');
+                          const { updateAgentPhoto } = await import('../services/sheetsService');
+
+                          const uploadRes = await uploadToCloudinary(file);
+                          if (uploadRes.success && uploadRes.url) {
+                            const res = await updateAgentPhoto(agent.id, uploadRes.url);
+                            if (res.success) {
+                              window.location.reload();
+                            }
+                          }
+                        } catch (err) {
+                          console.error("Error uploading photo:", err);
+                          alert("Error al actualizar foto.");
+                        } finally {
+                          setIsUpdating(false);
+                        }
+                      };
+                      input.click();
+                    }}
+                    disabled={isUpdating}
+                    className="absolute -bottom-2 -right-2 bg-[#ffb700] p-2.5 rounded-2xl shadow-xl border-2 border-[#001f3f] cursor-pointer hover:scale-110 active:scale-95 transition-all z-20 group-hover/photo:animate-pulse"
+                  >
+                    {isUpdating ? <Loader2 size={14} className="animate-spin text-[#001f3f]" /> : <Camera size={14} className="text-[#001f3f]" />}
+                  </button>
+                )}
               </div>
               <div className="text-center px-4">
                 <p className="text-[12px] font-black text-white uppercase tracking-wider leading-tight font-montserrat drop-shadow-lg">{agent.name}</p>

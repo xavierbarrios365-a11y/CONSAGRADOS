@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Agent } from '../types';
+import { Agent, UserRole } from '../types';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import {
@@ -30,6 +30,8 @@ import DigitalIdCard from './DigitalIdCard';
 interface TacticalExpedienteProps {
     agent: Agent;
     onClose: () => void;
+    currentUser?: Agent | null;
+    userRole?: UserRole;
 }
 
 // Helper para el efecto Typewriter
@@ -52,7 +54,7 @@ const TypewriterText = ({ text, delay = 0.02, onComplete }: { text: string, dela
     return <span className="font-mono tracking-wide">{displayedText}<motion.span animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.5 }}>_</motion.span></span>;
 };
 
-const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose }) => {
+const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose, currentUser, userRole }) => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
@@ -127,7 +129,7 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose 
                                 className="w-full h-full rounded-[2.25rem] object-cover grayscale hover:grayscale-0 transition-all duration-700 hover:scale-110"
                                 loading="lazy"
                                 onError={(e) => {
-                                    const target = e.currentTarget;
+                                    const target = e.currentTarget as HTMLImageElement;
                                     if (target.src !== "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png") {
                                         target.src = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
                                         target.className = "w-full h-full object-cover opacity-20";
@@ -202,7 +204,7 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose 
 
                     <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 no-scrollbar">
                         <div className="flex flex-col items-center">
-                            <DigitalIdCard agent={agent} />
+                            <DigitalIdCard agent={agent} currentUser={currentUser} userRole={userRole} />
                         </div>
                         {/* SECCIÓN IA: EL BRIEFING */}
                         <motion.div
@@ -338,4 +340,3 @@ const MetricRow = ({ label, value, icon, isRisk }: { label: string, value: strin
 );
 
 export default TacticalExpediente;
-

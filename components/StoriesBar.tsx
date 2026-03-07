@@ -337,17 +337,31 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
 
                                 {/* Floating Reaction Summary */}
                                 {getStoryReactions().length > 0 && (
-                                    <div className="absolute bottom-24 left-4 flex gap-1.5 animate-in fade-in">
+                                    <div className="absolute bottom-24 left-4 flex flex-col gap-2 animate-in fade-in">
                                         {getStoryReactions().map(r => (
-                                            <div
-                                                key={r.emoji}
-                                                className={`flex items-center gap-1 px-2.5 py-1 rounded-full backdrop-blur-md border text-xs shadow-lg ${r.myReaction
-                                                    ? 'bg-[#ffb700]/30 border-[#ffb700]/40'
-                                                    : 'bg-black/40 border-white/10'
-                                                    }`}
-                                            >
-                                                <span>{r.emoji}</span>
-                                                <span className="text-[9px] font-black text-white">{r.count}</span>
+                                            <div key={r.emoji} className="flex flex-col gap-1">
+                                                <div
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border text-xs shadow-lg self-start ${r.myReaction
+                                                        ? 'bg-[#ffb700]/30 border-[#ffb700]/40'
+                                                        : 'bg-black/40 border-white/10'
+                                                        }`}
+                                                >
+                                                    <span>{r.emoji}</span>
+                                                    <span className="text-[10px] font-black text-white">{r.count}</span>
+                                                </div>
+                                                {/* Mostrar nombres de quienes reaccionaron */}
+                                                <div className="flex flex-wrap gap-1 px-1">
+                                                    {getCurrentStory()?.historia_reactions?.filter(hr => hr.emoji === r.emoji).slice(0, 3).map((hr, idx) => (
+                                                        <span key={hr.id} className="text-[8px] font-bold text-white/60 bg-black/20 px-1.5 py-0.5 rounded">
+                                                            {hr.agent_name.split(' ')[0]}
+                                                        </span>
+                                                    ))}
+                                                    {(getCurrentStory()?.historia_reactions?.filter(hr => hr.emoji === r.emoji).length || 0) > 3 && (
+                                                        <span className="text-[8px] font-bold text-white/40 italic">
+                                                            +{(getCurrentStory()?.historia_reactions?.filter(hr => hr.emoji === r.emoji).length || 0) - 3}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

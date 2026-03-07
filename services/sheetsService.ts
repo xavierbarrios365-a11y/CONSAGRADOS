@@ -287,7 +287,7 @@ export const deleteGuide = async (guideId: string) => {
   catch (error: any) { return { success: false, error: error.message }; }
 };
 
-export const updateAgentPhoto = async (agentId: string, photoUrl: string) => {
+export const updateAgentPhoto = async (agentId: string, photoUrl: string): Promise<{ success: boolean; error?: string }> => {
   try { return await postToAction('update_agent_photo', { agentId, photoUrl }); }
   catch (error: any) { return { success: false, error: error.message }; }
 };

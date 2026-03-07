@@ -1426,7 +1426,7 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
             .from('asistencia_visitas')
             .select('*')
             .order('registrado_en', { ascending: false })
-            .limit(50); // Traer las últimas 50 actividades
+            .limit(100); // Traer suficientes para paginación y filtrado
 
         if (error) throw error;
 
@@ -1458,6 +1458,7 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
                 message: message,
                 verse: verse,
                 reference: reference,
+                parentId: item.parent_id, // Nuevo campo para hilos
                 date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
                     day: '2-digit',
                     month: 'short',
@@ -2059,13 +2060,14 @@ export const clearBibleWarQuestions = async (): Promise<{ success: boolean; erro
 /**
  * @description Publica una noticia en el historial de actividad (asistencia_visitas)
  */
-export const publishNewsSupabase = async (agentId: string, agentName: string, type: string, message: string): Promise<{ success: boolean, error?: string }> => {
+export const publishNewsSupabase = async (agentId: string, agentName: string, type: string, message: string, parentId?: string): Promise<{ success: boolean, error?: string }> => {
     try {
         const { error } = await supabase.from('asistencia_visitas').insert({
             agent_id: agentId || 'SISTEMA',
             agent_name: agentName || 'Sistema',
             tipo: type,
             detalle: message,
+            parent_id: parentId, // Guardar el ID del padre para hilos
             registrado_en: new Date().toISOString()
         });
         if (error) throw error;

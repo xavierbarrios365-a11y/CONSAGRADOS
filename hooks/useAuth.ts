@@ -4,6 +4,10 @@ import { resetPasswordWithAnswerSupabase as resetPasswordWithAnswer, updateAgent
 import { isBiometricAvailable, authenticateBiometric } from '../services/BiometricService';
 import { trackEvent } from '../firebase-config';
 
+// --- VERSION TÁCTICA DEL NÚCLEO ---
+// Cambiar el primer dígito (Major) para forzar logout masivo (Mega Actualización)
+const APP_VERSION = '1.6.0';
+
 export interface AuthState {
     isLoggedIn: boolean;
     currentUser: Agent | null;
@@ -75,7 +79,7 @@ export function useAuth() {
 
     // --- Logout ---
     const handleLogout = useCallback((fullPurge = false) => {
-        const backupKeys = fullPurge ? ['app_version', 'pwa_banner_dismissed'] : ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id'];
+        const backupKeys = fullPurge ? ['app_version', 'pwa_banner_dismissed'] : ['remembered_user', 'app_version', 'pwa_banner_dismissed', 'last_login_id', 'tutorial_completed'];
         const backup: Record<string, string> = {};
 
         backupKeys.forEach(k => {
@@ -177,6 +181,7 @@ export function useAuth() {
         if (isPinValid) {
             localStorage.setItem('consagrados_session', JSON.stringify(user));
             localStorage.setItem('last_login_id', user.id);
+            localStorage.setItem('app_version', APP_VERSION);
             const now = Date.now();
             localStorage.setItem('last_active_time', String(now));
 
@@ -231,6 +236,7 @@ export function useAuth() {
 
                 localStorage.setItem('consagrados_session', JSON.stringify(user));
                 localStorage.setItem('last_login_id', user.id);
+                localStorage.setItem('app_version', APP_VERSION);
                 const now = Date.now();
                 localStorage.setItem('last_active_time', String(now));
 
@@ -256,19 +262,31 @@ export function useAuth() {
     useEffect(() => {
         const storedUser = localStorage.getItem('consagrados_session');
         const storedLastActive = localStorage.getItem('last_active_time');
+        const storedVersion = localStorage.getItem('app_version');
         const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+
+        // MEGA ACTUALIZACIÓN: Forzar logout si la versión mayor cambió
+        if (storedVersion && storedVersion.split('.')[0] !== APP_VERSION.split('.')[0]) {
+            console.log("🚀 MEGA ACTUALIZACIÓN DETECTADA. REINICIANDO SESIÓN...");
+            handleLogout(true);
+            return;
+        }
 
         if (storedUser) {
             try {
                 const agent = JSON.parse(storedUser);
                 const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
                 const now = Date.now();
+
+                // Si es PWA, ignoramos el timeout de 1 hora
                 if (!isPwa && now - lastActive > 3600000 && lastActive !== 0) {
                     handleLogout();
                 } else {
                     setIsLoggedIn(true);
                     setCurrentUser(agent);
                     setLastActiveTime(now);
+                    // Aseguramos que la versión esté guardada
+                    localStorage.setItem('app_version', APP_VERSION);
                 }
             } catch (e) {
                 localStorage.removeItem('consagrados_session');
@@ -384,7 +402,10 @@ export function useAuth() {
                     const offlineStart = parseInt(localStorage.getItem('offline_start_time') || '0');
                     if (offlineStart === 0) {
                         localStorage.setItem('offline_start_time', String(now));
-                    } else if (now - offlineStart > 1800000) { handleLogout(); }
+                    } else if (now - offlineStart > 1800000) {
+                        // Solo cerramos por offline si NO es PWA
+                        if (!isPwa) handleLogout();
+                    }
                 } else {
                     localStorage.removeItem('offline_start_time');
                 }

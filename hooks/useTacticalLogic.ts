@@ -110,8 +110,8 @@ export const useTacticalLogic = (
         }
     }, [currentUser, syncData, refreshCurrentUser, showAlert]);
 
-    const handleVerseQuizComplete = useCallback(async (): Promise<boolean> => {
-        if (!currentUser) return false;
+    const handleVerseQuizComplete = useCallback(async (): Promise<void> => {
+        if (!currentUser) return;
         const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
         const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
 
@@ -132,7 +132,7 @@ export const useTacticalLogic = (
         if (alreadyDone || serverAlreadyDone) {
             // Asegurar localStorage sincronizado para evitar re-cálculos
             localStorage.setItem('verse_completed_date', localToday);
-            return true;
+            return;
         }
 
         // MARK AS DONE IMMEDIATELY — never block the UI
@@ -164,7 +164,7 @@ export const useTacticalLogic = (
         });
 
         // Return true IMMEDIATELY — don't wait for server
-        return true;
+        return;
     }, [currentUser, dailyVerse, syncData]);
 
     const handleConfirmEventAttendance = useCallback(async (event: any) => {

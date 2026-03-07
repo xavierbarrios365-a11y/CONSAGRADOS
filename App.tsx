@@ -14,7 +14,6 @@ import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import EliteRecruitmentTest from './components/EliteRecruitmentTest';
 import TacticalProfileDetail from './components/TacticalProfileDetail';
-import BibleWarArena from './components/BibleWarArena';
 import TutorialOverlay from './components/TutorialOverlay';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
 import TacticalExpediente from './components/TacticalExpediente';
@@ -120,7 +119,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
-  const APP_VERSION = "1.9.7"; // Force Atomic Purge for Smart Fallbacks
+  const APP_VERSION = "2.0.0"; // Mega Actualización - Tutorial, Persistence & Likes
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
   const auth = useAuth();
@@ -192,6 +191,7 @@ const App: React.FC = () => {
   const [hasCompletedTutorial, setHasCompletedTutorial] = useState(() => {
     return localStorage.getItem('tutorial_completed') === 'true';
   });
+  const [showCertificate, setShowCertificate] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null);

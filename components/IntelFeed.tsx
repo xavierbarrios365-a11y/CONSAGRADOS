@@ -416,8 +416,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        whileHover={{ backgroundColor: "rgba(255, 183, 0, 0.08)" }}
-                                        className="relative p-4 bg-[#001f3f]/40 backdrop-blur-xl border border-white/5 hover:border-[#ffb700]/20 transition-all rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y shadow-lg"
+                                        className="relative p-6 pt-8 bg-transparent border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-grab active:cursor-grabbing touch-pan-y"
                                     >
                                         <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 pointer-events-none" />
 
@@ -449,43 +448,53 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
                                             <div className="flex-1 min-w-0 pt-0.5">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#ffb700] uppercase tracking-widest flex items-center gap-1">
+                                                    <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter hover:underline cursor-pointer">
                                                         {agent ? agentName : config.label}
-                                                        {agent && mostLikedAgentId === agent.id && <Trophy size={8} className="text-[#ffb700] animate-pulse" />}
                                                     </span>
-                                                    <span className="text-[7px] text-white/20 font-black uppercase tracking-wider">{item.date}</span>
+                                                    {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
+                                                    <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">• {item.date}</span>
                                                 </div>
-                                                <p className="text-[11px] text-white/80 font-bold leading-tight tracking-wide font-montserrat">
+                                                <p className="text-[13px] text-white/90 font-medium leading-relaxed tracking-tight font-montserrat">
                                                     {item.message.split(' ').map((word, i) =>
-                                                        word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
+                                                        word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black hover:underline cursor-pointer">{word} </span> : word + ' '
                                                     )}
                                                 </p>
 
-                                                <div className="flex items-center gap-4 mt-2">
+                                                <div className="flex items-center gap-6 mt-4">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleToggleLike(item.id); }}
-                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userLikes.includes(item.id) ? 'bg-[#ff4d00]/10 border-[#ff4d00]/30 text-[#ff4d00]' : 'bg-white/5 border-white/10 text-white/40'}`}
+                                                        className={`flex items-center gap-2 group transition-all ${userLikes.includes(item.id) ? 'text-[#ff4d00]' : 'text-white/30 hover:text-[#ff4d00]'}`}
                                                     >
-                                                        <ThumbsUp size={12} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
-                                                        <span className="text-[9px] font-black">{likesCount[item.id] || 0}</span>
+                                                        <div className={`p-2 rounded-full transition-colors ${userLikes.includes(item.id) ? 'bg-[#ff4d00]/10' : 'group-hover:bg-[#ff4d00]/10'}`}>
+                                                            <ThumbsUp size={14} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black">{likesCount[item.id] || 0}</span>
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleToggleDislike(item.id); }}
-                                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userDislikes.includes(item.id) ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-white/5 border-white/10 text-white/40'}`}
+                                                        className={`flex items-center gap-2 group transition-all ${userDislikes.includes(item.id) ? 'text-red-500' : 'text-white/30 hover:text-red-500'}`}
                                                     >
-                                                        <ThumbsDown size={12} className={userDislikes.includes(item.id) ? "animate-pulse" : ""} />
-                                                        <span className="text-[9px] font-black">{dislikesCount[item.id] || 0}</span>
+                                                        <div className={`p-2 rounded-full transition-colors ${userDislikes.includes(item.id) ? 'bg-red-500/10' : 'group-hover:bg-red-500/10'}`}>
+                                                            <ThumbsDown size={14} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black">{dislikesCount[item.id] || 0}</span>
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setReplyTo(item); }}
-                                                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-white/5 border-white/10 text-white/40 hover:text-white/60 transition-all font-montserrat"
+                                                        className="flex items-center gap-2 text-white/30 hover:text-blue-400 group transition-all"
                                                     >
-                                                        <MessageCircle size={12} />
-                                                        <span className="text-[8px] font-black uppercase">Responder</span>
+                                                        <div className="p-2 rounded-full group-hover:bg-blue-400/10 transition-colors">
+                                                            <MessageCircle size={14} />
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase">Responder</span>
                                                     </button>
                                                 </div>
                                                 {/* In-line Reply Area */}
-                                                {replyTo?.id === item.id && renderPostArea(item.id)}
+                                                {replyTo?.id === item.id && (
+                                                    <div className="mt-4 border-l-2 border-[#ffb700]/20 pl-4 animate-in slide-in-from-left-2">
+                                                        {renderPostArea(item.id)}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="flex flex-col gap-2">
@@ -515,20 +524,28 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                             </div>
                                         </div>
 
-                                        {/* Nested Comments */}
-                                        <div className="mt-2 space-y-2">
+                                        {/* Nested Comments with Thread lines */}
+                                        <div className="relative">
                                             {(() => {
                                                 const threadComments = news.filter(comment => comment.parentId === item.id);
+                                                if (threadComments.length === 0) return null;
+
                                                 const showAll = expandedThread === item.id;
-                                                const visibleComments = showAll ? threadComments : threadComments.slice(0, 10);
+                                                const visibleComments = showAll ? threadComments : threadComments.slice(0, 5);
 
                                                 return (
-                                                    <>
+                                                    <div className="mt-2 space-y-4">
+                                                        {/* Thread line connecting main post to comments */}
+                                                        <div className="absolute left-[36px] top-[-20px] bottom-10 w-[2px] bg-white/5" />
+
                                                         {visibleComments.map(comment => (
-                                                            <div key={comment.id} className="ml-8 p-3 bg-white/5 rounded-2xl border border-white/5 flex items-start gap-3 shadow-inner">
+                                                            <div key={comment.id} className="relative ml-8 flex items-start gap-3 group">
+                                                                {/* Horizontal connector to the thread line */}
+                                                                <div className="absolute left-[-16px] top-4 w-4 h-[2px] bg-white/5" />
+
                                                                 <img
                                                                     src={formatDriveUrl(agents.find(a => a.id === comment.agentId)?.photoUrl || '', comment.agentName || '')}
-                                                                    className="w-6 h-6 rounded-lg object-cover border border-white/10"
+                                                                    className="w-8 h-8 rounded-lg object-cover border border-white/10 shadow-lg relative z-10"
                                                                     alt={comment.agentName}
                                                                     onError={(e) => {
                                                                         const target = e.currentTarget as HTMLImageElement;
@@ -537,12 +554,12 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                                         }
                                                                     }}
                                                                 />
-                                                                <div className="flex-1 space-y-1">
+                                                                <div className="flex-1 py-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[8px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
-                                                                        <span className="text-[6px] text-white/20 font-black uppercase">{comment.date}</span>
+                                                                        <span className="text-[9px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
+                                                                        <span className="text-[7px] text-white/20 font-black uppercase tracking-widest">• {comment.date}</span>
                                                                     </div>
-                                                                    <p className="text-[10px] text-white/70 font-medium leading-tight font-montserrat">
+                                                                    <p className="text-[12px] text-white/70 font-medium leading-relaxed font-montserrat">
                                                                         {comment.message.split(' ').map((word, i) =>
                                                                             word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
                                                                         )}
@@ -551,15 +568,15 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                             </div>
                                                         ))}
 
-                                                        {threadComments.length > 10 && !showAll && (
+                                                        {threadComments.length > 5 && !showAll && (
                                                             <button
                                                                 onClick={() => setExpandedThread(item.id)}
-                                                                className="ml-8 w-full py-2 bg-[#ffb700]/10 border border-dashed border-[#ffb700]/20 rounded-xl text-[8px] text-[#ffb700] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 transition-all"
+                                                                className="ml-11 flex items-center gap-2 py-2 text-[9px] text-blue-400 font-black uppercase tracking-widest hover:underline transition-all"
                                                             >
-                                                                Ver hilo completo ({threadComments.length} comentarios)
+                                                                <RefreshCw size={10} className="animate-pulse" /> Mostrar más respuestas ({threadComments.length - 5})
                                                             </button>
                                                         )}
-                                                    </>
+                                                    </div>
                                                 );
                                             })()}
                                         </div>

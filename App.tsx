@@ -88,6 +88,8 @@ import { generateTacticalProfile, getTacticalAnalysis } from './services/geminiS
 import jsQR from 'jsqr';
 import { isBiometricAvailable, registerBiometric, authenticateBiometric } from './services/BiometricService';
 import { initRemoteConfig } from './services/configService';
+import STREAK_REMINDERS from './constants/streak_reminders.json';
+import { sendPushBroadcast } from './services/notifyService';
 
 // --- Custom Hooks ---
 import { useAuth } from './hooks/useAuth';
@@ -180,10 +182,51 @@ const App: React.FC = () => {
   const hasSession = !!localStorage.getItem('consagrados_session');
   const storedView = localStorage.getItem('current_view') as AppView | null;
   const [view, setView] = useState<AppView>(hasSession ? (storedView || AppView.HOME) : AppView.PUBLIC_WEB);
+  const [lastStreakNotif, setLastStreakNotif] = useState<string | null>(() => localStorage.getItem('last_streak_notif'));
 
   useEffect(() => {
     localStorage.setItem('current_view', view);
   }, [view]);
+
+  // --- STREAK REMINDERS SCHEDULER ---
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) return;
+
+    const checkStreakReminders = () => {
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      // Encontrar si hay un recordatorio para este minuto
+      const reminder = STREAK_REMINDERS.find(r => r.time === timeStr);
+
+      if (reminder && lastStreakNotif !== timeStr) {
+        // Verificar si el usuario ya registró racha hoy
+        const today = new Date().toISOString().split('T')[0];
+        const lastStreak = currentUser.lastStreakDate;
+
+        if (lastStreak !== today) {
+          const notifKey = `${today}_${timeStr}`;
+          if (lastStreakNotif === notifKey) return;
+
+          console.log(`[STREAK] Disparando recordatorio: ${reminder.message}`);
+          setLastStreakNotif(notifKey);
+          localStorage.setItem('last_streak_notif', notifKey);
+
+          supabase.from('agentes').select('push_token').eq('id', currentUser.id).single().then(({ data }) => {
+            if (data?.push_token) {
+              sendPushBroadcast("🔥 OPERACIÓN SALVA TU RACHA", reminder.message, data.push_token, 'streak');
+            }
+          });
+        }
+      }
+    };
+
+    const interval = setInterval(checkStreakReminders, 60000); // Revisar cada minuto
+    checkStreakReminders(); // Ejecución inicial
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, currentUser, lastStreakNotif]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [foundAgent, setFoundAgent] = useState<Agent | null>(null);
   const [showExpedienteFor, setShowExpedienteFor] = useState<Agent | null>(null);

@@ -75,3 +75,41 @@ export const logNotificationSupabase = async (title: string, message: string, ty
         return false;
     }
 }
+
+/**
+ * @description Envía una notificación social específica (mención, like, trending)
+ */
+export const sendSocialNotification = async (type: 'MENTION' | 'LIKE' | 'TRENDING', targetAgentId: string, data: { senderName: string, messageSnippet?: string, threadId?: string }) => {
+    try {
+        let title = "";
+        let body = "";
+
+        // Obtener el push_token del destinatario
+        const { data: agent } = await supabase
+            .from('agentes')
+            .select('push_token, nombre')
+            .eq('id', targetAgentId)
+            .single();
+
+        if (!agent?.push_token) return;
+
+        switch (type) {
+            case 'MENTION':
+                title = "📍 HAS SIDO ETIQUETADO";
+                body = `${data.senderName} te mencionó: "${data.messageSnippet}"`;
+                break;
+            case 'LIKE':
+                title = "🔥 TU POST TIENE IMPACTO";
+                body = `A ${data.senderName} le gusta tu publicación.`;
+                break;
+            case 'TRENDING':
+                title = "🔥 HILO EN TENDENCIA";
+                body = `¡Hay mucha actividad en este hilo! No te quedes fuera de la conversación.`;
+                break;
+        }
+
+        return await sendPushBroadcast(title, body, agent.push_token, 'social');
+    } catch (e) {
+        console.error("Error en sendSocialNotification:", e);
+    }
+}

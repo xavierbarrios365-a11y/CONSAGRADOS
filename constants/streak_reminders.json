@@ -1,0 +1,22 @@
+[
+    {
+        "time": "08:00",
+        "type": "TACTICAL",
+        "message": "🌅 REPORTE MATUTINO: Los grandes se forjan temprano. Entra ahora y no permitas que tu racha se detenga. ¡El Comando cuenta contigo!"
+    },
+    {
+        "time": "13:00",
+        "type": "PERSUASIVE",
+        "message": "⚡ ALERTA DE MEDIODÍA: Un segundo de distracción puede costar una racha de días. Entra y asegura tu posición en el ranking. ¡Tú puedes!"
+    },
+    {
+        "time": "20:00",
+        "type": "URGENCY",
+        "message": "🔥 RANGO DE PELIGRO: Tu racha está a punto de caducar. Entra ahora para proteger tu legado. ¡No te quedes fuera del despliegue!"
+    },
+    {
+        "time": "23:00",
+        "type": "CRITICAL",
+        "message": "🚨 ÚLTIMA LLAMADA TÁCTICA: Queda poco tiempo. Salva tu racha de hoy y descansa con la misión cumplida. ¡Consagrados no se rinden!"
+    }
+]

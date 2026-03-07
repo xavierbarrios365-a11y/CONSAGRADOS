@@ -19,6 +19,7 @@ import {
     validateContent,
     toggleDislikeSupabase
 } from '../services/supabaseService';
+import { sendSocialNotification } from '../services/notifyService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
 import { useTacticalAlert } from './TacticalAlert';
@@ -131,6 +132,34 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         try {
             const res = await publishNewsSupabase(currentUser.id, currentUser.name, 'SOCIAL', socialMessage, parentId);
             if (res.success) {
+                const messageSnippet = socialMessage;
+                const senderName = currentUser.name;
+
+                // 2. Notificaciones de Mención (@usuario)
+                const mentionMatches = socialMessage.match(/@(\w+)/g);
+                if (mentionMatches) {
+                    mentionMatches.forEach(tag => {
+                        const cleanTag = tag.slice(1).toLowerCase();
+                        const targetAgent = agents.find(a => a.name.replace(/\s/g, '').toLowerCase().includes(cleanTag));
+                        if (targetAgent && targetAgent.id !== currentUser.id) {
+                            sendSocialNotification('MENTION', targetAgent.id, { senderName, messageSnippet });
+                        }
+                    });
+                }
+
+                // 3. Notificación de Trending (>5 mensajes en hilo)
+                if (parentId) {
+                    const threadCount = news.filter(n => n.parentId === parentId).length + 1;
+                    if (threadCount === 6) { // Justo al cruzar 5
+                        // Notificar a todos (o al menos loguear/broadcast)
+                        // Por ahora notificamos al dueño del hilo original
+                        const originalPost = news.find(n => n.id === parentId);
+                        if (originalPost && originalPost.agentId !== currentUser.id) {
+                            sendSocialNotification('TRENDING', originalPost.agentId, { senderName });
+                        }
+                    }
+                }
+
                 setSocialMessage('');
                 setReplyTo(null);
                 loadNews(true); // Silent refresh
@@ -145,6 +174,91 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         }
     };
 
+    const renderPostArea = (parentId?: string) => {
+        if (!currentUser) return null;
+        const isReply = !!parentId;
+
+        return (
+            <div className={`bg-[#001833]/60 backdrop-blur-xl border border-[#ffb700]/20 rounded-3xl p-4 space-y-3 shadow-xl ${isReply ? 'mt-3 mb-4' : ''}`}>
+                <div className="flex items-start gap-3">
+                    <img
+                        src={formatDriveUrl(currentUser.photoUrl, currentUser.name)}
+                        className="w-10 h-10 rounded-xl object-cover border border-white/20"
+                        alt="Yo"
+                    />
+                    <div className="flex-1 space-y-2">
+                        {isReply && (
+                            <div className="flex items-center justify-between bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                                <span className="text-[8px] text-white/40 font-black uppercase">Respondiendo a @{replyTo?.agentName?.split(' ')[0]}</span>
+                                <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white"><X size={10} /></button>
+                            </div>
+                        )}
+                        <div className="relative">
+                            <textarea
+                                value={socialMessage}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSocialMessage(val);
+                                    const lastWord = val.split(' ').pop() || '';
+                                    if (lastWord.startsWith('@') && lastWord.length > 1) {
+                                        const search = lastWord.slice(1).toLowerCase();
+                                        const filtered = (agents || []).filter(a =>
+                                            a.name.toLowerCase().replace(/\s/g, '').includes(search)
+                                        );
+                                        setMentions(filtered);
+                                        setShowMentions(filtered.length > 0);
+                                    } else {
+                                        setShowMentions(false);
+                                    }
+                                }}
+                                placeholder={isReply ? "Escribe tu respuesta..." : "¿Qué está pasando en el sector?"}
+                                maxLength={128}
+                                className="w-full bg-transparent border-none text-white text-[12px] font-medium placeholder:text-white/20 outline-none resize-none min-h-[60px] no-scrollbar font-montserrat"
+                                spellCheck="true"
+                                autoCapitalize="sentences"
+                                autoCorrect="on"
+                            />
+                            {showMentions && (
+                                <div className="absolute left-0 bottom-full mb-2 w-full max-h-32 overflow-y-auto bg-[#001f3f] border border-white/10 rounded-xl shadow-2xl z-50 no-scrollbar">
+                                    {mentions.map(a => (
+                                        <button
+                                            key={a.id}
+                                            onClick={() => {
+                                                const words = socialMessage.split(' ');
+                                                words.pop();
+                                                const tag = `@${a.name.replace(/\s/g, '').toLowerCase()}`;
+                                                setSocialMessage(words.join(' ') + (words.length > 0 ? ' ' : '') + tag + ' ');
+                                                setShowMentions(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 p-2 hover:bg-white/5 text-left border-b border-white/5"
+                                        >
+                                            <img src={formatDriveUrl(a.photoUrl, a.name)} className="w-5 h-5 rounded-full object-cover" />
+                                            <span className="text-[10px] text-white font-bold">{a.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-black ${socialMessage.length > 110 ? 'text-[#ffb700]' : 'text-white/20'}`}>
+                            {socialMessage.length}/128
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => handlePublishSocial(parentId)}
+                        disabled={!socialMessage.trim() || isPublishing}
+                        className="bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
+                    >
+                        {isPublishing ? 'Enviando...' : isReply ? 'Responder' : 'Publicar'}
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     const handleToggleLike = async (noticiaId: string) => {
         if (!currentUser) return;
 
@@ -155,6 +269,14 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 ...prev,
                 [noticiaId]: (prev[noticiaId] || 0) + (res.liked ? 1 : -1)
             }));
+
+            // Notificación de Like
+            if (res.liked) {
+                const post = news.find(n => n.id === noticiaId);
+                if (post && post.agentId !== currentUser.id) {
+                    sendSocialNotification('LIKE', post.agentId, { senderName: currentUser.name });
+                }
+            }
 
             const mostLiked = await getMostLikedAgentSupabase();
             if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
@@ -277,86 +399,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 </div>
             </div>
 
-            {/* Social Post Area */}
-            {currentUser && (
-                <div className="bg-[#001833]/60 backdrop-blur-xl border border-[#ffb700]/20 rounded-3xl p-4 space-y-3 shadow-xl">
-                    <div className="flex items-start gap-3">
-                        <img
-                            src={formatDriveUrl(currentUser.photoUrl, currentUser.name)}
-                            className="w-10 h-10 rounded-xl object-cover border border-white/20"
-                            alt="Yo"
-                        />
-                        <div className="flex-1 space-y-2">
-                            {replyTo && (
-                                <div className="flex items-center justify-between bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                                    <span className="text-[8px] text-white/40 font-black uppercase">Respondiendo a @{replyTo.agentName?.split(' ')[0]}</span>
-                                    <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white"><X size={10} /></button>
-                                </div>
-                            )}
-                            <div className="relative">
-                                <textarea
-                                    value={socialMessage}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setSocialMessage(val);
-                                        const lastWord = val.split(' ').pop() || '';
-                                        if (lastWord.startsWith('@') && lastWord.length > 1) {
-                                            const search = lastWord.slice(1).toLowerCase();
-                                            const filtered = (agents || []).filter(a =>
-                                                a.name.toLowerCase().replace(/\s/g, '').includes(search)
-                                            );
-                                            setMentions(filtered);
-                                            setShowMentions(filtered.length > 0);
-                                        } else {
-                                            setShowMentions(false);
-                                        }
-                                    }}
-                                    placeholder={replyTo ? "Escribe tu respuesta..." : "¿Qué está pasando en el sector?"}
-                                    maxLength={128}
-                                    className="w-full bg-transparent border-none text-white text-[12px] font-medium placeholder:text-white/20 outline-none resize-none min-h-[60px] no-scrollbar font-montserrat"
-                                    spellCheck="true"
-                                    autoCapitalize="sentences"
-                                    autoCorrect="on"
-                                />
-                                {showMentions && (
-                                    <div className="absolute left-0 bottom-full mb-2 w-full max-h-32 overflow-y-auto bg-[#001f3f] border border-white/10 rounded-xl shadow-2xl z-50 no-scrollbar">
-                                        {mentions.map(a => (
-                                            <button
-                                                key={a.id}
-                                                onClick={() => {
-                                                    const words = socialMessage.split(' ');
-                                                    words.pop();
-                                                    const tag = `@${a.name.replace(/\s/g, '').toLowerCase()}`;
-                                                    setSocialMessage(words.join(' ') + (words.length > 0 ? ' ' : '') + tag + ' ');
-                                                    setShowMentions(false);
-                                                }}
-                                                className="w-full flex items-center gap-2 p-2 hover:bg-white/5 text-left border-b border-white/5"
-                                            >
-                                                <img src={formatDriveUrl(a.photoUrl, a.name)} className="w-5 h-5 rounded-full object-cover" />
-                                                <span className="text-[10px] text-white font-bold">{a.name}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                            <span className={`text-[9px] font-black ${socialMessage.length > 110 ? 'text-[#ffb700]' : 'text-white/20'}`}>
-                                {socialMessage.length}/128
-                            </span>
-                        </div>
-                        <button
-                            onClick={() => handlePublishSocial(replyTo?.id)}
-                            disabled={!socialMessage.trim() || isPublishing}
-                            className="bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
-                        >
-                            {isPublishing ? 'Enviando...' : replyTo ? 'Responder' : 'Publicar'}
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Social Post Area (Main) */}
+            {!replyTo && renderPostArea()}
 
             <div className="space-y-2 relative">
                 {/* Decorative side line */}
@@ -465,13 +509,15 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         <span className="text-[9px] font-black">{dislikesCount[item.id] || 0}</span>
                                                     </button>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); setReplyTo(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                                        onClick={(e) => { e.stopPropagation(); setReplyTo(item); }}
                                                         className="flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-white/5 border-white/10 text-white/40 hover:text-white/60 transition-all font-montserrat"
                                                     >
                                                         <MessageCircle size={12} />
                                                         <span className="text-[8px] font-black uppercase">Responder</span>
                                                     </button>
                                                 </div>
+                                                {/* In-line Reply Area */}
+                                                {replyTo?.id === item.id && renderPostArea(item.id)}
                                             </div>
 
                                             <div className="flex flex-col gap-2">

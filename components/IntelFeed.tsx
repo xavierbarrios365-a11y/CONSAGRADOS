@@ -298,6 +298,14 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 [noticiaId]: (prev[noticiaId] || 0) + (res.disliked ? 1 : -1)
             }));
 
+            // Notificación de Dislike
+            if (res.disliked) {
+                const post = news.find(n => n.id === noticiaId);
+                if (post && post.agentId !== currentUser.id) {
+                    sendSocialNotification('DISLIKE', post.agentId, { senderName: currentUser.name });
+                }
+            }
+
             // Si el post se auto-eliminó por el trigger de 5 dislikes, loadNews refrescará el feed
             if (res.disliked && (dislikesCount[noticiaId] || 0) + 1 >= 5) {
                 setTimeout(() => loadNews(true), 500);
@@ -361,54 +369,10 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
     return (
         <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
-            {/* Intel Header */}
-            <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Activity size={18} className="text-[#ffb700] animate-pulse" />
-                        <div className="absolute inset-0 bg-[#ffb700]/20 blur-sm animate-pulse rounded-full" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-[12px] font-black text-white uppercase tracking-[0.2em] font-bebas leading-tight">Intel Feed</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[7px] font-black text-[#ffb700]/60 uppercase tracking-[0.3em] font-montserrat">Centro de Inteligencia</span>
-                            {totalPages > 1 && (
-                                <span className="text-[8px] bg-[#ffb700]/10 text-[#ffb700] px-1.5 py-0.5 rounded font-black border border-[#ffb700]/20">
-                                    PÁGINA {currentPage + 1}/{totalPages}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={() => loadNews()} className="p-2 text-white/40 hover:text-[#ffb700] transition-colors"><RefreshCw size={14} /></button>
-                    {totalPages > 1 && (
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                disabled={currentPage === 0}
-                                className="p-2 bg-white/5 border border-white/10 rounded-xl text-white/40 disabled:opacity-20 hover:bg-white/10 transition-all"
-                            >
-                                <ChevronRight size={14} className="rotate-180" />
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                                disabled={currentPage === totalPages - 1}
-                                className="p-2 bg-white/5 border border-white/10 rounded-xl text-white/40 disabled:opacity-20 hover:bg-white/10 transition-all"
-                            >
-                                <ChevronRight size={14} />
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Social Post Area (Main) */}
+            {/* Social Post Area (Main) - Integrated directly */}
             {!replyTo && renderPostArea()}
 
-            <div className="space-y-2 relative">
-                {/* Decorative side line */}
-                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-[#ffb700]/40 via-white/5 to-transparent ml-1" />
+            <div className="grid grid-cols-1 gap-2 relative">
 
                 <AnimatePresence mode="popLayout">
                     {displayedNews.length > 0 ? (

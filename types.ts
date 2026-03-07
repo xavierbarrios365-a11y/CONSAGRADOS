@@ -158,8 +158,9 @@ export interface InboxNotification {
   fecha: string;
   titulo: string;
   mensaje: string;
-  categoria: 'ALERTA' | 'INFO' | 'MISION';
+  categoria: 'ALERTA' | 'INFO' | 'MISION' | 'social';
   emisor: string;
+  agent_id?: string;
 }
 
 // ===== SISTEMA DE ASCENSO =====

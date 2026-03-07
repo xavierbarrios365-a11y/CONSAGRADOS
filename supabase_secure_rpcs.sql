@@ -79,8 +79,12 @@ BEGIN
     last_streak_date = agentes.last_streak_date,
     last_attendance = EXCLUDED.last_attendance,
     weekly_tasks = EXCLUDED.weekly_tasks,
-    notif_prefs = EXCLUDED.notif_prefs,
-    last_course = EXCLUDED.last_course,
+    notif_prefs = CASE 
+      WHEN (EXCLUDED.notif_prefs->'read' IS NOT NULL AND jsonb_array_length(EXCLUDED.notif_prefs->'read') > 0) 
+           OR (EXCLUDED.notif_prefs->'deleted' IS NOT NULL AND jsonb_array_length(EXCLUDED.notif_prefs->'deleted') > 0)
+      THEN EXCLUDED.notif_prefs
+      ELSE agentes.notif_prefs
+    END,
     updated_at = timezone('utc'::text, now());
     
   RETURN TRUE;

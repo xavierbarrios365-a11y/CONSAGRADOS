@@ -89,7 +89,15 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
             const delIds = JSON.parse(localStorage.getItem(DELETED_KEY) || '[]');
-            const unreadNotifs = notifs.filter(n => !readIds.includes(n.id) && !delIds.includes(n.id));
+
+            // Filtrar: Dirigidas a mí o Globales + No leída + No borrada
+            const unreadNotifs = notifs.filter(n => {
+                const isMyNotif = !n.agent_id || n.agent_id === agentId;
+                const isNotRead = !readIds.includes(n.id);
+                const isNotDeleted = !delIds.includes(n.id);
+                return isMyNotif && isNotRead && isNotDeleted;
+            });
+
             setUnreadNotifications(unreadNotifs.length);
 
             const notifHeadlines = unreadNotifs.slice(0, 5).map(n => `📢 ${n.titulo.toUpperCase()}`);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Calendar, Download, Flame, Share2 } from 'lucide-react';
+import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Timer, Download, Flame, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DailyVerse as DailyVerseType, Agent } from '../types';
 import { generateGoogleCalendarLink, downloadIcsFile } from '../services/calendarService';
@@ -166,8 +166,8 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
     };
 
     return (
-        <div className="w-full bg-gradient-to-br from-[#ffb700]/10 to-transparent border border-[#ffb700]/20 rounded-2xl p-3 relative overflow-hidden group">
-            <div className="absolute top-[-10px] right-[-10px] opacity-5 group-hover:scale-110 transition-transform duration-700">
+        <div className="w-full relative group">
+            <div className="absolute top-[-10px] right-[-10px] opacity-0 group-hover:opacity-5 transition-opacity duration-700">
                 <Quote size={80} className="text-[#ffb700]" />
             </div>
 
@@ -181,6 +181,46 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                             <div className="flex items-center gap-1 bg-[#ffb700] text-[#001f3f] px-1.5 py-0.5 rounded-full border border-white/10 ml-2">
                                 <Flame size={8} className={quizCompleted ? "animate-bounce" : "animate-pulse"} />
                                 <span className="text-[8px] font-black uppercase font-bebas">{streakCount} DÍAS</span>
+                            </div>
+                        )}
+                        {quizCompleted && timeLeft && (
+                            <div className="flex items-center gap-1 bg-black/40 text-[#ffb700] px-1.5 py-0.5 rounded-full border border-[#ffb700]/20 ml-1">
+                                <Timer size={8} />
+                                <span className="text-[8px] font-black uppercase font-bebas tracking-wider">{timeLeft}</span>
+                            </div>
+                        )}
+                        {quizCompleted && agent && (
+                            <button
+                                onClick={() => setShowShareModal(true)}
+                                className="ml-auto p-1 text-white/30 hover:text-[#ffb700] transition-colors"
+                                title="Compartir Victoria"
+                            >
+                                <Share2 size={12} />
+                            </button>
+                        )}
+                        {!quizCompleted && !showQuiz && (
+                            <button
+                                onClick={() => setShowQuiz(true)}
+                                className="ml-auto text-green-500/80 hover:text-green-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-1 transition-colors"
+                            >
+                                <Sparkles size={10} />
+                                VALIDAR RECON
+                            </button>
+                        )}
+                        {showQuiz && !quizCompleted && (
+                            <div className="ml-auto flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded-lg border border-[#ffb700]/30">
+                                <input
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
+                                    placeholder="?"
+                                    className="w-12 bg-transparent text-white text-[9px] font-black uppercase tracking-widest outline-none placeholder:text-white/20"
+                                    autoFocus
+                                />
+                                <button onClick={checkAnswer} className="text-[#ffb700]">
+                                    <Sparkles size={10} />
+                                </button>
                             </div>
                         )}
                     </div>
@@ -202,62 +242,6 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                     )}
                 </div>
 
-                {/* Acciones Compactas */}
-                <div className="flex items-center gap-2 shrink-0">
-                    {!quizCompleted && !showQuiz && (
-                        <motion.button
-                            whileHover={{ scale: 1.05, backgroundColor: "rgba(34, 197, 94, 0.3)" }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setShowQuiz(true)}
-                            className="bg-green-500/20 border border-green-500/10 px-3 py-1.5 rounded-xl text-green-500 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
-                        >
-                            <Sparkles size={12} />
-                            Validar Recon
-                        </motion.button>
-                    )}
-
-                    {showQuiz && !quizCompleted && (
-                        <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-[#ffb700]/30">
-                            <input
-                                type="text"
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
-                                placeholder="Palabra..."
-                                className={`w-24 bg-black/50 border ${isCorrect === false ? 'border-red-500' : 'border-white/10'} rounded-lg py-1 px-2 text-white text-[9px] font-black uppercase tracking-widest focus:border-[#ffb700] outline-none transition-all placeholder:text-white/20`}
-                                autoFocus
-                            />
-                            <button
-                                onClick={checkAnswer}
-                                className="bg-[#ffb700] text-[#001f3f] px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest"
-                            >
-                                <Sparkles size={10} />
-                            </button>
-                        </div>
-                    )}
-
-                    {quizCompleted && (
-                        <div className="flex items-center gap-2">
-                            {timeLeft && (
-                                <div className="hidden xs:flex items-center gap-1.5 px-3 py-1.5 bg-black/40 border border-[#ffb700]/20 rounded-xl">
-                                    <Calendar size={10} className="text-[#ffb700]" />
-                                    <span className="text-xs font-bebas text-[#ffb700] tracking-widest">{timeLeft}</span>
-                                </div>
-                            )}
-                            {agent && (
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => setShowShareModal(true)}
-                                    className="p-2 bg-[#ffb700] text-[#001f3f] rounded-xl shadow-lg active:scale-95 group"
-                                    title="Compartir Victoria"
-                                >
-                                    <Share2 size={16} className="group-hover:rotate-12 transition-transform" />
-                                </motion.button>
-                            )}
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Alerta de Error Compacta */}

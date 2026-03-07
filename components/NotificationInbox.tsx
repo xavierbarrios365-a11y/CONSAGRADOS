@@ -141,20 +141,34 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
     };
 
     const clearAll = async () => {
-        if (window.confirm("⚠️ ¿ESTÁS SEGURO DE ELIMINAR TODAS LAS TRANSMISIONES? ESTA ACCIÓN NO SE PUEDE DESHACER.")) {
-            const allIds = notifications.map(n => n.id);
-            const newDeleted = Array.from(new Set([...deletedIds, ...allIds]));
-            setDeletedIds(newDeleted);
-            localStorage.setItem(DELETED_KEY, JSON.stringify(newDeleted));
-            updateBadge(notifications, readIds, newDeleted);
+        if (!notifications.length) return;
 
-            if (agentId && currentUser) {
-                setIsSyncing(true);
-                const updatedPrefs = { read: readIds, deleted: newDeleted };
-                await updateNotifPrefsSupabase(agentId, updatedPrefs);
-                if (onSyncPrefs) {
-                    onSyncPrefs({ ...currentUser, notifPrefs: updatedPrefs });
+        if (window.confirm("⚠️ ¿ESTÁS SEGURO DE ELIMINAR TODAS LAS TRANSMISIONES? ESTA ACCIÓN NO SE PUEDE DESHACER.")) {
+            setIsSyncing(true);
+            try {
+                // Obtenemos todos los IDs actuales que el usuario está viendo (incluyendo globales y dirigidos)
+                const allVisibleIds = visibleNotifications.map(n => n.id);
+
+                // Mezclamos con los ya borrados para no perder historial
+                const newDeleted = Array.from(new Set([...deletedIds, ...allVisibleIds]));
+
+                // Actualización Local Inmediata
+                setDeletedIds(newDeleted);
+                localStorage.setItem(DELETED_KEY, JSON.stringify(newDeleted));
+                updateBadge(notifications, readIds, newDeleted);
+
+                // Sincronización con Supabase
+                if (agentId && currentUser) {
+                    const updatedPrefs = { read: readIds, deleted: newDeleted };
+                    const res = await updateNotifPrefsSupabase(agentId, updatedPrefs);
+
+                    if (res.success && onSyncPrefs) {
+                        onSyncPrefs({ ...currentUser, notifPrefs: updatedPrefs });
+                    }
                 }
+            } catch (err) {
+                console.error("Error al limpiar notificaciones:", err);
+            } finally {
                 setIsSyncing(false);
             }
         }
@@ -178,7 +192,14 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         }
     };
 
-    const visibleNotifications = notifications.filter(n => !deletedIds.includes(n.id));
+    const visibleNotifications = notifications
+        .filter(n => !deletedIds.includes(n.id))
+        .filter(n => {
+            // Notificaciones Globales (agent_id vacío o null)
+            if (!n.agent_id) return true;
+            // Notificaciones Dirigidas (solo para este agente)
+            return n.agent_id === agentId;
+        });
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">

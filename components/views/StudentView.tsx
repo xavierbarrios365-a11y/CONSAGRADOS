@@ -68,36 +68,9 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
                     <div className="max-w-2xl mx-auto pt-4 pb-24 ig-container font-montserrat">
                         {/* ENCABEZADO INTEGRADO (IG STYLE - HORIZONTAL) */}
-                        <div className="flex items-center gap-4 mb-2 bg-[#001f3f]/10 p-4 rounded-[2rem] border border-white/5">
-                            {/* LADO IZQUIERDO: PERFIL */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
-                                    <div
-                                        className={`w-1.5 h-1.5 rounded-full ${isOnline && notificationPermission === 'granted' ? 'bg-[#ffb700] shadow-[0_0_8px_rgba(255,183,0,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} animate-pulse`}
-                                        title={isOnline && notificationPermission === 'granted' ? 'CONECTADO' : 'DESCONECTADO'}
-                                    />
-                                </div>
-                                <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
-                                    {currentUser?.name
-                                        ? currentUser.name.split(' ').slice(0, 2).join(' ')
-                                        : 'Agente'}
-                                </p>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-2 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
-                                    <BadgeShowcase
-                                        currentAgentId={currentUser?.id}
-                                        currentAgentName={currentUser?.name}
-                                        mode="profile"
-                                        compact={true}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* LADO DERECHO: HISTORIAS (COMPACTAS) */}
-                            <div className="shrink-0 flex items-center">
-                                <StoriesBar currentUser={currentUser} />
-                            </div>
+                        {/* HISTORIAS FULL WIDTH (IG STYLE) */}
+                        <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-white/5 pb-4">
+                            <StoriesBar currentUser={currentUser} />
                         </div>
 
                         <div id="tutorial-daily-verse" className="w-full animate-in slide-in-from-top-4 duration-1000 mb-2">
@@ -128,12 +101,11 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 if (dangerCount === 0) return null;
 
                                 return (
-                                    <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-2xl cursor-pointer animate-pulse hover:bg-red-500/20 transition-all">
+                                    <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl transition-all cursor-pointer">
                                         <div className="flex items-center gap-3">
-                                            <AlertTriangle className="text-red-500" size={20} />
+                                            <AlertTriangle className="text-red-500" size={18} />
                                             <div>
-                                                <p className="text-[10px] text-white font-black uppercase tracking-widest">COMANDO: ALERTA DE DESERCIÓN</p>
-                                                <p className="text-[8px] text-red-500/80 font-bold uppercase">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
+                                                <p className="text-[10px] text-red-500/80 font-black uppercase tracking-widest">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
                                             </div>
                                         </div>
                                         <ChevronRight size={16} className="text-red-500" />
@@ -148,12 +120,11 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 if (myDiffDays < 14) return null;
 
                                 return (
-                                    <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                                    <div className="flex items-center justify-between p-2">
                                         <div className="flex items-center gap-3">
-                                            <AlertTriangle className="text-amber-500" size={20} />
+                                            <AlertTriangle className="text-amber-500" size={18} />
                                             <div>
-                                                <p className="text-[10px] text-white font-black uppercase tracking-widest">⚠️ ALERTA PERSONAL</p>
-                                                <p className="text-[8px] text-amber-500/80 font-bold uppercase">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
+                                                <p className="text-[10px] text-amber-500/80 font-black uppercase tracking-widest">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
                                             </div>
                                         </div>
                                     </div>

@@ -78,13 +78,25 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUs
 
   const handleAIUpdate = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("⚠️ ¿RE-EVALUACIÓN TÁCTICA?\nSe borrará tu perfil actual y deberás completar el test de élite nuevamente para acceder.")) {
+    if (window.confirm("⚡ ¿REGENERAR ANÁLISIS TÁCTICO?\nSe generará un nuevo perfil psicométrico con IA para este agente.")) {
       setIsUpdating(true);
       try {
-        await updateAgentAiProfileSupabase(agent.id, null, null);
-        window.location.reload(); // Esto activará el bloqueo global al recargar
-      } catch (err) {
-        alert("Fallo al resetear perfil.");
+        const { progress } = await fetchAcademyDataSupabase(agent.id);
+        const profile = await generateTacticalProfile(agent, progress || []);
+        if (profile && profile.stats && profile.summary) {
+          const res = await updateAgentAiProfileSupabase(agent.id, profile.stats, profile.summary);
+          if (res.success) {
+            alert(`✅ PERFIL ACTUALIZADO\n\n${profile.summary}`);
+            window.location.reload();
+          } else {
+            alert("❌ Error al guardar perfil: " + res.error);
+          }
+        } else {
+          alert("❌ La IA no pudo generar el perfil. Intente de nuevo.");
+        }
+      } catch (err: any) {
+        console.error("AI Profile Error:", err);
+        alert("❌ Error de IA: " + (err.message || "Fallo en la conexión."));
       } finally {
         setIsUpdating(false);
       }

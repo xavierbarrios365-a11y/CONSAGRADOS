@@ -3009,3 +3009,138 @@ export const getMostLikedAgentSupabase = async (): Promise<{ agentId: string; li
     }
 };
 
+/**
+ * ===== ACTIVACIÓN DE VISITANTES COMO AGENTES =====
+ */
+
+// @description Activa un visitante como agente completo en Supabase.
+export const activateVisitorAsAgentSupabase = async (visitorId: string, formData: any): Promise<{ success: boolean; newId?: string; newPin?: string; error?: string }> => {
+    try {
+        const newId = `CON-${Math.floor(1000 + Math.random() * 9000)}`;
+        const newPin = Math.floor(1000 + Math.random() * 9000).toString();
+
+        const { error: insertError } = await supabase
+            .from('agentes')
+            .insert({
+                id: newId,
+                nombre: formData.nombre || '',
+                whatsapp: formData.whatsapp || '',
+                birthday: formData.fechaNacimiento || '',
+                talent: formData.talento || '',
+                baptism_status: formData.bautizado || 'NO',
+                relationship_with_god: formData.relacion || '',
+                cargo: 'ESTUDIANTE',
+                foto_url: formData.photoUrl || '',
+                pin: newPin,
+                status: 'ACTIVO',
+                rango: 'RECLUTA',
+                xp: 0,
+                bible: 0,
+                notes: 0,
+                leadership: 0,
+                joined_date: new Date().toISOString(),
+                last_attendance: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }),
+                security_question: formData.preguntaSeguridad || '¿Cuál es tu color favorito?',
+                security_answer: formData.respuestaSeguridad || 'Azul',
+                must_change_password: true,
+                user_role: 'STUDENT',
+                referido_por_id: formData.referidoPor || visitorId
+            });
+
+        if (insertError) throw insertError;
+
+        await sendTelegramAlert(
+            `🆕 NUEVO AGENTE ACTIVADO\n` +
+            `👤 ${formData.nombre}\n` +
+            `🆔 ID: ${newId}\n` +
+            `🔑 PIN: ${newPin}\n` +
+            `📱 WhatsApp: ${formData.whatsapp || 'N/A'}\n` +
+            `📌 Origen: Visitante ${visitorId}`
+        );
+
+        return { success: true, newId, newPin };
+    } catch (error: any) {
+        console.error('Error activating visitor as agent:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * ===== ENVÍO DE CREDENCIALES POR TELEGRAM =====
+ */
+
+// @description Envía las credenciales de un agente específico por Telegram.
+export const sendAgentCredentialsSupabase = async (agentId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { data: agent, error } = await supabase
+            .from('agentes')
+            .select('id, nombre, pin, whatsapp, rango, cargo')
+            .eq('id', agentId)
+            .single();
+
+        if (error || !agent) throw new Error(error?.message || 'Agente no encontrado');
+
+        const message =
+            `📋 CREDENCIALES DE AGENTE\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `👤 ${agent.nombre}\n` +
+            `🆔 ID: ${agent.id}\n` +
+            `🔑 PIN: ${agent.pin}\n` +
+            `📱 WhatsApp: ${agent.whatsapp || 'N/A'}\n` +
+            `🎖️ Rango: ${agent.rango || 'RECLUTA'}\n` +
+            `💼 Cargo: ${agent.cargo || 'ESTUDIANTE'}`;
+
+        const sent = await sendTelegramAlert(message);
+        if (!sent) throw new Error('Fallo al enviar por Telegram');
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error sending credentials via Telegram:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// @description Envía las credenciales de TODOS los agentes activos por Telegram (en lotes).
+export const bulkSendCredentialsSupabase = async (): Promise<{ success: boolean; count?: number; error?: string }> => {
+    try {
+        const { data: agents, error } = await supabase
+            .from('agentes')
+            .select('id, nombre, pin, whatsapp, rango')
+            .eq('status', 'ACTIVO')
+            .order('nombre');
+
+        if (error) throw error;
+        if (!agents || agents.length === 0) return { success: true, count: 0 };
+
+        const BATCH_SIZE = 10;
+        let sent = 0;
+
+        for (let i = 0; i < agents.length; i += BATCH_SIZE) {
+            const batch = agents.slice(i, i + BATCH_SIZE);
+            const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+            const totalBatches = Math.ceil(agents.length / BATCH_SIZE);
+
+            let message = `📋 CREDENCIALES MASIVAS (Lote ${batchNum}/${totalBatches})\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+            for (const agent of batch) {
+                message += `\n👤 ${agent.nombre}\n`;
+                message += `   🆔 ${agent.id} | 🔑 ${agent.pin}\n`;
+                message += `   📱 ${agent.whatsapp || 'N/A'} | 🎖️ ${agent.rango || 'RECLUTA'}\n`;
+            }
+
+            await sendTelegramAlert(message);
+            sent += batch.length;
+
+            if (i + BATCH_SIZE < agents.length) {
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+
+        return { success: true, count: sent };
+    } catch (error: any) {
+        console.error('Error bulk sending credentials:', error);
+        return { success: false, error: error.message };
+    }
+};
+

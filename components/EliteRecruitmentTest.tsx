@@ -170,17 +170,49 @@ const EliteRecruitmentTest: React.FC<EliteRecruitmentTestProps> = ({ onComplete,
     }
 
     if (isFinished) {
+        const discCounts = Object.values(answers).reduce((acc, val) => {
+            if (['D', 'I', 'S', 'C'].includes(val)) {
+                acc[val] = (acc[val] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+
+        const dominant = Object.entries(discCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'D';
+
+        const discInfo = {
+            D: { label: 'DOMINANTE', color: 'text-red-500', bg: 'bg-red-500/20', border: 'border-red-500', desc: 'Enfocado en resultados, directo y decidido.' },
+            I: { label: 'INFLUYENTE', color: 'text-yellow-500', bg: 'bg-yellow-500/20', border: 'border-yellow-500', desc: 'Entusiasta, comunicativo y optimista.' },
+            S: { label: 'ESTABLE', color: 'text-green-500', bg: 'bg-green-500/20', border: 'border-green-500', desc: 'Paciente, confiable y buen oyente.' },
+            C: { label: 'CUMPLIDOR', color: 'text-blue-500', bg: 'bg-blue-500/20', border: 'border-blue-500', desc: 'Analítico, preciso y disciplinado.' }
+        }[dominant as 'D' | 'I' | 'S' | 'C'];
+
         return (
-            <div className="flex flex-col items-center justify-center p-8 text-center space-y-6 animate-in fade-in zoom-in duration-500">
-                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center border-2 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
-                    <CheckCircle2 className="text-green-500" size={40} />
+            <div className="flex flex-col items-center justify-center p-8 text-center space-y-8 animate-in fade-in zoom-in duration-500 bg-[#001f3f]/90 backdrop-blur-xl border border-white/10 rounded-[3rem] shadow-2xl">
+                <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center border-2 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]">
+                    <CheckCircle2 className="text-green-500" size={48} />
                 </div>
+
                 <div className="space-y-2">
-                    <h3 className="text-2xl font-bebas text-white uppercase tracking-widest">EVALUACIÓN COMPLETADA</h3>
+                    <h3 className="text-3xl font-bebas text-white uppercase tracking-widest">EVALUACIÓN COMPLETADA</h3>
                     <p className="text-[10px] text-white/50 font-montserrat uppercase tracking-[0.2em] max-w-xs mx-auto">
-                        Tus respuestas han sido enviadas al Núcleo de Inteligencia para el re-perfilado táctico.
+                        Perfil Táctico Sincronizado con el Núcleo de Inteligencia.
                     </p>
                 </div>
+
+                <div className={`w-full p-6 rounded-2xl border ${discInfo.border} ${discInfo.bg} space-y-3`}>
+                    <p className="text-[10px] text-white/60 font-black uppercase tracking-widest">RASGO DOMINANTE DETECTADO:</p>
+                    <h4 className={`text-4xl font-bebas font-black ${discInfo.color} tracking-[0.1em]`}>{discInfo.label}</h4>
+                    <p className="text-sm text-white/80 font-montserrat italic">{discInfo.desc}</p>
+                </div>
+
+                <div className="p-4 bg-white/5 border border-white/10 rounded-2xl w-full">
+                    <p className="text-[9px] text-white/40 uppercase font-black tracking-widest mb-1">PRÓXIMO PASO:</p>
+                    <p className="text-xs text-white/80">Tu analítica detallada y radar táctico ya están disponibles en tu **Tarjeta de Identificación Digital (METRICS)**.</p>
+                </div>
+
+                <p className="text-[8px] text-white/20 font-mono uppercase tracking-widest animate-pulse">
+                    RE-DIRECCIONANDO AL COMANDO CENTRAL...
+                </p>
             </div>
         );
     }

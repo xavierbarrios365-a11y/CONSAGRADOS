@@ -88,7 +88,7 @@ const SharedView: React.FC<SharedViewProps> = (props) => {
 
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="directory" className="h-full">
-                    <div className="p-6 md:p-10 space-y-6 pb-24 max-w-4xl mx-auto">
+                    <div className="p-6 md:p-10 space-y-6 pb-10 max-w-4xl mx-auto">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                             <div>
                                 <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Directorio de Agentes</h2>

@@ -30,7 +30,7 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
     ];
 
     return (
-        <div className="min-h-screen bg-[#001f3f] flex flex-col animate-in fade-in duration-500 pb-24">
+        <div className="min-h-screen bg-[#000810] flex flex-col animate-in fade-in duration-500 pb-10">
             {/* Header Táctico */}
             <div className="bg-black/40 backdrop-blur-md border-b border-white/5 p-6 sticky top-0 z-20">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -53,8 +53,7 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
                 </div>
             </div>
 
-            {/* Selector de Tabs Premium */}
-            <div className="p-4 sticky top-[80px] z-10 bg-[#001f3f]/95 backdrop-blur-sm">
+            <div className="p-4 sticky top-[80px] z-10 bg-[#000810]/95 backdrop-blur-sm">
                 <div className="max-w-md mx-auto bg-black/30 p-1.5 rounded-2xl flex gap-1 border border-white/5 shadow-2xl">
                     {tabs.map(tab => (
                         <button

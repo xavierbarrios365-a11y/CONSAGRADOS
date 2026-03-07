@@ -67,7 +67,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         case AppView.HOME:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
-                    <div className="max-w-2xl mx-auto pt-4 pb-24 ig-container font-montserrat">
+                    <div className="max-w-2xl mx-auto pt-4 pb-10 ig-container font-montserrat">
                         {/* ENCABEZADO INTEGRADO (IG STYLE - HORIZONTAL) */}
                         {/* HISTORIAS FULL WIDTH (IG STYLE) */}
                         <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-white/5 pb-4">
@@ -277,14 +277,14 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         case AppView.ACADEMIA:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="academia" className="h-full">
-                    <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} />
+                    <AcademyModule userRole={effectiveRole} agentId={currentUser?.id || ''} onActivity={resetSessionTimer} onUpdateNeeded={syncData} />
                 </motion.div>
             );
 
         case AppView.CONTENT:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="social_feed" className="h-full">
-                    <div className="p-5 md:p-8 pb-24 max-w-2xl mx-auto font-montserrat">
+                    <div className="p-5 md:p-8 pb-10 max-w-2xl mx-auto font-montserrat">
                         <IntelFeed
                             headlines={headlines}
                             agents={agents}

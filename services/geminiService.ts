@@ -1,6 +1,6 @@
 import { Agent } from "../types";
 
-const getGenAIResult = async (contents: any, modelName?: string): Promise<string> => {
+export const getGenAIResult = async (contents: any, modelName?: string): Promise<string> => {
   // En producción (Vercel) esto apunta a la Serverless Function
   const baseUrl = import.meta.env.DEV ? 'https://consagrados.vercel.app' : '';
 

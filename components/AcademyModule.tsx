@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
-import { fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase, submitQuizResultSupabase, resetStudentAttemptsSupabase, saveBulkAcademyDataSupabase } from '../services/supabaseService';
+import { fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase, submitQuizResultSupabase, resetStudentAttemptsSupabase, saveBulkAcademyDataSupabase, updateAgentPointsSupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { updateAgentAiProfileSupabase } from '../services/supabaseService';
 import { fetchAgentsFromSupabase } from '../services/supabaseService';
@@ -16,9 +16,10 @@ interface AcademyModuleProps {
     userRole: UserRole;
     agentId: string;
     onActivity?: () => void;
+    onUpdateNeeded?: () => void;
 }
 
-const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActivity }) => {
+const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActivity, onUpdateNeeded }) => {
     const [courses, setCourses] = useState<Course[]>([]);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [progress, setProgress] = useState<LessonProgress[]>([]);
@@ -388,6 +389,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 }
             }
             const isCompleted = score > 0 || (activeLesson.questions.length === 0 && textAnswer.trim() !== "");
+            const wasAlreadyCompleted = isLessonCompleted(activeLesson.id);
             const result = await submitQuizResultSupabase(
                 agentId,
                 activeLesson.id,
@@ -397,10 +399,24 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 1 // Agrega 1 intento
             );
 
+            // Award XP only on FIRST successful completion
+            let xpAwarded = 0;
+            if (result.success && isCompleted && !wasAlreadyCompleted) {
+                const lessonXP = activeLesson.xpReward || 10;
+                try {
+                    await updateAgentPointsSupabase(agentId, 'BIBLIA', lessonXP);
+                    xpAwarded = lessonXP;
+                    console.log(`✅ +${lessonXP} XP awarded for completing lesson: ${activeLesson.title}`);
+                    if (onUpdateNeeded) onUpdateNeeded();
+                } catch (xpErr) {
+                    console.error('⚠️ XP award failed:', xpErr);
+                }
+            }
+
             if (result.success) {
                 setQuizResult({
                     isCorrect: isCompleted,
-                    xpAwarded: score,
+                    xpAwarded: xpAwarded,
                     score: score,
                     error: undefined,
                     profile: profile,
@@ -507,7 +523,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
     if (!selectedCourse) {
         return (
-            <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-24 max-w-5xl mx-auto">
+            <div className="p-6 md:p-10 space-y-8 animate-in fade-in pb-10 max-w-5xl mx-auto">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="text-left space-y-2">
                         <h2 className="text-2xl md:text-4xl font-bebas text-white uppercase tracking-widest leading-none">Academia Táctica</h2>
@@ -808,7 +824,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const courseLessons = lessons.filter(l => l.courseId === selectedCourse.id).sort((a, b) => a.order - b.order);
 
     return (
-        <div className="animate-in fade-in pb-24">
+        <div className="animate-in fade-in pb-10">
             <div className="bg-[#000c19]/50 border-b border-white/5 p-6 backdrop-blur-xl sticky top-0 z-20">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
                     <button

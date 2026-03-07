@@ -102,7 +102,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
     const filteredAgents = agents.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.includes(searchQuery));
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto font-montserrat pb-24">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto font-montserrat pb-10">
 
             <div className="flex items-center justify-between mb-8">
                 <div>

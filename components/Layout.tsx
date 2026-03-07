@@ -190,7 +190,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto pb-40 md:pb-0 bg-transparent custom-scrollbar">
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-0 bg-transparent custom-scrollbar">
           <div className="max-w-screen-xl mx-auto h-full">
             {children}
           </div>

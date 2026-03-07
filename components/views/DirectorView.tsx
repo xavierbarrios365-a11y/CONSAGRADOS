@@ -193,7 +193,7 @@ const DirectorView: React.FC<DirectorViewProps> = (props) => {
             case AppView.VISITOR:
                 return (
                     <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="visitor" className="h-full">
-                        <div className="p-6 md:p-10 space-y-8 pb-24 max-w-4xl mx-auto">
+                        <div className="p-6 md:p-10 space-y-8 pb-10 max-w-4xl mx-auto">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                                 <div>
                                     <h2 className="text-3xl font-bebas text-white tracking-widest uppercase">Radar de Inteligencia</h2>

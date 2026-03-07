@@ -2648,13 +2648,14 @@ export const fetchActiveStoriesSupabase = async (): Promise<any[]> => {
     }
 };
 
-export const createStorySupabase = async (agentId: string, imageUrl: string): Promise<{ success: boolean; error?: string }> => {
+export const createStorySupabase = async (agentId: string, imageUrl: string, content?: string): Promise<{ success: boolean; error?: string }> => {
     try {
         const { error } = await supabase
             .from('historias')
             .insert({
                 agent_id: agentId,
-                image_url: imageUrl
+                image_url: imageUrl,
+                content: content
             });
 
         if (error) throw error;

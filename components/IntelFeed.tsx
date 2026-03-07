@@ -4,7 +4,7 @@ import {
     Heart, Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
     GraduationCap, Award, Flame, AlertCircle, Share2, Trash2, Gift,
-    MessageCircle, AtSign, X
+    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
 import {
@@ -498,14 +498,14 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         onClick={(e) => { e.stopPropagation(); handleToggleLike(item.id); }}
                                                         className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userLikes.includes(item.id) ? 'bg-[#ff4d00]/10 border-[#ff4d00]/30 text-[#ff4d00]' : 'bg-white/5 border-white/10 text-white/40'}`}
                                                     >
-                                                        <Heart size={12} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
+                                                        <ThumbsUp size={12} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
                                                         <span className="text-[9px] font-black">{likesCount[item.id] || 0}</span>
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleToggleDislike(item.id); }}
                                                         className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${userDislikes.includes(item.id) ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-white/5 border-white/10 text-white/40'}`}
                                                     >
-                                                        <AtSign size={12} className={userDislikes.includes(item.id) ? "animate-pulse" : ""} />
+                                                        <ThumbsDown size={12} className={userDislikes.includes(item.id) ? "animate-pulse" : ""} />
                                                         <span className="text-[9px] font-black">{dislikesCount[item.id] || 0}</span>
                                                     </button>
                                                     <button

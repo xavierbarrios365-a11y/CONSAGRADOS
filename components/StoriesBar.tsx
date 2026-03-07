@@ -12,6 +12,7 @@ interface Story {
     id: string;
     agent_id: string;
     image_url: string;
+    content?: string;
     created_at: string;
     agentes: {
         nombre: string;
@@ -43,6 +44,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
     const [isUploading, setIsUploading] = useState(false);
     const [selectedStory, setSelectedStory] = useState<any | null>(null);
     const [storyIndex, setStoryIndex] = useState(0);
+    const [storyContext, setStoryContext] = useState('');
     const [replyText, setReplyText] = useState('');
     const [isSendingReply, setIsSendingReply] = useState(false);
     const [showReactions, setShowReactions] = useState(false);
@@ -101,9 +103,10 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         try {
             const uploadRes = await uploadToCloudinary(file);
             if (uploadRes.success && uploadRes.url) {
-                const dbRes = await createStorySupabase(currentUser.id, uploadRes.url);
+                const dbRes = await createStorySupabase(currentUser.id, uploadRes.url, storyContext.trim() || undefined);
                 if (dbRes.success) {
                     await loadStories();
+                    setStoryContext('');
                 }
             }
         } catch (error) {
@@ -257,6 +260,21 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                     <span className="text-[10px] text-white/60 font-medium">Tu historia</span>
                 </div>
 
+                {isUploading && (
+                    <div className="flex flex-col gap-2 min-w-[150px]">
+                        <input
+                            type="text"
+                            placeholder="Añadir contexto..."
+                            value={storyContext}
+                            onChange={(e) => setStoryContext(e.target.value)}
+                            className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white outline-none focus:border-[#ffb700]/50"
+                        />
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#ffb700] animate-pulse w-full" />
+                        </div>
+                    </div>
+                )}
+
                 {/* Other Stories */}
                 {stories.map((agentGroup: any) => (
                     <div
@@ -300,15 +318,28 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                     />
                                     <div>
                                         <span className="text-white text-xs font-bold">{selectedStory.agentes.nombre}</span>
-                                        {getCurrentStory() && (
-                                            <p className="text-[9px] text-white/50">{getTimeAgo(getCurrentStory()!.created_at)}</p>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {getCurrentStory() && (
+                                                <p className="text-[9px] text-white/50">{getTimeAgo(getCurrentStory()!.created_at)}</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <button onClick={() => setSelectedStory(null)} className="text-white p-2">
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
+
+                            {/* Story Context Overlay */}
+                            {getCurrentStory()?.content && (
+                                <div className="absolute top-20 inset-x-0 px-6 py-4 z-10">
+                                    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl">
+                                        <p className="text-white text-xs font-medium leading-relaxed italic text-center">
+                                            "{getCurrentStory()?.content}"
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Progress Indicators */}
                             <div className="absolute top-2 inset-x-2 flex gap-1 z-20">

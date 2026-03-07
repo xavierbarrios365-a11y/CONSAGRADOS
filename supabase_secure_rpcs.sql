@@ -114,6 +114,8 @@ GRANT EXECUTE ON FUNCTION public.update_agent_fcm(TEXT, TEXT) TO anon;
 -- 4. Actualización de Rachas/Puntos Rápidos desde App.tsx
 CREATE OR REPLACE FUNCTION public.update_agent_streak(p_id TEXT, p_streak INTEGER, p_date TEXT, p_tasks JSONB, p_xp INTEGER)
 RETURNS BOOLEAN AS $$
+DECLARE
+  row_count INTEGER;
 BEGIN
   UPDATE public.agentes SET 
     streak_count = p_streak, 
@@ -122,7 +124,9 @@ BEGIN
     xp = p_xp,
     updated_at = timezone('utc'::text, now()) 
   WHERE id = p_id;
-  RETURN TRUE;
+  
+  GET DIAGNOSTICS row_count = ROW_COUNT;
+  RETURN row_count > 0;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

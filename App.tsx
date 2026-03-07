@@ -164,6 +164,19 @@ const App: React.FC = () => {
     userConfirmations, setUserConfirmations,
   } = dataSync;
 
+  const updateAgentLocalState = useCallback((updatedAgent: Agent) => {
+    // 1. Actualizar lista global de agentes
+    setAgents(prev => prev.map(a =>
+      String(a.id).toUpperCase() === String(updatedAgent.id).toUpperCase() ? updatedAgent : a
+    ));
+
+    // 2. Si es el usuario actual, actualizar estado y storage
+    if (currentUser && String(currentUser.id).toUpperCase() === String(updatedAgent.id).toUpperCase()) {
+      setCurrentUser(updatedAgent);
+      localStorage.setItem('consagrados_session', JSON.stringify(updatedAgent));
+    }
+  }, [currentUser, setAgents, setCurrentUser]);
+
   /*
   // --- AUTOMATIC ABSENCE PENALTIES (DISABLED TEMPORARILY DUE TO MASSIVE XP DEDUCTION BUG) ---
   useEffect(() => {
@@ -290,7 +303,8 @@ const App: React.FC = () => {
     syncData,
     refreshCurrentUser,
     showAlert,
-    setView
+    setView,
+    updateAgentLocalState
   );
 
   const {
@@ -1155,6 +1169,7 @@ const App: React.FC = () => {
           onRequestPermission={initFirebaseMessaging}
           agentId={currentUser?.id}
           currentUser={currentUser}
+          onSyncPrefs={updateAgentLocalState}
         />
       )}
 

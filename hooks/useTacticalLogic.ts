@@ -25,7 +25,8 @@ export const useTacticalLogic = (
     syncData: (force?: boolean) => Promise<Agent[] | void>,
     refreshCurrentUser: (agents: Agent[]) => void,
     showAlert: (config: { title: string, message: string, type: 'SUCCESS' | 'ERROR' | 'INFO' | 'CONFIRM', onConfirm?: () => void | Promise<void> }) => void,
-    setView: (view: AppView) => void
+    setView: (view: AppView) => void,
+    updateAgentLocalState?: (updatedAgent: Agent) => void
 ) => {
     const [scanStatus, setScanStatus] = useState<'IDLE' | 'SCANNING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [scannedId, setScannedId] = useState('');
@@ -153,8 +154,20 @@ export const useTacticalLogic = (
         Promise.race([
             updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference, safeStreak, safeXp),
             timeoutPromise
-        ]).then((res) => {
+        ]).then((res: any) => {
             if (res.success) {
+                // UPDATE LOCAL STATE IMMEDIATELY with the data from response or expected
+                if (updateAgentLocalState && res.updatedAgent) {
+                    updateAgentLocalState(res.updatedAgent);
+                } else if (updateAgentLocalState) {
+                    // Fallback: update manually if RPC doesn't return full agent
+                    updateAgentLocalState({
+                        ...currentUser,
+                        streakCount: res.newStreak !== undefined ? res.newStreak : safeStreak,
+                        lastStreakDate: localToday,
+                        weeklyTasks: updatedTasks
+                    });
+                }
                 syncData(true);
             } else {
                 console.warn('⚠️ Streak sync failed or timed out:', res.error);

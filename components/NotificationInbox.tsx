@@ -9,9 +9,10 @@ interface NotificationInboxProps {
     onRequestPermission?: () => Promise<void>;
     agentId?: string;
     currentUser?: Agent | null;
+    onSyncPrefs?: (updatedAgent: Agent) => void;
 }
 
-const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate, onRequestPermission, agentId, currentUser }) => {
+const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalReadUpdate, onRequestPermission, agentId, currentUser, onSyncPrefs }) => {
     const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
     const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
 
@@ -110,9 +111,13 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         localStorage.setItem(READ_KEY, JSON.stringify(newRead));
         updateBadge(notifications, newRead, deletedIds);
 
-        if (agentId) {
+        if (agentId && currentUser) {
             setIsSyncing(true);
-            await updateNotifPrefsSupabase(agentId, { read: newRead, deleted: deletedIds });
+            const updatedPrefs = { read: newRead, deleted: deletedIds };
+            await updateNotifPrefsSupabase(agentId, updatedPrefs);
+            if (onSyncPrefs) {
+                onSyncPrefs({ ...currentUser, notifPrefs: updatedPrefs });
+            }
             setIsSyncing(false);
         }
     };
@@ -124,9 +129,13 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         localStorage.setItem(DELETED_KEY, JSON.stringify(newDeleted));
         updateBadge(notifications, readIds, newDeleted);
 
-        if (agentId) {
+        if (agentId && currentUser) {
             setIsSyncing(true);
-            await updateNotifPrefsSupabase(agentId, { read: readIds, deleted: newDeleted });
+            const updatedPrefs = { read: readIds, deleted: newDeleted };
+            await updateNotifPrefsSupabase(agentId, updatedPrefs);
+            if (onSyncPrefs) {
+                onSyncPrefs({ ...currentUser, notifPrefs: updatedPrefs });
+            }
             setIsSyncing(false);
         }
     };
@@ -139,9 +148,13 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
             localStorage.setItem(DELETED_KEY, JSON.stringify(newDeleted));
             updateBadge(notifications, readIds, newDeleted);
 
-            if (agentId) {
+            if (agentId && currentUser) {
                 setIsSyncing(true);
-                await updateNotifPrefsSupabase(agentId, { read: readIds, deleted: newDeleted });
+                const updatedPrefs = { read: readIds, deleted: newDeleted };
+                await updateNotifPrefsSupabase(agentId, updatedPrefs);
+                if (onSyncPrefs) {
+                    onSyncPrefs({ ...currentUser, notifPrefs: updatedPrefs });
+                }
                 setIsSyncing(false);
             }
         }

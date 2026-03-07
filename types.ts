@@ -60,6 +60,7 @@ export interface Agent {
 export interface DailyVerse {
   verse: string;
   reference: string;
+  version?: string; // e.g., "RVR1960"
   lastStreakDate?: string;
 }
 
@@ -191,6 +192,7 @@ export interface NewsFeedItem {
   agentName?: string;
   verse?: string;
   reference?: string;
+  version?: string; // e.g. "RVR1960"
   parentId?: string; // Para hilos/respuestas
 }
 

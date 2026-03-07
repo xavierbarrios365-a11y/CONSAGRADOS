@@ -346,6 +346,34 @@ const App: React.FC = () => {
     }
   }, [agents, isLoggedIn, refreshCurrentUser]);
 
+  // --- AUTO-REPARACIÓN SILENCIOSA (RESTORE PHOTOS) ---
+  // Este efecto se encarga de corregir automáticamente cualquier pérdida de fotos 
+  // causada por el filtro de seguridad previo, realizando una sincronización desde Sheets una única vez.
+  useEffect(() => {
+    const runSelfHealing = async () => {
+      const alreadyHealed = sessionStorage.getItem('v37_photo_healing_done');
+      if (isLoggedIn && !alreadyHealed) {
+        console.log("🛠️ INICIANDO AUTO-REPARACIÓN DE INTELIGENCIA (FOTOS)...");
+        try {
+          const sheetAgents = await fetchAgentsFromSheets();
+          if (sheetAgents && sheetAgents.length > 0) {
+            await syncAllAgentsToSupabase(sheetAgents);
+            sessionStorage.setItem('v37_photo_healing_done', 'true');
+            console.log("✅ AUTO-REPARACIÓN COMPLETADA. FOTOS RESTAURADAS.");
+            // Refrescar localmente
+            window.location.reload();
+          }
+        } catch (e) {
+          console.error("Fallo en auto-reparación:", e);
+        }
+      }
+    };
+
+    // Ejecutar tras un pequeño delay para dejar que la app cargue
+    const repairTimer = setTimeout(runSelfHealing, 3000);
+    return () => clearTimeout(repairTimer);
+  }, [isLoggedIn]);
+
   // Monitor network status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);

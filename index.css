@@ -26,4 +26,22 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
+
+    /* IG-STYLE ECOSYSTEM REFINEMENTS */
+    .ig-container {
+        @apply space-y-4 px-4;
+    }
+
+    .ig-card {
+        @apply bg-[#001f3f]/20 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden;
+    }
+
+    .ig-header-blur {
+        @apply sticky top-0 z-30 bg-[#000810]/80 backdrop-blur-xl border-b border-white/5;
+    }
+
+    .tactical-blackout {
+        filter: blur(20px) brightness(0.2);
+        pointer-events: none;
+    }
 }

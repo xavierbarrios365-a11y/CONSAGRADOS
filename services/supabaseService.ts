@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 export { supabase };
-import { Agent, Badge, InboxNotification } from '../types';
+import { Agent, Badge, InboxNotification, UserRole, Rank } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 
 /**
@@ -16,8 +16,8 @@ export const syncAgentToSupabase = async (agent: Agent) => {
             rango: agent.rank,
             cargo: agent.accessLevel || agent.role,
             whatsapp: agent.whatsapp,
-            // BLINDAJE: Solo sincronizar foto_url si es una URL real (Cloudinary/Supabase), nunca placeholders
-            foto_url: (agent.photoUrl && (agent.photoUrl.includes('cloudinary.com') || agent.photoUrl.includes('supabase.co'))) ? agent.photoUrl : '',
+            // BLINDAJE: Solo sincronizar foto_url si es una URL real (Cloudinary/Supabase/Drive), nunca placeholders
+            foto_url: (agent.photoUrl && (agent.photoUrl.includes('cloudinary.com') || agent.photoUrl.includes('supabase.co') || agent.photoUrl.includes('drive.google.com') || agent.photoUrl.includes('docs.google.com'))) ? agent.photoUrl : (agent.photoUrl || ''),
             pin: agent.pin,
             is_ai_profile_pending: agent.isAiProfilePending || false,
             tactical_stats: agent.tacticalStats || {},
@@ -96,7 +96,7 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
         // SEGURIDAD: Solo seleccionamos las columnas permitidas por el protocolo de blindaje
         const { data, error } = await supabase
             .from('agentes')
-            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks, pin, whatsapp, notif_prefs, last_course, baptism_status, birthday, relationship_with_god, security_question, security_answer, must_change_password, biometric_credential');
+            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks, pin, whatsapp, baptism_status, birthday, relationship_with_god, must_change_password, is_ai_profile_pending, tactical_stats, tactor_summary');
         if (error) {
             console.error('❌ Error obteniendo agentes de Supabase:', error);
             return [];
@@ -121,15 +121,20 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
             talent: d.talent || 'PENDIENTE',
             baptismStatus: d.baptism_status || 'NO',
             status: d.status || 'ACTIVO',
-            userRole: String(d.nombre).toUpperCase().includes('SAHEL') ? 'DIRECTOR' : (d.user_role || (d.cargo === 'DIRECTOR' ? 'DIRECTOR' : d.cargo === 'LÍDER' ? 'LEADER' : 'STUDENT')),
-            idSignature: `V37 - SIG - ${d.id} `,
+            userRole: (() => {
+                const name = String(d.nombre || '').toUpperCase();
+                const role = String(d.user_role || '').toUpperCase();
+                const cargo = String(d.cargo || '').toUpperCase();
+
+                if (name.includes('SAHEL') || role === 'DIRECTOR' || cargo === 'DIRECTOR') return UserRole.DIRECTOR;
+                if (role === 'LEADER' || role === 'LIDER' || cargo === 'LIDER' || cargo === 'LÍDER') return UserRole.LEADER;
+                return UserRole.STUDENT;
+            })(),
+            idSignature: `V37-SIG-${d.id}`,
             joinedDate: d.joined_date || '',
             birthday: d.birthday || '',
             relationshipWithGod: d.relationship_with_god || 'PENDIENTE',
-            securityQuestion: d.security_question || '',
-            securityAnswer: d.security_answer || '',
             mustChangePassword: d.must_change_password || false,
-            biometricCredential: d.biometric_credential || '',
             streakCount: (() => {
                 const raw = d.last_streak_date || '';
                 if (!raw || (d.streak_count || 0) === 0) return 0;
@@ -2404,10 +2409,11 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
 
 export const updateNotifPrefsSupabase = async (agentId: string, prefs: { read: string[]; deleted: string[] }): Promise<{ success: boolean; error?: string }> => {
     try {
-        const { error } = await supabase.rpc('update_agent_notif_prefs', {
-            p_id: agentId,
-            p_prefs: prefs
-        });
+        // Actualizamos directamente la columna JSONB 'notif_prefs' en la tabla 'agentes'
+        const { error } = await supabase
+            .from('agentes')
+            .update({ notif_prefs: prefs })
+            .eq('id', agentId);
 
         if (error) throw error;
         return { success: true };

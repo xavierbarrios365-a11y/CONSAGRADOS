@@ -66,39 +66,25 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         case AppView.HOME:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
-                    <div className="p-5 md:p-8 space-y-6 pb-24 max-w-2xl mx-auto font-montserrat">
-                        {/* ENCABEZADO COMPACTO */}
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
-                                            <div
-                                                className={`w-1.5 h-1.5 rounded-full ${isOnline && notificationPermission === 'granted' ? 'bg-[#ffb700] shadow-[0_0_8px_rgba(255,183,0,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} animate-pulse`}
-                                                title={isOnline && notificationPermission === 'granted' ? 'CONECTADO' : 'DESCONECTADO'}
-                                            />
-                                        </div>
-                                        <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
-                                            {currentUser?.name
-                                                ? currentUser.name.split(' ').slice(0, 2).join(' ')
-                                                : 'Agente'}
-                                        </p>
+                    <div className="max-w-2xl mx-auto pt-4 pb-24 ig-container font-montserrat">
+                        {/* ENCABEZADO INTEGRADO (IG STYLE) */}
+                        <div className="flex flex-col gap-4 mb-2">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-montserrat opacity-60">Agente Activo</p>
+                                        <div
+                                            className={`w-1.5 h-1.5 rounded-full ${isOnline && notificationPermission === 'granted' ? 'bg-[#ffb700] shadow-[0_0_8px_rgba(255,183,0,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'} animate-pulse`}
+                                            title={isOnline && notificationPermission === 'granted' ? 'CONECTADO' : 'DESCONECTADO'}
+                                        />
                                     </div>
-                                    {currentUser && (
-                                        <div className="hidden xs:block">
-                                            <PromotionProgressCard
-                                                agentId={currentUser.id}
-                                                currentRank={currentUser.rank}
-                                                compact={true}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-3 mt-2">
-                                    <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
-                                    <div className="flex-1">
+                                    <p className="text-xl font-bebas text-white tracking-widest uppercase truncate leading-none mt-0.5">
+                                        {currentUser?.name
+                                            ? currentUser.name.split(' ').slice(0, 2).join(' ')
+                                            : 'Agente'}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <span className="text-[8px] text-white/40 font-black uppercase tracking-wider bg-white/5 px-3 py-1 rounded-full">{currentUser?.rank || 'RECLUTA'}</span>
                                         <BadgeShowcase
                                             currentAgentId={currentUser?.id}
                                             currentAgentName={currentUser?.name}
@@ -107,27 +93,25 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                         />
                                     </div>
                                 </div>
+
+                                {currentUser && (
+                                    <div className="shrink-0">
+                                        <PromotionProgressCard
+                                            agentId={currentUser.id}
+                                            currentRank={currentUser.rank}
+                                            compact={true}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* HISTORIAS AL LADO DEL NOMBRE (MOBILE OPTIMIZED) */}
+                            <div id="tutorial-stories" className="-mx-5 px-5 overflow-x-auto no-scrollbar">
+                                <StoriesBar currentUser={currentUser} />
                             </div>
                         </div>
 
-                        {/* BOTÓN DE ACTIVACIÓN NOTIF */}
-                        {notificationPermission !== 'granted' && (
-                            <div className="mb-6">
-                                <button
-                                    onClick={initFirebaseMessaging}
-                                    className="w-full py-3 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600/30 transition-all active:scale-95 font-bebas flex items-center justify-center gap-3"
-                                >
-                                    <Bell size={14} className="animate-swing" />
-                                    ACTIVAR CANAL TÁCTICO DE NOTIFICACIONES
-                                </button>
-                            </div>
-                        )}
-
-                        <div id="tutorial-stories">
-                            <StoriesBar currentUser={currentUser} />
-                        </div>
-
-                        <div id="tutorial-daily-verse" className="w-full animate-in slide-in-from-top-4 duration-1000 mb-6">
+                        <div id="tutorial-daily-verse" className="w-full animate-in slide-in-from-top-4 duration-1000 mb-2">
                             <DailyVerse
                                 verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
                                 streakCount={currentUser?.streakCount}

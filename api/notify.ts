@@ -154,14 +154,16 @@ export default async function handler(req: any, res: any) {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'Content-Length': '0'
+                },
+                body: "" // Ciertas APIs de IID requieren un body aunque sea vacío
             });
 
             if (!response.ok) {
                 const errText = await response.text();
-                process.env.NODE_ENV === 'development' && console.error("FCM Subscribe Error:", errText);
-                return res.status(500).json({
+                console.error("FCM Subscribe Error:", errText);
+                return res.status(response.status).json({
                     error: 'Subscription failed',
                     details: errText,
                     code: response.status

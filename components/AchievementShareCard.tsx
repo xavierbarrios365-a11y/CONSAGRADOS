@@ -167,9 +167,11 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
             const res = await fetch(dataUrl);
             const blob = await res.blob();
             const file = new File([blob], 'logro-consagrados-hd.png', { type: 'image/png' });
+
+            const bibleVersionText = newsItem?.version ? ` [${newsItem.version}]` : ' [RVR1960]';
             const shareText = newsItem?.verse
-                ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
-                : (newsItem?.message || '¡Nivel superado!');
+                ? `🔥 *CONSAGRADOS 2026: VICTORIA DIARIA* 🔥\n\n"${newsItem.verse}"\n— *${newsItem.reference}*${bibleVersionText}\n\n${newsItem.message}\n\n📲 *Únete a la élite:* consagrados2026.app`
+                : (`🏆 *CONSAGRADOS 2026: LOGRO ELITE* 🏆\n\n${newsItem?.message || '¡Nivel superado!'}\n\n📲 *Sigue mi racha:* consagrados2026.app`);
 
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
                 await navigator.share({
@@ -256,10 +258,34 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
         }
     };
 
-    const shareViaWhatsApp = () => {
+    const shareViaWhatsApp = async () => {
+        const bibleVersionText = newsItem?.version ? ` [${newsItem.version}]` : ' [RVR1960]';
         const text = newsItem?.verse
-            ? `¡VICTORIA DIARIA!\n\n"${newsItem.verse}"\n— ${newsItem.reference}\n\n${newsItem.message}`
-            : (newsItem?.message || '¡Nivel superado!');
+            ? `🔥 *CONSAGRADOS 2026: VICTORIA DIARIA* 🔥\n\n"${newsItem.verse}"\n— *${newsItem.reference}*${bibleVersionText}\n\n${newsItem.message}\n\n📲 *Únete a la élite:* consagrados2026.app`
+            : (`🏆 *CONSAGRADOS 2026: LOGRO ELITE* 🏆\n\n${newsItem?.message || '¡Nivel superado!'}\n\n📲 *Sigue mi racha:* consagrados2026.app`);
+
+        // Intentar compartir como archivo si es móvil y soporta archivos
+        try {
+            const dataUrl = await generateImageData();
+            if (dataUrl && navigator.share && navigator.canShare) {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const file = new File([blob], 'logro-consagrados.png', { type: 'image/png' });
+
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Consagrados 2026',
+                        text: text
+                    });
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn("Fallo compartiendo archivo en WhatsApp, usando link de texto:", e);
+        }
+
+        // Fallback a link de texto puro
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     };
 
@@ -407,7 +433,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                                                 </p>
                                                 {newsItem.reference && (
                                                     <p className="text-[20px] font-black text-[#ffb700] uppercase tracking-[0.2em]">
-                                                        — {newsItem.reference}
+                                                        — {newsItem.reference} {newsItem.version && <span className="text-white/40 ml-2">[{newsItem.version}]</span>}
                                                     </p>
                                                 )}
                                             </div>

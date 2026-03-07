@@ -281,14 +281,15 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                 <AchievementShareCard
                     agent={agent}
                     newsItem={{
-                        id: 'daily-verse-' + Date.now(),
+                        id: 'daily-victory',
                         type: 'RACHA',
-                        message: `¡VICTORIA DIARIA! He mantenido mi racha de ${streakCount} días.`,
+                        message: `¡Racha de ${streakCount} días alcanzada!`,
                         verse: verse?.verse,
                         reference: verse?.reference,
+                        version: verse?.version || 'RVR1960',
                         date: new Date().toLocaleDateString(),
-                        agentId: agent.id,
-                        agentName: agent.name
+                        agentId: agent?.id,
+                        agentName: agent?.name
                     }}
                     onClose={() => setShowShareModal(false)}
                 />

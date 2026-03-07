@@ -35,7 +35,7 @@ interface BibleReaderProps {
     currentUser: Agent | null;
 }
 
-const BIBLE_VERSION = 'RVR1960';
+const BIBLE_VERSION = 'RV1960';
 
 const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const [books, setBooks] = useState<BibleBook[]>([]);

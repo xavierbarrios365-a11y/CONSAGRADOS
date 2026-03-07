@@ -442,7 +442,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               message: `✅ CONCILIACIÓN COMPLETADA\n🔍 IDs encontrados: ${ids}\n✅ Agentes actualizados: ${res.count}\n📋 Nombres: ${names}`,
               type: 'SUCCESS'
             });
-            resetSyncBackoff();
+            if (onUpdateNeeded) await onUpdateNeeded();
             if (onUpdateNeeded) onUpdateNeeded();
           } else {
             showAlert({ title: "FALLO DE CONCILIACIÓN", message: "❌ FALLO: " + (res.error || "Error desconocido."), type: 'ERROR' });
@@ -460,8 +460,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (!currentUser) return;
     setIsSendingBroadcast(true);
     try {
-      const res = await sendPushBroadcast("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
-      if (res.success) {
+      const success = await sendPushBroadcast("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
+      if (success) {
         showAlert({ title: "PRUEBA ENVIADA", message: "✅ PRUEBA ENVIADA. Verifica tu bandeja de notificaciones.", type: 'SUCCESS' });
       }
     } catch (err) {
@@ -1102,13 +1102,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     if (confirmPromote) {
                       setIsLoadingPromo(true);
                       try {
-                        const res = await promoteAgentAction({
-                          agentId: agent.id,
-                          agentName: agent.name,
-                          newRank: targetRank,
-                          xp,
-                          certificates: certs
-                        });
+                        const res = await promoteAgentAction(agent.id, targetRank);
                         if (res.success) {
                           alert(`✅ ASCENSO EXITOSO: ${agent.name} ahora es ${targetRank}`);
                           onUpdateNeeded?.();

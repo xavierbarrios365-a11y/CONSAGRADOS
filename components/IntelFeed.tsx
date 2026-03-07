@@ -402,7 +402,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                     message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
                                                     type: 'CONFIRM',
                                                     onConfirm: async () => {
-                                                        const res = await deleteNewsItemSupabase(item.id);
+                                                        const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
                                                         if (res.success) {
                                                             showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
                                                             loadNews(true);
@@ -508,7 +508,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                                 message: "¿ESTÁS SEGURO? ESTA ACCIÓN ES IRREVERSIBLE.",
                                                                 type: 'CONFIRM',
                                                                 onConfirm: async () => {
-                                                                    const res = await deleteNewsItemSupabase(item.id);
+                                                                    const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
                                                                     if (res.success) {
                                                                         showAlert({ title: "ÉXITO", message: "MENSAJE ELIMINADO", type: 'SUCCESS' });
                                                                         loadNews(true);

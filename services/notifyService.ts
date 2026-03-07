@@ -60,14 +60,19 @@ export const sendPushBroadcast = async (title: string, message: string, targetTo
 
 export const subscribeToTopic = async (token: string): Promise<boolean> => {
     try {
+        // En modo desarrollo local, no intentamos suscribir al tópico global de producción
+        // para evitar el error 401 Unauthorized en la consola si el dominio no coincide.
+        if (import.meta.env.DEV) {
+            console.log("ℹ️ Modo DEV: Suscripción a tópicos de producción omitida localmente.");
+            return true;
+        }
+
         const res = await fetch(`${getBaseUrl()}/api/notify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'subscribe', targetToken: token })
         });
-        if (!res.ok && res.status === 401 && import.meta.env.DEV) {
-            return true; // Ignorar falla de suscripción en dev
-        }
+
         return res.ok;
     } catch (e) {
         if (import.meta.env.DEV) return true;

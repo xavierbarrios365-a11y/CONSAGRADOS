@@ -247,52 +247,6 @@ export const recoveryAgentPinSupabase = async (agentId: string, answer: string):
     }
 };
 
-/**
- * @description Actualiza puntos específicos de un agente en Supabase (XP, Biblia, etc.)
- */
-export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number = 10): Promise<{ success: boolean, error?: string }> => {
-    try {
-        const { data: currentData, error: fetchError } = await supabase
-            .from('agentes')
-            .select('xp, bible, notes, leadership, streak_count')
-            .eq('id', agentId)
-            .single();
-
-        if (fetchError) throw fetchError;
-
-        let multiplier = 1.0;
-        const streak = currentData.streak_count || 0;
-        if (streak >= 30) multiplier = 2.0;
-        else if (streak >= 20) multiplier = 1.75;
-        else if (streak >= 10) multiplier = 1.50;
-        else if (streak >= 5) multiplier = 1.25;
-
-        const adjustedAmount = Math.round(amount * multiplier);
-        let currentXp = Number(currentData.xp);
-        if (isNaN(currentXp)) currentXp = 0;
-        const updates: any = { xp: Math.max(0, currentXp + adjustedAmount) };
-
-        const safeVal = (val: any) => { const num = Number(val); return isNaN(num) ? 0 : num; };
-        const safeAmount = isNaN(Number(amount)) ? 0 : Number(amount);
-
-        if (type === 'BIBLIA') updates.bible = Math.max(0, safeVal(currentData.bible) + safeAmount);
-        if (type === 'APUNTES') updates.notes = Math.max(0, safeVal(currentData.notes) + safeAmount);
-        if (type === 'LIDERAZGO' || type === 'XP') {
-            if (type === 'LIDERAZGO') updates.leadership = Math.max(0, safeVal(currentData.leadership) + safeAmount);
-        }
-
-        const { error: updateError } = await supabase
-            .from('agentes')
-            .update(updates)
-            .eq('id', agentId);
-
-        if (updateError) throw updateError;
-        return { success: true };
-    } catch (error: any) {
-        console.error('❌ Error actualizando puntos en Supabase:', error.message);
-        return { success: false, error: error.message };
-    }
-};
 
 /**
  * @description Servicios para Banners Estratégicos
@@ -506,6 +460,26 @@ export const deductPercentagePointsSupabase = async (agentId: string, percentage
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
+    }
+};
+
+/**
+ * @description Incremento atómico de puntos usando el nuevo blindaje SQL
+ */
+export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number, multiplier: number = 1.0): Promise<{ success: boolean, error?: string }> => {
+    try {
+        const { data, error } = await supabase.rpc('atomic_increment_points', {
+            p_agent_id: agentId,
+            p_type: type,
+            p_amount: amount,
+            p_multiplier: multiplier
+        });
+
+        if (error) throw error;
+        return { success: !!data };
+    } catch (e: any) {
+        console.error("Error en incremento atómico:", e);
+        return { success: false, error: e.message };
     }
 };
 
@@ -1545,6 +1519,24 @@ export const validateContent = (text: string): { valid: boolean; word?: string }
 };
 
 /**
+ * @description Elimina una noticia del feed de forma segura usando RPC (Blindaje de Permisos)
+ */
+export const deleteNewsItemSupabase = async (noticiaId: string, requestingAgentId?: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { data, error } = await supabase.rpc('delete_news_item_secure', {
+            p_noticia_id: noticiaId,
+            p_requesting_agent_id: requestingAgentId || 'SISTEMA'
+        });
+
+        if (error) throw error;
+        return { success: !!data };
+    } catch (e: any) {
+        console.error('❌ Error al eliminar noticia de Supabase:', e.message);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
  * @description Alterna un dislike en una noticia
  */
 export const toggleDislikeSupabase = async (noticiaId: string, agentId: string): Promise<{ success: boolean; disliked?: boolean; error?: any }> => {
@@ -1639,23 +1631,6 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
     }
 };
 
-/**
- * @description Elimina una noticia del feed
- */
-export const deleteNewsItemSupabase = async (id: string): Promise<{ success: boolean, error?: string }> => {
-    try {
-        const { error } = await supabase
-            .from('asistencia_visitas')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        return { success: true };
-    } catch (err: any) {
-        console.error("Error al eliminar noticia de Supabase:", err);
-        return { success: false, error: err.message };
-    }
-};
 
 export const resolveTaskSupabase = async (taskId: string, status: 'RECHAZADO' | 'VERIFICADO', verifiedBy?: string) => {
     try {

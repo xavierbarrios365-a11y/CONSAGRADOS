@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield, Settings, Zap, Menu, X, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, QrCode, User, LogOut, Target, UserPlus, BookOpen, Activity, GraduationCap, Trophy, Bell, RotateCcw, ChevronUp, ClipboardList, Sparkles, Shield, Settings, Zap, Menu, X, MessageSquare, Radar } from 'lucide-react';
 import { AppView, UserRole } from '../types';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -25,8 +25,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
 
   const bottomNavItems = [
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Feed', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] }, // Usamos CONTENT para el Feed de hilos
+    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Feed', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Ranking', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];
@@ -34,11 +35,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
   const secondaryNavItems = [
     { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
     { id: AppView.DIRECTORY, icon: <Users size={20} />, label: 'Directorio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.VISITOR, icon: <Radar size={20} />, label: 'Radar', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.SCANNER, icon: <QrCode size={20} />, label: 'Asistencia', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.ASCENSO, icon: <ChevronUp size={20} />, label: 'Ascenso', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.DIRECTOR] },
-    { id: AppView.ADMIN, icon: <Settings size={20} />, label: 'Admin', roles: [UserRole.DIRECTOR] },
   ];
 
   const filterItemsByRole = (items: typeof bottomNavItems) => {
@@ -239,7 +239,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-8 pb-[max(6rem,env(safe-area-inset-bottom))] custom-scrollbar">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 xs:grid-cols-3 gap-3">
                 {[...filteredBottomItems, ...filteredSecondaryItems].map((item, index) => (
                   <motion.button
                     initial={{ opacity: 0, y: 20 }}
@@ -250,12 +250,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
                       setView(item.id);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all active:scale-95 ${activeView === item.id
+                    className={`flex flex-col items-center justify-center gap-2 p-5 rounded-3xl border transition-all active:scale-95 ${activeView === item.id
                       ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_10px_30px_rgba(255,183,0,0.3)]'
-                      : 'bg-black/40 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/20'
+                      : 'bg-white/[0.03] text-white/70 border-white/5 hover:bg-white/10 hover:border-white/10'
                       }`}
                   >
-                    <div className={activeView === item.id ? 'scale-125 transition-transform' : ''}>
+                    <div className={activeView === item.id ? 'scale-110 transition-transform' : 'text-white/40'}>
                       {item.icon}
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-center">

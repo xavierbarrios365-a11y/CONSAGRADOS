@@ -47,7 +47,32 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewState, setViewState] = useState<'BOOKS' | 'CHAPTERS' | 'VERSES'>('BOOKS');
+    const [activeTestament, setActiveTestament] = useState<'OT' | 'NT'>('OT');
     const [copiedVerse, setCopiedVerse] = useState<number | null>(null);
+
+    // 0. Cargar Estado Persistente
+    useEffect(() => {
+        const savedBook = localStorage.getItem('bible_last_book');
+        const savedChapter = localStorage.getItem('bible_last_chapter');
+        const savedView = localStorage.getItem('bible_last_view');
+
+        if (savedBook && savedChapter && savedView === 'VERSES') {
+            try {
+                const bookObj = JSON.parse(savedBook);
+                setSelectedBook(bookObj);
+                setSelectedChapter(parseInt(savedChapter));
+                setViewState('VERSES');
+                fetchVerses(bookObj.names[0], parseInt(savedChapter));
+                // Determine testament to keep tabs synced
+                if (books.length > 0) {
+                    const bookIdx = books.findIndex(b => b.names[0] === bookObj.names[0]);
+                    if (bookIdx >= 39) setActiveTestament('NT');
+                }
+            } catch (e) {
+                console.error("Error restoring bible state", e);
+            }
+        }
+    }, [books.length]); // Wait for books to loaded to find index
 
     // 1. Cargar Libros
     useEffect(() => {
@@ -76,6 +101,7 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
             if (data && data.vers) {
                 setVerses(data.vers);
                 setViewState('VERSES');
+                localStorage.setItem('bible_last_view', 'VERSES');
             }
         } catch (err) {
             console.error('Error fetching verses:', err);
@@ -87,18 +113,27 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
     const handleSelectBook = (book: BibleBook) => {
         setSelectedBook(book);
         setViewState('CHAPTERS');
+        localStorage.setItem('bible_last_book', JSON.stringify(book));
+        localStorage.setItem('bible_last_view', 'CHAPTERS');
     };
 
     const handleSelectChapter = (chapter: number) => {
         setSelectedChapter(chapter);
+        localStorage.setItem('bible_last_chapter', chapter.toString());
         if (selectedBook) {
             fetchVerses(selectedBook.names[0], chapter);
         }
     };
 
     const handleBack = () => {
-        if (viewState === 'VERSES') setViewState('CHAPTERS');
-        else if (viewState === 'CHAPTERS') setViewState('BOOKS');
+        if (viewState === 'VERSES') {
+            setViewState('CHAPTERS');
+            localStorage.setItem('bible_last_view', 'CHAPTERS');
+        }
+        else if (viewState === 'CHAPTERS') {
+            setViewState('BOOKS');
+            localStorage.setItem('bible_last_view', 'BOOKS');
+        }
     };
 
     const getBookName = (book: BibleBook | null) => book?.names[0] || '';
@@ -139,7 +174,15 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
         else alert("❌ Error al compartir");
     };
 
-    const filteredBooks = books.filter(b => b.names.some(n => n.toLowerCase().includes(searchTerm.toLowerCase())));
+    const filteredBooks = books.filter(b => {
+        const matchesSearch = b.names.some(n => n.toLowerCase().includes(searchTerm.toLowerCase()));
+        if (!matchesSearch) return false;
+
+        // Testament logic: OT is first 39 books, NT is the rest
+        const bookIndex = books.findIndex(book => book.names[0] === b.names[0]);
+        if (activeTestament === 'OT') return bookIndex < 39;
+        return bookIndex >= 39;
+    });
 
     return (
         <div className="flex flex-col h-full bg-[#000814] text-white font-montserrat relative overflow-hidden">
@@ -180,21 +223,38 @@ const BibleReader: React.FC<BibleReaderProps> = ({ currentUser }) => {
                 </div>
 
                 {viewState === 'BOOKS' && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative group"
-                    >
-                        <div className="absolute inset-0 bg-amber-500/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity rounded-3xl" />
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-amber-500 transition-colors z-10" size={20} />
-                        <input
-                            type="text"
-                            placeholder="DESPLEGAR ESCRITURAS (BUSCAR LIBRO)..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-[2rem] py-5 pl-14 pr-6 text-[13px] font-bold tracking-widest outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-white/10 relative z-10 shadow-2xl"
-                        />
-                    </motion.div>
+                    <div className="space-y-4">
+                        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 backdrop-blur-md mb-4">
+                            <button
+                                onClick={() => setActiveTestament('OT')}
+                                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTestament === 'OT' ? 'bg-amber-500 text-[#000814] shadow-lg shadow-amber-500/20' : 'text-white/40 hover:text-white'}`}
+                            >
+                                Antiguo Testamento
+                            </button>
+                            <button
+                                onClick={() => setActiveTestament('NT')}
+                                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTestament === 'NT' ? 'bg-amber-500 text-[#000814] shadow-lg shadow-amber-500/20' : 'text-white/40 hover:text-white'}`}
+                            >
+                                Nuevo Testamento
+                            </button>
+                        </div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="relative group"
+                        >
+                            <div className="absolute inset-0 bg-amber-500/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity rounded-3xl" />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-amber-500 transition-colors z-10" size={20} />
+                            <input
+                                type="text"
+                                placeholder="BUSCAR LIBRO..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-[2rem] py-5 pl-14 pr-6 text-[13px] font-bold tracking-widest outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-white/10 relative z-10 shadow-2xl"
+                            />
+                        </motion.div>
+                    </div>
                 )}
 
                 {selectedBook && (

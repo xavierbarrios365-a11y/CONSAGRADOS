@@ -78,8 +78,12 @@ BEGIN
     -- BLINDAJE: NUNCA tocar streak desde el sync — solo update_agent_streak lo maneja
     streak_count = agentes.streak_count,
     last_streak_date = agentes.last_streak_date,
-    last_attendance = EXCLUDED.last_attendance,
-    weekly_tasks = EXCLUDED.weekly_tasks,
+    -- BLINDAJE: Nunca sobrescribir asistencia o tareas con valores vacíos si ya existen
+    last_attendance = COALESCE(NULLIF(EXCLUDED.last_attendance, ''), agentes.last_attendance),
+    weekly_tasks = CASE 
+      WHEN jsonb_array_length(EXCLUDED.weekly_tasks) > 0 THEN EXCLUDED.weekly_tasks
+      ELSE agentes.weekly_tasks
+    END,
     notif_prefs = CASE 
       WHEN (EXCLUDED.notif_prefs->'read' IS NOT NULL AND jsonb_array_length(EXCLUDED.notif_prefs->'read') > 0) 
            OR (EXCLUDED.notif_prefs->'deleted' IS NOT NULL AND jsonb_array_length(EXCLUDED.notif_prefs->'deleted') > 0)
@@ -177,5 +181,34 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.update_agent_admin(TEXT, TEXT, INTEGER, TEXT, TEXT, TEXT, TEXT, TEXT) TO anon;
+
+-- 10. Incremento Atómico de Puntos (Blindaje Nuclear contra condiciones de carrera)
+CREATE OR REPLACE FUNCTION public.atomic_increment_points(
+  p_agent_id TEXT, 
+  p_type TEXT, 
+  p_amount INTEGER, 
+  p_multiplier FLOAT DEFAULT 1.0
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_adjusted_amount INTEGER;
+BEGIN
+  v_adjusted_amount := round(p_amount * p_multiplier);
+  
+  IF p_type = 'BIBLIA' THEN
+    UPDATE public.agentes SET bible = bible + p_amount, xp = xp + v_adjusted_amount, updated_at = now() WHERE id = p_agent_id;
+  ELSIF p_type = 'APUNTES' THEN
+    UPDATE public.agentes SET notes = notes + p_amount, xp = xp + v_adjusted_amount, updated_at = now() WHERE id = p_agent_id;
+  ELSIF p_type = 'LIDERAZGO' THEN
+    UPDATE public.agentes SET leadership = leadership + p_amount, xp = xp + v_adjusted_amount, updated_at = now() WHERE id = p_agent_id;
+  ELSIF p_type = 'XP' THEN
+    UPDATE public.agentes SET xp = xp + v_adjusted_amount, updated_at = now() WHERE id = p_agent_id;
+  END IF;
+  
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.atomic_increment_points(TEXT, TEXT, INTEGER, FLOAT) TO anon;
 
 NOTIFY pgrst, 'reload schema';

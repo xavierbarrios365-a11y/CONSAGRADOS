@@ -248,7 +248,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                 {editingAgent?.id === agent.id ? (
                                     <div className="flex-1 space-y-3 w-full">
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <input type="text" value={editingAgent.name} onChange={e => setEditingAgent({ ...editingAgent, name: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none placeholder:text-white/30" placeholder="NOMBRE" />
+                                            <input type="text" value={editingAgent.name} onChange={e => setEditingAgent({ ...editingAgent, name: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="NOMBRE" />
                                             <input type="number" value={editingAgent.xp} onChange={e => setEditingAgent({ ...editingAgent, xp: parseInt(e.target.value) || 0 })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none placeholder:text-white/30" placeholder="XP" />
                                             <select value={editingAgent.rank} onChange={e => setEditingAgent({ ...editingAgent, rank: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
                                                 <option value="RECLUTA">RECLUTA</option>
@@ -264,8 +264,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                             </select>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <input type="text" value={editingAgent.whatsapp || ''} onChange={e => setEditingAgent({ ...editingAgent, whatsapp: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none placeholder:text-white/30" placeholder="WHATSAPP" />
-                                            <input type="text" value={editingAgent.pin || ''} onChange={e => setEditingAgent({ ...editingAgent, pin: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none placeholder:text-white/30" placeholder="PIN" />
+                                            <input type="text" value={editingAgent.whatsapp || ''} onChange={e => setEditingAgent({ ...editingAgent, whatsapp: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="WHATSAPP" />
+                                            <input type="text" value={editingAgent.pin || ''} onChange={e => setEditingAgent({ ...editingAgent, pin: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="PIN" />
 
                                             <div className="md:col-span-2 relative">
                                                 <input
@@ -314,7 +314,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                                 {agent.name.substring(0, 2).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-white uppercase tracking-wider">{agent.name}</p>
+                                                <p className="text-sm font-bold text-white tracking-wider">{agent.name}</p>
                                                 <p className="text-[9px] text-white/50 uppercase tracking-widest">{agent.id} • {agent.xp} XP</p>
                                             </div>
                                         </div>

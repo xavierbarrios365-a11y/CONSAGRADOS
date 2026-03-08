@@ -1346,27 +1346,12 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
 
         if (insertError) throw insertError;
 
-        // 6. Publicar "DESPLIEGUE" en el Muro de Noticias si es Asistencia
+        // 6. Enviar notificación de asistencia a Telegram (ONLY TELEGRAM)
         if (tipo === 'ASISTENCIA') {
             try {
-                await supabase.from('asistencia_visitas').insert({
-                    id: `NEWS - ${Date.now()} `,
-                    agent_id: agentId,
-                    agent_name: agentName,
-                    tipo: 'DESPLIEGUE',
-                    detalle: `El agente ${agentName} se ha desplegado en el centro de operaciones.`,
-                    registrado_en: now.toISOString()
-                });
+                await sendTelegramAlert(`✅ <b>NUEVA ASISTENCIA</b>\n\nAgente: <b>${agentName}</b> [<code>${agentId}</code>]\nBono Evento: <b>${eventMultiplier}x</b>\nReportadx por: ${reporterName || 'SISTEMA'}`);
             } catch (err) {
-                console.error("No se pudo publicar noticia de DESPLIEGUE", err);
-            }
-
-            // 7. Enviar notificaciones de Telegram y Push
-            try {
-                await sendTelegramAlert(`✅ <b>NUEVA ASISTENCIA < /b>\n\nAgente: <b>${agentName}</b > [<code>${agentId} < /code>]\nBono Evento: <b>${eventMultiplier}x</b >\nReportadx por: ${reporterName || 'SISTEMA'}`);
-                await sendPushBroadcast(`REGISTRO TÁCTICO`, `El agente ${agentName} se ha reportado en el centro de operaciones.`);
-            } catch (err) {
-                console.error("Fallo al enviar notificación de asistencia:", err);
+                console.error("Fallo al enviar notificación de asistencia a Telegram:", err);
             }
         }
 
@@ -1606,9 +1591,10 @@ export const fetchNewsFeedSupabase = async (): Promise<any[]> => {
         const { data, error } = await supabase
             .from('asistencia_visitas')
             .select('*')
+            .not('tipo', 'in', '("ASISTENCIA", "BIBLIA", "APUNTES", "LIDERAZGO", "CONDUCTA", "RECOMPENSA_VISITA", "VISITANTE", "EVENTO_CONFIRMADO", "DIRECTOR_ASISTENCIA", "SANCION_AUTOMATICA")')
             .gte('registrado_en', fortyEightHoursAgo)
             .order('registrado_en', { ascending: false })
-            .limit(100); // Traer suficientes para paginación y filtrado
+            .limit(100);
 
         if (error) throw error;
 

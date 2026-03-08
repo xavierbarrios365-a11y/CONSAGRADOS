@@ -372,6 +372,16 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       try {
         const res = await updateAgentPointsSupabase(agent.id, type, points);
         if (res.success) {
+          // NOTIFICACIÓN TELEGRAM (ONLY TELEGRAM)
+          try {
+            const emoji = points > 0 ? '🔥' : '⚖️';
+            const action = points > 0 ? 'ganado' : 'perdido';
+            const msg = `${emoji} [CONTROL TÁCTICO]: <b>${agent.name}</b> ha ${action} <b>${absPoints}</b> puntos en <b>${type}</b>.`;
+            await sendTelegramAlert(msg);
+          } catch (telErr) {
+            console.error("Error notificando actualización de puntos a Telegram:", telErr);
+          }
+
           showAlert({
             title: "PUNTOS ACTUALIZADOS",
             message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + (points * ((agent.streakCount || 0) >= 5 ? 1.25 : 1))} XP`,

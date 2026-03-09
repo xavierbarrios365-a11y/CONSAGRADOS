@@ -1,129 +1,90 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HelpCircle, Star, Flame, Trophy, Zap, ChevronDown, ChevronUp, Book, Shield, Swords, Info, X } from 'lucide-react';
-
-interface FAQItem {
-    question: string;
-    answer: React.ReactNode;
-    icon: React.ReactNode;
-}
-
-const FAQ_DATA: FAQItem[] = [
-    {
-        question: "¿Cómo gano puntos de Honor (XP)?",
-        icon: <Zap className="text-yellow-400" size={18} />,
-        answer: "Los Puntos de Honor se obtienen mediante la participación en actividades del Mando Central: asistencias a reuniones, toma de apuntes, estudio bíblico y misiones especiales. Cada actividad tiene un valor base que puede ser multiplicado por tu racha táctica."
-    },
-    {
-        question: "Sistema de Rachas (Streak Multiplier)",
-        icon: <Flame className="text-orange-500" size={18} />,
-        answer: (
-            <div className="space-y-2">
-                <p>Mantener una racha activa (asistencia continua) aplica multiplicadores a todas tus ganancias de XP:</p>
-                <ul className="list-disc list-inside text-[10px] space-y-1 text-white/60">
-                    <li><span className="text-orange-400 font-bold">5 DÍAS:</span> Multiplicador 1.25x</li>
-                    <li><span className="text-orange-400 font-bold">10 DÍAS:</span> Multiplicador 1.50x</li>
-                    <li><span className="text-orange-400 font-bold">20 DÍAS:</span> Multiplicador 1.75x</li>
-                    <li><span className="text-orange-400 font-bold">30 DÍAS:</span> Multiplicador Elitista 2.0x</li>
-                </ul>
-                <p className="text-[9px] text-red-400/80 font-bold italic">⚠️ NOTA: Las sanciones por inasistencia también se multiplican según tu racha actual.</p>
-            </div>
-        )
-    },
-    {
-        question: "Rangos y Ascensos",
-        icon: <Shield className="text-blue-400" size={18} />,
-        answer: "Los agentes comienzan como RECLUTAS. Al acumular XP y completar misiones en la Academia, desbloqueas nuevos rangos (ACTIVO, CONSAGRADO, REFERENTE y LÍDER). El ascenso no solo otorga prestigio, sino que desbloquea misiones de mayor nivel y acceso a sectores restringidos."
-    },
-    {
-        question: "Proyecto Nehemías (Juego IQ)",
-        icon: <HelpCircle className="text-purple-400" size={18} />,
-        answer: "Este es un entrenamiento mental de 100 niveles. Cada nivel superado otorga XP. Si te quedas atorado, puedes usar una 'Clave Bíblica' para desbloquear una pista. Las respuestas correctas demuestran tu evolución cognitiva como agente."
-    },
-    {
-        question: "Arena de Duelos 1v1",
-        icon: <Swords className="text-red-500" size={18} />,
-        answer: "Duelos directos entre agentes para probar conocimientos. Estos encuentros son 'Protocolo de Honor', lo que significa que no arriesgas tus puntos de XP base. Ganar aumenta tus estadísticas de combate y tu posición en el radar de honor."
-    }
-];
+import { X, HelpCircle, BookOpen, Star, Trophy, Zap, ChevronRight, Award } from 'lucide-react';
 
 interface TacticalHelpProps {
     onClose: () => void;
 }
 
-const TacticalHelp: React.FC<TacticalHelpProps> = ({ onClose }) => {
-    const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
+const FAQ_ITEMS = [
+    {
+        icon: <Zap size={14} className="text-yellow-400" />,
+        title: "SISTEMA DE XP Y RACHAS",
+        content: "Los XP se obtienen por asistencia (20) y misiones. Tu racha activa multiplica los puntos ganados y perdidos: 5d (1.25x), 10d (1.50x), 20d (1.75x) y 30+d (2.0x)."
+    },
+    {
+        icon: <Award size={14} className="text-blue-400" />,
+        title: "RANGOS OFICIALES",
+        content: "RECLUTA (0-500), ACTIVO (501-1500), CONSAGRADO (1501-3000), REFERENTE (3001-5000) y LÍDER (5000+). Las promociones desbloquean misiones de mayor calibre."
+    },
+    {
+        icon: <Trophy size={14} className="text-green-400" />,
+        title: "ARENA DE DUELOS",
+        content: "Duelos en tiempo real sin riesgo de XP. Sirven para mejorar tus estadísticas de honor y ganar insignias sociales en el Intel Feed."
+    },
+    {
+        icon: <Star size={14} className="text-purple-400" />,
+        title: "PROYECTO NEHEMÍAS",
+        content: "Juego de IQ de 100 niveles. Cada 10 niveles superados, la recompensa aumenta: 1-10 (1 XP), 11-20 (2 XP) y así sucesivamente hasta 10 XP por nivel."
+    }
+];
+
+export const TacticalHelp: React.FC<TacticalHelpProps> = ({ onClose }) => {
+    const [openIndex, setOpenIndex] = React.useState<number | null>(0);
 
     return (
-        <div className="fixed inset-0 z-[100] bg-[#000814]/95 backdrop-blur-xl text-white font-montserrat flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/20 rounded-xl border border-blue-500/40">
-                        <Info className="text-blue-400" size={18} />
+        <div className="fixed inset-0 z-[100] bg-[#000814]/95 backdrop-blur-2xl flex flex-col font-montserrat overflow-hidden">
+            {/* HEADER ULTRA COMPACTO */}
+            <div className="p-3 border-b border-white/5 flex justify-between items-center bg-black/60">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                        <HelpCircle className="text-blue-400" size={16} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bebas tracking-widest leading-none">CENTRO DE INTELIGENCIA</h1>
-                        <p className="text-[7px] text-blue-400 font-bold uppercase tracking-widest mt-1">Protocolos de Operación</p>
+                        <h1 className="text-base font-bebas tracking-widest leading-none">TERMINAL DE AYUDA</h1>
+                        <p className="text-[6px] text-blue-400 font-black uppercase mt-0.5 tracking-widest">Protocolos de Operación</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-full transition-colors">
-                    <X size={20} />
+                <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-full transition-colors">
+                    <X size={18} />
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-[1.5rem] mb-4">
-                    <h3 className="text-[10px] font-bebas tracking-widest text-blue-400 mb-1 uppercase">Terminal de Operaciones</h3>
-                    <p className="text-[9px] text-white/70 leading-relaxed font-bold">
-                        Documentación esencial para tu desarrollo táctico.
-                        Comprender los sistemas de XP, rachas y rangos es vital para escalar en la jerarquía.
-                    </p>
-                </div>
-
-                <div className="space-y-3">
-                    {FAQ_DATA.map((item, index) => (
-                        <motion.div
-                            key={index}
-                            className={`border rounded-3xl transition-all overflow-hidden ${expandedIndex === index ? 'bg-white/5 border-white/20' : 'bg-black/20 border-white/5'}`}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {FAQ_ITEMS.map((item, idx) => (
+                    <div key={idx} className="border border-white/5 rounded-xl bg-white/[0.02] overflow-hidden">
+                        <button
+                            onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+                            className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors"
                         >
-                            <button
-                                onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
-                                className="w-full p-3 flex items-center justify-between gap-3"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <div className="p-1.5 bg-white/5 rounded-lg">
-                                        {item.icon}
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-left">{item.question}</span>
-                                </div>
-                                {expandedIndex === index ? <ChevronUp size={14} className="text-white/40" /> : <ChevronDown size={14} className="text-white/40" />}
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {item.icon}
+                                <span className="text-[10px] font-black font-bebas tracking-widest">{item.title}</span>
+                            </div>
+                            <ChevronRight size={12} className={`text-gray-500 transition-transform ${openIndex === idx ? 'rotate-90' : ''}`} />
+                        </button>
 
-                            <AnimatePresence>
-                                {expandedIndex === index && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="px-4 pb-4 pt-1"
-                                    >
-                                        <div className="h-[1px] bg-white/5 mb-3" />
-                                        <div className="text-[9px] text-white/60 leading-relaxed font-medium">
-                                            {item.answer}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    ))}
-                </div>
-
-                <div className="pt-8 pb-12 flex flex-col items-center gap-4 opacity-50">
-                    <div className="w-12 h-12 border border-white/10 rounded-full flex items-center justify-center">
-                        <Star size={18} className="text-[#FFB700]" />
+                        <AnimatePresence>
+                            {openIndex === idx && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="px-3 pb-3"
+                                >
+                                    <p className="text-[9px] text-gray-400 font-bold leading-relaxed border-t border-white/5 pt-2">
+                                        {item.content}
+                                    </p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
-                    <p className="text-[8px] font-bold tracking-[0.4em] uppercase">Soli Deo Gloria</p>
-                </div>
+                ))}
+            </div>
+
+            {/* FOOTER COMPACTO */}
+            <div className="p-3 bg-black/40 border-t border-white/5 text-center">
+                <p className="text-[7px] text-gray-500 font-black uppercase tracking-[0.3em]">Consagrados Tactical OS v3.0</p>
             </div>
         </div>
     );

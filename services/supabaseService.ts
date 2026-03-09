@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 export { supabase };
-import { Agent, Badge, InboxNotification, UserRole, Rank, DailyVerse as DailyVerseType } from '../types';
+import { Agent, Badge, InboxNotification, UserRole, Rank, DailyVerse as DailyVerseType, DuelChallenge } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
 
 /**
@@ -3237,21 +3237,20 @@ export const acceptDuelChallenge = async (challengeId: string, retadorId: string
  */
 export const submitIQLevelComplete = async (agentId: string, level: number): Promise<{ success: boolean; rewardedXp?: number; error?: string }> => {
     try {
+        const upperId = agentId.toUpperCase();
         // 1. Calcular XP basado en el nivel (1-10: 1, 11-20: 2, etc.)
         const rewardedXp = Math.floor((level - 1) / 10) + 1;
 
         // 2. Actualizar el nivel de IQ del agente (solo si es mayor al actual)
-        const { data: agentData } = await supabase.from('agentes').select('name, iq_level').eq('id', agentId).single();
+        const { data: agentData } = await supabase.from('agentes').select('name, iq_level').eq('id', upperId).single();
         const currentIq = agentData?.iq_level || 0;
 
         if (level > currentIq) {
-            await supabase.from('agentes').update({ iq_level: level }).eq('id', agentId);
+            await supabase.from('agentes').update({ iq_level: level }).eq('id', upperId);
 
             // --- SOCIAL: INTEL FEED ---
-            // Publicar solo hitos importantes o cada cierto avance (ej. cada nivel)
-            // Se usa publishNewsSupabase para que aparezca en el feed global
             await publishNewsSupabase(
-                agentId,
+                upperId,
                 agentData?.name || 'Agente',
                 'IQ_GAME',
                 `¡NUEVO HIT REEALIZADO! El agente ha escalado al NIVEL ${level} del Proyecto Nehemías.`
@@ -3259,8 +3258,7 @@ export const submitIQLevelComplete = async (agentId: string, level: number): Pro
         }
 
         // 3. Otorgar XP usando el incremento atómico
-        // Nota: El multiplicador de racha NO aplica a juegos de IQ para evitar inflar XP
-        const res = await updateAgentPointsSupabase(agentId, 'XP', rewardedXp, 1.0);
+        const res = await updateAgentPointsSupabase(upperId, 'XP', rewardedXp, 1.0);
 
         if (!res.success) throw new Error(res.error);
 

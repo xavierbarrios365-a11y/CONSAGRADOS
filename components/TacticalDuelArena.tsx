@@ -35,10 +35,10 @@ const TacticalDuelArena: React.FC<TacticalDuelArenaProps> = ({ currentUser, onCl
         if (currentUser) {
             const challengeSub = supabase
                 .channel('public:duelo_desafios')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'duelo_desafios', filter: `oponente_id=eq.${currentUser.id}` }, (payload) => {
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'duelo_desafios', filter: `oponente_id=eq.${currentUser.id.toUpperCase()}` }, (payload) => {
                     setChallenges(prev => [...prev, payload.new as DuelChallenge]);
                 })
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duelo_desafios', filter: `retador_id=eq.${currentUser.id}` }, (payload) => {
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duelo_desafios', filter: `retador_id=eq.${currentUser.id.toUpperCase()}` }, (payload) => {
                     if (payload.new.status === 'ACEPTADO' && payload.new.session_id) {
                         handleEnterSession(payload.new.session_id);
                     }
@@ -78,7 +78,7 @@ const TacticalDuelArena: React.FC<TacticalDuelArenaProps> = ({ currentUser, onCl
                 const refreshed = payload.new;
                 setCurrentSession(refreshed);
                 if (currentUser) {
-                    const isA = refreshed.gladiator_a_id === currentUser.id;
+                    const isA = String(refreshed.gladiator_a_id).toUpperCase() === String(currentUser.id).toUpperCase();
                     setMyScore(isA ? refreshed.score_a : refreshed.score_b);
                     setOpponentScore(isA ? refreshed.score_b : refreshed.score_a);
                 }
@@ -100,9 +100,9 @@ const TacticalDuelArena: React.FC<TacticalDuelArenaProps> = ({ currentUser, onCl
         if (currentUser) {
             const [agentsData, challengesData] = await Promise.all([
                 fetchAgentsFromSupabase(),
-                fetchMyChallenges(currentUser.id)
+                fetchMyChallenges(currentUser.id.toUpperCase())
             ]);
-            setAgents(agentsData.filter(a => a.id !== currentUser.id));
+            setAgents(agentsData.filter(a => String(a.id).toUpperCase() !== String(currentUser.id).toUpperCase()));
             setChallenges(challengesData);
         }
         setIsLoading(false);
@@ -313,21 +313,25 @@ const TacticalDuelArena: React.FC<TacticalDuelArenaProps> = ({ currentUser, onCl
                                                     onClick={() => {
                                                         const isCorrect = opt === currentQuestion.correct_answer;
                                                         setHasAnswered(true);
-                                                        const isA = currentSession.gladiator_a_id === currentUser?.id;
-                                                        const newScore = (isA ? currentSession.score_a : currentSession.score_b) + (isCorrect ? 10 : 0);
-                                                        supabase.from('duelo_sesiones').update(isA ? { score_a: newScore } : { score_b: newScore }).eq('id', currentSession.id).then(() => {
-                                                            setTimeout(() => {
-                                                                const nextIdx = questions.findIndex(q => q.id === currentQuestion.id) + 1;
-                                                                if (nextIdx < questions.length) {
-                                                                    setCurrentQuestion(questions[nextIdx]);
-                                                                    setHasAnswered(false);
-                                                                } else {
-                                                                    setActiveTab('ARENA');
-                                                                    setCurrentSession(null);
-                                                                    if (onUpdateNeeded) onUpdateNeeded();
-                                                                }
-                                                            }, 1000);
-                                                        });
+                                                        const isA = String(currentSession.gladiator_a_id).toUpperCase() === String(currentUser?.id).toUpperCase();
+                                                        const newScore = (isA ? (currentSession.score_a || 0) : (currentSession.score_b || 0)) + (isCorrect ? 10 : 0);
+
+                                                        supabase.from('duelo_sesiones')
+                                                            .update(isA ? { score_a: newScore } : { score_b: newScore })
+                                                            .eq('id', currentSession.id)
+                                                            .then(() => {
+                                                                setTimeout(() => {
+                                                                    const nextIdx = questions.findIndex(q => q.id === currentQuestion.id) + 1;
+                                                                    if (nextIdx < questions.length) {
+                                                                        setCurrentQuestion(questions[nextIdx]);
+                                                                        setHasAnswered(false);
+                                                                    } else {
+                                                                        setActiveTab('ARENA');
+                                                                        setCurrentSession(null);
+                                                                        if (onUpdateNeeded) onUpdateNeeded();
+                                                                    }
+                                                                }, 1000);
+                                                            });
                                                     }}
                                                     className={`py-3.5 rounded-lg font-bebas tracking-widest text-[10px] ${hasAnswered ? opt === currentQuestion.correct_answer ? 'bg-green-600 text-white' : 'bg-white/5 text-white/30' : 'bg-white/5 border border-white/10 active:scale-95'}`}
                                                 >

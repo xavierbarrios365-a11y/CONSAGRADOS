@@ -96,7 +96,7 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
         // SEGURIDAD: Solo seleccionamos las columnas permitidas por el protocolo de blindaje
         const { data, error } = await supabase
             .from('agentes')
-            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks, pin, whatsapp, baptism_status, birthday, relationship_with_god, must_change_password, is_ai_profile_pending, tactical_stats, tactor_summary');
+            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks, pin, whatsapp, baptism_status, birthday, relationship_with_god, must_change_password, is_ai_profile_pending, tactical_stats, tactor_summary, iq_level');
         if (error) {
             console.error('❌ Error obteniendo agentes de Supabase:', error);
             return [];
@@ -104,10 +104,11 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
 
         if (!data || data.length === 0) return [];
 
-        return data.map((d: any) => ({
+        return data.filter((d: any) => d.id && d.id.trim() !== '').map((d: any) => ({
             id: d.id,
             name: d.nombre,
             xp: d.xp || 0,
+            iqLevel: d.iq_level || 1,
             rank: (() => {
                 const name = String(d.nombre || '').toUpperCase();
                 const role = String(d.user_role || '').toUpperCase();
@@ -3235,36 +3236,68 @@ export const acceptDuelChallenge = async (challengeId: string, retadorId: string
 /**
  * @description Registra que un agente completó un nivel de IQ y otorga XP escalado
  */
-export const submitIQLevelComplete = async (agentId: string, level: number): Promise<{ success: boolean; rewardedXp?: number; error?: string }> => {
+export const submitIQLevelComplete = async (agentId: string, level: number, timeTakenSecs: number = 0): Promise<{ success: boolean; rewardedXp?: number; error?: string }> => {
+    console.log('IQ_SERVER: Iniciando procesamiento de nivel...', { agentId, level, timeTakenSecs });
     try {
         const upperId = agentId.toUpperCase();
+        console.log('IQ_SERVER: ID Normalizado:', upperId);
+
         // 1. Calcular XP basado en el nivel (1-10: 1, 11-20: 2, etc.)
         const rewardedXp = Math.floor((level - 1) / 10) + 1;
+        console.log('IQ_SERVER: XP a recompensar:', rewardedXp);
 
-        // 2. Actualizar el nivel de IQ del agente (solo si es mayor al actual)
-        const { data: agentData } = await supabase.from('agentes').select('name, iq_level').eq('id', upperId).single();
-        const currentIq = agentData?.iq_level || 0;
+        // 2. Actualizar el nivel de IQ usando RPC seguro (bypass RLS)
+        console.log('IQ_SERVER: Ejecutando RPC process_iq_level_complete...');
+        const { data: rpcData, error: rpcError } = await supabase.rpc('process_iq_level_complete', {
+            p_agent_id_input: agentId,
+            p_level_achieved: level,
+            p_time_taken_secs: timeTakenSecs
+        });
+
+        if (rpcError) {
+            console.error('IQ_SERVER: Error en RPC:', rpcError);
+            throw new Error(`Fallo al procesar victoria: ${rpcError.message}`);
+        }
+
+        if (!rpcData || !rpcData.success) {
+            console.error('IQ_SERVER: Error devuelto por RPC:', rpcData?.error);
+            throw new Error(`Error BD: ${rpcData?.error || 'Desconocido'}`);
+        }
+
+        const realId = rpcData.real_id;
+        const currentIq = rpcData.current_iq;
+        console.log('IQ_SERVER: Data agente recuperada del RPC:', { id: realId, nombre: rpcData.nombre, currentIq });
 
         if (level > currentIq) {
-            await supabase.from('agentes').update({ iq_level: level }).eq('id', upperId);
+            console.log('IQ_SERVER: Nivel IQ actualizado en DB mediante RPC.');
 
             // --- SOCIAL: INTEL FEED ---
-            await publishNewsSupabase(
-                upperId,
-                agentData?.name || 'Agente',
-                'IQ_GAME',
-                `¡NUEVO HIT REEALIZADO! El agente ha escalado al NIVEL ${level} del Proyecto Nehemías.`
-            );
+            console.log('IQ_SERVER: Publicando en Intel Feed...');
+            try {
+                await publishNewsSupabase(
+                    realId,
+                    rpcData.nombre || 'Agente',
+                    'IQ_GAME',
+                    `¡NUEVO HIT REEALIZADO! El agente ha escalado al NIVEL ${level} del Proyecto Nehemías.`
+                );
+            } catch (socialErr) {
+                console.warn('IQ_SERVER: Error no fatal en Intel Feed:', socialErr);
+            }
+        } else {
+            console.log('IQ_SERVER: Nivel ya completado anteriormente o menor al actual.');
         }
 
         // 3. Otorgar XP usando el incremento atómico
-        const res = await updateAgentPointsSupabase(upperId, 'XP', rewardedXp, 1.0);
+        console.log('IQ_SERVER: Incrementando puntos XP...');
+        const res = await updateAgentPointsSupabase(realId, 'XP', rewardedXp, 1.0);
+        console.log('IQ_SERVER: Resultado incremento XP:', res);
 
         if (!res.success) throw new Error(res.error);
 
+        console.log('IQ_SERVER: Nivel completado con éxito.');
         return { success: true, rewardedXp };
     } catch (e: any) {
-        console.error('Error completando nivel IQ:', e);
+        console.error('IQ_SERVER: FALLO CRÍTICO en submitIQLevelComplete:', e);
         return { success: false, error: e.message };
     }
 };

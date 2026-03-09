@@ -33,7 +33,7 @@ const FAQ_DATA: FAQItem[] = [
     {
         question: "Rangos y Ascensos",
         icon: <Shield className="text-blue-400" size={18} />,
-        answer: "Los agentes comienzan como RECLUTAS. Al acumular XP, desbloqueas nuevos rangos (EXPLORADOR, COMUNICADOR, etc.). El ascenso no solo otorga prestigio, sino que desbloquea misiones de mayor nivel en la Academia y acceso a sectores restringidos."
+        answer: "Los agentes comienzan como RECLUTAS. Al acumular XP y completar misiones en la Academia, desbloqueas nuevos rangos (ACTIVO, CONSAGRADO, REFERENTE y LÍDER). El ascenso no solo otorga prestigio, sino que desbloquea misiones de mayor nivel y acceso a sectores restringidos."
     },
     {
         question: "Proyecto Nehemías (Juego IQ)",
@@ -56,27 +56,27 @@ const TacticalHelp: React.FC<TacticalHelpProps> = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[100] bg-[#000814]/95 backdrop-blur-xl text-white font-montserrat flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/40">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/40">
-                        <Info className="text-blue-400" size={24} />
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-xl border border-blue-500/40">
+                        <Info className="text-blue-400" size={18} />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bebas tracking-widest">CENTRO DE INTELIGENCIA Y SOPORTE</h1>
-                        <p className="text-[8px] text-blue-400 font-bold uppercase tracking-widest">Protocolos de Operación y Preguntas Frecuentes</p>
+                        <h1 className="text-lg font-bebas tracking-widest leading-none">CENTRO DE INTELIGENCIA</h1>
+                        <p className="text-[7px] text-blue-400 font-bold uppercase tracking-widest mt-1">Protocolos de Operación</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                    <X size={24} />
+                <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-full transition-colors">
+                    <X size={20} />
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <div className="bg-blue-900/10 border border-blue-500/20 p-6 rounded-[2.5rem] mb-6">
-                    <h3 className="text-sm font-bebas tracking-widest text-blue-400 mb-2">BIENVENIDO, AGENTE</h3>
-                    <p className="text-[10px] text-white/70 leading-relaxed font-bold">
-                        Esta terminal contiene la documentación esencial para tu desarrollo táctico.
-                        Comprender los sistemas de XP, rachas y rangos es vital para escalar en la jerarquía de Consagrados.
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="bg-blue-900/10 border border-blue-500/20 p-4 rounded-[1.5rem] mb-4">
+                    <h3 className="text-[10px] font-bebas tracking-widest text-blue-400 mb-1 uppercase">Terminal de Operaciones</h3>
+                    <p className="text-[9px] text-white/70 leading-relaxed font-bold">
+                        Documentación esencial para tu desarrollo táctico.
+                        Comprender los sistemas de XP, rachas y rangos es vital para escalar en la jerarquía.
                     </p>
                 </div>
 
@@ -88,15 +88,15 @@ const TacticalHelp: React.FC<TacticalHelpProps> = ({ onClose }) => {
                         >
                             <button
                                 onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
-                                className="w-full p-4 flex items-center justify-between gap-4"
+                                className="w-full p-3 flex items-center justify-between gap-3"
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/5 rounded-xl">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-white/5 rounded-lg">
                                         {item.icon}
                                     </div>
-                                    <span className="text-[11px] font-black uppercase tracking-wider text-left">{item.question}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-left">{item.question}</span>
                                 </div>
-                                {expandedIndex === index ? <ChevronUp size={16} className="text-white/40" /> : <ChevronDown size={16} className="text-white/40" />}
+                                {expandedIndex === index ? <ChevronUp size={14} className="text-white/40" /> : <ChevronDown size={14} className="text-white/40" />}
                             </button>
 
                             <AnimatePresence>
@@ -105,10 +105,10 @@ const TacticalHelp: React.FC<TacticalHelpProps> = ({ onClose }) => {
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: 'auto', opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        className="px-6 pb-6 pt-2"
+                                        className="px-4 pb-4 pt-1"
                                     >
-                                        <div className="h-[1px] bg-white/5 mb-4" />
-                                        <div className="text-[10px] text-white/60 leading-relaxed font-medium">
+                                        <div className="h-[1px] bg-white/5 mb-3" />
+                                        <div className="text-[9px] text-white/60 leading-relaxed font-medium">
                                             {item.answer}
                                         </div>
                                     </motion.div>

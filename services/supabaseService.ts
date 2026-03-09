@@ -464,15 +464,31 @@ export const deductPercentagePointsSupabase = async (agentId: string, percentage
 };
 
 /**
+ * @description Obtiene el multiplicador de racha basado en la cantidad de días consecutivos.
+ */
+export const getStreakMultiplier = (streakCount: number): number => {
+    if (streakCount >= 30) return 2.0;
+    if (streakCount >= 20) return 1.75;
+    if (streakCount >= 10) return 1.50;
+    if (streakCount >= 5) return 1.25;
+    return 1.0;
+};
+
+/**
  * @description Incremento atómico de puntos usando el nuevo blindaje SQL
  */
-export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number, multiplier: number = 1.0): Promise<{ success: boolean, error?: string }> => {
+export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' | 'APUNTES' | 'LIDERAZGO' | 'XP', amount: number, multiplier: number = 1.0, streakCount?: number): Promise<{ success: boolean, error?: string }> => {
     try {
+        let finalMultiplier = multiplier;
+        if (streakCount !== undefined && multiplier === 1.0) {
+            finalMultiplier = getStreakMultiplier(streakCount);
+        }
+
         const { data, error } = await supabase.rpc('atomic_increment_points', {
             p_agent_id: agentId,
             p_type: type,
             p_amount: amount,
-            p_multiplier: multiplier
+            p_multiplier: finalMultiplier
         });
 
         if (error) throw error;
@@ -595,23 +611,11 @@ export const applyAbsencePenaltiesSupabase = async (): Promise<{ success: boolea
         let count = 0;
         // 4. Aplicar penalización de -10 * multiplicador de racha
         for (const agent of agentsToPenalize) {
-            let multiplier = 1.0;
-            const streak = agent.streak_count || 0;
-            if (streak >= 30) multiplier = 2.0;
-            else if (streak >= 20) multiplier = 1.75;
-            else if (streak >= 10) multiplier = 1.50;
-            else if (streak >= 5) multiplier = 1.25;
+            const multiplier = getStreakMultiplier(agent.streak_count || 0);
+            const penaltyAmount = -10; // Pasamos el valor negativo a la RPC
 
-            const penaltyAmount = Math.round(10 * multiplier);
-            let agentXp = Number(agent.xp);
-            if (isNaN(agentXp)) agentXp = 0;
-            const newXp = Math.max(0, agentXp - penaltyAmount);
-
-            const { error: updateError } = await supabase
-                .from('agentes')
-                .update({ xp: newXp })
-                .eq('id', agent.id);
-            if (!updateError) count++;
+            const res = await updateAgentPointsSupabase(agent.id, 'XP', penaltyAmount, multiplier);
+            if (res.success) count++;
         }
 
         // 5. Registrar ejecución de sanción global
@@ -1323,7 +1327,10 @@ export const submitTransactionSupabase = async (agentId: string, tipo: string, r
         // 4. Asignar 10 XP Base de Asistencia * Bono de Evento 
         // Nota: updateAgentPointsSupabase se encargará de añadir el Multiplicador de Racha adicionalmente.
         if (tipo === 'ASISTENCIA') {
-            await updateAgentPointsSupabase(agentId, 'XP', 10 * eventMultiplier);
+            const { data: streakData } = await supabase.from('agentes').select('streak_count').eq('id', agentId).single();
+            const currentStreak = streakData?.streak_count || 0;
+
+            await updateAgentPointsSupabase(agentId, 'XP', 10 * eventMultiplier, 1.0, currentStreak);
 
             // Actualizar su última fecha de asistencia
             await supabase
@@ -3127,6 +3134,140 @@ export const bulkSendCredentialsSupabase = async (): Promise<{ success: boolean;
     } catch (error: any) {
         console.error('Error bulk sending credentials:', error);
         return { success: false, error: error.message };
+    }
+};
+
+// ==========================================
+// GAME EXPANSION: Arena Online & Proyecto Nehemías
+// ==========================================
+
+/**
+ * @description Envía un desafío de duelo a otro agente
+ */
+export const sendDuelChallenge = async (retadorId: string, oponenteId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const { error } = await supabase
+            .from('duelo_desafios')
+            .insert({
+                retador_id: retadorId,
+                oponente_id: oponenteId,
+                status: 'PENDIENTE'
+            });
+
+        if (error) throw error;
+
+        // --- SOCIAL: NOTIFICACIÓN PUSH ---
+        // Obtener datos del retador y token del oponente
+        const [{ data: retador }, { data: oponente }] = await Promise.all([
+            supabase.from('agentes').select('name').eq('id', retadorId).single(),
+            supabase.from('agentes').select('push_token').eq('id', oponenteId).single()
+        ]);
+
+        if (oponente?.push_token) {
+            await sendPushBroadcast(
+                "⚔️ NUEVO DESAFÍO RECIBIDO",
+                `${retador?.name || 'Un agente'} te ha desafiado a un duelo de honor en la Arena.`,
+                oponente.push_token,
+                'duel'
+            );
+        }
+
+        return { success: true };
+    } catch (e: any) {
+        console.error('Error enviando desafío de duelo:', e);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Obtiene los desafíos pendientes para el agente actual
+ */
+export const fetchMyChallenges = async (agentId: string): Promise<DuelChallenge[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('duelo_desafios')
+            .select('*')
+            .eq('oponente_id', agentId)
+            .eq('status', 'PENDIENTE');
+
+        if (error) throw error;
+        return data || [];
+    } catch (e: any) {
+        console.error('Error obteniendo mis desafíos:', e);
+        return [];
+    }
+};
+
+/**
+ * @description Acepta un desafío y crea una sesión de duelo
+ */
+export const acceptDuelChallenge = async (challengeId: string, retadorId: string, oponenteId: string): Promise<{ success: boolean; sessionId?: string; error?: string }> => {
+    try {
+        // 1. Crear sesión de duelo
+        const { data: session, error: sessionError } = await supabase
+            .from('duelo_sesiones')
+            .insert({
+                gladiator_a_id: retadorId,
+                gladiator_b_id: oponenteId,
+                status: 'ACTIVE',
+                stakes_xp: 0 // Duelos sin riesgo
+            })
+            .select()
+            .single();
+
+        if (sessionError) throw sessionError;
+
+        // 2. Actualizar desafío con el ID de la sesión
+        const { error: updateError } = await supabase
+            .from('duelo_desafios')
+            .update({ status: 'ACEPTADO', session_id: session.id })
+            .eq('id', challengeId);
+
+        if (updateError) throw updateError;
+
+        return { success: true, sessionId: session.id };
+    } catch (e: any) {
+        console.error('Error aceptando desafío:', e);
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Registra que un agente completó un nivel de IQ y otorga XP escalado
+ */
+export const submitIQLevelComplete = async (agentId: string, level: number): Promise<{ success: boolean; rewardedXp?: number; error?: string }> => {
+    try {
+        // 1. Calcular XP basado en el nivel (1-10: 1, 11-20: 2, etc.)
+        const rewardedXp = Math.floor((level - 1) / 10) + 1;
+
+        // 2. Actualizar el nivel de IQ del agente (solo si es mayor al actual)
+        const { data: agentData } = await supabase.from('agentes').select('name, iq_level').eq('id', agentId).single();
+        const currentIq = agentData?.iq_level || 0;
+
+        if (level > currentIq) {
+            await supabase.from('agentes').update({ iq_level: level }).eq('id', agentId);
+
+            // --- SOCIAL: INTEL FEED ---
+            // Publicar solo hitos importantes o cada cierto avance (ej. cada nivel)
+            // Se usa publishNewsSupabase para que aparezca en el feed global
+            await publishNewsSupabase(
+                agentId,
+                agentData?.name || 'Agente',
+                'IQ_GAME',
+                `¡NUEVO HIT REEALIZADO! El agente ha escalado al NIVEL ${level} del Proyecto Nehemías.`
+            );
+        }
+
+        // 3. Otorgar XP usando el incremento atómico
+        // Nota: El multiplicador de racha NO aplica a juegos de IQ para evitar inflar XP
+        const res = await updateAgentPointsSupabase(agentId, 'XP', rewardedXp, 1.0);
+
+        if (!res.success) throw new Error(res.error);
+
+        return { success: true, rewardedXp };
+    } catch (e: any) {
+        console.error('Error completando nivel IQ:', e);
+        return { success: false, error: e.message };
     }
 };
 

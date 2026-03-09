@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
     Bell, Calendar, Target, ShieldCheck, CheckCircle2,
     Loader2, Download, Trophy, UserPlus, AlertTriangle,
-    ChevronRight, Activity
+    ChevronRight, Activity, Brain, Swords, HelpCircle
 } from 'lucide-react';
 import { AppView, Agent, UserRole, DailyVerse as DailyVerseType } from '../../types';
 import PromotionProgressCard from '../PromotionProgressCard';
@@ -83,6 +83,42 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                             />
                         </div>
 
+                        {/* TACTICAL GAMES HUB - MINIMALIST */}
+                        <div className="grid grid-cols-2 gap-2 mb-4 animate-in fade-in zoom-in duration-700">
+                            <button
+                                onClick={() => setView(AppView.IQ_GAME)}
+                                className="flex items-center gap-3 p-3 bg-blue-950/20 border border-blue-500/10 rounded-2xl hover:bg-blue-900/40 transition-all group"
+                            >
+                                <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500 transition-colors">
+                                    <Brain className="text-blue-400 group-hover:text-white" size={16} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[7px] font-black uppercase tracking-[0.2em] text-blue-400/80 mb-0.5">INTELIGENCIA</p>
+                                    <h4 className="text-[10px] font-bebas tracking-widest text-white leading-none">PROYECTO NEHEMÍAS</h4>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => setView(AppView.DUEL_ARENA)}
+                                className="flex items-center gap-3 p-3 bg-red-950/20 border border-red-500/10 rounded-2xl hover:bg-red-900/40 transition-all group"
+                            >
+                                <div className="p-2 bg-red-500/10 rounded-xl group-hover:bg-red-500 transition-colors">
+                                    <Swords className="text-red-400 group-hover:text-white" size={16} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[7px] font-black uppercase tracking-[0.2em] text-red-400/80 mb-0.5">COMBATE</p>
+                                    <h4 className="text-[10px] font-bebas tracking-widest text-white leading-none">ARENA DE DUELOS</h4>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* HELP BUTTON */}
+                        <button
+                            onClick={() => setView(AppView.HELP_CENTER)}
+                            className="w-full mb-4 p-3 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all group"
+                        >
+                            <HelpCircle className="text-blue-400 group-hover:scale-110 transition-transform" size={18} />
+                            <span className="text-[10px] font-bebas tracking-widest text-white/70">¿CÓMO FUNCIONA EL SISTEMA? (AYUDA)</span>
+                        </button>
                         {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
                             <IntelFeed
                                 headlines={headlines}

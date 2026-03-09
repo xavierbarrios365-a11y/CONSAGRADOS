@@ -55,6 +55,12 @@ export interface Agent {
   weeklyTasks?: { id: string; title: string; completed: boolean }[];
   notifPrefs?: { read: string[]; deleted: string[] };
   lastCourse?: string;
+  iqLevel?: number;
+  duelStats?: {
+    wins: number;
+    losses: number;
+    draws: number;
+  };
 }
 
 export interface DailyVerse {
@@ -94,7 +100,10 @@ export enum AppView {
   BIBLE_WAR_ARENA = 'BIBLE_WAR_ARENA',
   BIBLE_WAR_STUDENT = 'BIBLE_WAR_STUDENT',
   BIBLE = 'bible',
-  PUBLIC_WEB = 'public_web'
+  PUBLIC_WEB = 'public_web',
+  IQ_GAME = 'IQ_GAME',
+  DUEL_ARENA = 'DUEL_ARENA',
+  HELP_CENTER = 'HELP_CENTER'
 }
 
 export interface Visitor {
@@ -239,5 +248,26 @@ export interface BibleWarSession {
   used_questions?: string[];
   gladiator_a_id?: string | null;
   gladiator_b_id?: string | null;
+}
+
+export interface DuelChallenge {
+  id: string;
+  retador_id: string;
+  oponente_id: string;
+  status: 'PENDIENTE' | 'ACEPTADO' | 'RECHAZADO' | 'COMPLETADO';
+  created_at: string;
+  session_id?: string;
+}
+
+export interface IQLevel {
+  level: number;
+  question: string;
+  answer: string;
+  options?: string[];
+  hint: string;
+  bibleClue: {
+    verse: string;
+    reference: string;
+  };
 }
 

@@ -9,7 +9,7 @@ import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase, getStreakMultiplier } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import TacticalRanking from './TacticalRanking';
@@ -370,13 +370,15 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     const executeUpdate = async () => {
       setIsUpdatingPoints(true);
       try {
-        const res = await updateAgentPointsSupabase(agent.id, type, points);
+        const res = await updateAgentPointsSupabase(agent.id, type, points, 1.0, agent.streakCount || 0);
         if (res.success) {
           // NOTIFICACIÓN TELEGRAM (ONLY TELEGRAM)
           try {
+            const currentMultiplier = getStreakMultiplier(agent.streakCount || 0);
+            const totalXpAdjusted = Math.round(points * currentMultiplier);
             const emoji = points > 0 ? '🔥' : '⚖️';
             const action = points > 0 ? 'ganado' : 'perdido';
-            const msg = `${emoji} [CONTROL TÁCTICO]: <b>${agent.name}</b> ha ${action} <b>${absPoints}</b> puntos en <b>${type}</b>.`;
+            const msg = `${emoji} [CONTROL TÁCTICO]: <b>${agent.name}</b> ha ${action} <b>${absPoints}</b> puntos en <b>${type}</b> (Total XP: <b>${totalXpAdjusted > 0 ? '+' : ''}${totalXpAdjusted}</b>).`;
             await sendTelegramAlert(msg);
           } catch (telErr) {
             console.error("Error notificando actualización de puntos a Telegram:", telErr);
@@ -384,7 +386,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
           showAlert({
             title: "PUNTOS ACTUALIZADOS",
-            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + (points * ((agent.streakCount || 0) >= 5 ? 1.25 : 1))} XP`,
+            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + Math.round(points * getStreakMultiplier(agent.streakCount || 0))} XP`,
             type: 'SUCCESS'
           });
           if (onUpdateNeeded) onUpdateNeeded();

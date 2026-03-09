@@ -34,7 +34,9 @@ import LighthouseIndicator from './components/LighthouseIndicator';
 import AdminDashboard from './components/AdminDashboard';
 import LandingInversion from './components/LandingInversion';
 import PublicWebsite from './components/PublicWebsite';
-
+import TacticalIQ from './components/TacticalIQ';
+import TacticalDuelArena from './components/TacticalDuelArena';
+import TacticalHelp from './components/TacticalHelp';
 // --- Modularized Views ---
 import StudentView from './components/views/StudentView';
 import DirectorView from './components/views/DirectorView';
@@ -61,6 +63,7 @@ import {
   updateBiometricSupabase,
   fetchDailyVerseSupabase,
   deleteAgentSupabase,
+  sendDuelChallenge,
   supabase
 } from './services/supabaseService';
 import { generateGoogleCalendarLink, downloadIcsFile, parseEventDate } from './services/calendarService';
@@ -581,7 +584,15 @@ const App: React.FC = () => {
     }
 
     // Shared Views
-    if ([AppView.DIRECTORY, AppView.PROFILE, AppView.BIBLE_WAR_DISPLAY, AppView.RANKING, AppView.ENROLLMENT, AppView.BIBLE_WAR_ARENA, AppView.BIBLE_WAR_STUDENT, AppView.BIBLE].includes(view)) {
+    if ([AppView.DIRECTORY, AppView.PROFILE, AppView.BIBLE_WAR_DISPLAY, AppView.RANKING, AppView.ENROLLMENT, AppView.BIBLE_WAR_ARENA, AppView.BIBLE_WAR_STUDENT, AppView.BIBLE, AppView.IQ_GAME, AppView.DUEL_ARENA, AppView.HELP_CENTER].includes(view)) {
+      if (view === AppView.HELP_CENTER) {
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="help_center" className="h-full">
+            <TacticalHelp onClose={() => setView(AppView.HOME)} />
+          </motion.div>
+        );
+      }
+
       if (view === AppView.BIBLE) {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="bible" className="h-full">
@@ -598,6 +609,13 @@ const App: React.FC = () => {
                   agents={agents}
                   currentUser={currentUser}
                   onAgentClick={setShowExpedienteFor} // <--- ADDED
+                  onChallenge={async (agent) => {
+                    if (!currentUser) return;
+                    const res = await sendDuelChallenge(currentUser.id, agent.id);
+                    if (res.success) {
+                      showAlert({ title: "DESAFÍO ENVIADO", message: `Has desafiado a ${agent.name} a un duelo de honor.`, type: 'SUCCESS' });
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -622,6 +640,22 @@ const App: React.FC = () => {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="arena" className="h-full">
             <BibleWarDisplay isFullScreen={false} />
+          </motion.div>
+        );
+      }
+
+      if (view === AppView.IQ_GAME) {
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="iq_game" className="h-full">
+            <TacticalIQ currentUser={currentUser} onClose={() => setView(AppView.HOME)} onUpdateNeeded={syncData} />
+          </motion.div>
+        );
+      }
+
+      if (view === AppView.DUEL_ARENA) {
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="duel_arena" className="h-full">
+            <TacticalDuelArena currentUser={currentUser} onClose={() => setView(AppView.HOME)} onUpdateNeeded={syncData} />
           </motion.div>
         );
       }

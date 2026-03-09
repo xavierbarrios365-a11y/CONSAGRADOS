@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Agent, UserRole } from '../types';
-import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus, Award } from 'lucide-react';
+import { Trophy, Medal, Crown, Star, Search, Flame, Target, Shield, Zap, Users, ArrowUpCircle, ChevronUp, ChevronDown, Minus, Award, Swords } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDriveUrl } from '../services/storageUtils';
 import { PROMOTION_RULES } from '../constants';
@@ -9,6 +9,7 @@ interface TacticalRankingProps {
     agents: Agent[];
     currentUser: Agent | null;
     onAgentClick: (agent: Agent) => void;
+    onChallenge?: (agent: Agent) => void;
 }
 
 // Estados de promoción
@@ -31,7 +32,7 @@ const getPromotionStatus = (agent: Agent): string => {
     return PROMOTION_STATUS.NONE;
 };
 
-const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, onAgentClick }) => {
+const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, onAgentClick, onChallenge }) => {
     const [activeTab, setActiveTab] = useState<string>('RECLUTA');
 
     const rankingTabs = [
@@ -398,13 +399,29 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
                                                 </div>
                                             </div>
 
-                                            {/* XP Score */}
-                                            <div className="flex flex-col items-end gap-1 md:gap-2 pl-4">
-                                                <div className="flex items-center gap-1.5 md:gap-3 bg-black/40 px-3 py-1.5 md:px-4 md:py-2.5 rounded-xl border border-white/5 shadow-inner">
-                                                    <span className="text-lg md:text-3xl font-bebas text-white tracking-widest leading-none">{agent.xp}</span>
-                                                    <Zap size={14} className="text-[#FFB700] md:size-5" fill="#FFB700" />
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center gap-2">
+                                                {agent.id !== currentUser?.id && onChallenge && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onChallenge(agent);
+                                                        }}
+                                                        className="p-2 sm:p-3 bg-red-600/10 border border-red-600/20 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95"
+                                                        title="RETAR A DUELO"
+                                                    >
+                                                        <Swords size={18} />
+                                                    </button>
+                                                )}
+
+                                                {/* XP Score */}
+                                                <div className="flex flex-col items-end gap-1 md:gap-2 pl-2">
+                                                    <div className="flex items-center gap-1.5 md:gap-3 bg-black/40 px-3 py-1.5 md:px-4 md:py-2.5 rounded-xl border border-white/5 shadow-inner">
+                                                        <span className="text-lg md:text-3xl font-bebas text-white tracking-widest leading-none">{agent.xp}</span>
+                                                        <Zap size={14} className="text-[#FFB700] md:size-5" fill="#FFB700" />
+                                                    </div>
+                                                    <p className="text-[7px] md:text-[8px] text-white/20 font-black uppercase tracking-widest">Puntos de Honor</p>
                                                 </div>
-                                                <p className="text-[7px] md:text-[8px] text-white/20 font-black uppercase tracking-widest">Puntos de Honor</p>
                                             </div>
                                         </motion.div>
                                     ))}

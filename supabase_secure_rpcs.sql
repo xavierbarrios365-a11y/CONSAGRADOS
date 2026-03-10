@@ -1,8 +1,8 @@
--- ========================================================
--- RPCs PARA ESCRITURA SEGURA (BYPASS DE RESTRICCIÓN DE COLUMNAS)
+﻿-- ========================================================
+-- RPCs PARA ESCRITURA SEGURA (BYPASS DE RESTRICCIÃ“N DE COLUMNAS)
 -- ========================================================
 
--- 1. Sincronización completa del agente
+-- 1. SincronizaciÃ³n completa del agente
 CREATE OR REPLACE FUNCTION public.sync_agent_profile(payload JSONB)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -57,7 +57,7 @@ BEGIN
     leadership = GREATEST(agentes.leadership, EXCLUDED.leadership),
     rango = EXCLUDED.rango,
     cargo = EXCLUDED.cargo,
-    -- BLINDAJE: Nunca sobrescribir campos sensibles con valores vacíos
+    -- BLINDAJE: Nunca sobrescribir campos sensibles con valores vacÃ­os
     whatsapp = COALESCE(NULLIF(EXCLUDED.whatsapp, ''), agentes.whatsapp),
     foto_url = COALESCE(NULLIF(EXCLUDED.foto_url, ''), agentes.foto_url),
     pin = COALESCE(NULLIF(EXCLUDED.pin, ''), agentes.pin),
@@ -75,10 +75,10 @@ BEGIN
     security_answer = COALESCE(NULLIF(EXCLUDED.security_answer, ''), agentes.security_answer),
     must_change_password = EXCLUDED.must_change_password,
     biometric_credential = COALESCE(NULLIF(EXCLUDED.biometric_credential, ''), agentes.biometric_credential),
-    -- BLINDAJE: NUNCA tocar streak desde el sync — solo update_agent_streak lo maneja
+    -- BLINDAJE: NUNCA tocar streak desde el sync â€” solo update_agent_streak lo maneja
     streak_count = agentes.streak_count,
     last_streak_date = agentes.last_streak_date,
-    -- BLINDAJE: Nunca sobrescribir asistencia o tareas con valores vacíos si ya existen
+    -- BLINDAJE: Nunca sobrescribir asistencia o tareas con valores vacÃ­os si ya existen
     last_attendance = COALESCE(NULLIF(EXCLUDED.last_attendance, ''), agentes.last_attendance),
     weekly_tasks = CASE 
       WHEN jsonb_array_length(EXCLUDED.weekly_tasks) > 0 THEN EXCLUDED.weekly_tasks
@@ -98,7 +98,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.sync_agent_profile(JSONB) TO anon;
 
--- 2. Actualización específica del PIN
+-- 2. ActualizaciÃ³n especÃ­fica del PIN
 CREATE OR REPLACE FUNCTION public.update_agent_pin(p_id TEXT, p_pin TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -120,7 +120,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.update_agent_fcm(TEXT, TEXT) TO anon;
 
--- 4. Actualización de Rachas/Puntos Rápidos desde App.tsx
+-- 4. ActualizaciÃ³n de Rachas/Puntos RÃ¡pidos desde App.tsx
 CREATE OR REPLACE FUNCTION public.update_agent_streak(p_id TEXT, p_streak INTEGER, p_date TEXT, p_tasks JSONB, p_xp INTEGER)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -141,7 +141,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.update_agent_streak(TEXT, INTEGER, TEXT, JSONB, INTEGER) TO anon;
 
--- 6. Actualización de Biometría
+-- 6. ActualizaciÃ³n de BiometrÃ­a
 CREATE OR REPLACE FUNCTION public.update_agent_biometric(p_id TEXT, p_credential TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -152,7 +152,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.update_agent_biometric(TEXT, TEXT) TO anon;
 
--- 5. Actualización desde el Panel de Admin
+-- 5. ActualizaciÃ³n desde el Panel de Admin
 CREATE OR REPLACE FUNCTION public.update_agent_admin(
   p_id TEXT, 
   p_nombre TEXT, 
@@ -182,7 +182,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.update_agent_admin(TEXT, TEXT, INTEGER, TEXT, TEXT, TEXT, TEXT, TEXT) TO anon;
 
--- 10. Incremento Atómico de Puntos (Blindaje Nuclear contra condiciones de carrera)
+-- 10. Incremento AtÃ³mico de Puntos (Blindaje Nuclear contra condiciones de carrera)
 CREATE OR REPLACE FUNCTION public.atomic_increment_points(
   p_agent_id TEXT, 
   p_type TEXT, 

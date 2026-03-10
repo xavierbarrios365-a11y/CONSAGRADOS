@@ -302,5 +302,79 @@ export const LORE_DATA: Record<number, LoreFragment[]> = {
             options: ["Comercio y Sueño", "Fe y Acción Estratégica (Caballos/Ejército)", "Riqueza y Pobreza", "Agua y Fuego"],
             correctIndex: 1
         }
+    ],
+    9: [ // Puerta Oriental
+        {
+            title: "Semaías, el Guarda de la Puerta",
+            text: "Nehemías 3:29 menciona a Semaías hijo de Secanías, quien era el guarda de la puerta Oriental. A diferencia de otros que repararon secciones cerca de sus casas, Semaías tenía la responsabilidad directa de vigilar la entrada más majestuosa.",
+            question: "¿Cuál era el cargo de Semaías hijo de Secanías?",
+            options: ["Sumo Sacerdote", "Herrero Real", "Guarda de la Puerta Oriental", "Perfumista"],
+            correctIndex: 2
+        },
+        {
+            title: "La Entrada del Mesías",
+            text: "En la tradición bíblica y profética, la Puerta Oriental es el lugar por donde entrará el Mesías. Restaurarla representa no solo seguridad física, sino la esperanza en el cumplimiento de las promesas divinas.",
+            question: "¿Qué evento profético se asocia tradicionalmente con la Puerta Oriental?",
+            options: ["La caída de los muros", "El regreso del Mesías", "La llegada de los mercaderes", "La huida del rey"],
+            correctIndex: 1
+        },
+        {
+            title: "Hacia el Monte de los Olivos",
+            text: "Esta puerta comunicaba directamente con el valle de Cedrón y el Monte de los Olivos. Era la vía principal para quienes venían del oriente hacia el área sagrada del Templo.",
+            question: "¿Hacia qué monte comunicaba directamente esta puerta?",
+            options: ["Monte Sinaí", "Monte Carmelo", "Monte de los Olivos", "Monte Ararat"],
+            correctIndex: 2
+        },
+        {
+            title: "La Primera Luz",
+            text: "Al estar orientada al este, esta puerta recibía los primeros rayos del sol al amanecer. Simboliza la vigilancia constante y el despertar espiritual ante un nuevo día de gracia.",
+            question: "¿Qué simboliza el hecho de ser la puerta del 'Este' u 'Oriental'?",
+            options: ["La puesta del sol", "La vigilancia y la luz del amanecer", "El final de la jornada", "La oscuridad"],
+            correctIndex: 1
+        },
+        {
+            title: "Vigilancia de Restos Sagrados",
+            text: "La Puerta Oriental también estaba cerca de las dependencias donde se guardaban tesoros y registros sagrados. Un guarda en esta posición debía ser de absoluta confianza y lealtad.",
+            question: "¿Qué cualidad era vital para el guarda de esta puerta específica?",
+            options: ["Fuerza física", "Lealtad y confianza absoluta", "Riqueza", "Habilidad comercial"],
+            correctIndex: 1
+        }
+    ],
+    10: [ // Puerta del Juicio (Miphkad)
+        {
+            title: "Miphkad: El Lugar de la Inspección",
+            text: "La palabra hebrea Miphkad (Mifkad) se traduce como 'inspección', 'censo' o 'lugar asignado'. Aquí se realizaba el recuento final y la revisión de quienes entraban y salían, asegurando que el orden se mantuviera en la ciudad restaurada.",
+            question: "¿Qué significa el nombre hebreo 'Miphkad'?",
+            options: ["Puerta del Oro", "Lugar de la Inspección o Censo", "Salida de emergencia", "Mercado de especias"],
+            correctIndex: 1
+        },
+        {
+            title: "Malquías el Platero",
+            text: "Nehemías 3:31 menciona que Malquías, hijo del platero, reparó hasta la casa de los sirvientes del templo y de los comerciantes, enfrente de la puerta del Juicio. Incluso los artesanos de metales preciosos se dedicaron a la construcción.",
+            question: "¿Qué oficio tenía Malquías, quien reparó cerca de esta puerta?",
+            options: ["Carpintero", "Sacerdote", "Platero (Orfebre)", "Soldado"],
+            correctIndex: 2
+        },
+        {
+            title: "El Recuento de los Talentos",
+            text: "El juicio o inspección no siempre era punitivo; a menudo era una evaluación de los recursos y talentos. En la reconstrucción, cada hombre era 'inspeccionado' para ver si su trabajo cumplía con el estándar de excelencia del muro.",
+            question: "¿Cuál era el propósito de la 'inspección' en el contexto del muro?",
+            options: ["Cobrar impuestos altos", "Evaluar la calidad y estándar del trabajo", "Buscar enemigos ocultos", "Pintar la puerta"],
+            correctIndex: 1
+        },
+        {
+            title: "Punto de Reunión Final",
+            text: "Esta puerta estaba situada al noreste, cerca del final del recorrido de Nehemías. Representa la culminación del esfuerzo: la revisión final antes de declarar la obra terminada ante Dios.",
+            question: "¿Qué fase del proyecto representa simbólicamente esta puerta?",
+            options: ["El inicio de los cimientos", "La mitad del camino", "La revisión y cierre final de la obra", "El primer ataque enemigo"],
+            correctIndex: 2
+        },
+        {
+            title: "Justicia y Verdad",
+            text: "La Puerta del Juicio nos recuerda que toda obra será probada. Nehemías buscaba que el muro no solo fuera alto, sino que estuviera construido con integridad. La 'Criba' elimina lo falso para dejar solo lo sólido.",
+            question: "¿Qué se buscaba asegurar mediante la inspección en esta puerta?",
+            options: ["Que fuera el muro más caro", "Integridad y solidez en la construcción", "Que tuviera muchos colores", "Que fuera famosa"],
+            correctIndex: 1
+        }
     ]
 };

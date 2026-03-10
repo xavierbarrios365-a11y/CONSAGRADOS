@@ -21,8 +21,8 @@ const LEVELS: IQLevel[] = [
     { level: 6, question: "PUERTA DE LA FUENTE: Decodifica el patrón numérico.", answer: "", options: [], hint: "Un hit verde vale más que dos amarillos.", bibleClue: { verse: "Salum hijo de Colhoze, gobernador de la región de Mizpa, restauró la puerta de la Fuente.", reference: "Nehemías 3:15" } },
     { level: 7, question: "PUERTA DE LAS AGUAS: Decodifica el patrón numérico.", answer: "", options: [], hint: "Mantén el ritmo.", bibleClue: { verse: "Y los sirvientes del templo que habitaban en Ofel restauraron hasta enfrente de la puerta de las Aguas al oriente.", reference: "Nehemías 3:26" } },
     { level: 8, question: "PUERTA DE LOS CABALLOS: Decodifica el patrón numérico.", answer: "", options: [], hint: "La victoria requiere insistencia.", bibleClue: { verse: "Desde la puerta de los Caballos restauraron los sacerdotes, cada uno enfrente de su casa.", reference: "Nehemías 3:28" } },
-    { level: 9, question: "PUERTA ORIENTAL: Decodifica el patrón numérico.", answer: "", options: [], hint: "No hay atajos tácticos.", bibleClue: { verse: "Después de ellos restauró Sadoc hijo de Imer, enfrente de su casa; y después de él restauró Semaías, guarda de la puerta Oriental.", reference: "Nehemías 3:29" } },
-    { level: 10, question: "PUERTA DEL JUICIO: Decodifica el patrón numérico.", answer: "", options: [], hint: "Casi en el final, evalúa bien tus datos.", bibleClue: { verse: "Después de él restauró Malquías, hijo del platero... hasta la puerta del Juicio.", reference: "Nehemías 3:31" } },
+    { level: 9, question: "PUERTA ORIENTAL: Restaura las Torres de la Ciudad.", answer: "", options: [], hint: "No hay atajos tácticos, solo pasos precisos.", bibleClue: { verse: "Después de ellos restauró Sadoc hijo de Imer, enfrente de su casa; y después de él restauró Semaías, guarda de la puerta Oriental.", reference: "Nehemías 3:29" } },
+    { level: 10, question: "PUERTA DEL JUICIO: Completa la Criba de Justicia.", answer: "", options: [], hint: "Inspecciona cada fila y columna con rigor.", bibleClue: { verse: "Después de él restauró Malquías, hijo del platero... hasta la puerta del Juicio.", reference: "Nehemías 3:31" } },
     { level: 11, question: "PUERTA DE EFRAÍN: Decodifica el patrón numérico.", answer: "", options: [], hint: "Requiere paciencia y exactitud.", bibleClue: { verse: "Y desde la puerta de Efraín hasta la puerta Vieja...", reference: "Nehemías 12:39" } },
     { level: 12, question: "PUERTA DE LA CÁRCEL: Decodifica el patrón numérico.", answer: "", options: [], hint: "El muro se completa aquí.", bibleClue: { verse: "...y se detuvieron a la puerta de la Cárcel.", reference: "Nehemías 12:39" } }
 ];
@@ -79,6 +79,18 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     const [knightGridSize, setKnightGridSize] = useState(4);
     const [knightObstacles, setKnightObstacles] = useState<number[]>([]);
 
+    // Torres de la Ciudad (Hanoi) (Puerta 9) State
+    const [hanoiTowers, setHanoiTowers] = useState<number[][]>([[3, 2, 1], [], []]);
+    const [hanoiSelectedTower, setHanoiSelectedTower] = useState<number | null>(null);
+    const [hanoiMoves, setHanoiMoves] = useState(0);
+    const [hanoiLevel, setHanoiLevel] = useState(1);
+
+    // Criba de Justicia (Sudoku) (Puerta 10) State
+    const [sudokuGrid, setSudokuGrid] = useState<(number | null)[]>([]);
+    const [sudokuInitial, setSudokuInitial] = useState<boolean[]>([]);
+    const [sudokuLevel, setSudokuLevel] = useState(1);
+    const [sudokuSize, setSudokuSize] = useState(4);
+
     // Pistas y Curriculum Bíblico (Lore) State
     const [hintsUsed, setHintsUsed] = useState(0);
     const [currentLoreIndex, setCurrentLoreIndex] = useState(0);
@@ -125,13 +137,22 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 knightMovesCount,
                 knightLevel,
                 knightGridSize,
-                knightObstacles
+                knightGridSize,
+                knightObstacles,
+                hanoiTowers,
+                hanoiSelectedTower,
+                hanoiMoves,
+                hanoiLevel,
+                sudokuGrid,
+                sudokuInitial,
+                sudokuLevel,
+                sudokuSize
             };
             localStorage.setItem(`iq_state_${currentUser.id}_level${selectedLevel}`, JSON.stringify(stateToSave));
         } else if ((status === 'FAILED' || gameState === 'RESOLVING') && selectedLevel && currentUser) {
             localStorage.removeItem(`iq_state_${currentUser.id}_level${selectedLevel}`);
         }
-    }, [secretCode, attempts, currentGuess, status, startTime, showHint, showBibleClue, memoryPattern, memoryPlayerGuess, memoryLevel, cryptoPhrase, cryptoCipher, cryptoGuess, cryptoMistakes, wordleWord, wordleGuesses, wordleCurrentGuess, lightsOutGrid, lightsOutMoves, pipesGrid, pipeMoves, pipeLevel, pipeGridSize, knightPos, knightTarget, knightMovesCount, knightLevel, knightGridSize, knightObstacles, gameState, selectedLevel, currentUser]);
+    }, [secretCode, attempts, currentGuess, status, startTime, showHint, showBibleClue, memoryPattern, memoryPlayerGuess, memoryLevel, cryptoPhrase, cryptoCipher, cryptoGuess, cryptoMistakes, wordleWord, wordleGuesses, wordleCurrentGuess, lightsOutGrid, lightsOutMoves, pipesGrid, pipeMoves, pipeLevel, pipeGridSize, knightPos, knightTarget, knightMovesCount, knightLevel, knightGridSize, knightObstacles, hanoiTowers, hanoiSelectedTower, hanoiMoves, hanoiLevel, sudokuGrid, sudokuInitial, sudokuLevel, sudokuSize, gameState, selectedLevel, currentUser]);
 
     // Generador Puerta 1
     const generateCode = () => {
@@ -296,6 +317,18 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         if (stage === 1) setStartTime(Date.now());
     };
 
+    // Generador Puerta 9 (Hanoi)
+    const startHanoi = (stage: number = 1) => {
+        const diskCount = 2 + stage; // Stage 1: 3, Stage 2: 4, Stage 3: 5
+        const disks = Array.from({ length: diskCount }, (_, i) => diskCount - i);
+        setHanoiTowers([disks, [], []]);
+        setHanoiSelectedTower(null);
+        setHanoiMoves(0);
+        setHanoiLevel(stage);
+        setStatus('PLAYING');
+        if (stage === 1) setStartTime(Date.now());
+    };
+
     const handleLevelSelect = (level: number) => {
         if (level <= currentIqLevel) {
             setSelectedLevel(level);
@@ -342,6 +375,16 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                         setKnightGridSize(saved.knightGridSize || 4);
                         setKnightObstacles(saved.knightObstacles || []);
 
+                        setHanoiTowers(saved.hanoiTowers || [[3, 2, 1], [], []]);
+                        setHanoiSelectedTower(saved.hanoiSelectedTower || null);
+                        setHanoiMoves(saved.hanoiMoves || 0);
+                        setHanoiLevel(saved.hanoiLevel || 1);
+
+                        setSudokuGrid(saved.sudokuGrid || []);
+                        setSudokuInitial(saved.sudokuInitial || []);
+                        setSudokuLevel(saved.sudokuLevel || 1);
+                        setSudokuSize(saved.sudokuSize || 4);
+
                         // Lógicas de auto-corrección para guardados corruptos/antiguos
                         if (level === 2 && saved.status === 'MEM_SHOWING') {
                             startMemorySequence(saved.memoryLevel || 1);
@@ -358,6 +401,10 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                             generateCode();
                         } else if (level === 8 && saved.knightLevel === undefined) {
                             startKnight(1);
+                        } else if (level === 9 && (!saved.hanoiTowers || saved.hanoiTowers[0].length === 0 && saved.hanoiTowers[1].length === 0 && saved.hanoiTowers[2].length === 0)) {
+                            startHanoi(1);
+                        } else if (level === 10 && (!saved.sudokuGrid || saved.sudokuGrid.length === 0)) {
+                            startSudoku(1);
                         } else {
                             setStatus(saved.status || 'PLAYING');
                         }
@@ -389,8 +436,9 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         else if (level === 4) startWordle();
         else if (level === 5) startLightsOut();
         else if (level === 6) startPipes(1);
-        else if (level === 7) generateCode(); // Temporal
         else if (level === 8) startKnight(1);
+        else if (level === 9) startHanoi(1);
+        else if (level === 10) startSudoku(1);
     };
 
     const handleNumberPress = (num: string) => {
@@ -460,6 +508,126 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
             }
         } else if (newAttempts.length >= 6) {
             setStatus('FAILED');
+        }
+    };
+
+    // CONTROLADORES PUERTA 9
+    const handleHanoiClick = async (towerIndex: number) => {
+        if (status !== 'PLAYING') return;
+
+        if (hanoiSelectedTower === null) {
+            // Seleccionar torre de origen (si no está vacía)
+            if (hanoiTowers[towerIndex].length > 0) {
+                setHanoiSelectedTower(towerIndex);
+            }
+        } else {
+            // Mover disco
+            if (hanoiSelectedTower === towerIndex) {
+                // Deseleccionar si toca la misma
+                setHanoiSelectedTower(null);
+                return;
+            }
+
+            const sourceTower = hanoiTowers[hanoiSelectedTower];
+            const targetTower = hanoiTowers[towerIndex];
+            const movingDisk = sourceTower[sourceTower.length - 1];
+            const topDiskTarget = targetTower[targetTower.length - 1];
+
+            if (!topDiskTarget || movingDisk < topDiskTarget) {
+                // Movimiento válido
+                const newTowers = hanoiTowers.map((t, i) => {
+                    if (i === hanoiSelectedTower) return t.slice(0, -1);
+                    if (i === towerIndex) return [...t, movingDisk];
+                    return t;
+                });
+
+                setHanoiTowers(newTowers);
+                setHanoiSelectedTower(null);
+                setHanoiMoves(prev => prev + 1);
+
+                // Win Condition Stage
+                if (newTowers[2].length === (2 + hanoiLevel)) {
+                    if (hanoiLevel < 3) {
+                        setHanoiLevel(prev => prev + 1);
+                        setTimeout(() => startHanoi(hanoiLevel + 1), 1000);
+                    } else {
+                        // Win Level 9
+                        setIsSubmitting(true);
+                        const timeTakenSecs = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+                        setFinalTime(timeTakenSecs);
+
+                        try {
+                            const res = await submitIQLevelComplete(currentUser!.id, 9, timeTakenSecs);
+                            if (res.success) {
+                                if (9 === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                                setGameState('RESOLVING');
+                                if (onUpdateNeeded) onUpdateNeeded();
+                            } else alert(`❌ ERROR DE ENLACE: ${res.error}`);
+                        } catch (error: any) {
+                            alert(`⚠️ FALLO CRÍTICO: ${error.message}`);
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    }
+                }
+            } else {
+                // Movimiento inválido - Feedback visual rápido (opcional, por ahora nada)
+            }
+        }
+    };
+
+    // CONTROLADORES PUERTA 10
+    const handleSudokuCellClick = async (index: number) => {
+        if (status !== 'PLAYING' || sudokuInitial[index]) return;
+
+        const newGrid = [...sudokuGrid];
+        const currentVal = newGrid[index] || 0;
+        const nextVal = (currentVal % sudokuSize) + 1;
+        newGrid[index] = nextVal;
+        setSudokuGrid(newGrid);
+
+        // Check Win Condition
+        const isComplete = newGrid.every(v => v !== null);
+        if (isComplete) {
+            // Verificar filas y columnas
+            let isValid = true;
+            for (let i = 0; i < sudokuSize; i++) {
+                const row = newGrid.slice(i * sudokuSize, (i + 1) * sudokuSize);
+                const col = Array.from({ length: sudokuSize }, (_, r) => newGrid[r * sudokuSize + i]);
+
+                const rowSet = new Set(row.filter(v => v !== null));
+                const colSet = new Set(col.filter(v => v !== null));
+
+                if (rowSet.size !== sudokuSize || colSet.size !== sudokuSize) {
+                    isValid = false;
+                    break;
+                }
+            }
+
+            if (isValid) {
+                if (sudokuLevel < 3) {
+                    setSudokuLevel(prev => prev + 1);
+                    setTimeout(() => startSudoku(sudokuLevel + 1), 1000);
+                } else {
+                    // Win Level 10
+                    setIsSubmitting(true);
+                    const timeTakenSecs = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+                    setFinalTime(timeTakenSecs);
+
+                    try {
+                        const res = await submitIQLevelComplete(currentUser!.id, 10, timeTakenSecs);
+                        if (res.success) {
+                            if (10 === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                            setGameState('RESOLVING');
+                            if (onUpdateNeeded) onUpdateNeeded();
+                        } else alert(`❌ ERROR DE ENLACE: ${res.error}`);
+                    } catch (error: any) {
+                        alert(`⚠️ FALLO CRÍTICO: ${error.message}`);
+                    } finally {
+                        setIsSubmitting(false);
+                    }
+                }
+            }
         }
     };
 
@@ -866,6 +1034,12 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         } else if (level === 8) {
             // Caballos: Auto-mover hacia el target si es posible
             alert("Sistema Táctico: Observa el Tablero, busca el movimiento que te acerca diagonalmente 2 saltos adelante.");
+        } else if (level === 9) {
+            // Hanoi: Auto-mover el disco más pequeño a la torre final (si está libre o tiene disco mayor)
+            alert("Sistema Táctico: Recuerda que la clave es mover los bloques pequeños para liberar los grandes. Intenta mover el bloque superior a la torre de la derecha.");
+        } else if (level === 10) {
+            // Sudoku: Revelar una celda vacía correctamente (necesitaríamos la solución, pero por ahora damos una pista genérica)
+            alert("Sistema Táctico: Observa las filas y columnas. Cada símbolo debe ser único. Busca la fila que tenga más espacios llenos.");
         }
     };
 
@@ -1112,6 +1286,8 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                 {selectedLevel === 5 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Apaga todos los focos rojos (déjalos verdes).</p><p><span className="text-green-400 font-bold">» REGLAS CRÍTICAS:</span> Al tocar un foco, este cambia de color. <strong>PERO TAMBIÉN CAMBIAN sus 4 vecinos directos en forma de CRUZ ➕ (arriba, abajo, izquierda y derecha).</strong> ¡Piensa antes de tocar para usar el daño colateral a tu favor!</p></>}
                                                 {selectedLevel === 6 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Restaura el flujo de la fuente conectando la entrada (superior izquierda) con la salida (inferior derecha).</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Estructura de 3 Fases incrementales (4x4, 5x5, 6x6). Toca cualquier sección de tubería para rotarla 90 grados. Forma un camino ininterrumpido a modo de puente.</p></>}
                                                 {selectedLevel === 7 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Guía al Táctico (indicador azul) hasta el Punto de Extracción (indicador verde).</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Estructura de 3 Fases incrementales. El Táctico <strong>solo puede moverse en forma de "L"</strong> (como el Caballo en el ajedrez: 2 pasos rectos y 1 doblado). Evita las zonas dañadas (X).</p></>}
+                                                {selectedLevel === 9 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Mueve todos los bloques de restauración desde la torre izquierda a la torre derecha.</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Solo puedes mover el bloque superior de cada torre. <strong>Nunca puedes colocar un bloque sobre otro que sea más pequeño que él.</strong> Completa las 3 fases (3, 4 y 5 bloques).</p></>}
+                                                {selectedLevel === 10 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Completa la Criba de Inspección asegurando que cada símbolo aparezca exactamente una vez en cada fila y columna.</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Toca una celda vacía para asignar un valor. No puede haber valores repetidos en la misma línea horizontal o vertical. 3 Fases (4x4 y 6x6).</p></>}
                                             </div>
 
                                             <button onClick={() => startLevelLogic(selectedLevel)} className="w-full px-6 py-3 bg-blue-600 text-white font-bebas tracking-[0.15em] rounded-xl hover:bg-blue-500 shadow-lg shadow-blue-500/20 active:scale-95 transition-all text-sm">
@@ -1152,7 +1328,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                 {showHint && showBibleClue && (
                                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-green-500/5 p-3 rounded-lg border border-green-500/10 text-center">
                                         <p className="text-[9px] text-green-400 font-bold leading-tight">
-                                            📡 PISTA DE SISTEMA: {selectedLevel === 1 ? 'Observa los colores verdes y amarillos devueltos tras cada intento.' : selectedLevel === 2 ? 'Concéntrate en la forma imaginaria que dibujan los toques en la matriz.' : selectedLevel === 3 ? 'Busca palabras cortas como "EL", "LA" o "DE" como puntos de inicio comunes.' : selectedLevel === 4 ? 'Piensa en las edificaciones que construyó Nehemías a su regreso o en temas del Templo.' : selectedLevel === 5 ? 'Tocar las esquinas primero a veces ayuda. Busca simetrías y secuencias.' : selectedLevel === 6 ? 'Sigue el flujo de agua desde el inicio. Si se te bloquea, es probable que un cruce esté al revés y necesites retroceder dos bloques.' : 'Un movimiento en L significa: 2 casillas en una dirección y 1 casilla perpendicular. Si estás en una esquina, tus opciones son muy limitadas.'}
+                                            📡 PISTA DE SISTEMA: {selectedLevel === 1 ? 'Observa los colores verdes y amarillos devueltos tras cada intento.' : selectedLevel === 2 ? 'Concéntrate en la forma imaginaria que dibujan los toques en la matriz.' : selectedLevel === 3 ? 'Busca palabras cortas como "EL", "LA" o "DE" como puntos de inicio comunes.' : selectedLevel === 4 ? 'Piensa en las edificaciones que construyó Nehemías a su regreso o en temas del Templo.' : selectedLevel === 5 ? 'Tocar las esquinas primero a veces ayuda. Busca simetrías y secuencias.' : selectedLevel === 6 ? 'Sigue el flujo de agua desde el inicio. Si se te bloquea, es probable que un cruce esté al revés y necesites retroceder dos bloques.' : selectedLevel === 9 ? 'Si tienes un número impar de bloques, comienza moviendo el más pequeño a la torre de destino (derecha). Si es par, muévelo a la torre central.' : selectedLevel === 10 ? 'Usa el proceso de eliminación. Si en una fila faltan solo dos números y uno de ellos ya está en la columna de abajo, entonces el otro número va en esa celda.' : 'Un movimiento en L significa: 2 casillas en una dirección y 1 casilla perpendicular. Si estás en una esquina, tus opciones son muy limitadas.'}
                                         </p>
                                     </motion.div>
                                 )}
@@ -1462,6 +1638,94 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                 </div>
                             )}
 
+                            {/* INTERFAZ PUERTA 9: TORRES DE LA CIUDAD (HANOI) */}
+                            {selectedLevel === 9 && (
+                                <div className="mt-2 flex flex-col items-center w-full px-2 sm:px-4">
+                                    <div className="flex justify-between w-full mb-4 px-2">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Fase {hanoiLevel}/3</span>
+                                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">
+                                            Movimientos: {hanoiMoves}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-around items-end w-full max-w-[320px] h-48 bg-white/[0.02] border border-white/5 rounded-xl p-4 gap-2 relative">
+                                        {hanoiTowers.map((tower, tIdx) => (
+                                            <button
+                                                key={`tower-${tIdx}`}
+                                                onClick={() => handleHanoiClick(tIdx)}
+                                                className={`relative w-1/3 h-full flex flex-col justify-end items-center group transition-all rounded-lg ${hanoiSelectedTower === tIdx ? 'bg-blue-500/10 ring-1 ring-blue-500/30' : 'hover:bg-white/5'}`}
+                                            >
+                                                {/* Eje de la torre */}
+                                                <div className={`absolute bottom-0 w-1.5 h-3/4 rounded-t-full transition-colors ${hanoiSelectedTower === tIdx ? 'bg-blue-400' : 'bg-gray-700'}`} />
+
+                                                {/* Discos */}
+                                                <div className="flex flex-col-reverse items-center w-full z-10 gap-1 pb-1">
+                                                    {tower.map((diskSize, dIdx) => {
+                                                        const isTop = dIdx === tower.length - 1;
+                                                        const isMoving = hanoiSelectedTower === tIdx && isTop;
+
+                                                        return (
+                                                            <motion.div
+                                                                layoutId={`disk-${diskSize}`}
+                                                                key={`disk-${diskSize}`}
+                                                                className={`h-4 rounded-full shadow-lg border ${isMoving ? 'border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'border-white/10'}`}
+                                                                style={{
+                                                                    width: `${30 + diskSize * 12}%`,
+                                                                    backgroundColor: `hsl(${200 + diskSize * 20}, 70%, ${isMoving ? '60%' : '40%'})`
+                                                                }}
+                                                                initial={false}
+                                                                animate={{
+                                                                    y: isMoving ? -20 : 0,
+                                                                    scale: isMoving ? 1.05 : 1
+                                                                }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Base de la torre */}
+                                                <div className={`w-full h-2 rounded-full absolute bottom-0 ${hanoiSelectedTower === tIdx ? 'bg-blue-500/40' : 'bg-white/10'}`} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[9px] text-gray-500 mt-6 text-center italic">Restaura la Ciudad moviendo los bloques a la derecha. Un bloque grande no puede sostener a uno pequeño.</p>
+                                </div>
+                            )}
+
+                            {/* INTERFAZ PUERTA 10: CRIBA DE JUSTICIA (SUDOKU) */}
+                            {selectedLevel === 10 && (
+                                <div className="mt-2 flex flex-col items-center w-full px-2 sm:px-4">
+                                    <div className="flex justify-between w-full mb-4 px-2">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Fase {sudokuLevel}/3</span>
+                                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">
+                                            {sudokuSize}x{sudokuSize} - Inspección
+                                        </span>
+                                    </div>
+
+                                    <div className={`grid gap-1.5 p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto w-full max-w-[300px]`} style={{ gridTemplateColumns: `repeat(${sudokuSize}, minmax(0, 1fr))` }}>
+                                        {sudokuGrid.map((val, idx) => {
+                                            const isInitial = sudokuInitial[idx];
+
+                                            return (
+                                                <button
+                                                    key={`sudoku-${idx}`}
+                                                    disabled={status !== 'PLAYING' || isInitial}
+                                                    onClick={() => handleSudokuCellClick(idx)}
+                                                    className={`aspect-square rounded-lg border-2 flex items-center justify-center font-bebas text-xl transition-all duration-200 ${isInitial
+                                                        ? 'bg-blue-900/40 border-blue-500/20 text-blue-300 opacity-80 cursor-default'
+                                                        : val
+                                                            ? 'bg-blue-600/20 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.3)] active:scale-95'
+                                                            : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/20 active:scale-95'}`}
+                                                >
+                                                    {val || '?'}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[9px] text-gray-500 mt-6 text-center italic">Inspecciona los registros y completa la cuadrícula sin repetir números en filas o columnas.</p>
+                                </div>
+                            )}
+
                             {/* BOTÓN DE SUSTENTACIÓN TÁCTICA (PISTAS BÍBLICAS) */}
                             {status === 'PLAYING' && selectedLevel && LORE_DATA[selectedLevel] && (
                                 <div className="mt-6 flex flex-col items-center w-full px-4">
@@ -1499,6 +1763,8 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                         if (selectedLevel === 6) startPipes(1);
                                         if (selectedLevel === 7) generateCode();
                                         if (selectedLevel === 8) startKnight(1);
+                                        if (selectedLevel === 9) startHanoi(1);
+                                        if (selectedLevel === 10) startSudoku(1);
                                     }} className="px-6 py-2 bg-red-600 text-white font-bebas rounded hover:bg-red-500 shadow-lg tracking-widest active:scale-95 transition-all text-sm flex items-center justify-center gap-2 mx-auto">
                                         <RotateCcw size={14} /> REINTENTAR PROTOCOLO
                                     </button>

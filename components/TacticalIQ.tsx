@@ -19,7 +19,7 @@ const LEVELS: IQLevel[] = [
     { level: 4, question: "PUERTA DEL VALLE: Decodifica el patrón numérico.", answer: "", options: [], hint: "Elimina los números grises de tu mente.", bibleClue: { verse: "La puerta del Valle la restauró Hanún con los moradores de Zanoa...", reference: "Nehemías 3:13" } },
     { level: 5, question: "PUERTA DEL MULADAR: Decodifica el patrón numérico.", answer: "", options: [], hint: "Usa el teclado táctico con precisión.", bibleClue: { verse: "La puerta del Muladar la restauró Malquías hijo de Recab, gobernador de la provincia de Bet-haquerem.", reference: "Nehemías 3:14" } },
     { level: 6, question: "PUERTA DE LA FUENTE: Decodifica el patrón numérico.", answer: "", options: [], hint: "Un hit verde vale más que dos amarillos.", bibleClue: { verse: "Salum hijo de Colhoze, gobernador de la región de Mizpa, restauró la puerta de la Fuente.", reference: "Nehemías 3:15" } },
-    { level: 7, question: "PUERTA DE LAS AGUAS: Decodifica el patrón numérico.", answer: "", options: [], hint: "Mantén el ritmo.", bibleClue: { verse: "Y los sirvientes del templo que habitaban en Ofel restauraron hasta enfrente de la puerta de las Aguas al oriente.", reference: "Nehemías 3:26" } },
+    { level: 7, question: "PUERTA DE LAS AGUAS: Resuelve el Enigma de los Cántaros.", answer: "", options: [], hint: "La precisión es vital en el suministro.", bibleClue: { verse: "Y los sirvientes del templo que habitaban en Ofel restauraron hasta enfrente de la puerta de las Aguas al oriente.", reference: "Nehemías 3:26" } },
     { level: 8, question: "PUERTA DE LOS CABALLOS: Decodifica el patrón numérico.", answer: "", options: [], hint: "La victoria requiere insistencia.", bibleClue: { verse: "Desde la puerta de los Caballos restauraron los sacerdotes, cada uno enfrente de su casa.", reference: "Nehemías 3:28" } },
     { level: 9, question: "PUERTA ORIENTAL: Restaura las Torres de la Ciudad.", answer: "", options: [], hint: "No hay atajos tácticos, solo pasos precisos.", bibleClue: { verse: "Después de ellos restauró Sadoc hijo de Imer, enfrente de su casa; y después de él restauró Semaías, guarda de la puerta Oriental.", reference: "Nehemías 3:29" } },
     { level: 10, question: "PUERTA DEL JUICIO: Completa la Criba de Justicia.", answer: "", options: [], hint: "Inspecciona cada fila y columna con rigor.", bibleClue: { verse: "Después de él restauró Malquías, hijo del platero... hasta la puerta del Juicio.", reference: "Nehemías 3:31" } },
@@ -91,6 +91,14 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     const [sudokuLevel, setSudokuLevel] = useState(1);
     const [sudokuSize, setSudokuSize] = useState(4);
 
+    // Enigma de los Cántaros (Puerta 7) State
+    const [jugA, setJugA] = useState(0);
+    const [jugB, setJugB] = useState(0);
+    const [jugACap, setJugACap] = useState(3);
+    const [jugBCap, setJugBCap] = useState(5);
+    const [jugTarget, setJugTarget] = useState(4);
+    const [jugLevel, setJugLevel] = useState(1);
+
     // Pistas y Curriculum Bíblico (Lore) State
     const [hintsUsed, setHintsUsed] = useState(0);
     const [currentLoreIndex, setCurrentLoreIndex] = useState(0);
@@ -137,7 +145,6 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 knightMovesCount,
                 knightLevel,
                 knightGridSize,
-                knightGridSize,
                 knightObstacles,
                 hanoiTowers,
                 hanoiSelectedTower,
@@ -146,13 +153,19 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 sudokuGrid,
                 sudokuInitial,
                 sudokuLevel,
-                sudokuSize
+                sudokuSize,
+                jugA,
+                jugB,
+                jugACap,
+                jugBCap,
+                jugTarget,
+                jugLevel
             };
             localStorage.setItem(`iq_state_${currentUser.id}_level${selectedLevel}`, JSON.stringify(stateToSave));
         } else if ((status === 'FAILED' || gameState === 'RESOLVING') && selectedLevel && currentUser) {
             localStorage.removeItem(`iq_state_${currentUser.id}_level${selectedLevel}`);
         }
-    }, [secretCode, attempts, currentGuess, status, startTime, showHint, showBibleClue, memoryPattern, memoryPlayerGuess, memoryLevel, cryptoPhrase, cryptoCipher, cryptoGuess, cryptoMistakes, wordleWord, wordleGuesses, wordleCurrentGuess, lightsOutGrid, lightsOutMoves, pipesGrid, pipeMoves, pipeLevel, pipeGridSize, knightPos, knightTarget, knightMovesCount, knightLevel, knightGridSize, knightObstacles, hanoiTowers, hanoiSelectedTower, hanoiMoves, hanoiLevel, sudokuGrid, sudokuInitial, sudokuLevel, sudokuSize, gameState, selectedLevel, currentUser]);
+    }, [secretCode, attempts, currentGuess, status, startTime, showHint, showBibleClue, memoryPattern, memoryPlayerGuess, memoryLevel, cryptoPhrase, cryptoCipher, cryptoGuess, cryptoMistakes, wordleWord, wordleGuesses, wordleCurrentGuess, lightsOutGrid, lightsOutMoves, pipesGrid, pipeMoves, pipeLevel, pipeGridSize, knightPos, knightTarget, knightMovesCount, knightLevel, knightGridSize, knightObstacles, hanoiTowers, hanoiSelectedTower, hanoiMoves, hanoiLevel, sudokuGrid, sudokuInitial, sudokuLevel, sudokuSize, jugA, jugB, jugACap, jugBCap, jugTarget, jugLevel, gameState, selectedLevel, currentUser]);
 
     // Generador Puerta 1
     const generateCode = () => {
@@ -329,6 +342,52 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         if (stage === 1) setStartTime(Date.now());
     };
 
+    // Generador Puerta 7 (Enigma de los Cántaros)
+    const startJugs = (stage: number = 1) => {
+        let target = 4;
+        let capA = 3;
+        let capB = 5;
+
+        if (stage === 2) { target = 6; capA = 4; capB = 9; }
+        else if (stage === 3) { target = 8; capA = 5; capB = 12; }
+
+        setJugACap(capA);
+        setJugBCap(capB);
+        setJugTarget(target);
+        setJugA(0);
+        setJugB(0);
+        setJugLevel(stage);
+        setStatus('PLAYING');
+        if (stage === 1) setStartTime(Date.now());
+    };
+
+    // Generador Puerta 10 (Sudoku)
+    const startSudoku = (stage: number = 1) => {
+        const size = stage === 3 ? 6 : 4;
+        const newGrid = Array(size * size).fill(null);
+        const initial = Array(size * size).fill(false);
+
+        // Generador simple de Sudoku/Cuadrado Latino
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const val = ((i + j) % size) + 1;
+                const idx = i * size + j;
+                // Dejamos algunas pistas fijas
+                if ((i + j) % 2 === 0) {
+                    newGrid[idx] = val;
+                    initial[idx] = true;
+                }
+            }
+        }
+
+        setSudokuGrid(newGrid);
+        setSudokuInitial(initial);
+        setSudokuLevel(stage);
+        setSudokuSize(size);
+        setStatus('PLAYING');
+        if (stage === 1) setStartTime(Date.now());
+    };
+
     const handleLevelSelect = (level: number) => {
         if (level <= currentIqLevel) {
             setSelectedLevel(level);
@@ -385,6 +444,13 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                         setSudokuLevel(saved.sudokuLevel || 1);
                         setSudokuSize(saved.sudokuSize || 4);
 
+                        setJugA(saved.jugA || 0);
+                        setJugB(saved.jugB || 0);
+                        setJugACap(saved.jugACap || 3);
+                        setJugBCap(saved.jugBCap || 5);
+                        setJugTarget(saved.jugTarget || 4);
+                        setJugLevel(saved.jugLevel || 1);
+
                         // Lógicas de auto-corrección para guardados corruptos/antiguos
                         if (level === 2 && saved.status === 'MEM_SHOWING') {
                             startMemorySequence(saved.memoryLevel || 1);
@@ -396,15 +462,14 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                             startLightsOut();
                         } else if (level === 6 && (!saved.pipesGrid || saved.pipesGrid.length === 0)) {
                             startPipes(1);
-                        } else if (level === 7) {
-                            // Temporalmente Puerta 7 (Aguas) será Mastermind hasta que diseñemos su minijuego
-                            generateCode();
                         } else if (level === 8 && saved.knightLevel === undefined) {
                             startKnight(1);
                         } else if (level === 9 && (!saved.hanoiTowers || saved.hanoiTowers[0].length === 0 && saved.hanoiTowers[1].length === 0 && saved.hanoiTowers[2].length === 0)) {
                             startHanoi(1);
                         } else if (level === 10 && (!saved.sudokuGrid || saved.sudokuGrid.length === 0)) {
                             startSudoku(1);
+                        } else if (level === 7 && saved.jugTarget === undefined) {
+                            startJugs(1);
                         } else {
                             setStatus(saved.status || 'PLAYING');
                         }
@@ -436,6 +501,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         else if (level === 4) startWordle();
         else if (level === 5) startLightsOut();
         else if (level === 6) startPipes(1);
+        else if (level === 7) startJugs(1);
         else if (level === 8) startKnight(1);
         else if (level === 9) startHanoi(1);
         else if (level === 10) startSudoku(1);
@@ -572,6 +638,67 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 }
             } else {
                 // Movimiento inválido - Feedback visual rápido (opcional, por ahora nada)
+            }
+        }
+    };
+
+    // CONTROLADORES PUERTA 7 (ENIGMA DE LOS CÁNTAROS)
+    const handleJugFill = (jug: 'A' | 'B') => {
+        if (status !== 'PLAYING') return;
+        if (jug === 'A') setJugA(jugACap);
+        else setJugB(jugBCap);
+    };
+
+    const handleJugEmpty = (jug: 'A' | 'B') => {
+        if (status !== 'PLAYING') return;
+        if (jug === 'A') setJugA(0);
+        else setJugB(0);
+    };
+
+    const handleJugPour = async (from: 'A' | 'B') => {
+        if (status !== 'PLAYING') return;
+
+        let newA = jugA;
+        let newB = jugB;
+
+        if (from === 'A') {
+            const transfer = Math.min(jugA, jugBCap - jugB);
+            newA -= transfer;
+            newB += transfer;
+        } else {
+            const transfer = Math.min(jugB, jugACap - jugA);
+            newB -= transfer;
+            newA += transfer;
+        }
+
+        setJugA(newA);
+        setJugB(newB);
+
+        // Win Condition
+        if (newA === jugTarget || newB === jugTarget) {
+            if (jugLevel < 3) {
+                setJugLevel(prev => prev + 1);
+                setTimeout(() => startJugs(jugLevel + 1), 1000);
+            } else {
+                // Ganó el Nivel 7 Completo
+                setIsSubmitting(true);
+                const timeTakenSecs = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+                setFinalTime(timeTakenSecs);
+
+                try {
+                    const res = await submitIQLevelComplete(currentUser!.id, 7, timeTakenSecs);
+                    if (res.success) {
+                        if (7 === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                        setGameState('RESOLVING');
+                        if (onUpdateNeeded) onUpdateNeeded();
+                    } else {
+                        alert(`❌ ERROR DE ENLACE: ${res.error}`);
+                    }
+                } catch (error: any) {
+                    alert(`⚠️ FALLO CRÍTICO: ${error.message}`);
+                } finally {
+                    setIsSubmitting(false);
+                }
             }
         }
     };
@@ -1026,11 +1153,9 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
             newGrid[0].rot = 0;
             setPipesGrid(newGrid);
         } else if (level === 7) {
-            const unrevealedIdx = currentGuess.length;
-            if (unrevealedIdx < 4) {
-                const newGuess = [...currentGuess, secretCode[unrevealedIdx]];
-                setCurrentGuess(newGuess);
-            }
+            // Cántaros: El sistema te sugiere el primer paso táctico
+            const hint = jugA === 0 ? `Sistema Táctico: Comienza llenando el cántaro de ${jugACap}L.` : `Sistema Táctico: Intenta trasvasar el contenido al cántaro de ${jugBCap}L.`;
+            alert(hint);
         } else if (level === 8) {
             // Caballos: Auto-mover hacia el target si es posible
             alert("Sistema Táctico: Observa el Tablero, busca el movimiento que te acerca diagonalmente 2 saltos adelante.");
@@ -1285,7 +1410,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                 {selectedLevel === 4 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Decodifica la Frecuencia encontrando la palabra bíblica de 5 letras.</p><p><span className="text-green-400 font-bold">» REGLAS:</span> <span className="text-green-500">Verde:</span> Letra correcta y posición.<br /><span className="text-yellow-500">Amarillo:</span> Letra en otra posición. Tienes 6 intentos.</p></>}
                                                 {selectedLevel === 5 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Apaga todos los focos rojos (déjalos verdes).</p><p><span className="text-green-400 font-bold">» REGLAS CRÍTICAS:</span> Al tocar un foco, este cambia de color. <strong>PERO TAMBIÉN CAMBIAN sus 4 vecinos directos en forma de CRUZ ➕ (arriba, abajo, izquierda y derecha).</strong> ¡Piensa antes de tocar para usar el daño colateral a tu favor!</p></>}
                                                 {selectedLevel === 6 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Restaura el flujo de la fuente conectando la entrada (superior izquierda) con la salida (inferior derecha).</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Estructura de 3 Fases incrementales (4x4, 5x5, 6x6). Toca cualquier sección de tubería para rotarla 90 grados. Forma un camino ininterrumpido a modo de puente.</p></>}
-                                                {selectedLevel === 7 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Guía al Táctico (indicador azul) hasta el Punto de Extracción (indicador verde).</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Estructura de 3 Fases incrementales. El Táctico <strong>solo puede moverse en forma de "L"</strong> (como el Caballo en el ajedrez: 2 pasos rectos y 1 doblado). Evita las zonas dañadas (X).</p></>}
+                                                {selectedLevel === 7 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Mide exactamente la cantidad de agua solicitada usando los dos cántaros disponibles.</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Puedes llenar un cántaro al máximo, vaciarlo por completo o trasvasar su contenido al otro cántaro hasta que se llene o se vacíe. 3 Fases de dificultad técnica.</p></>}
                                                 {selectedLevel === 9 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Mueve todos los bloques de restauración desde la torre izquierda a la torre derecha.</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Solo puedes mover el bloque superior de cada torre. <strong>Nunca puedes colocar un bloque sobre otro que sea más pequeño que él.</strong> Completa las 3 fases (3, 4 y 5 bloques).</p></>}
                                                 {selectedLevel === 10 && <><p><span className="text-blue-400 font-bold">» OBJETIVO:</span> Completa la Criba de Inspección asegurando que cada símbolo aparezca exactamente una vez en cada fila y columna.</p><p><span className="text-green-400 font-bold">» REGLAS:</span> Toca una celda vacía para asignar un valor. No puede haber valores repetidos en la misma línea horizontal o vertical. 3 Fases (4x4 y 6x6).</p></>}
                                             </div>
@@ -1328,7 +1453,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                 {showHint && showBibleClue && (
                                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-green-500/5 p-3 rounded-lg border border-green-500/10 text-center">
                                         <p className="text-[9px] text-green-400 font-bold leading-tight">
-                                            📡 PISTA DE SISTEMA: {selectedLevel === 1 ? 'Observa los colores verdes y amarillos devueltos tras cada intento.' : selectedLevel === 2 ? 'Concéntrate en la forma imaginaria que dibujan los toques en la matriz.' : selectedLevel === 3 ? 'Busca palabras cortas como "EL", "LA" o "DE" como puntos de inicio comunes.' : selectedLevel === 4 ? 'Piensa en las edificaciones que construyó Nehemías a su regreso o en temas del Templo.' : selectedLevel === 5 ? 'Tocar las esquinas primero a veces ayuda. Busca simetrías y secuencias.' : selectedLevel === 6 ? 'Sigue el flujo de agua desde el inicio. Si se te bloquea, es probable que un cruce esté al revés y necesites retroceder dos bloques.' : selectedLevel === 9 ? 'Si tienes un número impar de bloques, comienza moviendo el más pequeño a la torre de destino (derecha). Si es par, muévelo a la torre central.' : selectedLevel === 10 ? 'Usa el proceso de eliminación. Si en una fila faltan solo dos números y uno de ellos ya está en la columna de abajo, entonces el otro número va en esa celda.' : 'Un movimiento en L significa: 2 casillas en una dirección y 1 casilla perpendicular. Si estás en una esquina, tus opciones son muy limitadas.'}
+                                            📡 PISTA DE SISTEMA: {selectedLevel === 1 ? 'Observa los colores verdes y amarillos devueltos tras cada intento.' : selectedLevel === 2 ? 'Concéntrate en la forma imaginaria que dibujan los toques en la matriz.' : selectedLevel === 3 ? 'Busca palabras cortas como "EL", "LA" o "DE" como puntos de inicio comunes.' : selectedLevel === 4 ? 'Piensa en las edificaciones que construyó Nehemías a su regreso o en temas del Templo.' : selectedLevel === 5 ? 'Tocar las esquinas primero a veces ayuda. Busca simetrías y secuencias.' : selectedLevel === 6 ? 'Sigue el flujo de agua desde el inicio. Si se te bloquea, es probable que un cruce esté al revés y necesites retroceder dos bloques.' : selectedLevel === 7 ? 'Si necesitas 4 litros con cántaros de 3 y 5: Llena el de 5, pásalo al de 3 (te quedan 2 en el de 5), vacía el de 3, pasa esos 2 al de 3, llena el de 5 y completa el de 3...' : selectedLevel === 9 ? 'Si tienes un número impar de bloques, comienza moviendo el más pequeño a la torre de destino (derecha). Si es par, muévelo a la torre central.' : selectedLevel === 10 ? 'Usa el proceso de eliminación. Si en una fila faltan solo dos números y uno de ellos ya está en la columna de abajo, entonces el otro número va en esa celda.' : 'Un movimiento en L significa: 2 casillas en una dirección y 1 casilla perpendicular. Si estás en una esquina, tus opciones son muy limitadas.'}
                                         </p>
                                     </motion.div>
                                 )}
@@ -1583,6 +1708,65 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                 </div>
                             )}
 
+                            {/* INTERFAZ PUERTA 7: ENIGMA DE LOS CÁNTAROS (WATER JUGS) */}
+                            {selectedLevel === 7 && (
+                                <div className="mt-2 flex flex-col items-center w-full px-2 sm:px-4">
+                                    <div className="flex justify-between w-full mb-4 px-2">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Fase {jugLevel}/3</span>
+                                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-widest text-right">
+                                            Objetivo: <span className="text-white font-black">{jugTarget}L</span>
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-around items-end w-full max-w-[320px] h-48 bg-white/[0.02] border border-white/5 rounded-2xl p-6 gap-8 relative overflow-hidden">
+                                        {/* Cántaro A */}
+                                        <div className="flex flex-col items-center gap-3 flex-1">
+                                            <div className="relative w-full aspect-[2/3] max-w-[80px]">
+                                                {/* Cuerpo del Cántaro */}
+                                                <div className="absolute inset-0 border-x-4 border-b-4 border-white/20 rounded-b-3xl rounded-t-lg overflow-hidden bg-black/20">
+                                                    <motion.div
+                                                        className="absolute bottom-0 w-full bg-blue-500/60 backdrop-blur-sm border-t border-blue-300/50 shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                                                        initial={false}
+                                                        animate={{ height: `${(jugA / jugACap) * 100}%` }}
+                                                        transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                                                    />
+                                                    <div className="absolute top-2 left-0 w-full text-center text-[10px] font-bold text-white/40 z-10">{jugACap}L</div>
+                                                    <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-white drop-shadow-md z-10">{jugA}L</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1 w-full scale-90">
+                                                <button onClick={() => handleJugFill('A')} className="flex-1 p-1 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 rounded text-[9px] font-bold text-blue-200">LLENAR</button>
+                                                <button onClick={() => handleJugEmpty('A')} className="flex-1 p-1 bg-red-600/30 hover:bg-red-600/50 border border-red-500/30 rounded text-[9px] font-bold text-red-200">VACÍAR</button>
+                                            </div>
+                                            <button onClick={() => handleJugPour('A')} className="w-full p-1.5 bg-green-600/30 hover:bg-green-600/50 border border-green-500/30 rounded text-[9px] font-bold text-green-200 flex items-center justify-center gap-1">TRASVASAR <ChevronRight size={10} /></button>
+                                        </div>
+
+                                        {/* Cántaro B */}
+                                        <div className="flex flex-col items-center gap-3 flex-1">
+                                            <div className="relative w-full aspect-[2/3] max-w-[80px]">
+                                                {/* Cuerpo del Cántaro */}
+                                                <div className="absolute inset-0 border-x-4 border-b-4 border-white/20 rounded-b-3xl rounded-t-lg overflow-hidden bg-black/20">
+                                                    <motion.div
+                                                        className="absolute bottom-0 w-full bg-blue-500/60 backdrop-blur-sm border-t border-blue-300/50 shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                                                        initial={false}
+                                                        animate={{ height: `${(jugB / jugBCap) * 100}%` }}
+                                                        transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                                                    />
+                                                    <div className="absolute top-2 left-0 w-full text-center text-[10px] font-bold text-white/40 z-10">{jugBCap}L</div>
+                                                    <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-white drop-shadow-md z-10">{jugB}L</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-1 w-full scale-90">
+                                                <button onClick={() => handleJugFill('B')} className="flex-1 p-1 bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 rounded text-[9px] font-bold text-blue-200">LLENAR</button>
+                                                <button onClick={() => handleJugEmpty('B')} className="flex-1 p-1 bg-red-600/30 hover:bg-red-600/50 border border-red-500/30 rounded text-[9px] font-bold text-red-200">VACÍAR</button>
+                                            </div>
+                                            <button onClick={() => handleJugPour('B')} className="w-full p-1.5 bg-green-600/30 hover:bg-green-600/50 border border-green-500/30 rounded text-[9px] font-bold text-green-200 flex items-center justify-center gap-1"><ChevronLeft size={10} /> TRASVASAR</button>
+                                        </div>
+                                    </div>
+                                    <p className="text-[9px] text-gray-500 mt-6 text-center italic">Usa los cántaros para medir exactamente {jugTarget} litros de agua pura de la Fuente.</p>
+                                </div>
+                            )}
+
                             {/* INTERFAZ PUERTA 8: RUTA TÁCTICA (CABALLO) */}
                             {selectedLevel === 8 && (
                                 <div className="mt-2 flex flex-col items-center w-full px-2 sm:px-4">
@@ -1761,7 +1945,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                         if (selectedLevel === 4) startWordle();
                                         if (selectedLevel === 5) startLightsOut();
                                         if (selectedLevel === 6) startPipes(1);
-                                        if (selectedLevel === 7) generateCode();
+                                        if (selectedLevel === 7) startJugs(1);
                                         if (selectedLevel === 8) startKnight(1);
                                         if (selectedLevel === 9) startHanoi(1);
                                         if (selectedLevel === 10) startSudoku(1);

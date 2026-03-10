@@ -3268,7 +3268,7 @@ export const submitIQLevelComplete = async (agentId: string, level: number, time
         const currentIq = rpcData.current_iq;
         console.log('IQ_SERVER: Data agente recuperada del RPC:', { id: realId, nombre: rpcData.nombre, currentIq });
 
-        if (level > currentIq) {
+        if (level >= currentIq) {
             console.log('IQ_SERVER: Nivel IQ actualizado en DB mediante RPC.');
 
             // --- SOCIAL: INTEL FEED ---

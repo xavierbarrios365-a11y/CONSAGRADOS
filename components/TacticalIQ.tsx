@@ -20,7 +20,7 @@ const LEVELS: IQLevel[] = [
     { level: 5, question: "PUERTA DEL MULADAR: Decodifica el patrón numérico.", answer: "", options: [], hint: "Usa el teclado táctico con precisión.", bibleClue: { verse: "La puerta del Muladar la restauró Malquías hijo de Recab, gobernador de la provincia de Bet-haquerem.", reference: "Nehemías 3:14" } },
     { level: 6, question: "PUERTA DE LA FUENTE: Decodifica el patrón numérico.", answer: "", options: [], hint: "Un hit verde vale más que dos amarillos.", bibleClue: { verse: "Salum hijo de Colhoze, gobernador de la región de Mizpa, restauró la puerta de la Fuente.", reference: "Nehemías 3:15" } },
     { level: 7, question: "PUERTA DE LAS AGUAS: Resuelve el Enigma de los Cántaros.", answer: "", options: [], hint: "La precisión es vital en el suministro.", bibleClue: { verse: "Y los sirvientes del templo que habitaban en Ofel restauraron hasta enfrente de la puerta de las Aguas al oriente.", reference: "Nehemías 3:26" } },
-    { level: 8, question: "PUERTA DE LOS CABALLOS: Decodifica el patrón numérico.", answer: "", options: [], hint: "La victoria requiere insistencia.", bibleClue: { verse: "Desde la puerta de los Caballos restauraron los sacerdotes, cada uno enfrente de su casa.", reference: "Nehemías 3:28" } },
+    { level: 8, question: "PUERTA DE LOS CABALLOS: Completa el recorrido del jinete.", answer: "", options: [], hint: "La victoria requiere insistencia.", bibleClue: { verse: "Desde la puerta de los Caballos restauraron los sacerdotes, cada uno enfrente de su casa.", reference: "Nehemías 3:28" } },
     { level: 9, question: "PUERTA ORIENTAL: Restaura las Torres de la Ciudad.", answer: "", options: [], hint: "No hay atajos tácticos, solo pasos precisos.", bibleClue: { verse: "Después de ellos restauró Sadoc hijo de Imer, enfrente de su casa; y después de él restauró Semaías, guarda de la puerta Oriental.", reference: "Nehemías 3:29" } },
     { level: 10, question: "PUERTA DEL JUICIO: Completa la Criba de Justicia.", answer: "", options: [], hint: "Inspecciona cada fila y columna con rigor.", bibleClue: { verse: "Después de él restauró Malquías, hijo del platero... hasta la puerta del Juicio.", reference: "Nehemías 3:31" } },
     { level: 11, question: "PUERTA DE EFRAÍN: Decodifica el patrón numérico.", answer: "", options: [], hint: "Requiere paciencia y exactitud.", bibleClue: { verse: "Y desde la puerta de Efraín hasta la puerta Vieja...", reference: "Nehemías 12:39" } },
@@ -99,6 +99,17 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     const [jugTarget, setJugTarget] = useState(4);
     const [jugLevel, setJugLevel] = useState(1);
 
+    // ESTADOS PUERTA 11 (CUADRADO MÁGICO)
+    const [magicSquareGrid, setMagicSquareGrid] = useState<(number | null)[]>(Array(9).fill(null));
+    const [magicSquareLevel, setMagicSquareLevel] = useState(1);
+    const [magicSquareTarget, setMagicSquareTarget] = useState(15);
+    const [magicSquareSelectedIdx, setMagicSquareSelectedIdx] = useState<number | null>(null);
+
+    // ESTADOS PUERTA 12 (CÁRCEL / COMBINACIÓN FINAL)
+    const [lockCombination, setLockCombination] = useState<string[]>([]);
+    const [lockCurrentGuess, setLockCurrentGuess] = useState<string[]>([]);
+    const [lockAttempts, setLockAttempts] = useState<{ guess: string[], feedback: any[] }[]>([]);
+
     // Pistas y Curriculum Bíblico (Lore) State
     const [hintsUsed, setHintsUsed] = useState(0);
     const [currentLoreIndex, setCurrentLoreIndex] = useState(0);
@@ -169,7 +180,12 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
 
     // Generador Puerta 1
     const generateCode = () => {
-        const newCode = Array.from({ length: 4 }, () => Math.floor(Math.random() * 6) + 1 + "");
+        const isLevel12 = selectedLevel === 12;
+        const length = isLevel12 ? 5 : 4;
+        const range = isLevel12 ? 10 : 6;
+        const offset = isLevel12 ? 0 : 1;
+
+        const newCode = Array.from({ length }, () => Math.floor(Math.random() * range) + offset + "");
         setSecretCode(newCode);
         setAttempts([]);
         setCurrentGuess([]);
@@ -388,6 +404,28 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         if (stage === 1) setStartTime(Date.now());
     };
 
+    // GENERADOR PUERTA 11
+    const startMagicSquare = (level: number) => {
+        setMagicSquareLevel(level);
+        setMagicSquareTarget(15);
+        const newGrid = Array(9).fill(null);
+
+        if (level === 1) {
+            newGrid[0] = 8;
+            newGrid[1] = 1;
+            newGrid[2] = 6;
+        } else if (level === 2) {
+            newGrid[4] = 5;
+        } else {
+            newGrid[0] = 4;
+        }
+
+        setMagicSquareGrid(newGrid);
+        setMagicSquareSelectedIdx(null);
+        setStatus('PLAYING');
+        if (level === 1) setStartTime(Date.now());
+    };
+
     const handleLevelSelect = (level: number) => {
         if (level <= currentIqLevel) {
             setSelectedLevel(level);
@@ -439,6 +477,10 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                         setHanoiMoves(saved.hanoiMoves || 0);
                         setHanoiLevel(saved.hanoiLevel || 1);
 
+                        setMagicSquareGrid(saved.magicSquareGrid || Array(9).fill(null));
+                        setMagicSquareLevel(saved.magicSquareLevel || 1);
+                        setMagicSquareTarget(saved.magicSquareTarget || 15);
+
                         setSudokuGrid(saved.sudokuGrid || []);
                         setSudokuInitial(saved.sudokuInitial || []);
                         setSudokuLevel(saved.sudokuLevel || 1);
@@ -468,6 +510,8 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                             startHanoi(1);
                         } else if (level === 10 && (!saved.sudokuGrid || saved.sudokuGrid.length === 0)) {
                             startSudoku(1);
+                        } else if (level === 11 && (!saved.magicSquareGrid || saved.magicSquareGrid.every(v => v === null))) {
+                            startMagicSquare(1);
                         } else if (level === 7 && saved.jugTarget === undefined) {
                             startJugs(1);
                         } else {
@@ -492,7 +536,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         setStartTime(Date.now());
         setShowBriefing(false);
 
-        if (level === 1) generateCode();
+        if (level === 1 || level === 12) generateCode();
         else if (level === 2) {
             setMemoryLevel(1);
             startMemorySequence(1);
@@ -505,10 +549,12 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         else if (level === 8) startKnight(1);
         else if (level === 9) startHanoi(1);
         else if (level === 10) startSudoku(1);
+        else if (level === 11) startMagicSquare(1);
     };
 
     const handleNumberPress = (num: string) => {
-        if (currentGuess.length < 4 && status === 'PLAYING') {
+        const length = selectedLevel === 12 ? 5 : 4;
+        if (currentGuess.length < length && status === 'PLAYING') {
             setCurrentGuess(prev => [...prev, num]);
         }
     };
@@ -520,15 +566,16 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     };
 
     const submitGuess = async () => {
-        if (currentGuess.length !== 4 || status !== 'PLAYING' || !currentUser || !selectedLevel) return;
+        const length = selectedLevel === 12 ? 5 : 4;
+        if (currentGuess.length !== length || status !== 'PLAYING' || !currentUser || !selectedLevel) return;
 
         // Evaluar lógica Mastermind / Wordle
-        const feedback: FeedbackType[] = new Array(4).fill('gray');
+        const feedback: FeedbackType[] = new Array(length).fill('gray');
         const secretCopy = [...secretCode];
         const guessCopy = [...currentGuess];
 
         // 1ra pasada: Verdes (Match exacto posición y valor)
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < length; i++) {
             if (guessCopy[i] === secretCopy[i]) {
                 feedback[i] = 'green';
                 secretCopy[i] = 'MATCHED';
@@ -537,7 +584,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         }
 
         // 2da pasada: Amarillos (Match valor diferente posición)
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < length; i++) {
             if (guessCopy[i] !== 'USED') {
                 const secretIndex = secretCopy.indexOf(guessCopy[i]);
                 if (secretIndex !== -1) {
@@ -572,7 +619,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
             } finally {
                 setIsSubmitting(false);
             }
-        } else if (newAttempts.length >= 6) {
+        } else if (newAttempts.length >= (selectedLevel === 12 ? 15 : 6)) {
             setStatus('FAILED');
         }
     };
@@ -625,7 +672,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                         try {
                             const res = await submitIQLevelComplete(currentUser!.id, 9, timeTakenSecs);
                             if (res.success) {
-                                if (9 === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                                if (selectedLevel === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
                                 setGameState('RESOLVING');
                                 if (onUpdateNeeded) onUpdateNeeded();
                             } else alert(`❌ ERROR DE ENLACE: ${res.error}`);
@@ -688,7 +735,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 try {
                     const res = await submitIQLevelComplete(currentUser!.id, 7, timeTakenSecs);
                     if (res.success) {
-                        if (7 === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                        if (selectedLevel === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
                         setGameState('RESOLVING');
                         if (onUpdateNeeded) onUpdateNeeded();
                     } else {
@@ -744,7 +791,64 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                     try {
                         const res = await submitIQLevelComplete(currentUser!.id, 10, timeTakenSecs);
                         if (res.success) {
-                            if (10 === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                            if (selectedLevel === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
+                            setGameState('RESOLVING');
+                            if (onUpdateNeeded) onUpdateNeeded();
+                        } else alert(`❌ ERROR DE ENLACE: ${res.error}`);
+                    } catch (error: any) {
+                        alert(`⚠️ FALLO CRÍTICO: ${error.message}`);
+                    } finally {
+                        setIsSubmitting(false);
+                    }
+                }
+            }
+        }
+    };
+
+    // CONTROLADORES PUERTA 11
+    const handleMagicSquareCellClick = (index: number) => {
+        if (status !== 'PLAYING') return;
+        setMagicSquareSelectedIdx(index);
+    };
+
+    const handleMagicSquareNumPress = async (num: number) => {
+        if (status !== 'PLAYING' || magicSquareSelectedIdx === null) return;
+
+        const newGrid = [...magicSquareGrid];
+        newGrid[magicSquareSelectedIdx] = num;
+        setMagicSquareGrid(newGrid);
+
+        // Validar victoria
+        const isComplete = newGrid.every(v => v !== null);
+        if (isComplete) {
+            const target = magicSquareTarget;
+            const checks = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Filas
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
+                [0, 4, 8], [2, 4, 6]             // Diagonales
+            ];
+
+            const isValid = checks.every(group =>
+                group.reduce((acc, idx) => acc + (newGrid[idx] || 0), 0) === target
+            );
+
+            const uniqueNums = new Set(newGrid.filter(v => v !== null));
+            const allUnique = uniqueNums.size === 9;
+
+            if (isValid && allUnique) {
+                if (magicSquareLevel < 3) {
+                    setMagicSquareLevel(prev => prev + 1);
+                    setTimeout(() => startMagicSquare(magicSquareLevel + 1), 1000);
+                } else {
+                    // Win Puerta 11
+                    setIsSubmitting(true);
+                    const timeTakenSecs = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+                    setFinalTime(timeTakenSecs);
+
+                    try {
+                        const res = await submitIQLevelComplete(currentUser!.id, 11, timeTakenSecs);
+                        if (res.success) {
+                            if (selectedLevel === currentIqLevel) setCurrentIqLevel(prev => prev + 1);
                             setGameState('RESOLVING');
                             if (onUpdateNeeded) onUpdateNeeded();
                         } else alert(`❌ ERROR DE ENLACE: ${res.error}`);
@@ -759,7 +863,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     };
 
     // CONTROLADORES PUERTA 2
-    const handleMemoryPress = async (blockIndex: number) => {
+    const handleMemoryClick = async (blockIndex: number) => {
         if (status !== 'PLAYING') return;
 
         const newGuess = [...memoryPlayerGuess, blockIndex];
@@ -1099,27 +1203,22 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     };
 
     const applyTacticalReveal = (level: number) => {
-        if (level === 1) {
-            // Mastermind: Añade el primer número correcto a currentGuess (super-pista)
+        if (level === 1 || level === 12) {
+            // Mastermind / Lock: Añade el siguiente número correcto
+            const length = level === 12 ? 5 : 4;
             const unrevealedIdx = currentGuess.length;
-            if (unrevealedIdx < 4) {
+            if (unrevealedIdx < length) {
                 const newGuess = [...currentGuess, secretCode[unrevealedIdx]];
                 setCurrentGuess(newGuess);
             }
         } else if (level === 2) {
             // Memory: Mostrar patrón un segundo (como un replay)
             setStatus('MEM_SHOWING');
-            let i = 0;
-            const seqLength = memoryPlayerGuess.length + 1;
-            const interval = setInterval(() => {
-                if (i < seqLength) {
-                    const block = memoryPattern[i];
-                    // Flash block logically
-                    // Para simplificar, le damos un auto-click al bloque correcto
-                    clearInterval(interval);
-                    handleMemoryClick(memoryPattern[memoryPlayerGuess.length]);
-                }
-            }, 500);
+            setActiveMemoryBlock(memoryPattern[memoryPlayerGuess.length]);
+            setTimeout(() => {
+                const block = memoryPattern[memoryPlayerGuess.length];
+                handleMemoryClick(block);
+            }, 600);
         } else if (level === 3) {
             // Criptograma: Rellenar primera letra vacía
             const emptyIdx = cryptoCipher.split("").findIndex((c, i) => c !== " " && (!cryptoGuess || cryptoGuess[i] === " " || cryptoGuess[i] === "_"));
@@ -1129,42 +1228,169 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 handleCryptoInput(correctChar, cipherChar);
             }
         } else if (level === 4) {
-            // Wordle: Poner letra correcta no encontrada en el input temporal
+            // Wordle: Poner letra correcta no encontrada
             const missingVars = wordleWord.split("").filter(l => !wordleGuesses.some(g => g.feedback[wordleWord.indexOf(l)] === 'green'));
             if (missingVars.length > 0 && wordleCurrentGuess.length < 5) {
                 handleWordleInput(missingVars[0]);
             }
         } else if (level === 5) {
-            // Lights Out: Override - Apagar el primer sector rojo forzosamente sin daño colateral
+            // Lights Out: Apagar un foco encendido
             const redIndex = lightsOutGrid.findIndex(l => l === true);
             if (redIndex >= 0) {
                 const newGrid = [...lightsOutGrid];
                 newGrid[redIndex] = false;
                 setLightsOutGrid(newGrid);
-                // Si justo con esto gana:
-                if (newGrid.every(light => light === false)) {
-                    // Check win logic inside render avoids state duplication here, but we should trigger it. We let user click somewhere valid to finish or we submit it.
-                }
             }
         } else if (level === 6) {
-            // Pipes: Setear la primera tubería mal a la rotación 0 (probablemente correcta si es recta, o cercana)
-            // Ya que no guardamos pathDefs localmente, simplemente les damos un "Auto-Move" aleatorio a una tubería curva/recta a pos 0
-            const newGrid = [...pipesGrid];
-            newGrid[0].rot = 0;
-            setPipesGrid(newGrid);
+            // Pipes: Rotar la primera tubería que rompe el flujo
+            const getConnections = (type: number, rot: number) => {
+                let base = type === 0 ? [0, 2] : [0, 1];
+                return base.map(d => (d + rot) % 4);
+            };
+
+            const grid = [...pipesGrid];
+            let currentCell = 0;
+            let incomingDir = 3;
+            const visited = new Set<number>();
+
+            while (currentCell >= 0 && currentCell < grid.length) {
+                if (visited.has(currentCell)) break;
+                visited.add(currentCell);
+
+                const pipe = grid[currentCell];
+                const conns = getConnections(pipe.type, pipe.rot);
+
+                if (!conns.includes(incomingDir)) {
+                    // Esta tubería no recibe flujo. Buscamos rotación que sí lo reciba.
+                    for (let r = 0; r < 4; r++) {
+                        if (getConnections(pipe.type, r).includes(incomingDir)) {
+                            grid[currentCell].rot = r;
+                            setPipesGrid(grid);
+                            return;
+                        }
+                    }
+                    return; // No hay rotación válida
+                }
+
+                const outDir = conns.find(d => d !== incomingDir);
+                if (outDir === undefined) return;
+
+                // Calcular siguiente celda basándonos en outDir
+                let nextCell = -1;
+                let nextIncomingDir = -1;
+
+                if (outDir === 0) { // N
+                    if (currentCell >= pipeGridSize) {
+                        nextCell = currentCell - pipeGridSize;
+                        nextIncomingDir = 2;
+                    }
+                } else if (outDir === 1) { // E
+                    if ((currentCell + 1) % pipeGridSize !== 0) {
+                        nextCell = currentCell + 1;
+                        nextIncomingDir = 3;
+                    }
+                } else if (outDir === 2) { // S
+                    if (currentCell < grid.length - pipeGridSize) {
+                        nextCell = currentCell + pipeGridSize;
+                        nextIncomingDir = 0;
+                    }
+                } else if (outDir === 3) { // W
+                    if (currentCell % pipeGridSize !== 0) {
+                        nextCell = currentCell - 1;
+                        nextIncomingDir = 1;
+                    }
+                }
+
+                if (nextCell === -1) {
+                    // La salida de esta tubería da contra una pared o es inválida.
+                    // Rotamos esta misma tubería para que apunte a un vecino válido que no sea el de entrada.
+                    for (let r = 0; r < 4; r++) {
+                        const testConns = getConnections(pipe.type, r);
+                        if (testConns.includes(incomingDir)) {
+                            const newOut = testConns.find(d => d !== incomingDir);
+                            if (newOut === 0 && currentCell >= pipeGridSize) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
+                            if (newOut === 1 && (currentCell + 1) % pipeGridSize !== 0) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
+                            if (newOut === 2 && currentCell < grid.length - pipeGridSize) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
+                            if (newOut === 3 && currentCell % pipeGridSize !== 0) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
+                        }
+                    }
+                    return;
+                }
+
+                currentCell = nextCell;
+                incomingDir = nextIncomingDir;
+            }
         } else if (level === 7) {
-            // Cántaros: El sistema te sugiere el primer paso táctico
-            const hint = jugA === 0 ? `Sistema Táctico: Comienza llenando el cántaro de ${jugACap}L.` : `Sistema Táctico: Intenta trasvasar el contenido al cántaro de ${jugBCap}L.`;
-            alert(hint);
+            // Cántaros: El sistema ejecuta un movimiento útil
+            if (jugA < jugACap) setJugA(jugACap);
+            else if (jugB < jugBCap) {
+                const transfer = Math.min(jugA, jugBCap - jugB);
+                setJugA(prev => prev - transfer);
+                setJugB(prev => prev + transfer);
+            } else setJugB(0);
         } else if (level === 8) {
-            // Caballos: Auto-mover hacia el target si es posible
-            alert("Sistema Táctico: Observa el Tablero, busca el movimiento que te acerca diagonalmente 2 saltos adelante.");
+            // Caballos: Hint visual o movimiento automático
+            const moves = [
+                { r: -2, c: -1 }, { r: -2, c: 1 }, { r: -1, c: -2 }, { r: -1, c: 2 },
+                { r: 1, c: -2 }, { r: 1, c: 2 }, { r: 2, c: -1 }, { r: 2, c: 1 }
+            ];
+            const r1 = Math.floor(knightPos / knightGridSize);
+            const c1 = knightPos % knightGridSize;
+            const rTarget = Math.floor(knightTarget / knightGridSize);
+            const cTarget = knightTarget % knightGridSize;
+
+            for (const m of moves) {
+                const nr = r1 + m.r, nc = c1 + m.c;
+                if (nr >= 0 && nr < knightGridSize && nc >= 0 && nc < knightGridSize) {
+                    const nIdx = nr * knightGridSize + nc;
+                    if (Math.abs(nr - rTarget) + Math.abs(nc - cTarget) < Math.abs(r1 - rTarget) + Math.abs(c1 - cTarget)) {
+                        handleKnightClick(nIdx);
+                        return;
+                    }
+                }
+            }
         } else if (level === 9) {
-            // Hanoi: Auto-mover el disco más pequeño a la torre final (si está libre o tiene disco mayor)
-            alert("Sistema Táctico: Recuerda que la clave es mover los bloques pequeños para liberar los grandes. Intenta mover el bloque superior a la torre de la derecha.");
+            // Hanoi: Ejecutar un movimiento válido
+            const fromTower = hanoiTowers.findIndex(t => t.length > 0);
+            if (fromTower !== -1) {
+                const disk = hanoiTowers[fromTower][hanoiTowers[fromTower].length - 1];
+                const toTower = (fromTower + 1) % 3;
+                if (hanoiTowers[toTower].length === 0 || hanoiTowers[toTower][hanoiTowers[toTower].length - 1] > disk) {
+                    const newTowers = [...hanoiTowers.map(t => [...t])];
+                    newTowers[fromTower].pop();
+                    newTowers[toTower].push(disk);
+                    setHanoiTowers(newTowers);
+                    setHanoiMoves(prev => prev + 1);
+                }
+            }
         } else if (level === 10) {
-            // Sudoku: Revelar una celda vacía correctamente (necesitaríamos la solución, pero por ahora damos una pista genérica)
-            alert("Sistema Táctico: Observa las filas y columnas. Cada símbolo debe ser único. Busca la fila que tenga más espacios llenos.");
+            // Sudoku: Revelar una celda vacía con un número válido (no necesariamente la única solución)
+            const emptyIdx = sudokuGrid.findIndex(v => v === 0);
+            if (emptyIdx !== -1) {
+                const newGrid = [...sudokuGrid];
+                const size = sudokuSize;
+                const row = Math.floor(emptyIdx / size);
+                const col = emptyIdx % size;
+                // Buscar un número que no esté en fila/col
+                for (let n = 1; n <= size; n++) {
+                    const inRow = newGrid.slice(row * size, (row + 1) * size).includes(n);
+                    const inCol = newGrid.filter((_, i) => i % size === col).includes(n);
+                    if (!inRow && !inCol) {
+                        newGrid[emptyIdx] = n;
+                        setSudokuGrid(newGrid);
+                        break;
+                    }
+                }
+            }
+        } else if (level === 11) {
+            // Cuadrado Mágico: Rellenar celda basada en la solución estándar
+            const solution = [8, 1, 6, 3, 5, 7, 4, 9, 2];
+            const emptyIdx = magicSquareGrid.findIndex(v => v === null);
+            if (emptyIdx !== -1) {
+                const newGrid = [...magicSquareGrid];
+                newGrid[emptyIdx] = solution[emptyIdx];
+                setMagicSquareGrid(newGrid);
+            }
         }
     };
 
@@ -1234,6 +1460,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
 
     // RENDERIZADORES PUERTA 1
     const renderAttemptRow = (index: number) => {
+        const length = selectedLevel === 12 ? 5 : 4;
         const isCurrentRow = index === attempts.length;
         const isPastRow = index < attempts.length;
 
@@ -1246,7 +1473,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
 
         return (
             <div key={index} className="flex gap-2 justify-center mb-2">
-                {[0, 1, 2, 3].map(col => {
+                {Array.from({ length }).map((_, col) => {
                     let digit = '';
                     let feedbackColorClass = 'bg-white/5 border-white/10 text-white/20';
 
@@ -1255,12 +1482,11 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                         feedbackColorClass = getBgColor(attempts[index].feedback[col]);
                     } else if (isCurrentRow && currentGuess[col]) {
                         digit = currentGuess[col];
-                        // Resaltar caja activa que tiene número
                         feedbackColorClass = 'border-blue-400 text-blue-100 shadow-[0_0_10px_rgba(59,130,246,0.2)] bg-blue-500/20';
                     }
 
                     return (
-                        <div key={col} className={`w-10 h-10 sm:w-12 sm:h-12 border-2 rounded-lg flex items-center justify-center text-xl sm:text-2xl font-bebas transition-all duration-300 ${feedbackColorClass}`}>
+                        <div key={col} className={`${selectedLevel === 12 ? 'w-8 h-8 sm:w-10 sm:h-10' : 'w-10 h-10 sm:w-12 sm:h-12'} border-2 rounded-lg flex items-center justify-center text-xl sm:text-2xl font-bebas transition-all duration-300 ${feedbackColorClass}`}>
                             {digit}
                         </div>
                     );
@@ -1908,6 +2134,98 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                     </div>
                                     <p className="text-[9px] text-gray-500 mt-6 text-center italic">Inspecciona los registros y completa la cuadrícula sin repetir números en filas o columnas.</p>
                                 </div>
+                            )}
+
+                            {/* INTERFAZ PUERTA 11: CUADRADO MÁGICO */}
+                            {selectedLevel === 11 && (
+                                <div className="mt-2 flex flex-col items-center w-full px-2 sm:px-4">
+                                    <div className="flex justify-between w-full mb-4 px-2">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Fase {magicSquareLevel}/3</span>
+                                        <span className="text-[10px] text-[#FFB700] font-bold uppercase tracking-widest">Suma Objetivo: {magicSquareTarget}</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto w-full max-w-[280px]">
+                                        {magicSquareGrid.map((val, idx) => (
+                                            <button
+                                                key={`magic-${idx}`}
+                                                disabled={status !== 'PLAYING'}
+                                                onClick={() => handleMagicSquareCellClick(idx)}
+                                                className={`aspect-square rounded-lg border-2 flex items-center justify-center font-bebas text-2xl transition-all duration-200 ${magicSquareSelectedIdx === idx
+                                                    ? 'bg-blue-600/40 border-blue-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-105 z-10'
+                                                    : val
+                                                        ? 'bg-blue-900/20 border-blue-500/30 text-white'
+                                                        : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/20'}`}
+                                            >
+                                                {val || ''}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Teclado para Cuadrado Mágico */}
+                                    <div className="grid grid-cols-3 gap-2 mt-6 w-full max-w-[280px]">
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => {
+                                            const isUsed = magicSquareGrid.includes(num);
+                                            return (
+                                                <button
+                                                    key={`keypad-${num}`}
+                                                    disabled={status !== 'PLAYING' || isUsed}
+                                                    onClick={() => handleMagicSquareNumPress(num)}
+                                                    className={`py-2 rounded-lg font-bebas text-lg border transition-all ${isUsed
+                                                        ? 'bg-gray-800 border-gray-700 text-gray-600 cursor-not-allowed opacity-50'
+                                                        : 'bg-blue-900/20 border-blue-500/30 text-blue-300 hover:bg-blue-800/40 active:scale-95'}`}
+                                                >
+                                                    {num}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <p className="text-[9px] text-gray-500 mt-6 text-center italic">Organiza los números del 1 al 9 para que cada fila, columna y diagonal sume {magicSquareTarget}.</p>
+                                </div>
+                            )}
+
+                            {/* INTERFAZ PUERTA 12: CÁRCEL / COMBINACIÓN FINAL */}
+                            {selectedLevel === 12 && (
+                                <>
+                                    <div className="flex justify-between w-full px-2 mb-2">
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Blindaje Final</span>
+                                        <span className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Intentos: {attempts.length}/15</span>
+                                    </div>
+                                    <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 shadow-inner mt-2 overflow-y-auto max-h-[220px]">
+                                        {Array.from({ length: attempts.length + 1 }).map((_, rowIndex) => renderAttemptRow(rowIndex))}
+                                    </div>
+
+                                    <div className="mt-2">
+                                        <div className="grid grid-cols-5 gap-1.5 px-1">
+                                            {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+                                                <button
+                                                    key={num}
+                                                    disabled={status !== 'PLAYING' || currentGuess.length >= 5}
+                                                    onClick={() => handleNumberPress(num)}
+                                                    className="aspect-square bg-white/[0.05] border border-white/10 rounded-lg text-lg font-bebas active:scale-[0.95] active:bg-blue-600/50 transition-all disabled:opacity-30 flex items-center justify-center text-blue-100"
+                                                >
+                                                    {num}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mt-3 px-1">
+                                            <button
+                                                onClick={handleDelete}
+                                                disabled={status !== 'PLAYING' || currentGuess.length === 0}
+                                                className="py-2.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg font-bebas active:scale-95 disabled:opacity-30 transition-all text-xs tracking-widest"
+                                            >
+                                                DESHACER
+                                            </button>
+                                            <button
+                                                onClick={submitGuess}
+                                                disabled={status !== 'PLAYING' || currentGuess.length !== 5 || isSubmitting}
+                                                className="py-2.5 bg-blue-600 text-white rounded-lg font-bebas shadow-lg active:scale-95 disabled:opacity-30 transition-all text-xs tracking-widest"
+                                            >
+                                                {isSubmitting ? 'VALIDANDO...' : 'VASCULAR'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
                             )}
 
                             {/* BOTÓN DE SUSTENTACIÓN TÁCTICA (PISTAS BÍBLICAS) */}

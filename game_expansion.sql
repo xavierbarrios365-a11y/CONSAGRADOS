@@ -73,10 +73,10 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Agente no encontrado');
     END IF;
 
-    -- 3. Actualizar el nivel si rompió su récord
-    IF p_level_achieved > v_current_iq THEN
+    -- 3. Actualizar el nivel si completó su nivel actual o superior
+    IF p_level_achieved >= v_current_iq THEN
         UPDATE public.agentes 
-        SET iq_level = p_level_achieved, updated_at = timezone('utc'::text, now())
+        SET iq_level = p_level_achieved + 1, updated_at = timezone('utc'::text, now())
         WHERE id = v_real_id;
     END IF;
 

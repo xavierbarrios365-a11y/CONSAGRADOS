@@ -376,5 +376,51 @@ export const LORE_DATA: Record<number, LoreFragment[]> = {
             options: ["Que fuera el muro más caro", "Integridad y solidez en la construcción", "Que tuviera muchos colores", "Que fuera famosa"],
             correctIndex: 1
         }
+    ],
+    11: [ // Puerta de Efraín
+        {
+            title: "La Puerta de la Expansión",
+            text: "La Puerta de Efraín (Neh 12:39) conectaba la Ciudad de David con las nuevas extensiones del muro. Representa el crecimiento y la capacidad de la ciudad para albergar a más personas bajo protección.",
+            question: "¿Qué representa simbólicamente la Puerta de Efraín?",
+            options: ["El fin del mundo", "La expansión y crecimiento de la ciudad", "Un lugar de castigo", "Una entrada secreta"],
+            correctIndex: 1
+        },
+        {
+            title: "Equilibrio Táctico",
+            text: "Situada entre la Puerta Vieja y la Puerta del Pescado, Efraín servía como un nodo de balance. En la guerra espiritual, el crecimiento debe ser equilibrado con la estructura y la provisión.",
+            question: "¿Entre qué puertas importantes se situaba la de Efraín?",
+            options: ["Sion y Moriah", "Vieja y del Pescado", "Ovejas y Aguas", "Cárcel y Juicio"],
+            correctIndex: 1
+        },
+        {
+            title: "El Doble Fruto",
+            text: "Efraín significa 'Doble Fruto'. En el Proyecto Nehemías, esta fase busca que el agente no solo aprenda, sino que multiplique su conocimiento y efectividad táctica.",
+            question: "¿Qué significa el nombre 'Efraín'?",
+            options: ["Guerrero fuerte", "Doble Fruto", "Muro alto", "Piedra preciosa"],
+            correctIndex: 1
+        }
+    ],
+    12: [ // Puerta de la Cárcel
+        {
+            title: "El Cierre de la Muralla",
+            text: "Nehemías 12:39 menciona que el desfile de dedicación se detuvo en la Puerta de la Cárcel. Era el punto final de control donde se validaba que nadie sin autorización cruzara el perímetro sagrado.",
+            question: "¿Qué función principal tenía la Puerta de la Cárcel?",
+            options: ["Era un mercado", "Punto final de control y seguridad", "Salida de emergencia", "Residencia real"],
+            correctIndex: 1
+        },
+        {
+            title: "Dedicación y Gozo",
+            text: "Al llegar a esta puerta, los coros se detuvieron y el gozo de Jerusalén se oía desde lejos. Era el momento de celebrar que la obra, contra todo pronóstico, estaba terminada.",
+            question: "¿Qué sentimiento predominaba al llegar a esta puerta en la dedicación?",
+            options: ["Miedo", "Tristeza", "Gozo y celebración por la obra terminada", "Cansancio extremo"],
+            correctIndex: 2
+        },
+        {
+            title: "Blindaje Final",
+            text: "La Cárcel no solo era para prisioneros, sino para custodiar lo más valioso. Simboliza que una vez que construyes tu carácter y tu fe, debes poner guardias para no perder lo ganado.",
+            question: "¿Qué simboliza la Puerta de la Cárcel para el agente?",
+            options: ["Que será arrestado", "El blindaje y custodia de lo que se ha construido", "Que el juego es infinito", "Que debe rendirse"],
+            correctIndex: 1
+        }
     ]
 };

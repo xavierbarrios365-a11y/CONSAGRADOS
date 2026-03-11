@@ -1017,14 +1017,40 @@ export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> 
             .eq('fecha', today)
             .maybeSingle();
 
-        if (error) throw error;
-        if (!data) return null;
+        if (data && !error) {
+            return {
+                date: data.fecha,
+                reference: data.cita,
+                verse: data.texto
+            };
+        }
 
-        return {
-            date: data.fecha,
-            reference: data.cita,
-            verse: data.texto
-        };
+        // --- FALLBACK: Usar API Externa si no hay versículo cargado para hoy ---
+        try {
+            const apiRes = await fetch('https://bible-api.deno.dev/api/read/rv1960/random');
+            const apiData = await apiRes.json();
+
+            if (apiData && apiData.text) {
+                const newDaily = {
+                    fecha: today,
+                    cita: `${apiData.book} ${apiData.chapter}:${apiData.verse}`,
+                    texto: apiData.text
+                };
+
+                // Guardar en DB para que todos los usuarios compartan el mismo versículo el resto del día
+                await supabase.from('versiculos_diarios').insert(newDaily);
+
+                return {
+                    date: newDaily.fecha,
+                    reference: newDaily.cita,
+                    verse: newDaily.texto
+                };
+            }
+        } catch (apiError) {
+            console.error('❌ Error llamando a la API de la Biblia:', apiError);
+        }
+
+        return null;
     } catch (e) {
         console.error('❌ Error al obtener versículo diario:', e);
         return null;

@@ -71,7 +71,7 @@ export const registerBiometric = async (
                 { alg: -257, type: "public-key" }, // RS256 (mayor compatibilidad Android)
             ],
             authenticatorSelection: {
-                userVerification: "required",
+                userVerification: "preferred",
                 residentKey: "preferred",
             },
             excludeCredentials: excludeCredentials,
@@ -108,7 +108,7 @@ export const authenticateBiometric = async (storedCredentialIdsRaw?: string | nu
 
         const publicKeyCredentialRequestOptions: any = {
             challenge: challenge,
-            userVerification: "required",
+            userVerification: "preferred",
             timeout: 60000,
         };
 

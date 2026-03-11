@@ -394,10 +394,13 @@ export function useAuth() {
             const interval = setInterval(() => {
                 const now = Date.now();
                 const diff = now - lastActiveTime;
+
+                // --- FIX: Remove strict 1 hour timeout. Increase to 30 days (2592000000 ms) ---
                 if (!isPwa) {
-                    if (diff >= 3600000) { handleLogout(); }
-                    else if (diff >= 3300000) { setShowSessionWarning(true); }
+                    if (diff >= 2592000000) { handleLogout(); } // 30 días
+                    else if (diff >= 2590000000) { setShowSessionWarning(true); }
                 }
+
                 if (!navigator.onLine) {
                     const offlineStart = parseInt(localStorage.getItem('offline_start_time') || '0');
                     if (offlineStart === 0) {

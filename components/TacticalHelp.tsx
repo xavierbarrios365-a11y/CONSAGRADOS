@@ -10,7 +10,7 @@ const FAQ_ITEMS = [
     {
         icon: <Zap size={14} className="text-yellow-400" />,
         title: "SISTEMA DE XP Y RACHAS",
-        content: "Los XP se obtienen por asistencia (20) y misiones. Tu racha activa multiplica los puntos ganados y perdidos: 5d (1.25x), 10d (1.50x), 20d (1.75x) y 30+d (2.0x)."
+        content: "Los XP se obtienen por asistencia (20) y misiones. Tu racha activa multiplica puntos: 5d (1.25x), 10d (1.50x), 20d (1.75x) y 30+d (2.0x). ¡Mantén el fuego encendido!"
     },
     {
         icon: <Award size={14} className="text-blue-400" />,
@@ -23,9 +23,9 @@ const FAQ_ITEMS = [
         content: "Duelos en tiempo real sin riesgo de XP. Sirven para mejorar tus estadísticas de honor y ganar insignias sociales en el Intel Feed."
     },
     {
-        icon: <Star size={14} className="text-purple-400" />,
-        title: "PROYECTO NEHEMÍAS",
-        content: "Juego de IQ de 100 niveles. Cada 10 niveles superados, la recompensa aumenta: 1-10 (1 XP), 11-20 (2 XP) y así sucesivamente hasta 10 XP por nivel."
+        icon: <BookOpen size={14} className="text-orange-400" />,
+        title: "ECOSISTEMA DE MEDIOS",
+        content: "Historias y posts en Intel Feed permiten fotos y videos. Todo el contenido multimedia se elimina automáticamente tras 48 horas para mantener la seguridad operacional."
     }
 ];
 

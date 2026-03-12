@@ -18,8 +18,7 @@ import {
     supabase,
     validateContent,
     toggleDislikeSupabase,
-    parseNewsMessage,
-    uploadToCloudinary
+    parseNewsMessage
 } from '../services/supabaseService';
 import { uploadToCloudinary as uploadCloudinaryDirect } from '../services/cloudinaryService';
 import { sendSocialNotification } from '../services/notifyService';
@@ -75,6 +74,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+    const [viewingMedia, setViewingMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
     const mediaInputRef = React.useRef<HTMLInputElement>(null);
 
     const PAGE_SIZE = 20;
@@ -90,6 +90,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const loadNews = async (silent = false) => {
         if (!silent || news.length === 0) setLoading(true);
         try {
+            // Cleanup fire-and-forget (48h policy)
+            Promise.resolve(supabase.rpc('cleanup_expired_intel_feed')).catch(() => { });
+
             const data = await fetchNewsFeed();
             setNews(data || []);
             setCurrentPage(0);
@@ -121,8 +124,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
     const handlePublishSocial = async (parentId?: string) => {
         if (!currentUser || !socialMessage.trim() || isPublishing) return;
-        if (socialMessage.length > 128 && !socialMessage.startsWith('📖')) {
-            showAlert({ title: "OPERACIÓN DENEGADA", message: "EL MENSAJE EXCEDE EL LÍMITE TÁCTICO DE 128 CARACTERES.", type: 'ERROR' });
+        const limit = selectedMedia ? 256 : 128;
+        if (socialMessage.length > limit && !socialMessage.startsWith('📖')) {
+            showAlert({ title: "OPERACIÓN DENEGADA", message: `EL MENSAJE EXCEDE EL LÍMITE TÁCTICO DE ${limit} CARACTERES.`, type: 'ERROR' });
             return;
         }
 
@@ -238,10 +242,35 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         setShowMentions(false);
                                     }
                                 }}
-                                placeholder={isReply ? "Escribe tu respuesta..." : "¿Qué quieres compartir hoy?"}
-                                maxLength={128}
+                                placeholder={selectedMedia ? "Escribe un pie de foto para tu multimedia..." : (isReply ? "Escribe tu respuesta..." : "¿Qué quieres compartir hoy?")}
+                                maxLength={selectedMedia ? 256 : 128} // Permitimos más texto si es un post con multimedia
                                 className="w-full bg-transparent border-none text-white text-[12px] font-medium placeholder:text-white/20 outline-none resize-none min-h-[60px] no-scrollbar font-montserrat"
                             />
+
+                            {mediaPreview && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="relative w-full aspect-video rounded-xl overflow-hidden mb-2 border border-white/10"
+                                >
+                                    <button
+                                        onClick={() => { setSelectedMedia(null); setMediaPreview(null); }}
+                                        className="absolute top-2 right-2 z-10 p-1.5 bg-black/60 text-white rounded-full hover:bg-black/80 transition-all border border-white/10"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                    {selectedMedia?.type.startsWith('video/') ? (
+                                        <video src={mediaPreview} className="w-full h-full object-cover" muted playsInline />
+                                    ) : (
+                                        <img src={mediaPreview} className="w-full h-full object-cover" alt="Preview" />
+                                    )}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                                    <div className="absolute bottom-2 left-3 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                                        <span className="text-[8px] font-black text-white uppercase tracking-widest">Multimedia Lista</span>
+                                    </div>
+                                </motion.div>
+                            )}
                             {showMentions && (
                                 <div className="absolute left-0 bottom-full mb-2 w-full max-h-32 overflow-y-auto bg-[#001f3f] border border-white/10 rounded-xl shadow-2xl z-50 no-scrollbar">
                                     {mentions.map(a => (
@@ -355,7 +384,10 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         } else if (res.liked) {
             const post = news.find(n => n.id === noticiaId);
             if (post && post.agentId !== currentUser.id) {
-                sendSocialNotification('LIKE', post.agentId, { senderName: currentUser.name });
+                sendSocialNotification('LIKE', post.agentId, {
+                    senderName: currentUser.name,
+                    senderId: currentUser.id
+                });
             }
             const mostLiked = await getMostLikedAgentSupabase();
             if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
@@ -383,7 +415,10 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             if (res.disliked) {
                 const post = news.find(n => n.id === noticiaId);
                 if (post && post.agentId !== currentUser.id) {
-                    sendSocialNotification('DISLIKE', post.agentId, { senderName: currentUser.name });
+                    sendSocialNotification('DISLIKE', post.agentId, {
+                        senderName: currentUser.name,
+                        senderId: currentUser.id
+                    });
                 }
             }
             if (res.disliked && (dislikesCount[noticiaId] || 0) + 1 >= 5) {
@@ -410,7 +445,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         channel.on('postgres_changes', { event: '*', schema: 'public', table: 'asistencia_visitas' }, (payload) => {
             if (payload.eventType === 'INSERT') {
                 const item = payload.new;
-                const { message, verse, reference } = parseNewsMessage(item.detalle || '');
+                const { message, verse, reference, mediaUrl, mediaType } = parseNewsMessage(item.detalle || '');
                 const mappedItem: NewsFeedItem = {
                     id: item.id,
                     agentId: item.agent_id,
@@ -419,6 +454,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                     message: message,
                     verse: verse,
                     reference: reference,
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
                     parentId: item.parent_id,
                     date: new Date(item.registrado_en).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase()
                 };
@@ -524,7 +561,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                     <div className="relative">
                                                         <img src={photoUrl} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" onClick={() => agent && onAgentClick?.(agent)} />
                                                         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center border border-black/20" style={{ backgroundColor: config.color }}>
-                                                            {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement, { size: 10 }) : config.icon}
+                                                            {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -541,12 +578,39 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                 {item.type === 'BIBLE_SHARE' && item.verse ? (
                                                     <div className="relative mt-2 mb-3 px-6 py-6 bg-gradient-to-br from-[#ffb700]/10 border border-[#ffb700]/20 rounded-3xl overflow-hidden">
                                                         <BookOpen size={100} className="absolute -bottom-6 -right-6 text-[#ffb700]/5" />
-                                                        <p className="text-[15px] text-white font-medium italic">{item.verse}</p>
+                                                        <p className="text-[12px] text-white/90 font-medium leading-relaxed whitespace-pre-wrap font-montserrat">{item.message}</p>
+
+                                                        {item.mediaUrl && (
+                                                            <div
+                                                                className="mt-3 relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black cursor-pointer hover:scale-[1.02] transition-transform shadow-2xl group"
+                                                                onClick={() => item.mediaUrl && item.mediaType && setViewingMedia({ url: item.mediaUrl, type: item.mediaType })}
+                                                            >
+                                                                {item.mediaType === 'video' ? (
+                                                                    <div className="relative w-full h-full">
+                                                                        <video src={item.mediaUrl} className="w-full h-full object-cover" muted playsInline />
+                                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                                                                            <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/40">
+                                                                                <Zap size={20} className="text-white animate-pulse" />
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <img src={item.mediaUrl} className="w-full h-full object-cover" alt="Media content" />
+                                                                )}
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Ver en pantalla completa</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                         <span className="text-[11px] font-black text-[#ffb700] uppercase mt-2 block">{item.reference}</span>
                                                     </div>
                                                 ) : (
                                                     <p className="text-[13px] text-white/90 font-medium">
-                                                        {item.message.split(' ').map((word, i) => word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' ')}
+                                                        {item.message
+                                                            .replace(/\[MEDIA\]: \S+/g, '')
+                                                            .replace(/\[VIDEO\]: \S+/g, '')
+                                                            .split(' ')
+                                                            .map((word, i) => word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' ')}
                                                     </p>
                                                 )}
 
@@ -554,13 +618,23 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                     const m = item.message.match(/\[MEDIA\]: (\S+)/);
                                                     const v = item.message.match(/\[VIDEO\]: (\S+)/);
                                                     if (v) return (
-                                                        <div className="mt-3 rounded-2xl overflow-hidden border border-[#ffb700]/20 bg-black aspect-video">
-                                                            <video src={v[1]} controls playsInline className="w-full h-full object-cover" />
+                                                        <div
+                                                            className="mt-3 rounded-2xl overflow-hidden border border-[#ffb700]/20 bg-black aspect-video cursor-pointer relative group"
+                                                            onClick={() => setViewingMedia({ url: v[1], type: 'video' })}
+                                                        >
+                                                            <video src={v[1]} className="w-full h-full object-cover" />
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                                                                <Zap className="text-[#ffb700] w-12 h-12" />
+                                                            </div>
                                                         </div>
                                                     );
                                                     if (m) return (
-                                                        <div className="mt-3 rounded-2xl overflow-hidden border border-white/10 aspect-video">
-                                                            <img src={m[1]} className="w-full h-full object-cover" alt="" onClick={() => window.open(m[1], '_blank')} />
+                                                        <div
+                                                            className="mt-3 rounded-2xl overflow-hidden border border-white/10 aspect-video cursor-pointer relative group"
+                                                            onClick={() => setViewingMedia({ url: m[1], type: 'image' })}
+                                                        >
+                                                            <img src={m[1]} className="w-full h-full object-cover" alt="" />
+                                                            <div className="absolute inset-0 bg-[#ffb700]/0 group-hover:bg-[#ffb700]/10 transition-colors" />
                                                         </div>
                                                     );
                                                     return null;
@@ -603,7 +677,13 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                                 <img src={formatDriveUrl(agents.find(a => a.id === c.agentId)?.photoUrl || '', c.agentName || '')} className="w-8 h-8 rounded-lg object-cover" alt="" />
                                                                 <div className="flex-1 py-1">
                                                                     <div className="flex items-center gap-2"><span className="text-[9px] font-black text-[#ffb700] uppercase">{c.agentName?.split(' ')[0]}</span><span className="text-[7px] text-white/20">• {c.date}</span></div>
-                                                                    <p className="text-[12px] text-white/70">{c.message.split(' ').map((w, i) => w.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{w} </span> : w + ' ')}</p>
+                                                                    <p className="text-[12px] text-white/70">
+                                                                        {c.message
+                                                                            .replace(/\[MEDIA\]: \S+/g, '')
+                                                                            .replace(/\[VIDEO\]: \S+/g, '')
+                                                                            .split(' ')
+                                                                            .map((w, i) => w.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{w} </span> : w + ' ')}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -621,6 +701,61 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             </div>
 
             {sharePreview && <AchievementShareCard agent={sharePreview.agent} newsItem={sharePreview.newsItem} onClose={() => setSharePreview(null)} />}
+
+            {/* FULL SCREEN MEDIA VIEWER */}
+            <AnimatePresence>
+                {viewingMedia && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4"
+                        onClick={() => setViewingMedia(null)}
+                    >
+                        <button
+                            className="absolute top-8 right-8 text-white/60 hover:text-white transition-colors"
+                            onClick={() => setViewingMedia(null)}
+                        >
+                            <X size={40} />
+                        </button>
+
+                        <div className="w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black flex items-center justify-center">
+                            {viewingMedia.type === 'video' ? (
+                                <video
+                                    src={viewingMedia.url}
+                                    controls
+                                    autoPlay
+                                    className="w-full h-full object-contain"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            ) : (
+                                <img
+                                    src={viewingMedia.url}
+                                    className="w-full h-full object-contain"
+                                    alt="Visualización táctica"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            )}
+                        </div>
+
+                        <div className="mt-8 flex flex-col items-center gap-2 pointer-events-none">
+                            <span className="bg-[#ffb700] text-[#001f3f] px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
+                                Visualizador de Inteligencia
+                            </span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <style>{`
+                .animate-spin-slow {
+                    animation: spin 3s linear infinite;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };

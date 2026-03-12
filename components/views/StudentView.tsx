@@ -68,57 +68,62 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
                     <div className="max-w-2xl mx-auto pt-4 pb-10 ig-container font-montserrat">
-                        {/* ENCABEZADO INTEGRADO (IG STYLE - HORIZONTAL) */}
+                        {/* TACTICAL DASHBOARD SLIDER (HORIZONTAL) - TOP POSITION */}
+                        <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar flex gap-3 pb-2 pt-2 border-b border-white/5">
+                            {/* Shortcut: Proyecto Nehemías */}
+                            <button
+                                onClick={() => setView(AppView.IQ_GAME)}
+                                className="flex items-center gap-3 p-4 bg-blue-900/10 border border-blue-500/10 rounded-3xl shrink-0 w-64 hover:bg-blue-900/20 transition-all group shadow-lg"
+                            >
+                                <div className="p-3 bg-blue-500/20 rounded-2xl group-hover:bg-blue-500 transition-colors shadow-inner">
+                                    <Brain className="text-blue-400 group-hover:text-white" size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-400 mb-0.5">INTELIGENCIA</p>
+                                    <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none">PROYECTO NEHEMÍAS</h4>
+                                </div>
+                            </button>
+
+                            {/* Shortcut: Arena de Duelos */}
+                            <button
+                                onClick={() => setView(AppView.DUEL_ARENA)}
+                                className="flex items-center gap-3 p-4 bg-red-900/10 border border-red-500/10 rounded-3xl shrink-0 w-64 hover:bg-red-900/20 transition-all group shadow-lg"
+                            >
+                                <div className="p-3 bg-red-500/20 rounded-2xl group-hover:bg-red-500 transition-colors shadow-inner">
+                                    <Swords className="text-red-400 group-hover:text-white" size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-red-400 mb-0.5">COMBATE</p>
+                                    <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none">ARENA DE DUELOS</h4>
+                                </div>
+                            </button>
+
+                            {/* Active Operations listed horizontally */}
+                            {activeEvents.map(evt => (
+                                <div
+                                    key={evt.id}
+                                    className="flex items-center gap-4 p-4 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-3xl shrink-0 w-72 hover:bg-[#ffb700]/20 transition-all cursor-pointer shadow-lg group relative overflow-hidden"
+                                    onClick={() => handleConfirmEventAttendance(evt)}
+                                >
+                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:scale-110 transition-transform">
+                                        <Target size={40} className="text-[#ffb700]" />
+                                    </div>
+                                    <div className="p-3 bg-[#ffb700]/20 rounded-2xl shadow-inner shrink-0">
+                                        <Calendar size={20} className="text-[#ffb700]" />
+                                    </div>
+                                    <div className="text-left min-w-0">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#ffb700] mb-0.5">OPERACIÓN</p>
+                                        <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none truncate">{evt.titulo}</h4>
+                                        <p className="text-[9px] text-white/40 mt-1 font-medium">{evt.fecha} @ {evt.hora || 'S/H'}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
                         {/* HISTORIAS FULL WIDTH (IG STYLE) */}
                         <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-white/5 pb-4">
                             <StoriesBar currentUser={currentUser} />
                         </div>
-
-                        <div id="tutorial-daily-verse" className="w-full animate-in slide-in-from-top-4 duration-1000 mb-2">
-                            <DailyVerse
-                                verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
-                                streakCount={currentUser?.streakCount}
-                                onQuizComplete={handleVerseQuizComplete}
-                                agent={currentUser || undefined}
-                            />
-                        </div>
-
-                        {/* TACTICAL GAMES HUB - MINIMALIST */}
-                        <div className="grid grid-cols-2 gap-2 mb-4 animate-in fade-in zoom-in duration-700">
-                            <button
-                                onClick={() => setView(AppView.IQ_GAME)}
-                                className="flex items-center gap-3 p-3 bg-blue-950/20 border border-blue-500/10 rounded-2xl hover:bg-blue-900/40 transition-all group"
-                            >
-                                <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500 transition-colors">
-                                    <Brain className="text-blue-400 group-hover:text-white" size={16} />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[7px] font-black uppercase tracking-[0.2em] text-blue-400/80 mb-0.5">INTELIGENCIA</p>
-                                    <h4 className="text-[10px] font-bebas tracking-widest text-white leading-none">PROYECTO NEHEMÍAS</h4>
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => setView(AppView.DUEL_ARENA)}
-                                className="flex items-center gap-3 p-3 bg-red-950/20 border border-red-500/10 rounded-2xl hover:bg-red-900/40 transition-all group"
-                            >
-                                <div className="p-2 bg-red-500/10 rounded-xl group-hover:bg-red-500 transition-colors">
-                                    <Swords className="text-red-400 group-hover:text-white" size={16} />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[7px] font-black uppercase tracking-[0.2em] text-red-400/80 mb-0.5">COMBATE</p>
-                                    <h4 className="text-[10px] font-bebas tracking-widest text-white leading-none">ARENA DE DUELOS</h4>
-                                </div>
-                            </button>
-                        </div>
-
-                        {/* HELP BUTTON */}
-                        <button
-                            onClick={() => setView(AppView.HELP_CENTER)}
-                            className="w-full mb-4 p-3 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all group"
-                        >
-                            <HelpCircle className="text-blue-400 group-hover:scale-110 transition-transform" size={18} />
-                            <span className="text-[10px] font-bebas tracking-widest text-white/70">¿CÓMO FUNCIONA EL SISTEMA? (AYUDA)</span>
-                        </button>
                         {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
                             <IntelFeed
                                 headlines={headlines}
@@ -175,90 +180,6 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                             }
                         })()}
 
-                        {/* EVENTOS ACTIVOS */}
-                        {activeEvents.length > 0 && (
-                            <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-700">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Calendar size={14} className="text-[#ffb700] animate-pulse" />
-                                    <span className="text-[10px] font-black text-white/60 uppercase tracking-widest font-bebas">Operaciones Próximas</span>
-                                </div>
-                                {activeEvents.map(evt => (
-                                    <div key={evt.id} className="bg-[#001833] border border-white/10 rounded-3xl p-5 space-y-4 shadow-xl relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                            <Target size={60} className="text-[#ffb700]" />
-                                        </div>
-                                        <div className="relative z-10">
-                                            <h4 className="text-lg font-bebas font-black text-white uppercase tracking-wider">{evt.titulo}</h4>
-                                            <p className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest mb-3 opacity-80">{evt.fecha} @ {evt.hora || 'S/H'}</p>
-                                            {evt.descripcion && <p className="text-[9px] text-white/50 mb-4 leading-relaxed font-montserrat">{evt.descripcion}</p>}
-
-                                            <div className="flex flex-col gap-2">
-                                                {userConfirmations.includes(String(evt.titulo).trim()) ? (
-                                                    <div className="w-full bg-green-500/10 border border-green-500/30 text-green-500 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 font-bebas">
-                                                        <ShieldCheck size={14} /> Misión Confirmada
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleConfirmEventAttendance(evt)}
-                                                        disabled={isConfirmingEvent === evt.id}
-                                                        className="w-full bg-[#ffb700] text-[#001f3f] font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-[#ffb700]/90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 font-bebas shadow-[0_10px_20px_rgba(255,183,0,0.2)]"
-                                                    >
-                                                        {isConfirmingEvent === evt.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                                        Confirmar Mi Asistencia
-                                                    </button>
-                                                )}
-
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            try {
-                                                                const startDate = parseEventDate(evt.fecha, evt.hora);
-                                                                const endDate = new Date(startDate.getTime() + 2 * 3600000);
-                                                                const calLink = generateGoogleCalendarLink({
-                                                                    title: evt.titulo,
-                                                                    description: evt.descripcion || '',
-                                                                    startTime: startDate,
-                                                                    endTime: endDate
-                                                                });
-                                                                if (calLink) {
-                                                                    window.open(calLink, '_blank', 'noopener,noreferrer');
-                                                                } else {
-                                                                    showAlert({ title: "ERROR", message: "No se pudo generar el enlace.", type: 'ERROR' });
-                                                                }
-                                                            } catch (e) {
-                                                                showAlert({ title: "ERROR", message: "Fecha inválida.", type: 'ERROR' });
-                                                            }
-                                                        }}
-                                                        className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
-                                                    >
-                                                        <Calendar size={12} /> Google
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            try {
-                                                                const startDate = parseEventDate(evt.fecha, evt.hora);
-                                                                const endDate = new Date(startDate.getTime() + 2 * 3600000);
-                                                                downloadIcsFile({
-                                                                    title: evt.titulo,
-                                                                    description: evt.descripcion || '',
-                                                                    startTime: startDate,
-                                                                    endTime: endDate
-                                                                });
-                                                            } catch (e) {
-                                                                showAlert({ title: "ERROR", message: "Fecha inválida.", type: 'ERROR' });
-                                                            }
-                                                        }}
-                                                        className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 py-3 rounded-xl text-white/70 text-[8px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 hover:text-[#ffb700] transition-all"
-                                                    >
-                                                        <Download size={12} /> Apple / Sistema
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
 
                         <div className={`grid gap-3 ${currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2' ? 'grid-cols-1' : 'grid-cols-2 xs:grid-cols-3'}`}>
                             {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (

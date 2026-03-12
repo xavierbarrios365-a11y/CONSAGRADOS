@@ -132,12 +132,11 @@ export const FALLBACK_VERSES = [
 ];
 
 export const getRandomFallbackVerse = () => {
-    // Para que cambie exactamente a la medianoche (hora de Caracas) sin repetirse
-    // usamos los días transcurridos desde el epoch calculados sobre la fecha local.
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-    const diffDays = Math.floor(new Date(todayStr).getTime() / (1000 * 60 * 60 * 24));
+    // Calculamos el índice basado en bloques de 2 horas desde el epoch
+    const now = new Date();
+    const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60));
+    const twoHourWindows = Math.floor(hoursSinceEpoch / 2);
 
-    // Al usar modulo la longitud, garantizamos no repetir hasta darle vuelta completa al array (100+ días)
-    const index = diffDays % FALLBACK_VERSES.length;
+    const index = twoHourWindows % FALLBACK_VERSES.length;
     return FALLBACK_VERSES[index];
 };

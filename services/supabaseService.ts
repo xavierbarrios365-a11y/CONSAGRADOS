@@ -1011,7 +1011,10 @@ export const syncDailyVersesToSupabase = async (verses: any[]) => {
  */
 export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> => {
     try {
-        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+        const now = new Date();
+        const today = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+        // 1. Intentar obtener el de la BD
         const { data, error } = await supabase
             .from('versiculos_diarios')
             .select('*')
@@ -1021,42 +1024,62 @@ export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> 
         let needsNewVerse = false;
 
         if (data && !error) {
-            return {
-                date: data.fecha,
-                reference: data.cita,
-                verse: data.texto
-            };
+            // Verificar si el versículo tiene más de 2 horas
+            const lastUpdated = new Date(data.created_at || data.fecha).getTime();
+            const hoursDiff = (now.getTime() - lastUpdated) / (1000 * 60 * 60);
+
+            if (hoursDiff < 2) {
+                return {
+                    date: data.fecha,
+                    reference: data.cita,
+                    verse: data.texto
+                };
+            } else {
+                needsNewVerse = true;
+            }
         } else {
             needsNewVerse = true;
         }
 
-        // --- FALLBACK / ROTACIÓN: Una vez al día ---
+        // --- FALLBACK / ROTACIÓN DINÁMICA ---
         if (needsNewVerse) {
             try {
-                // Generar versículo local estructurado garantizado cada 2 horas
-                const fallbackData = getRandomFallbackVerse();
+                let finalVerseData = getRandomFallbackVerse();
+
+                // Intentar fetch de API externa para mayor dinamismo (bible-api.com)
+                try {
+                    const apiRes = await fetch('https://bible-api.com/?random=verse&translation=rv1909');
+                    const apiData = await apiRes.json();
+                    if (apiData && apiData.text) {
+                        finalVerseData = {
+                            book: apiData.verses[0].book_name,
+                            chapter: apiData.verses[0].chapter.toString(),
+                            verse: apiData.verses[0].verse.toString(),
+                            text: apiData.text.trim()
+                        };
+                        console.log('✅ Versículo obtenido de API externa.');
+                    }
+                } catch (apiErr) {
+                    console.warn('API de Biblia falló, usando fallback local.', apiErr);
+                }
 
                 const newDaily = {
                     fecha: today,
-                    cita: `${fallbackData.book} ${fallbackData.chapter}:${fallbackData.verse}`,
-                    texto: fallbackData.text,
-                    created_at: new Date().toISOString() // Actualizar timestamp para el próximo ciclo
+                    cita: `${finalVerseData.book} ${finalVerseData.chapter}:${finalVerseData.verse}`,
+                    texto: finalVerseData.text,
+                    created_at: now.toISOString()
                 };
 
                 if (data) {
-                    // Actualizar el existente (silenciosamente fallará si no hay permisos, pero devolveremos la data al UI)
-                    supabase.from('versiculos_diarios').update({
+                    // Actualizar el existente
+                    await supabase.from('versiculos_diarios').update({
                         cita: newDaily.cita,
                         texto: newDaily.texto,
                         created_at: newDaily.created_at
-                    }).eq('fecha', today).then(({ error }) => {
-                        if (error) console.warn('Supabase verse update failed (RLS), but UI will use new local verse.', error);
-                    });
+                    }).eq('id', data.id);
                 } else {
                     // Insertar nuevo si no existía el de hoy
-                    supabase.from('versiculos_diarios').insert(newDaily).then(({ error }) => {
-                        if (error) console.warn('Supabase verse insert failed (RLS), but UI will use new local verse.', error);
-                    });
+                    await supabase.from('versiculos_diarios').insert(newDaily);
                 }
 
                 return {
@@ -1067,7 +1090,6 @@ export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> 
 
             } catch (fallbackErr) {
                 console.error('❌ Error generando versículo fallback:', fallbackErr);
-                // Si incluso esto falla, retornamos el viejo
                 if (data) {
                     return {
                         date: data.fecha,
@@ -1625,7 +1647,10 @@ export const parseNewsMessage = (rawMessage: string) => {
     let message = rawMessage;
     let verse = undefined;
     let reference = undefined;
+    let mediaUrl = undefined;
+    let mediaType: 'image' | 'video' | undefined = undefined;
 
+    // 1. Extraer Versículos
     if (message.includes('[VERSE]:')) {
         const parts = message.split(' [VERSE]: ');
         message = parts[0];
@@ -1639,7 +1664,17 @@ export const parseNewsMessage = (rawMessage: string) => {
             }
         }
     }
-    return { message, verse, reference };
+
+    // 2. Extraer Media/Video (y ocultarlos del mensaje)
+    const mediaPattern = / \[(MEDIA|VIDEO)\]: (\S+)/;
+    const match = message.match(mediaPattern);
+    if (match) {
+        mediaType = match[1] === 'VIDEO' ? 'video' : 'image';
+        mediaUrl = match[2];
+        message = message.replace(mediaPattern, '').trim();
+    }
+
+    return { message, verse, reference, mediaUrl, mediaType };
 };
 
 /**
@@ -2264,9 +2299,27 @@ export const publishNewsSupabase = async (agentId: string, agentName: string, ty
             agent_name: agentName || 'Sistema',
             tipo: type,
             detalle: message,
-            parent_id: parentId, // Guardar el ID del padre para hilos
+            parent_id: parentId,
             registrado_en: new Date().toISOString()
         });
+
+        if (error) throw error;
+
+        // --- SOCIAL: NOTIFICACIÓN A TELEGRAM ---
+        if (type === 'SOCIAL' && !parentId) {
+            try {
+                const { sendTelegramAlert } = await import('./notifyService');
+                const cleanMessage = message.split(' [MEDIA]: ')[0].split(' [VIDEO]: ')[0];
+                await sendTelegramAlert(
+                    `💬 <b>NUEVA PUBLICACIÓN</b>\n` +
+                    `👤 Agente: ${agentName}\n` +
+                    `📝 Mensaje: ${cleanMessage}\n\n` +
+                    `🔗 Revisa en el Intel Feed.`
+                );
+            } catch (tgErr) {
+                console.warn('Fallo al enviar alerta de Telegram social:', tgErr);
+            }
+        }
         if (error) throw error;
         return { success: true };
     } catch (error: any) {
@@ -2781,6 +2834,31 @@ export const fetchActiveStoriesSupabase = async (): Promise<any[]> => {
     } catch (e) {
         console.error("Error fetching stories:", e);
         return [];
+    }
+};
+
+/**
+ * @description Marca una historia como vista por un agente (agrega el ID al array vistas)
+ */
+export const markStoryAsSeenSupabase = async (storyId: string, agentId: string): Promise<void> => {
+    try {
+        const { data: story } = await supabase
+            .from('historias')
+            .select('vistas')
+            .eq('id', storyId)
+            .single();
+
+        if (story) {
+            const currentVistas = story.vistas || [];
+            if (!currentVistas.includes(agentId)) {
+                await supabase
+                    .from('historias')
+                    .update({ vistas: [...currentVistas, agentId] })
+                    .eq('id', storyId);
+            }
+        }
+    } catch (e) {
+        console.error("Error marking story as seen:", e);
     }
 };
 

@@ -205,6 +205,8 @@ export interface NewsFeedItem {
   reference?: string;
   version?: string; // e.g. "RVR1960"
   parentId?: string; // Para hilos/respuestas
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
 }
 
 export interface Badge {

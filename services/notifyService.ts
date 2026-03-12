@@ -106,8 +106,17 @@ export const logNotificationSupabase = async (title: string, message: string, ty
 /**
  * @description Envía una notificación social específica (mención, like, trending)
  */
-export const sendSocialNotification = async (type: 'MENTION' | 'LIKE' | 'DISLIKE' | 'TRENDING', targetAgentId: string, data: { senderName: string, messageSnippet?: string, threadId?: string }) => {
+export const sendSocialNotification = async (
+    type: 'MENTION' | 'LIKE' | 'DISLIKE' | 'TRENDING',
+    targetAgentId: string,
+    data: { senderName: string, messageSnippet?: string, threadId?: string, senderId?: string }
+) => {
     try {
+        // 0. EVITAR AUTO-NOTIFICACIÓN
+        if (data.senderId && data.senderId === targetAgentId) {
+            return true;
+        }
+
         let title = "";
         let body = "";
 
@@ -132,10 +141,13 @@ export const sendSocialNotification = async (type: 'MENTION' | 'LIKE' | 'DISLIKE
         }
 
         // 2. LOGUEAR EN EL INBOX (SIEMPRE)
-        // Esto asegura que la notificación aparezca en la campana de la app
         await logNotificationSupabase(title, body, 'social', data.senderName, targetAgentId);
 
-        // 3. Obtener el push_token para el envío móvil (SI EXISTE)
+        // 3. ENVIAR A TELEGRAM (Para monitoreo del sistema)
+        const telegramMsg = `🔔 [SOCIAL]: <b>${title}</b>\n${body}`;
+        await sendTelegramAlert(telegramMsg);
+
+        // 4. Obtener el push_token para el envío móvil (SI EXISTE)
         const { data: agent } = await supabase
             .from('agentes')
             .select('push_token')
@@ -143,7 +155,6 @@ export const sendSocialNotification = async (type: 'MENTION' | 'LIKE' | 'DISLIKE
             .single();
 
         if (agent?.push_token) {
-            // Solo intentamos el push móvil si hay token
             return await sendPushBroadcast(title, body, agent.push_token, 'social');
         }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart, BookOpen } from 'lucide-react';
 import { Agent } from '../types';
-import { fetchActiveStoriesSupabase, createStorySupabase, reactToStorySupabase, sendStoryReplySupabase } from '../services/supabaseService';
+import { fetchActiveStoriesSupabase, createStorySupabase, reactToStorySupabase, sendStoryReplySupabase, markStoryAsSeenSupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -94,7 +94,17 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
             return acc;
         }, {});
 
-        setStories(Object.values(grouped));
+        // Convertir a array y ordenar: No vistas primero (basado en vistas de cada historia)
+        const sortedGroups = Object.values(grouped).sort((a: any, b: any) => {
+            const aHasUnseen = a.allStories.some((s: any) => !s.vistas?.includes(currentUser.id));
+            const bHasUnseen = b.allStories.some((s: any) => !s.vistas?.includes(currentUser.id));
+
+            if (aHasUnseen && !bHasUnseen) return -1;
+            if (!aHasUnseen && bHasUnseen) return 1;
+            return 0;
+        });
+
+        setStories(sortedGroups as unknown as Story[]);
         setIsLoading(false);
     };
 
@@ -147,12 +157,23 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         setStoryIndex(0);
         setReplyText('');
         setShowReactions(false);
+
+        // Marcar como vista la primera historia del grupo
+        if (currentUser && agentStories.allStories?.[0]) {
+            markStoryAsSeenSupabase(agentStories.allStories[0].id, currentUser.id);
+        }
     };
 
     const nextStory = () => {
         const agentStories = selectedStory?.allStories || [];
         if (storyIndex < agentStories.length - 1) {
-            setStoryIndex(storyIndex + 1);
+            const nextIdx = storyIndex + 1;
+            setStoryIndex(nextIdx);
+
+            // Marcar como vista la siguiente historia
+            if (currentUser && agentStories[nextIdx]) {
+                markStoryAsSeenSupabase(agentStories[nextIdx].id, currentUser.id);
+            }
         } else {
             setSelectedStory(null);
         }

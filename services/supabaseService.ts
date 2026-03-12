@@ -1017,37 +1017,70 @@ export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> 
             .eq('fecha', today)
             .maybeSingle();
 
+        let needsNewVerse = false;
+
         if (data && !error) {
-            return {
-                date: data.fecha,
-                reference: data.cita,
-                verse: data.texto
-            };
-        }
+            // Check if the verse is older than 2 hours
+            const createdAtMs = new Date(data.created_at).getTime();
+            const nowMs = Date.now();
+            const twoHoursMs = 2 * 60 * 60 * 1000;
 
-        // --- FALLBACK: Usar API Externa si no hay versículo cargado para hoy ---
-        try {
-            const apiRes = await fetch('https://bible-api.deno.dev/api/read/rv1960/random');
-            const apiData = await apiRes.json();
-
-            if (apiData && apiData.text) {
-                const newDaily = {
-                    fecha: today,
-                    cita: `${apiData.book} ${apiData.chapter}:${apiData.verse}`,
-                    texto: apiData.text
-                };
-
-                // Guardar en DB para que todos los usuarios compartan el mismo versículo el resto del día
-                await supabase.from('versiculos_diarios').insert(newDaily);
-
+            if (nowMs - createdAtMs >= twoHoursMs) {
+                needsNewVerse = true;
+            } else {
                 return {
-                    date: newDaily.fecha,
-                    reference: newDaily.cita,
-                    verse: newDaily.texto
+                    date: data.fecha,
+                    reference: data.cita,
+                    verse: data.texto
                 };
             }
-        } catch (apiError) {
-            console.error('❌ Error llamando a la API de la Biblia:', apiError);
+        } else {
+            needsNewVerse = true;
+        }
+
+        // --- FALLBACK / ROTACIÓN: Usar API Externa cada 2 horas ---
+        if (needsNewVerse) {
+            try {
+                const apiRes = await fetch('https://bible-api.deno.dev/api/read/rv1960/random');
+                const apiData = await apiRes.json();
+
+                if (apiData && apiData.text) {
+                    const newDaily = {
+                        fecha: today,
+                        cita: `${apiData.book} ${apiData.chapter}:${apiData.verse}`,
+                        texto: apiData.text,
+                        created_at: new Date().toISOString() // Actuliazar timestamp para el próximo ciclo
+                    };
+
+                    if (data) {
+                        // Actualizar el existente
+                        await supabase.from('versiculos_diarios').update({
+                            cita: newDaily.cita,
+                            texto: newDaily.texto,
+                            created_at: newDaily.created_at
+                        }).eq('fecha', today);
+                    } else {
+                        // Insertar nuevo si no existía el de hoy
+                        await supabase.from('versiculos_diarios').insert(newDaily);
+                    }
+
+                    return {
+                        date: newDaily.fecha,
+                        reference: newDaily.cita,
+                        verse: newDaily.texto
+                    };
+                }
+            } catch (apiError) {
+                console.error('❌ Error llamando a la API de la Biblia:', apiError);
+                // Si la API falla pero tenemos un verso viejo de hoy, lo retornamos para no dejar UI rota
+                if (data) {
+                    return {
+                        date: data.fecha,
+                        reference: data.cita,
+                        verse: data.texto
+                    };
+                }
+            }
         }
 
         return null;

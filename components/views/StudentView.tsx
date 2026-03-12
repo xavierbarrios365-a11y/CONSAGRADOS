@@ -93,10 +93,9 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                         </div>
 
                         {/* TACTICAL DASHBOARD SLIDER (AUTOPLAY) */}
-                        <div className="mb-6 -mx-4 px-4 relative group">
+                        <div className="mb-6 -mx-4 relative group overflow-hidden">
                             <div
-                                className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth"
-                                style={{ scrollSnapType: 'x mandatory' }}
+                                className="flex gap-3 overflow-x-auto no-scrollbar pb-4 px-12 sm:px-16 scroll-smooth snap-x snap-mandatory"
                                 ref={(el) => {
                                     if (el) {
                                         const children = el.children;
@@ -117,25 +116,27 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                             if (item.type === 'shortcut') setView(item.view);
                                             else if (item.type === 'event') handleConfirmEventAttendance(item.event);
                                         }}
-                                        className={`flex items-center gap-3 p-4 rounded-3xl shrink-0 w-[85%] sm:w-80 border transition-all shadow-lg scroll-snap-align-center ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' :
+                                        className={`flex items-center gap-3 p-4 rounded-3xl shrink-0 w-[240px] xs:w-[280px] h-[90px] border transition-all shadow-lg snap-center scroll-snap-align-center ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' :
                                             item.color === 'red' ? 'bg-red-900/10 border-red-500/20 hover:bg-red-900/20' :
                                                 'bg-[#ffb700]/10 border-[#ffb700]/30 hover:bg-[#ffb700]/20'
                                             }`}
                                     >
-                                        <div className={`p-3 rounded-2xl shadow-inner ${item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
+                                        <div className={`p-3 rounded-2xl shadow-inner shrink-0 ${item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
                                             item.color === 'red' ? 'bg-red-500/20 text-red-400' :
                                                 'bg-[#ffb700]/20 text-[#ffb700]'
                                             }`}>
                                             {item.icon}
                                         </div>
-                                        <div className="text-left min-w-0">
-                                            <p className={`text-[8px] font-black uppercase tracking-[0.2em] mb-0.5 ${item.color === 'blue' ? 'text-blue-400' :
+                                        <div className="text-left min-w-0 flex-1">
+                                            <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 ${item.color === 'blue' ? 'text-blue-400' :
                                                 item.color === 'red' ? 'text-red-400' :
                                                     'text-[#ffb700]'
                                                 }`}>{item.sub}</p>
-                                            <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none truncate">{item.title}</h4>
-                                            {item.type === 'event' && item.event && (
-                                                <p className="text-[9px] text-white/40 mt-1 font-medium">{item.event.fecha} @ {item.event.hora || 'S/H'}</p>
+                                            <h4 className="text-[13px] font-bebas tracking-widest text-white leading-none truncate">{item.title}</h4>
+                                            {item.type === 'event' && item.event ? (
+                                                <p className="text-[10px] text-white/40 mt-1 font-medium truncate">{item.event.fecha} @ {item.event.hora || 'S/H'}</p>
+                                            ) : (
+                                                <p className="text-[10px] text-white/20 mt-1 font-medium">ACCESO DIRECTO</p>
                                             )}
                                         </div>
                                     </button>

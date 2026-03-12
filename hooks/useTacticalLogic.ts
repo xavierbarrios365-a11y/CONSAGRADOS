@@ -30,7 +30,14 @@ export const useTacticalLogic = (
     agents: Agent[],
     syncData: (force?: boolean) => Promise<Agent[] | void>,
     refreshCurrentUser: (agents: Agent[]) => void,
-    showAlert: (config: { title: string, message: string, type: 'SUCCESS' | 'ERROR' | 'INFO' | 'CONFIRM', onConfirm?: () => void | Promise<void> }) => void,
+    showAlert: (config: {
+        title: string,
+        message: string,
+        type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'CONFIRM',
+        confirmText?: string,
+        cancelText?: string,
+        onConfirm?: () => void | Promise<void>
+    }) => void,
     setView: (view: AppView) => void,
     updateAgentLocalState?: (updatedAgent: Agent) => void
 ) => {
@@ -197,14 +204,10 @@ export const useTacticalLogic = (
                 eventTitle: event.titulo
             });
             if (res.success) {
-                showAlert({ title: "MISIÓN CONFIRMADA", message: `✅ Has sido registrado exitosamente para: ${event.titulo}`, type: 'SUCCESS' });
-                syncData(true);
-
                 // --- CALENDAR INTEGRATION ---
                 const startDate = parseEventDate(event.fecha, event.hora);
-                // Lead time: 30 minutes before
                 const reminderDate = new Date(startDate.getTime() - 30 * 60 * 1000);
-                const endDate = new Date(startDate.getTime() + 90 * 60 * 1000); // 1.5 hour duration total
+                const endDate = new Date(startDate.getTime() + 90 * 60 * 1000);
 
                 const googleUrl = generateGoogleCalendarLink({
                     title: `OPERACIÓN: ${event.titulo}`,
@@ -215,13 +218,16 @@ export const useTacticalLogic = (
                 });
 
                 showAlert({
-                    title: "CALENDARIO TÁCTICO",
-                    message: "📅 ¿Deseas agendar esta operación en tu calendario? (Incluye 30 min de preparación)",
+                    title: "MISIÓN CONFIRMADA",
+                    message: `✅ Has sido registrado exitosamente para: ${event.titulo}\n\n📅 ¿Deseas agendar esta misión en tu calendario? (Incluye 30 min de preparación)`,
                     type: 'CONFIRM',
+                    confirmText: 'AGENDAR',
+                    cancelText: 'LUEGO',
                     onConfirm: () => {
                         window.open(googleUrl, '_blank');
                     }
                 });
+                syncData(true);
             }
         } catch (e) {
             showAlert({ title: "ERROR", message: "No se pudo confirmar la asistencia.", type: 'ERROR' });

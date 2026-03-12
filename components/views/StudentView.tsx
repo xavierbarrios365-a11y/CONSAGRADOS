@@ -95,7 +95,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                         {/* TACTICAL DASHBOARD SLIDER (AUTOPLAY) */}
                         <div className="mb-6 -mx-4 relative group overflow-hidden">
                             <div
-                                className="flex gap-3 overflow-x-auto no-scrollbar pb-4 px-12 sm:px-16 scroll-smooth snap-x snap-mandatory"
+                                className="flex overflow-x-auto no-scrollbar pb-4 scroll-smooth snap-x snap-mandatory"
                                 ref={(el) => {
                                     if (el) {
                                         const children = el.children;
@@ -110,36 +110,40 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 }}
                             >
                                 {sliderItems.map((item: any, idx) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            if (item.type === 'shortcut') setView(item.view);
-                                            else if (item.type === 'event') handleConfirmEventAttendance(item.event);
-                                        }}
-                                        className={`flex items-center gap-3 p-4 rounded-3xl shrink-0 w-[240px] xs:w-[280px] h-[90px] border transition-all shadow-lg snap-center scroll-snap-align-center ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' :
-                                            item.color === 'red' ? 'bg-red-900/10 border-red-500/20 hover:bg-red-900/20' :
-                                                'bg-[#ffb700]/10 border-[#ffb700]/30 hover:bg-[#ffb700]/20'
-                                            }`}
-                                    >
-                                        <div className={`p-3 rounded-2xl shadow-inner shrink-0 ${item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
-                                            item.color === 'red' ? 'bg-red-500/20 text-red-400' :
-                                                'bg-[#ffb700]/20 text-[#ffb700]'
-                                            }`}>
-                                            {item.icon}
-                                        </div>
-                                        <div className="text-left min-w-0 flex-1">
-                                            <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 ${item.color === 'blue' ? 'text-blue-400' :
-                                                item.color === 'red' ? 'text-red-400' :
-                                                    'text-[#ffb700]'
-                                                }`}>{item.sub}</p>
-                                            <h4 className="text-[13px] font-bebas tracking-widest text-white leading-none truncate">{item.title}</h4>
-                                            {item.type === 'event' && item.event ? (
-                                                <p className="text-[10px] text-white/40 mt-1 font-medium truncate">{item.event.fecha} @ {item.event.hora || 'S/H'}</p>
-                                            ) : (
-                                                <p className="text-[10px] text-white/20 mt-1 font-medium">ACCESO DIRECTO</p>
-                                            )}
-                                        </div>
-                                    </button>
+                                    <div key={item.id} className="w-full shrink-0 px-4 snap-center">
+                                        <button
+                                            onClick={() => {
+                                                if (item.type === 'shortcut') setView(item.view);
+                                                else if (item.type === 'event') handleConfirmEventAttendance(item.event);
+                                            }}
+                                            className={`flex items-center gap-4 p-5 rounded-xl w-full border transition-all shadow-lg active:scale-[0.98] ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/30 hover:bg-blue-900/20' :
+                                                item.color === 'red' ? 'bg-red-900/10 border-red-500/30 hover:bg-red-900/20' :
+                                                    'bg-[#ffb700]/10 border-[#ffb700]/40 hover:bg-[#ffb700]/20'
+                                                }`}
+                                        >
+                                            <div className={`p-4 rounded-lg shadow-inner shrink-0 ${item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
+                                                item.color === 'red' ? 'bg-red-500/20 text-red-400' :
+                                                    'bg-[#ffb700]/20 text-[#ffb700]'
+                                                }`}>
+                                                {item.icon}
+                                            </div>
+                                            <div className="text-left min-w-0 flex-1">
+                                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${item.color === 'blue' ? 'text-blue-400' :
+                                                    item.color === 'red' ? 'text-red-400' :
+                                                        'text-[#ffb700]'
+                                                    }`}>{item.sub}</p>
+                                                <h4 className="text-[16px] font-bebas tracking-widest text-white leading-tight uppercase truncate">{item.title}</h4>
+                                                {item.type === 'event' && item.event ? (
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-white/60 font-medium">{item.event.fecha}</span>
+                                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-white/60 font-medium">{item.event.hora || 'S/H'}</span>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[10px] text-white/30 mt-1 font-medium italic">ACCESO PRIORITARIO</p>
+                                                )}
+                                            </div>
+                                        </button>
+                                    </div>
                                 ))}
                             </div>
 

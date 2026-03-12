@@ -195,45 +195,58 @@ export const useTacticalLogic = (
 
     const handleConfirmEventAttendance = useCallback(async (event: any) => {
         if (!currentUser) return;
-        setIsConfirmingEvent(event.id);
-        try {
-            const res = await confirmEventAttendanceService({
-                agentId: currentUser.id,
-                agentName: currentUser.name,
-                eventId: event.id,
-                eventTitle: event.titulo
-            });
-            if (res.success) {
-                // --- CALENDAR INTEGRATION ---
-                const startDate = parseEventDate(event.fecha, event.hora);
-                const reminderDate = new Date(startDate.getTime() - 30 * 60 * 1000);
-                const endDate = new Date(startDate.getTime() + 90 * 60 * 1000);
 
-                const googleUrl = generateGoogleCalendarLink({
-                    title: `OPERACIÓN: ${event.titulo}`,
-                    description: `Confirmación de asistencia táctica para ${event.titulo}. (Puntualidad requerida 30 min antes).`,
-                    startTime: reminderDate,
-                    endTime: endDate,
-                    location: "Consagrados 2026"
-                });
+        // --- STEP 1: INITIAL CONFIRMATION ---
+        showAlert({
+            title: "CONFIRMAR MISIÓN",
+            message: `¿Deseas registrar tu asistencia para la operación:\n"${event.titulo}"?`,
+            type: 'CONFIRM',
+            confirmText: 'SÍ, CONFIRMAR',
+            cancelText: 'CANCELAR',
+            onConfirm: async () => {
+                setIsConfirmingEvent(event.id);
+                try {
+                    const res = await confirmEventAttendanceService({
+                        agentId: currentUser.id,
+                        agentName: currentUser.name,
+                        eventId: event.id,
+                        eventTitle: event.titulo
+                    });
 
-                showAlert({
-                    title: "MISIÓN CONFIRMADA",
-                    message: `✅ Has sido registrado exitosamente para: ${event.titulo}\n\n📅 ¿Deseas agendar esta misión en tu calendario? (Incluye 30 min de preparación)`,
-                    type: 'CONFIRM',
-                    confirmText: 'AGENDAR',
-                    cancelText: 'LUEGO',
-                    onConfirm: () => {
-                        window.open(googleUrl, '_blank');
+                    if (res.success) {
+                        // --- STEP 2: PREPARE CALENDAR DATA ---
+                        const startDate = parseEventDate(event.fecha, event.hora);
+                        const reminderDate = new Date(startDate.getTime() - 30 * 60 * 1000);
+                        const endDate = new Date(startDate.getTime() + 90 * 60 * 1000);
+
+                        const googleUrl = generateGoogleCalendarLink({
+                            title: `OPERACIÓN: ${event.titulo}`,
+                            description: `Asistencia táctica confirmada. (Ingreso 30 min antes).`,
+                            startTime: reminderDate,
+                            endTime: endDate,
+                            location: "Consagrados 2026"
+                        });
+
+                        // --- STEP 3: SUCCESS ALERT + CALENDAR REDIRECT ---
+                        showAlert({
+                            title: "REGISTRO EXITOSO",
+                            message: `✅ Asistencia confirmada.\n\n📅 ¿Deseas agendar esta misión en tu Google Calendar ahora? (Incluye 30 min ración previa).`,
+                            type: 'CONFIRM',
+                            confirmText: 'AGENDAR AHORA',
+                            cancelText: 'FINALIZAR',
+                            onConfirm: () => {
+                                window.open(googleUrl, '_blank');
+                            }
+                        });
+                        syncData(true);
                     }
-                });
-                syncData(true);
+                } catch (e) {
+                    showAlert({ title: "FALLO TÉCNICO", message: "No se pudo sincronizar la asistencia con el núcleo.", type: 'ERROR' });
+                } finally {
+                    setIsConfirmingEvent(null);
+                }
             }
-        } catch (e) {
-            showAlert({ title: "ERROR", message: "No se pudo confirmar la asistencia.", type: 'ERROR' });
-        } finally {
-            setIsConfirmingEvent(null);
-        }
+        });
     }, [currentUser, showAlert, syncData]);
 
     const handleRefreshIntel = useCallback(async () => {

@@ -18,8 +18,10 @@ import {
     supabase,
     validateContent,
     toggleDislikeSupabase,
-    parseNewsMessage
+    parseNewsMessage,
+    uploadToCloudinary
 } from '../services/supabaseService';
+import { uploadToCloudinary as uploadCloudinaryDirect } from '../services/cloudinaryService';
 import { sendSocialNotification } from '../services/notifyService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
@@ -31,7 +33,7 @@ interface NewsFeedProps {
     agents?: Agent[];
     userRole?: UserRole;
     currentUser?: Agent | null;
-    filterType?: string; // Nuevo: Para filtrar por SOCIAL u otros
+    filterType?: string;
     onAgentClick?: (agent: Agent) => void;
 }
 
@@ -59,10 +61,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [userDislikes, setUserDislikes] = useState<string[]>([]);
     const [dislikesCount, setDislikesCount] = useState<Record<string, number>>({});
     const [mostLikedAgentId, setMostLikedAgentId] = useState<string | null>(null);
-    const [sharePreview, setSharePreview] = useState<{
-        agent?: Agent;
-        newsItem?: NewsFeedItem;
-    } | null>(null);
+    const [sharePreview, setSharePreview] = useState<{ agent?: Agent; newsItem?: NewsFeedItem; } | null>(null);
 
     const [socialMessage, setSocialMessage] = useState('');
     const [replyTo, setReplyTo] = useState<NewsFeedItem | null>(null);
@@ -73,10 +72,13 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [newItemsCount, setNewItemsCount] = useState(0);
     const [isAtTop, setIsAtTop] = useState(true);
 
+    const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+    const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+    const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+    const mediaInputRef = React.useRef<HTMLInputElement>(null);
+
     const PAGE_SIZE = 20;
 
-    // Filtramos para mostrar solo los mensajes principales (sin parentId) en el feed general
-    // Y opcionalmente por tipo (ej: SOCIAL para el feed de hilos)
     const rootNews = news.filter(item => {
         const isRoot = !item.parentId;
         const matchesType = filterType ? item.type === filterType : true;
@@ -97,7 +99,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 const counts = await fetchNewsLikesSupabase(ids);
                 setLikesCount(counts);
 
-                // Mapear dislikes desde la data (si fetchNewsFeed los trae)
                 const dCounts: Record<string, number> = {};
                 data.forEach(item => {
                     if (item.dislikesCount !== undefined) dCounts[item.id] = item.dislikesCount;
@@ -111,11 +112,10 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             if (currentUser) {
                 const userL = await fetchUserLikesSupabase(currentUser.id);
                 setUserLikes(userL);
-
-                // Fetch user dislikes (necesitaríamos un servicio similar a fetchUserLikes)
-                // Por ahora asumimos que los dislikes se gestionan reactivamente
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+        }
         setLoading(false);
     };
 
@@ -126,7 +126,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             return;
         }
 
-        // 1. Validación de Censura Local
         const validation = validateContent(socialMessage);
         if (!validation.valid) {
             showAlert({
@@ -139,24 +138,31 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
         setIsPublishing(true);
         try {
-            const res = await publishNewsSupabase(currentUser.id, currentUser.name, 'SOCIAL', socialMessage, parentId);
+            let finalMessage = socialMessage;
+
+            if (selectedMedia) {
+                setIsUploadingMedia(true);
+                const uploadRes = await uploadCloudinaryDirect(selectedMedia);
+                if (uploadRes.success && uploadRes.url) {
+                    const tag = selectedMedia.type.startsWith('video/') ? '[VIDEO]' : '[MEDIA]';
+                    finalMessage += ` ${tag}: ${uploadRes.url}`;
+                } else {
+                    throw new Error(uploadRes.error || "Fallo al subir multimedia.");
+                }
+            }
+
+            const res = await publishNewsSupabase(currentUser.id, currentUser.name, 'SOCIAL', finalMessage, parentId);
             if (res.success) {
                 const messageSnippet = socialMessage;
                 const senderName = currentUser.name;
 
-                // 2. Notificaciones de Mención (@usuario)
-                // Regex mejorado para soportar acentos, puntos, guiones y caracteres latinos
                 const mentionMatches = socialMessage.match(/@([\wáéíóúñÁÉÍÓÚÑ._-]+)/g);
                 if (mentionMatches) {
                     mentionMatches.forEach(tag => {
                         const cleanTag = tag.slice(1).toLowerCase();
-                        // Búsqueda más robusta: quitamos espacios y acentos para comparar
                         const targetAgent = agents.find(a => {
-                            const normalizedName = a.name.toLowerCase()
-                                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                                .replace(/\s/g, '');
+                            const normalizedName = a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s/g, '');
                             const normalizedTag = cleanTag.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
                             return normalizedName.includes(normalizedTag) || normalizedTag.includes(normalizedName);
                         });
 
@@ -166,12 +172,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                     });
                 }
 
-                // 3. Notificación de Trending (>5 mensajes en hilo)
                 if (parentId) {
                     const threadCount = news.filter(n => n.parentId === parentId).length + 1;
-                    if (threadCount === 6) { // Justo al cruzar 5
-                        // Notificar a todos (o al menos loguear/broadcast)
-                        // Por ahora notificamos al dueño del hilo original
+                    if (threadCount === 6) {
                         const originalPost = news.find(n => n.id === parentId);
                         if (originalPost && originalPost.agentId !== currentUser.id) {
                             sendSocialNotification('TRENDING', originalPost.agentId, { senderName });
@@ -181,7 +184,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
                 setSocialMessage('');
                 setReplyTo(null);
-                loadNews(true); // Silent refresh
+                setSelectedMedia(null);
+                setMediaPreview(null);
+                loadNews(true);
                 if (onActivity) onActivity();
             } else {
                 throw new Error(res.error);
@@ -190,6 +195,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             showAlert({ title: "FALLO DE TRANSMISIÓN", message: e.message || "NO SE PUDO PUBLICAR.", type: 'ERROR' });
         } finally {
             setIsPublishing(false);
+            setIsUploadingMedia(false);
         }
     };
 
@@ -232,12 +238,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                         setShowMentions(false);
                                     }
                                 }}
-                                placeholder={isReply ? "Escribe tu respuesta..." : "¿Qué quieres compartir hoy? ¿De qué quieres hablar? ¿Cómo te sientes hoy?"}
+                                placeholder={isReply ? "Escribe tu respuesta..." : "¿Qué quieres compartir hoy?"}
                                 maxLength={128}
                                 className="w-full bg-transparent border-none text-white text-[12px] font-medium placeholder:text-white/20 outline-none resize-none min-h-[60px] no-scrollbar font-montserrat"
-                                spellCheck="true"
-                                autoCapitalize="sentences"
-                                autoCorrect="on"
                             />
                             {showMentions && (
                                 <div className="absolute left-0 bottom-full mb-2 w-full max-h-32 overflow-y-auto bg-[#001f3f] border border-white/10 rounded-xl shadow-2xl z-50 no-scrollbar">
@@ -262,28 +265,78 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <div className="flex items-center gap-2">
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => mediaInputRef.current?.click()}
+                            className={`p-2 rounded-xl border transition-all flex items-center gap-2 ${selectedMedia ? 'border-[#ffb700] bg-[#ffb700]/10 text-[#ffb700]' : 'border-white/10 text-white/40 hover:text-white'}`}
+                        >
+                            {selectedMedia ? (
+                                selectedMedia.type.startsWith('video/') ? <Zap size={16} /> : <Target size={16} />
+                            ) : (
+                                <Activity size={16} />
+                            )}
+                            <span className="text-[10px] font-bold uppercase">{selectedMedia ? 'Cambiar Medios' : 'Anexar Medios'}</span>
+                        </button>
+                        <input
+                            type="file"
+                            ref={mediaInputRef}
+                            className="hidden"
+                            accept="image/*,video/*"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    setSelectedMedia(file);
+                                    setMediaPreview(URL.createObjectURL(file));
+                                }
+                            }}
+                        />
                         <span className={`text-[9px] font-black ${socialMessage.length > 110 ? 'text-[#ffb700]' : 'text-white/20'}`}>
                             {socialMessage.length}/128
                         </span>
                     </div>
-                    <button
-                        onClick={() => handlePublishSocial(parentId)}
-                        disabled={!socialMessage.trim() || isPublishing}
-                        className="bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
-                    >
-                        {isPublishing ? 'Enviando...' : isReply ? 'Responder' : 'Publicar'}
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                        {selectedMedia && (
+                            <button
+                                onClick={() => {
+                                    setSelectedMedia(null);
+                                    setMediaPreview(null);
+                                }}
+                                className="text-red-500/60 hover:text-red-500 text-[10px] font-black uppercase"
+                            >
+                                Quitar
+                            </button>
+                        )}
+                        <button
+                            onClick={() => handlePublishSocial(parentId)}
+                            disabled={(!socialMessage.trim() && !selectedMedia) || isPublishing}
+                            className="bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
+                        >
+                            {isPublishing ? 'Enviando...' : isReply ? 'Responder' : 'Publicar'}
+                        </button>
+                    </div>
                 </div>
+
+                {mediaPreview && (
+                    <div className="relative mt-2 rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black">
+                        {selectedMedia?.type.startsWith('video/') ? (
+                            <video src={mediaPreview} className="w-full h-full object-cover" muted />
+                        ) : (
+                            <img src={mediaPreview} className="w-full h-full object-cover" alt="Preview" />
+                        )}
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-[#ffb700] text-[8px] font-black px-2 py-1 rounded-full uppercase">
+                            Vista Previa operativa
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
 
     const handleToggleLike = async (noticiaId: string) => {
         if (!currentUser) return;
-
-        // Optimistic UI
         const isCurrentlyLiked = userLikes.includes(noticiaId);
         setUserLikes(prev => isCurrentlyLiked ? prev.filter(id => id !== noticiaId) : [...prev, noticiaId]);
         setLikesCount(prev => ({
@@ -293,20 +346,16 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
         const res = await toggleLikeSupabase(noticiaId, currentUser.id, currentUser.name);
         if (!res.success) {
-            // Rollback on failure
             setUserLikes(prev => isCurrentlyLiked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
             setLikesCount(prev => ({
                 ...prev,
                 [noticiaId]: (prev[noticiaId] || 0) + (isCurrentlyLiked ? 1 : -1)
             }));
             showAlert({ title: "FALLO DE REACCIÓN", message: "NO SE PUDO REGISTRAR TU REACCIÓN.", type: 'ERROR' });
-        } else {
-            // Notificación de Like (solo si no se hizo rollback)
-            if (res.liked) {
-                const post = news.find(n => n.id === noticiaId);
-                if (post && post.agentId !== currentUser.id) {
-                    sendSocialNotification('LIKE', post.agentId, { senderName: currentUser.name });
-                }
+        } else if (res.liked) {
+            const post = news.find(n => n.id === noticiaId);
+            if (post && post.agentId !== currentUser.id) {
+                sendSocialNotification('LIKE', post.agentId, { senderName: currentUser.name });
             }
             const mostLiked = await getMostLikedAgentSupabase();
             if (mostLiked) setMostLikedAgentId(mostLiked.agentId);
@@ -315,8 +364,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
     const handleToggleDislike = async (noticiaId: string) => {
         if (!currentUser) return;
-
-        // Optimistic UI
         const isCurrentlyDisliked = userDislikes.includes(noticiaId);
         setUserDislikes(prev => isCurrentlyDisliked ? prev.filter(id => id !== noticiaId) : [...prev, noticiaId]);
         setDislikesCount(prev => ({
@@ -326,7 +373,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
         const res = await toggleDislikeSupabase(noticiaId, currentUser.id);
         if (!res.success) {
-            // Rollback
             setUserDislikes(prev => isCurrentlyDisliked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
             setDislikesCount(prev => ({
                 ...prev,
@@ -334,14 +380,12 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             }));
             showAlert({ title: "FALLO DE REACCIÓN", message: "NO SE PUDO REGISTRAR TU REACCIÓN.", type: 'ERROR' });
         } else {
-            // Notificación de Dislike
             if (res.disliked) {
                 const post = news.find(n => n.id === noticiaId);
                 if (post && post.agentId !== currentUser.id) {
                     sendSocialNotification('DISLIKE', post.agentId, { senderName: currentUser.name });
                 }
             }
-
             if (res.disliked && (dislikesCount[noticiaId] || 0) + 1 >= 5) {
                 setTimeout(() => loadNews(true), 500);
             }
@@ -351,7 +395,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     useEffect(() => {
         loadNews();
 
-        // 1. Monitorizar Scroll para el botón de "Nuevos Mensajes"
         const container = document.getElementById('intel-feed-scroll-container');
         const handleScroll = () => {
             if (container) {
@@ -362,15 +405,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         };
         container?.addEventListener('scroll', handleScroll);
 
-        // 2. Suscripción Realtime Unificada (Estilo Pro)
         const channel = supabase.channel('social_realtime_nexus');
 
-        // Escuchar MENSAJES (INSERT/DELETE/UPDATE)
-        channel.on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'asistencia_visitas'
-        }, (payload) => {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'asistencia_visitas' }, (payload) => {
             if (payload.eventType === 'INSERT') {
                 const item = payload.new;
                 const { message, verse, reference } = parseNewsMessage(item.detalle || '');
@@ -383,61 +420,39 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                     verse: verse,
                     reference: reference,
                     parentId: item.parent_id,
-                    date: new Date(item.registrado_en).toLocaleDateString('es-ES', {
-                        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                    }).toUpperCase()
+                    date: new Date(item.registrado_en).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase()
                 };
 
                 setNews(prev => {
                     if (prev.find(p => p.id === mappedItem.id)) return prev;
-                    // Si el usuario no está arriba, le mostramos un contador
-                    if (!isAtTop && !mappedItem.parentId) {
-                        setNewItemsCount(c => c + 1);
-                    }
+                    if (!isAtTop && !mappedItem.parentId) setNewItemsCount(c => c + 1);
                     return [mappedItem, ...prev];
                 });
             } else if (payload.eventType === 'DELETE') {
                 setNews(prev => prev.filter(p => p.id !== payload.old.id));
             } else if (payload.eventType === 'UPDATE') {
-                // Actualizar detalle si cambió
                 setNews(prev => prev.map(p => p.id === payload.new.id ? { ...p, message: parseNewsMessage(payload.new.detalle).message } : p));
             }
         });
 
-        // Escuchar LIKES (INSERT/DELETE)
-        channel.on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'noticia_likes'
-        }, (payload) => {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'noticia_likes' }, (payload) => {
             const like = (payload.new as any) || (payload.old as any);
-            if (!like?.noticia_id) return;
-
-            // Si el like es mío, lo ignoro porque ya lo procesé optimísticamente
-            if (like.agent_id === currentUser?.id) return;
-
-            setLikesCount(prev => ({
-                ...prev,
-                [like.noticia_id]: Math.max(0, (prev[like.noticia_id] || 0) + (payload.eventType === 'INSERT' ? 1 : -1))
-            }));
+            if (like?.noticia_id && like.agent_id !== currentUser?.id) {
+                setLikesCount(prev => ({
+                    ...prev,
+                    [like.noticia_id]: Math.max(0, (prev[like.noticia_id] || 0) + (payload.eventType === 'INSERT' ? 1 : -1))
+                }));
+            }
         });
 
-        // Escuchar DISLIKES (INSERT/DELETE)
-        channel.on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'noticia_dislikes'
-        }, (payload) => {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'noticia_dislikes' }, (payload) => {
             const dislike = (payload.new as any) || (payload.old as any);
-            if (!dislike?.noticia_id) return;
-
-            // Si el dislike es mío, lo ignoro
-            if (dislike.agent_id === currentUser?.id) return;
-
-            setDislikesCount(prev => ({
-                ...prev,
-                [dislike.noticia_id]: Math.max(0, (prev[dislike.noticia_id] || 0) + (payload.eventType === 'INSERT' ? 1 : -1))
-            }));
+            if (dislike?.noticia_id && dislike.agent_id !== currentUser?.id) {
+                setDislikesCount(prev => ({
+                    ...prev,
+                    [dislike.noticia_id]: Math.max(0, (prev[dislike.noticia_id] || 0) + (payload.eventType === 'INSERT' ? 1 : -1))
+                }));
+            }
         });
 
         channel.subscribe();
@@ -446,7 +461,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             container?.removeEventListener('scroll', handleScroll);
             supabase.removeChannel(channel);
         };
-    }, [isAtTop]); // Dependemos de isAtTop para decidir el contador de nuevos items
+    }, [isAtTop, currentUser?.id]);
 
     if (loading) {
         return (
@@ -461,27 +476,12 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
     return (
         <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700 h-full flex flex-col">
-            {/* Social Post Area (Main) - Integrated directly */}
             {!replyTo && renderPostArea()}
-
-            {/* New Messages Indicator */}
             <AnimatePresence>
                 {newItemsCount > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="sticky top-4 z-[60] flex justify-center pointer-events-none"
-                    >
-                        <button
-                            onClick={() => {
-                                const container = document.getElementById('intel-feed-scroll-container');
-                                container?.scrollTo({ top: 0, behavior: 'smooth' });
-                                setNewItemsCount(0);
-                            }}
-                            className="pointer-events-auto bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 group hover:scale-105 transition-transform"
-                        >
-                            <RefreshCw size={14} className="animate-spin-slow group-hover:rotate-180 transition-transform duration-500" />
+                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} className="sticky top-4 z-[60] flex justify-center pointer-events-none">
+                        <button onClick={() => { const c = document.getElementById('intel-feed-scroll-container'); c?.scrollTo({ top: 0, behavior: 'smooth' }); setNewItemsCount(0); }} className="pointer-events-auto bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 group hover:scale-105 transition-transform">
+                            <RefreshCw size={14} className="animate-spin-slow" />
                             <span className="text-[10px] font-black uppercase tracking-widest">Nuevos Mensajes ({newItemsCount})</span>
                         </button>
                     </motion.div>
@@ -490,263 +490,137 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
             <div id="intel-feed-scroll-container" className="flex-1 overflow-y-auto pr-2 no-scrollbar space-y-4">
                 <div className="grid grid-cols-1 gap-2 relative">
-
                     <AnimatePresence mode="popLayout">
-                        {displayedNews.length > 0 ? (
-                            displayedNews.map((item, idx) => {
-                                const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
-                                let agent = agents.find(a => String(a.id) === String(item.agentId));
-                                if (!agent && item.message) {
-                                    agent = agents.find(a => item.message.toUpperCase().includes(a.name.toUpperCase()));
-                                }
+                        {displayedNews.map((item, idx) => {
+                            const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
+                            const agent = agents.find(a => String(a.id) === String(item.agentId));
+                            const photoUrl = agent?.photoUrl ? formatDriveUrl(agent.photoUrl) : null;
+                            const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
 
-                                const photoUrl = agent?.photoUrl ? formatDriveUrl(agent.photoUrl) : null;
-                                const agentName = agent ? agent.name.split(' ')[0] : 'SISTEMA';
-
-                                return (
-                                    <div key={item.id || idx} className="relative ml-4">
-                                        <motion.div
-                                            layout
-                                            drag={(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) ? "x" : false}
-                                            dragDirectionLock
-                                            dragListener
-                                            dragConstraints={{ left: -100, right: 0 }}
-                                            dragElastic={0.1}
-                                            onDragEnd={(event, info) => {
-                                                if (info.offset.x < -60 || info.velocity.x < -500) {
-                                                    showAlert({
-                                                        title: "ELIMINAR NOTICIA",
-                                                        message: "¿Estás seguro de que deseas eliminar esta notificación del feed?",
-                                                        type: 'CONFIRM',
-                                                        onConfirm: async () => {
-                                                            const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
-                                                            if (res.success) {
-                                                                showAlert({ title: "ÉXITO", message: "NOTICIA ELIMINADA", type: 'SUCCESS' });
-                                                                loadNews(true);
-                                                            } else {
-                                                                showAlert({ title: "FALLO TÁCTICO", message: `ERROR DE PERMISOS`, type: 'ERROR' });
-                                                            }
-                                                        }
-                                                    });
-                                                }
-                                            }}
-                                            initial={{ opacity: 0, y: -20, scale: 0.98 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: idx * 0.05, duration: 0.4 } }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            className="relative p-6 pt-8 bg-transparent border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-grab active:cursor-grabbing touch-pan-y"
-                                        >
-                                            <div className="absolute inset-x-0 top-0 h-[1px] bg-[#ffb700]/10 pointer-events-none" />
-
-                                            <div className="flex items-start gap-4">
-                                                <div className="relative shrink-0">
-                                                    {photoUrl ? (
-                                                        <div className="relative">
-                                                            <img
-                                                                src={photoUrl}
-                                                                alt={agent?.name || 'Agente'}
-                                                                onClick={() => agent && onAgentClick?.(agent)}
-                                                                className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
-                                                            />
-                                                            <div
-                                                                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border border-black/20"
-                                                                style={{ backgroundColor: config.color, color: '#001f3f' }}
-                                                            >
-                                                                {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
-                                                            </div>
+                            return (
+                                <div key={item.id} className="relative ml-4">
+                                    <motion.div
+                                        layout
+                                        drag={(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) ? "x" : false}
+                                        dragConstraints={{ left: -100, right: 0 }}
+                                        onDragEnd={(e, info) => {
+                                            if (info.offset.x < -60) {
+                                                showAlert({
+                                                    title: "ELIMINAR NOTICIA", message: "¿Seguro?", type: 'CONFIRM',
+                                                    onConfirm: async () => {
+                                                        const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
+                                                        if (res.success) { showAlert({ title: "ÉXITO", message: "ELIMINADA", type: 'SUCCESS' }); loadNews(true); }
+                                                    }
+                                                });
+                                            }
+                                        }}
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="relative p-6 pt-8 bg-transparent border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="relative shrink-0">
+                                                {photoUrl ? (
+                                                    <div className="relative">
+                                                        <img src={photoUrl} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" onClick={() => agent && onAgentClick?.(agent)} />
+                                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center border border-black/20" style={{ backgroundColor: config.color }}>
+                                                            {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement, { size: 10 }) : config.icon}
                                                         </div>
-                                                    ) : (
-                                                        <div
-                                                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg border border-white/10"
-                                                            style={{ backgroundColor: `${config.color}15`, color: config.color }}
-                                                        >
-                                                            {config.icon}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex-1 min-w-0 pt-0.5">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span
-                                                            onClick={() => agent && onAgentClick?.(agent)}
-                                                            className="text-[9px] font-black text-[#ffb700] uppercase tracking-tighter hover:underline cursor-pointer"
-                                                        >
-                                                            {agent ? agentName : config.label}
-                                                        </span>
-                                                        {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
-                                                        <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">• {item.date}</span>
                                                     </div>
-                                                    {item.type === 'BIBLE_SHARE' && item.verse ? (
-                                                        <div className="relative mt-2 mb-3 px-6 py-6 bg-gradient-to-br from-[#ffb700]/10 to-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl overflow-hidden group/bible shadow-2xl">
-                                                            {/* Decorative Background Icon */}
-                                                            <BookOpen size={100} className="absolute -bottom-6 -right-6 text-[#ffb700]/5 -rotate-12 group-hover/bible:scale-110 transition-transform duration-700" />
-
-                                                            {/* Quote Icon */}
-                                                            <div className="text-[#ffb700]/30 font-serif text-6xl absolute -top-2 left-2 h-8 leading-none opacity-50">“</div>
-
-                                                            <div className="relative z-10 space-y-4">
-                                                                <p className="text-[15px] md:text-[18px] text-white font-medium leading-relaxed tracking-tight italic font-montserrat pr-4 drop-shadow-sm">
-                                                                    {item.verse}
-                                                                </p>
-
-                                                                <div className="flex items-center gap-3 pt-2">
-                                                                    <div className="h-[1.5px] w-10 bg-[#ffb700]/50" />
-                                                                    <span className="text-[11px] font-black text-[#ffb700] uppercase tracking-[0.25em] font-bebas">
-                                                                        {item.reference}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Bottom Glow */}
-                                                            <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-[#ffb700]/20 to-transparent" />
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-[13px] text-white/90 font-medium leading-relaxed tracking-tight font-montserrat">
-                                                            {item.message.split(' ').map((word, i) =>
-                                                                word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black hover:underline cursor-pointer">{word} </span> : word + ' '
-                                                            )}
-                                                        </p>
-                                                    )}
-
-                                                    <div className="flex items-center gap-6 mt-4">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleToggleLike(item.id); }}
-                                                            className={`flex items-center gap-2 group transition-all ${userLikes.includes(item.id) ? 'text-[#ff4d00]' : 'text-white/30 hover:text-[#ff4d00]'}`}
-                                                        >
-                                                            <div className={`p-2 rounded-full transition-colors ${userLikes.includes(item.id) ? 'bg-[#ff4d00]/10' : 'group-hover:bg-[#ff4d00]/10'}`}>
-                                                                <ThumbsUp size={14} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
-                                                            </div>
-                                                            <span className="text-[10px] font-black">{likesCount[item.id] || 0}</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleToggleDislike(item.id); }}
-                                                            className={`flex items-center gap-2 group transition-all ${userDislikes.includes(item.id) ? 'text-red-500' : 'text-white/30 hover:text-red-500'}`}
-                                                        >
-                                                            <div className={`p-2 rounded-full transition-colors ${userDislikes.includes(item.id) ? 'bg-red-500/10' : 'group-hover:bg-red-500/10'}`}>
-                                                                <ThumbsDown size={14} />
-                                                            </div>
-                                                            <span className="text-[10px] font-black">{dislikesCount[item.id] || 0}</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setReplyTo(item); }}
-                                                            className="flex items-center gap-2 text-white/30 hover:text-blue-400 group transition-all"
-                                                        >
-                                                            <div className="p-2 rounded-full group-hover:bg-blue-400/10 transition-colors">
-                                                                <MessageCircle size={14} />
-                                                            </div>
-                                                            <span className="text-[10px] font-black uppercase">Responder</span>
-                                                        </button>
-                                                    </div>
-                                                    {/* In-line Reply Area */}
-                                                    {replyTo?.id === item.id && (
-                                                        <div className="mt-4 border-l-2 border-[#ffb700]/20 pl-4 animate-in slide-in-from-left-2">
-                                                            {renderPostArea(item.id)}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex flex-col gap-2">
-                                                    <button onClick={() => setSharePreview({ agent, newsItem: item })} className="p-2 text-white/20 hover:text-[#ffb700] transition-colors"><Share2 size={16} /></button>
-                                                    {(userRole === UserRole.DIRECTOR) && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                showAlert({
-                                                                    title: "ELIMINAR MENSAJE (DIRECTOR)",
-                                                                    message: "¿ESTÁS SEGURO? ESTA ACCIÓN ES IRREVERSIBLE.",
-                                                                    type: 'CONFIRM',
-                                                                    onConfirm: async () => {
-                                                                        const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
-                                                                        if (res.success) {
-                                                                            showAlert({ title: "ÉXITO", message: "MENSAJE ELIMINADO", type: 'SUCCESS' });
-                                                                            loadNews(true);
-                                                                        }
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="p-2 text-red-500/40 hover:text-red-500 transition-colors"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${config.color}15`, color: config.color }}>{config.icon}</div>
+                                                )}
                                             </div>
 
-                                            {/* Nested Comments with Thread lines */}
-                                            <div className="relative">
+                                            <div className="flex-1 min-w-0 pt-0.5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[9px] font-black text-[#ffb700] uppercase hover:underline cursor-pointer" onClick={() => agent && onAgentClick?.(agent)}>{agent ? agentName : config.label}</span>
+                                                    {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
+                                                    <span className="text-[8px] text-white/20 font-bold uppercase">• {item.date}</span>
+                                                </div>
+                                                {item.type === 'BIBLE_SHARE' && item.verse ? (
+                                                    <div className="relative mt-2 mb-3 px-6 py-6 bg-gradient-to-br from-[#ffb700]/10 border border-[#ffb700]/20 rounded-3xl overflow-hidden">
+                                                        <BookOpen size={100} className="absolute -bottom-6 -right-6 text-[#ffb700]/5" />
+                                                        <p className="text-[15px] text-white font-medium italic">{item.verse}</p>
+                                                        <span className="text-[11px] font-black text-[#ffb700] uppercase mt-2 block">{item.reference}</span>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[13px] text-white/90 font-medium">
+                                                        {item.message.split(' ').map((word, i) => word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' ')}
+                                                    </p>
+                                                )}
+
                                                 {(() => {
-                                                    const threadComments = news.filter(comment => comment.parentId === item.id);
-                                                    if (threadComments.length === 0) return null;
-
-                                                    const showAll = expandedThread === item.id;
-                                                    const visibleComments = showAll ? threadComments : threadComments.slice(0, 5);
-
-                                                    return (
-                                                        <div className="mt-2 space-y-4">
-                                                            {/* Thread line connecting main post to comments */}
-                                                            <div className="absolute left-[36px] top-[-20px] bottom-10 w-[2px] bg-white/5" />
-
-                                                            {visibleComments.map(comment => (
-                                                                <div key={comment.id} className="relative ml-8 flex items-start gap-3 group">
-                                                                    {/* Horizontal connector to the thread line */}
-                                                                    <div className="absolute left-[-16px] top-4 w-4 h-[2px] bg-white/5" />
-
-                                                                    <img
-                                                                        src={formatDriveUrl(agents.find(a => a.id === comment.agentId)?.photoUrl || '', comment.agentName || '')}
-                                                                        className="w-8 h-8 rounded-lg object-cover border border-white/10 shadow-lg relative z-10"
-                                                                        alt={comment.agentName}
-                                                                        onError={(e) => {
-                                                                            const target = e.currentTarget as HTMLImageElement;
-                                                                            if (!target.src.includes('ui-avatars.com')) {
-                                                                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.agentName || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                    <div className="flex-1 py-1">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-[9px] font-black text-[#ffb700] uppercase">{comment.agentName?.split(' ')[0]}</span>
-                                                                            <span className="text-[7px] text-white/20 font-black uppercase tracking-widest">• {comment.date}</span>
-                                                                        </div>
-                                                                        <p className="text-[12px] text-white/70 font-medium leading-relaxed font-montserrat">
-                                                                            {comment.message.split(' ').map((word, i) =>
-                                                                                word.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{word} </span> : word + ' '
-                                                                            )}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-
-                                                            {threadComments.length > 5 && !showAll && (
-                                                                <button
-                                                                    onClick={() => setExpandedThread(item.id)}
-                                                                    className="ml-11 flex items-center gap-2 py-2 text-[9px] text-blue-400 font-black uppercase tracking-widest hover:underline transition-all"
-                                                                >
-                                                                    <RefreshCw size={10} className="animate-pulse" /> Mostrar más respuestas ({threadComments.length - 5})
-                                                                </button>
-                                                            )}
+                                                    const m = item.message.match(/\[MEDIA\]: (\S+)/);
+                                                    const v = item.message.match(/\[VIDEO\]: (\S+)/);
+                                                    if (v) return (
+                                                        <div className="mt-3 rounded-2xl overflow-hidden border border-[#ffb700]/20 bg-black aspect-video">
+                                                            <video src={v[1]} controls playsInline className="w-full h-full object-cover" />
                                                         </div>
                                                     );
+                                                    if (m) return (
+                                                        <div className="mt-3 rounded-2xl overflow-hidden border border-white/10 aspect-video">
+                                                            <img src={m[1]} className="w-full h-full object-cover" alt="" onClick={() => window.open(m[1], '_blank')} />
+                                                        </div>
+                                                    );
+                                                    return null;
                                                 })()}
+
+                                                <div className="flex items-center gap-6 mt-4">
+                                                    <button onClick={() => handleToggleLike(item.id)} className={`flex items-center gap-2 ${userLikes.includes(item.id) ? 'text-[#ff4d00]' : 'text-white/30 hover:text-[#ff4d00]'}`}>
+                                                        <ThumbsUp size={14} fill={userLikes.includes(item.id) ? "currentColor" : "none"} />
+                                                        <span className="text-[10px] font-black">{likesCount[item.id] || 0}</span>
+                                                    </button>
+                                                    <button onClick={() => handleToggleDislike(item.id)} className={`flex items-center gap-2 ${userDislikes.includes(item.id) ? 'text-red-500' : 'text-white/30 hover:text-red-500'}`}>
+                                                        <ThumbsDown size={14} />
+                                                        <span className="text-[10px] font-black">{dislikesCount[item.id] || 0}</span>
+                                                    </button>
+                                                    <button onClick={() => setReplyTo(item)} className="text-white/30 hover:text-blue-400 text-[10px] font-black uppercase">Responder</button>
+                                                </div>
+                                                {replyTo?.id === item.id && <div className="mt-4 border-l-2 border-[#ffb700]/20 pl-4">{renderPostArea(item.id)}</div>}
                                             </div>
-                                        </motion.div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Sin actividad operativa reciente</p>
-                            </div>
-                        )}
+
+                                            <div className="flex flex-col gap-2">
+                                                <button onClick={() => setSharePreview({ agent, newsItem: item })} className="p-2 text-white/20 hover:text-[#ffb700]"><Share2 size={16} /></button>
+                                                {userRole === UserRole.DIRECTOR && (
+                                                    <button onClick={() => showAlert({ title: "ELIMINAR", message: "¿?", type: 'CONFIRM', onConfirm: async () => { if ((await deleteNewsItemSupabase(item.id, currentUser?.id)).success) { loadNews(true); } } })} className="p-2 text-red-500/40 hover:text-red-500"><Trash2 size={14} /></button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="relative">
+                                            {(() => {
+                                                const comments = news.filter(c => c.parentId === item.id);
+                                                if (comments.length === 0) return null;
+                                                const showAll = expandedThread === item.id;
+                                                const visible = showAll ? comments : comments.slice(0, 5);
+                                                return (
+                                                    <div className="mt-2 space-y-4">
+                                                        <div className="absolute left-[36px] top-[-20px] bottom-10 w-[2px] bg-white/5" />
+                                                        {visible.map(c => (
+                                                            <div key={c.id} className="relative ml-8 flex items-start gap-3">
+                                                                <div className="absolute left-[-16px] top-4 w-4 h-[2px] bg-white/5" />
+                                                                <img src={formatDriveUrl(agents.find(a => a.id === c.agentId)?.photoUrl || '', c.agentName || '')} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                                                                <div className="flex-1 py-1">
+                                                                    <div className="flex items-center gap-2"><span className="text-[9px] font-black text-[#ffb700] uppercase">{c.agentName?.split(' ')[0]}</span><span className="text-[7px] text-white/20">• {c.date}</span></div>
+                                                                    <p className="text-[12px] text-white/70">{c.message.split(' ').map((w, i) => w.startsWith('@') ? <span key={i} className="text-[#ffb700] font-black">{w} </span> : w + ' ')}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {comments.length > 5 && !showAll && <button onClick={() => setExpandedThread(item.id)} className="ml-11 text-[9px] text-blue-400 font-black uppercase tracking-widest hover:underline">Mostrar más ({comments.length - 5})</button>}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            );
+                        })}
                     </AnimatePresence>
                 </div>
             </div>
 
-            {sharePreview && (
-                <AchievementShareCard
-                    agent={sharePreview.agent}
-                    newsItem={sharePreview.newsItem}
-                    onClose={() => setSharePreview(null)}
-                />
-            )}
+            {sharePreview && <AchievementShareCard agent={sharePreview.agent} newsItem={sharePreview.newsItem} onClose={() => setSharePreview(null)} />}
         </div>
     );
 };

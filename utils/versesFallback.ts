@@ -132,11 +132,12 @@ export const FALLBACK_VERSES = [
 ];
 
 export const getRandomFallbackVerse = () => {
-    // Al usar minTimestamp % length, aseguramos un bloque persistente
-    // cada 2 horas globalmente sin repetirse inmediatamente a menos que length sea pequeño
-    // NOTA: Como agregamos >100 versículos, el índice saltará naturalmente garantizando
-    // variedad durante varias semanas sin repetir versículos frecuentemente.
-    const minTimestamp = Math.floor(Date.now() / (1000 * 60 * 60 * 2));
-    const index = minTimestamp % FALLBACK_VERSES.length;
+    // Para que cambie exactamente a la medianoche (hora de Caracas) sin repetirse
+    // usamos los días transcurridos desde el epoch calculados sobre la fecha local.
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    const diffDays = Math.floor(new Date(todayStr).getTime() / (1000 * 60 * 60 * 24));
+
+    // Al usar modulo la longitud, garantizamos no repetir hasta darle vuelta completa al array (100+ días)
+    const index = diffDays % FALLBACK_VERSES.length;
     return FALLBACK_VERSES[index];
 };

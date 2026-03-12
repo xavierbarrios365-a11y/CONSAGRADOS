@@ -10,14 +10,20 @@ const CLOUDINARY_UPLOAD_PRESET = "consagrados";
 export const uploadToCloudinary = async (file: File | string): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
         const formData = new FormData();
+        const isVideo = typeof file !== 'string' && file.type.startsWith('video/');
 
-        if (typeof file === 'string') {
-            formData.append('file', file);
-        } else {
-            formData.append('file', file);
+        // Limit: 50MB for videos, 10MB for images
+        if (typeof file !== 'string') {
+            const limit = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+            if (file.size > limit) {
+                throw new Error(`Archivo demasiado grande. Límite: ${isVideo ? '50MB' : '10MB'}`);
+            }
         }
+
+        formData.append('file', file);
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
+        // 'auto' detects image or video automatically
         const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
             method: 'POST',
             body: formData,
@@ -25,7 +31,7 @@ export const uploadToCloudinary = async (file: File | string): Promise<{ success
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Failed to upload to Cloudinary');
+            throw new Error(errorData.error?.message || 'Error al subir a la nube');
         }
 
         const data = await response.json();

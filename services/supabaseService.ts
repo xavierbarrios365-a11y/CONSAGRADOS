@@ -1021,25 +1021,16 @@ export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> 
         let needsNewVerse = false;
 
         if (data && !error) {
-            // Check if the verse is older than 2 hours
-            const createdAtMs = new Date(data.created_at).getTime();
-            const nowMs = Date.now();
-            const twoHoursMs = 2 * 60 * 60 * 1000;
-
-            if (nowMs - createdAtMs >= twoHoursMs) {
-                needsNewVerse = true;
-            } else {
-                return {
-                    date: data.fecha,
-                    reference: data.cita,
-                    verse: data.texto
-                };
-            }
+            return {
+                date: data.fecha,
+                reference: data.cita,
+                verse: data.texto
+            };
         } else {
             needsNewVerse = true;
         }
 
-        // --- FALLBACK / ROTACIÓN: Usar Array Interno cada 2 horas ---
+        // --- FALLBACK / ROTACIÓN: Una vez al día ---
         if (needsNewVerse) {
             try {
                 // Generar versículo local estructurado garantizado cada 2 horas

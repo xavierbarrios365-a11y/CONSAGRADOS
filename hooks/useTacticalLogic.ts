@@ -230,10 +230,10 @@ export const useTacticalLogic = (
                         // --- STEP 3: SUCCESS ALERT + CALENDAR REDIRECT ---
                         showAlert({
                             title: "REGISTRO EXITOSO",
-                            message: `✅ Asistencia confirmada.\n\n📅 ¿Deseas agendar esta misión en tu Google Calendar ahora? (Incluye 30 min ración previa).`,
+                            message: `✅ Asistencia confirmada.\n\n📅 ¿Deseas agendar esta misión en tu Google Calendar? (Se agendará con 30 min de anticipación).`,
                             type: 'CONFIRM',
-                            confirmText: 'AGENDAR AHORA',
-                            cancelText: 'FINALIZAR',
+                            confirmText: 'SÍ, AGENDAR',
+                            cancelText: 'LUEGO',
                             onConfirm: () => {
                                 window.open(googleUrl, '_blank');
                             }

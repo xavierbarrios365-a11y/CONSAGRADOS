@@ -33,7 +33,7 @@ export const parseEventDate = (dateStr: string, timeStr?: string): Date => {
 
     const [hour, minute] = (timeStr || '08:00').replace(/[^0-9:]/g, '').split(':').map(Number);
 
-    const date = new Date(year, month - 1, day, hour || 8, minute || 0);
+    const date = new Date(year, month - 1, day, hour !== undefined && !isNaN(hour) ? hour : 8, minute !== undefined && !isNaN(minute) ? minute : 0);
     return isNaN(date.getTime()) ? new Date() : date;
 };
 
@@ -55,8 +55,8 @@ const sanitizeText = (text: string): string => {
 };
 
 export const generateGoogleCalendarLink = (event: CalendarEvent): string => {
-    // Usamos el formato preferido por Google para máxima compatibilidad
-    const baseUrl = "https://calendar.google.com/calendar/r/eventedit";
+    // Usamos el formato preferido por Google (action=TEMPLATE) para máxima compatibilidad
+    const baseUrl = "https://www.google.com/calendar/render";
 
     const startStr = formatICSTime(event.startTime);
     const endStr = formatICSTime(event.endTime);
@@ -66,10 +66,13 @@ export const generateGoogleCalendarLink = (event: CalendarEvent): string => {
     }
 
     const params = new URLSearchParams({
+        action: 'TEMPLATE',
         text: event.title,
         details: event.description,
         location: event.location || "",
-        dates: `${startStr}/${endStr}`
+        dates: `${startStr}/${endStr}`,
+        sf: 'true',
+        output: 'xml'
     });
 
     return `${baseUrl}?${params.toString()}`;

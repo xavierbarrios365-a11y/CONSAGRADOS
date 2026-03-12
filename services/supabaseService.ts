@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 export { supabase };
 import { Agent, Badge, InboxNotification, UserRole, Rank, DailyVerse as DailyVerseType, DuelChallenge } from '../types';
 import { sendTelegramAlert, sendPushBroadcast } from './notifyService';
+import { getRandomFallbackVerse } from '../utils/versesFallback';
 
 /**
  * @description Sincroniza un agente desde Google Sheets hacia Supabase.
@@ -1038,41 +1039,44 @@ export const fetchDailyVerseSupabase = async (): Promise<DailyVerseType | null> 
             needsNewVerse = true;
         }
 
-        // --- FALLBACK / ROTACIÓN: Usar API Externa cada 2 horas ---
+        // --- FALLBACK / ROTACIÓN: Usar Array Interno cada 2 horas ---
         if (needsNewVerse) {
             try {
-                const apiRes = await fetch('https://bible-api.deno.dev/api/read/rv1960/random');
-                const apiData = await apiRes.json();
+                // Generar versículo local estructurado garantizado cada 2 horas
+                const fallbackData = getRandomFallbackVerse();
 
-                if (apiData && apiData.text) {
-                    const newDaily = {
-                        fecha: today,
-                        cita: `${apiData.book} ${apiData.chapter}:${apiData.verse}`,
-                        texto: apiData.text,
-                        created_at: new Date().toISOString() // Actuliazar timestamp para el próximo ciclo
-                    };
+                const newDaily = {
+                    fecha: today,
+                    cita: `${fallbackData.book} ${fallbackData.chapter}:${fallbackData.verse}`,
+                    texto: fallbackData.text,
+                    created_at: new Date().toISOString() // Actualizar timestamp para el próximo ciclo
+                };
 
-                    if (data) {
-                        // Actualizar el existente
-                        await supabase.from('versiculos_diarios').update({
-                            cita: newDaily.cita,
-                            texto: newDaily.texto,
-                            created_at: newDaily.created_at
-                        }).eq('fecha', today);
-                    } else {
-                        // Insertar nuevo si no existía el de hoy
-                        await supabase.from('versiculos_diarios').insert(newDaily);
-                    }
-
-                    return {
-                        date: newDaily.fecha,
-                        reference: newDaily.cita,
-                        verse: newDaily.texto
-                    };
+                if (data) {
+                    // Actualizar el existente (silenciosamente fallará si no hay permisos, pero devolveremos la data al UI)
+                    supabase.from('versiculos_diarios').update({
+                        cita: newDaily.cita,
+                        texto: newDaily.texto,
+                        created_at: newDaily.created_at
+                    }).eq('fecha', today).then(({ error }) => {
+                        if (error) console.warn('Supabase verse update failed (RLS), but UI will use new local verse.', error);
+                    });
+                } else {
+                    // Insertar nuevo si no existía el de hoy
+                    supabase.from('versiculos_diarios').insert(newDaily).then(({ error }) => {
+                        if (error) console.warn('Supabase verse insert failed (RLS), but UI will use new local verse.', error);
+                    });
                 }
-            } catch (apiError) {
-                console.error('❌ Error llamando a la API de la Biblia:', apiError);
-                // Si la API falla pero tenemos un verso viejo de hoy, lo retornamos para no dejar UI rota
+
+                return {
+                    date: newDaily.fecha,
+                    reference: newDaily.cita,
+                    verse: newDaily.texto
+                };
+
+            } catch (fallbackErr) {
+                console.error('❌ Error generando versículo fallback:', fallbackErr);
+                // Si incluso esto falla, retornamos el viejo
                 if (data) {
                     return {
                         date: data.fecha,

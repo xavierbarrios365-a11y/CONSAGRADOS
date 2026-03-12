@@ -67,9 +67,9 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
     const [sliderIndex, setSliderIndex] = React.useState(0);
     const sliderItems = React.useMemo(() => {
         const items = [
+            ...activeEvents.map(evt => ({ id: evt.id, type: 'event', event: evt, title: evt.titulo, sub: 'OPERACIÓN', color: 'amber', icon: <Calendar size={20} /> })),
             { id: 'nehemias', type: 'shortcut', view: AppView.IQ_GAME, title: 'PROYECTO NEHEMÍAS', sub: 'INTELIGENCIA', color: 'blue', icon: <Brain size={20} /> },
-            { id: 'duelos', type: 'shortcut', view: AppView.DUEL_ARENA, title: 'ARENA DE DUELOS', sub: 'COMBATE', color: 'red', icon: <Swords size={20} /> },
-            ...activeEvents.map(evt => ({ id: evt.id, type: 'event', event: evt, title: evt.titulo, sub: 'OPERACIÓN', color: 'amber', icon: <Calendar size={20} /> }))
+            { id: 'duelos', type: 'shortcut', view: AppView.DUEL_ARENA, title: 'ARENA DE DUELOS', sub: 'COMBATE', color: 'red', icon: <Swords size={20} /> }
         ];
         return items;
     }, [activeEvents]);
@@ -104,7 +104,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                             (children[sliderIndex] as HTMLElement).scrollIntoView({
                                                 behavior: 'smooth',
                                                 block: 'nearest',
-                                                inline: 'start'
+                                                inline: 'center'
                                             });
                                         }
                                     }
@@ -117,7 +117,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                             if (item.type === 'shortcut') setView(item.view);
                                             else if (item.type === 'event') handleConfirmEventAttendance(item.event);
                                         }}
-                                        className={`flex items-center gap-3 p-4 rounded-3xl shrink-0 w-[85%] sm:w-80 border transition-all shadow-lg scroll-snap-align-start ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' :
+                                        className={`flex items-center gap-3 p-4 rounded-3xl shrink-0 w-[85%] sm:w-80 border transition-all shadow-lg scroll-snap-align-center ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' :
                                             item.color === 'red' ? 'bg-red-900/10 border-red-500/20 hover:bg-red-900/20' :
                                                 'bg-[#ffb700]/10 border-[#ffb700]/30 hover:bg-[#ffb700]/20'
                                             }`}

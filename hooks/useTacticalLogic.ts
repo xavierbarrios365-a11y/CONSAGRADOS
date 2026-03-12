@@ -13,7 +13,15 @@ import {
 } from '../services/supabaseService';
 
 
-import { generateTacticalProfile, getTacticalAnalysis } from '../services/geminiService';
+import {
+    generateTacticalProfile,
+    getTacticalAnalysis
+} from '../services/geminiService';
+
+import {
+    parseEventDate,
+    generateGoogleCalendarLink
+} from '../services/calendarService';
 
 import jsQR from 'jsqr';
 
@@ -191,6 +199,29 @@ export const useTacticalLogic = (
             if (res.success) {
                 showAlert({ title: "MISIÓN CONFIRMADA", message: `✅ Has sido registrado exitosamente para: ${event.titulo}`, type: 'SUCCESS' });
                 syncData(true);
+
+                // --- CALENDAR INTEGRATION ---
+                const startDate = parseEventDate(event.fecha, event.hora);
+                // Lead time: 30 minutes before
+                const reminderDate = new Date(startDate.getTime() - 30 * 60 * 1000);
+                const endDate = new Date(startDate.getTime() + 90 * 60 * 1000); // 1.5 hour duration total
+
+                const googleUrl = generateGoogleCalendarLink({
+                    title: `OPERACIÓN: ${event.titulo}`,
+                    description: `Confirmación de asistencia táctica para ${event.titulo}. (Puntualidad requerida 30 min antes).`,
+                    startTime: reminderDate,
+                    endTime: endDate,
+                    location: "Consagrados 2026"
+                });
+
+                showAlert({
+                    title: "CALENDARIO TÁCTICO",
+                    message: "📅 ¿Deseas agendar esta operación en tu calendario? (Incluye 30 min de preparación)",
+                    type: 'CONFIRM',
+                    onConfirm: () => {
+                        window.open(googleUrl, '_blank');
+                    }
+                });
             }
         } catch (e) {
             showAlert({ title: "ERROR", message: "No se pudo confirmar la asistencia.", type: 'ERROR' });

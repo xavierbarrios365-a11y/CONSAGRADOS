@@ -63,66 +63,103 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         visitorRadar, resetSessionTimer, setScannedAgentForPoints, onAgentClick, showAlert, syncData
     } = props;
 
+    // --- AUTOPLAY SLIDER LOGIC ---
+    const [sliderIndex, setSliderIndex] = React.useState(0);
+    const sliderItems = React.useMemo(() => {
+        const items = [
+            { id: 'nehemias', type: 'shortcut', view: AppView.IQ_GAME, title: 'PROYECTO NEHEMÍAS', sub: 'INTELIGENCIA', color: 'blue', icon: <Brain size={20} /> },
+            { id: 'duelos', type: 'shortcut', view: AppView.DUEL_ARENA, title: 'ARENA DE DUELOS', sub: 'COMBATE', color: 'red', icon: <Swords size={20} /> },
+            ...activeEvents.map(evt => ({ id: evt.id, type: 'event', event: evt, title: evt.titulo, sub: 'OPERACIÓN', color: 'amber', icon: <Calendar size={20} /> }))
+        ];
+        return items;
+    }, [activeEvents]);
+
+    React.useEffect(() => {
+        if (sliderItems.length <= 1) return;
+        const interval = setInterval(() => {
+            setSliderIndex(prev => (prev + 1) % sliderItems.length);
+        }, 4000); // Rota cada 4 segundos
+        return () => clearInterval(interval);
+    }, [sliderItems.length]);
+
     switch (view) {
         case AppView.HOME:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
                     <div className="max-w-2xl mx-auto pt-4 pb-10 ig-container font-montserrat">
-                        {/* TACTICAL DASHBOARD SLIDER (HORIZONTAL) - TOP POSITION */}
-                        <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar flex gap-3 pb-2 pt-2 border-b border-white/5">
-                            {/* Shortcut: Proyecto Nehemías */}
-                            <button
-                                onClick={() => setView(AppView.IQ_GAME)}
-                                className="flex items-center gap-3 p-4 bg-blue-900/10 border border-blue-500/10 rounded-3xl shrink-0 w-64 hover:bg-blue-900/20 transition-all group shadow-lg"
-                            >
-                                <div className="p-3 bg-blue-500/20 rounded-2xl group-hover:bg-blue-500 transition-colors shadow-inner">
-                                    <Brain className="text-blue-400 group-hover:text-white" size={20} />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-400 mb-0.5">INTELIGENCIA</p>
-                                    <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none">PROYECTO NEHEMÍAS</h4>
-                                </div>
-                            </button>
-
-                            {/* Shortcut: Arena de Duelos */}
-                            <button
-                                onClick={() => setView(AppView.DUEL_ARENA)}
-                                className="flex items-center gap-3 p-4 bg-red-900/10 border border-red-500/10 rounded-3xl shrink-0 w-64 hover:bg-red-900/20 transition-all group shadow-lg"
-                            >
-                                <div className="p-3 bg-red-500/20 rounded-2xl group-hover:bg-red-500 transition-colors shadow-inner">
-                                    <Swords className="text-red-400 group-hover:text-white" size={20} />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-red-400 mb-0.5">COMBATE</p>
-                                    <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none">ARENA DE DUELOS</h4>
-                                </div>
-                            </button>
-
-                            {/* Active Operations listed horizontally */}
-                            {activeEvents.map(evt => (
-                                <div
-                                    key={evt.id}
-                                    className="flex items-center gap-4 p-4 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-3xl shrink-0 w-72 hover:bg-[#ffb700]/20 transition-all cursor-pointer shadow-lg group relative overflow-hidden"
-                                    onClick={() => handleConfirmEventAttendance(evt)}
-                                >
-                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:scale-110 transition-transform">
-                                        <Target size={40} className="text-[#ffb700]" />
-                                    </div>
-                                    <div className="p-3 bg-[#ffb700]/20 rounded-2xl shadow-inner shrink-0">
-                                        <Calendar size={20} className="text-[#ffb700]" />
-                                    </div>
-                                    <div className="text-left min-w-0">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-[#ffb700] mb-0.5">OPERACIÓN</p>
-                                        <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none truncate">{evt.titulo}</h4>
-                                        <p className="text-[9px] text-white/40 mt-1 font-medium">{evt.fecha} @ {evt.hora || 'S/H'}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
                         {/* HISTORIAS FULL WIDTH (IG STYLE) */}
                         <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-white/5 pb-4">
                             <StoriesBar currentUser={currentUser} />
+                        </div>
+
+                        {/* TACTICAL DASHBOARD SLIDER (AUTOPLAY) */}
+                        <div className="mb-6 -mx-4 px-4 relative group">
+                            <div
+                                className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth"
+                                style={{ scrollSnapType: 'x mandatory' }}
+                                ref={(el) => {
+                                    if (el) {
+                                        const children = el.children;
+                                        if (children[sliderIndex]) {
+                                            (children[sliderIndex] as HTMLElement).scrollIntoView({
+                                                behavior: 'smooth',
+                                                block: 'nearest',
+                                                inline: 'start'
+                                            });
+                                        }
+                                    }
+                                }}
+                            >
+                                {sliderItems.map((item: any, idx) => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            if (item.type === 'shortcut') setView(item.view);
+                                            else if (item.type === 'event') handleConfirmEventAttendance(item.event);
+                                        }}
+                                        className={`flex items-center gap-3 p-4 rounded-3xl shrink-0 w-[85%] sm:w-80 border transition-all shadow-lg scroll-snap-align-start ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/20 hover:bg-blue-900/20' :
+                                            item.color === 'red' ? 'bg-red-900/10 border-red-500/20 hover:bg-red-900/20' :
+                                                'bg-[#ffb700]/10 border-[#ffb700]/30 hover:bg-[#ffb700]/20'
+                                            }`}
+                                    >
+                                        <div className={`p-3 rounded-2xl shadow-inner ${item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
+                                            item.color === 'red' ? 'bg-red-500/20 text-red-400' :
+                                                'bg-[#ffb700]/20 text-[#ffb700]'
+                                            }`}>
+                                            {item.icon}
+                                        </div>
+                                        <div className="text-left min-w-0">
+                                            <p className={`text-[8px] font-black uppercase tracking-[0.2em] mb-0.5 ${item.color === 'blue' ? 'text-blue-400' :
+                                                item.color === 'red' ? 'text-red-400' :
+                                                    'text-[#ffb700]'
+                                                }`}>{item.sub}</p>
+                                            <h4 className="text-[12px] font-bebas tracking-widest text-white leading-none truncate">{item.title}</h4>
+                                            {item.type === 'event' && item.event && (
+                                                <p className="text-[9px] text-white/40 mt-1 font-medium">{item.event.fecha} @ {item.event.hora || 'S/H'}</p>
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Indicadores de Slider */}
+                            <div className="flex justify-center gap-1.5 mt-2">
+                                {sliderItems.map((_, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`h-1 rounded-full transition-all duration-300 ${idx === sliderIndex ? 'w-4 bg-[#ffb700]' : 'w-1 bg-white/10'}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div id="tutorial-daily-verse" className="w-full animate-in slide-in-from-top-4 duration-1000 mb-2">
+                            <DailyVerse
+                                verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
+                                streakCount={currentUser?.streakCount}
+                                onQuizComplete={handleVerseQuizComplete}
+                                agent={currentUser || undefined}
+                            />
                         </div>
                         {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
                             <IntelFeed
@@ -202,6 +239,11 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                     <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Reclutar</span>
                                 </button>
                             )}
+
+                            <button onClick={() => setView(AppView.HELP_CENTER)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
+                                <HelpCircle size={24} className="text-blue-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ayuda</span>
+                            </button>
                         </div>
                     </div>
                 </motion.div>

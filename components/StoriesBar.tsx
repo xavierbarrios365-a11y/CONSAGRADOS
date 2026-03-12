@@ -135,10 +135,15 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                     setShowPreview(false);
                     setPreviewFile(null);
                     setPreviewUrl(null);
+                } else {
+                    alert("ERROR AL GUARDAR HISTORIA: " + dbRes.error);
                 }
+            } else {
+                alert("ERROR AL SUBIR ARCHIVO: " + uploadRes.error);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Story upload failed:", error);
+            alert("FALLA TÁCTICA: " + (error.message || "Error desconocido"));
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';

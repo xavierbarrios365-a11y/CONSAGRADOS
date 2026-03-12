@@ -91,16 +91,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 md:gap-3">
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              onClick={() => setView(AppView.HELP_CENTER)}
-              className="relative cursor-pointer group p-2 text-gray-500 hover:text-blue-400 transition-colors"
-              title="Centro de Ayuda"
-            >
-              <HelpCircle size={20} className="group-hover:scale-110 transition-transform" />
-            </motion.div>
-
-            <motion.div
               id="nav-notifications"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}

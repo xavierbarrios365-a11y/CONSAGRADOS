@@ -62,6 +62,9 @@ export const useTacticalLogic = (
         try {
             const result = await submitTransactionSupabase(id, 'ASISTENCIA', currentUser?.name);
             if (result.success) {
+                // Asignar los puntos reales de Asistencia (XP) a la vez
+                await updateAgentPointsSupabase(id, 'XP', 10);
+
                 setScanStatus('SUCCESS');
                 syncData(true); // Se desplaza fuera del timeout para actualización inmediata en UI
                 const agent = agents.find(a => String(a.id) === String(id));

@@ -13,7 +13,7 @@ export const fetchVisitorRadarSupabase = async (): Promise<Visitor[]> => {
         if (error) throw error;
         return (data || []).map(v => ({
             id: v.id,
-            name: v.nombre,
+            name: v.agent_name,
             whatsapp: v.whatsapp,
             reason: v.motivo,
             date: v.registrado_en,
@@ -37,7 +37,7 @@ export const registerVisitorSupabase = async (
 ) => {
     try {
         const { data, error } = await supabase.from('asistencia_visitas').insert({
-            nombre: name,
+            agent_name: name,
             whatsapp: 'NO_REGISTRADO',
             motivo: reporter || 'APP_VISITOR',
             registrado_en: new Date().toISOString()
@@ -93,7 +93,7 @@ export const confirmEventAttendanceSupabase = async (payload: { agentId: string,
     try {
         const { data, error } = await supabase.from('asistencia_visitas').insert({
             agent_id: payload.agentId,
-            nombre: payload.agentName,
+            agent_name: payload.agentName,
             tipo: 'EVENTO_CONFIRMADO',
             detalle: `Confirmación para evento: ${payload.eventTitle}`,
             registrado_en: new Date().toISOString()
@@ -126,7 +126,7 @@ export const confirmDirectorAttendanceSupabase = async (agentId: string, agentNa
 
         const { error } = await supabase.from('asistencia_visitas').insert({
             agent_id: agentId,
-            nombre: agentName,
+            agent_name: agentName,
             tipo: 'DIRECTOR_ASISTENCIA',
             detalle: `Confirmación Director: ${today}`,
             registrado_en: new Date().toISOString()
@@ -145,7 +145,7 @@ export const submitTransactionSupabase = async (agentId: string, type: string, a
     try {
         const { error } = await supabase.from('asistencia_visitas').insert({
             agent_id: agentId,
-            nombre: agentName || 'Agente',
+            agent_name: agentName || 'Agente',
             tipo: 'QR_SCAN',
             detalle: `Escaneo QR: ${type}`,
             registrado_en: new Date().toISOString()

@@ -1224,7 +1224,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                 <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
                   <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
                   <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
-                    {agent.accessLevel || 'ESTUDIANTE'}
+                    {agent.role || 'ESTUDIANTE'}
                   </p>
                 </div>
               </div>

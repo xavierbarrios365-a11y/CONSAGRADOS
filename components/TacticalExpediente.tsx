@@ -305,7 +305,7 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose,
                         <div className="flex items-center gap-4 text-[7px] text-white/20 font-black uppercase tracking-[0.4em]">
                             <span>SISTEMA DE VIGILANCIA C26</span>
                             <span className="w-1 h-1 bg-white/20 rounded-full"></span>
-                            <span>NIVEL DE ACCESO: {agent.accessLevel || 'RECLUTA'}</span>
+                            <span>NIVEL DE ACCESO: {agent.userRole || agent.role || 'RECLUTA'}</span>
                         </div>
                         <div className="flex gap-1 h-2 items-center">
                             {[1, 2, 3, 4, 5, 6, 7].map(i => (

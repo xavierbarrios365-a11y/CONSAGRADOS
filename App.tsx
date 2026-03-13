@@ -1,4 +1,3 @@
-window.alert('APP.TSX EXECUTING');
 console.log('--- APP.TSX TOP-LEVEL LOADED ---');
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

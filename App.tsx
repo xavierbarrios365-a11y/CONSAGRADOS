@@ -1,4 +1,12 @@
-console.log('--- APP.TSX TOP-LEVEL LOADED ---');
+// --- PURGE SYSTEM: FORZAR RECARGA PARA LIMPIAR CACHÉ ANTIGUO ---
+const APP_PURGE_VERSION = '2026_PRUGE_V4_FINAL';
+if (typeof window !== 'undefined') {
+  if (localStorage.getItem('APP_PURGE_ID') !== APP_PURGE_VERSION) {
+    localStorage.setItem('APP_PURGE_ID', APP_PURGE_VERSION);
+    window.location.reload();
+  }
+}
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
@@ -388,6 +396,17 @@ const App: React.FC = () => {
 
   // --- Init: Remote config, daily verse, PWA install (not extracted — App-specific) ---
   useEffect(() => {
+    // Unregister legacy service workers for total cache purge
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister().then(() => {
+            console.log('--- SYSTEM PURGE: SW UNREGISTERED ---');
+          });
+        }
+      });
+    }
+
     initRemoteConfig();
 
     fetchDailyVerseSupabase().then(res => {

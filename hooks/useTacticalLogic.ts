@@ -221,23 +221,31 @@ export const useTacticalLogic = (
 
                         const googleUrl = generateGoogleCalendarLink({
                             title: `OPERACIÓN: ${event.titulo}`,
-                            description: `Asistencia táctica confirmada. (Ingreso 30 min antes).`,
+                            description: `Asistencia táctica confirmada con el Centro de Mando. (Ingreso 30 min antes).`,
                             startTime: reminderDate,
                             endTime: endDate,
-                            location: "Consagrados 2026"
+                            location: "Centro de Operaciones Consagrados"
                         });
 
                         // --- STEP 3: SUCCESS ALERT + CALENDAR REDIRECT ---
-                        showAlert({
-                            title: "REGISTRO EXITOSO",
-                            message: `✅ Asistencia confirmada.\n\n📅 ¿Deseas agendar esta misión en tu Google Calendar? (Se agendará con 30 min de anticipación).`,
-                            type: 'CONFIRM',
-                            confirmText: 'SÍ, AGENDAR',
-                            cancelText: 'LUEGO',
-                            onConfirm: () => {
-                                window.open(googleUrl, '_blank');
-                            }
-                        });
+                        if (googleUrl) {
+                            showAlert({
+                                title: "REGISTRO EXITOSO",
+                                message: `✅ Asistencia confirmada.\n\n📅 ¿Deseas agendar esta misión en tu Google Calendar? (Se agendará con 30 min de ración previa).`,
+                                type: 'CONFIRM',
+                                confirmText: 'SÍ, AGENDAR',
+                                cancelText: 'LUEGO',
+                                onConfirm: () => {
+                                    window.open(googleUrl, '_blank');
+                                }
+                            });
+                        } else {
+                            showAlert({
+                                title: "REGISTRO EXITOSO",
+                                message: `✅ Asistencia confirmada.\n\n⚠️ Los datos de fecha/hora son irregulares para el calendario automático.`,
+                                type: 'SUCCESS'
+                            });
+                        }
                         syncData(true);
                     }
                 } catch (e) {

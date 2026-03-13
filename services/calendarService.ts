@@ -33,15 +33,34 @@ export const parseEventDate = (dateStr: string, timeStr?: string): Date => {
 
     const [hour, minute] = (timeStr || '08:00').replace(/[^0-9:]/g, '').split(':').map(Number);
 
+    // Si el año viene en 2 dígitos, asumimos 2000+
+    if (year > 0 && year < 100) year += 2000;
+
     const date = new Date(year, month - 1, day, hour !== undefined && !isNaN(hour) ? hour : 8, minute !== undefined && !isNaN(minute) ? minute : 0);
     return isNaN(date.getTime()) ? new Date() : date;
 };
 
+/**
+ * Formato para Google Calendar: YYYYMMDDTHHmmSS
+ * NOTA: No incluimos la 'Z' al final para que Google lo interprete en la zona horaria del usuario (Local).
+ */
+const formatLocalTime = (date: Date): string => {
+    if (!date || isNaN(date.getTime())) return "";
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const yyyy = date.getFullYear();
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    const ss = pad(date.getSeconds());
+
+    return `${yyyy}${mm}${dd}T${hh}${min}${ss}`;
+};
+
 const formatICSTime = (date: Date): string => {
-    if (!date || isNaN(date.getTime())) {
-        console.warn("Invalid date provided to formatICSTime, falling back to empty string.");
-        return "";
-    }
+    if (!date || isNaN(date.getTime())) return "";
     return date.toISOString().replace(/-|:|\.\d{3}/g, "");
 };
 
@@ -55,24 +74,21 @@ const sanitizeText = (text: string): string => {
 };
 
 export const generateGoogleCalendarLink = (event: CalendarEvent): string => {
-    // Usamos el formato preferido por Google (action=TEMPLATE) para máxima compatibilidad
-    const baseUrl = "https://www.google.com/calendar/render";
+    // Usamos el formato preferido por Google para máxima compatibilidad
+    // https://calendar.google.com/calendar/render?action=TEMPLATE
+    const baseUrl = "https://calendar.google.com/calendar/render";
 
-    const startStr = formatICSTime(event.startTime);
-    const endStr = formatICSTime(event.endTime);
+    const startStr = formatLocalTime(event.startTime);
+    const endStr = formatLocalTime(event.endTime);
 
-    if (!startStr || !endStr) {
-        return "";
-    }
+    if (!startStr || !endStr) return "";
 
     const params = new URLSearchParams({
         action: 'TEMPLATE',
         text: event.title,
         details: event.description,
         location: event.location || "",
-        dates: `${startStr}/${endStr}`,
-        sf: 'true',
-        output: 'xml'
+        dates: `${startStr}/${endStr}`
     });
 
     return `${baseUrl}?${params.toString()}`;

@@ -1225,7 +1225,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
             if (emptyIdx >= 0) {
                 const correctChar = cryptoPhrase[emptyIdx];
                 const cipherChar = cryptoCipher[emptyIdx];
-                handleCryptoInput(correctChar, cipherChar);
+                handleCryptoInput(correctChar);
             }
         } else if (level === 4) {
             // Wordle: Poner letra correcta no encontrada
@@ -1749,7 +1749,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                 <button
                                                     key={i}
                                                     disabled={status !== 'PLAYING'}
-                                                    onClick={() => handleMemoryPress(i)}
+                                                    onClick={() => handleMemoryClick(i)}
                                                     className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 transition-all duration-200 focus:outline-none ${isShowing
                                                         ? 'bg-blue-500 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)] scale-105'
                                                         : isClicked

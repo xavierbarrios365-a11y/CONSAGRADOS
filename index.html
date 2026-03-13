@@ -144,20 +144,16 @@
 
 <body>
   <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+  <script type="module" src="/main_entry.tsx"></script>
   <script>
-    console.log('🚀 SYSTEM_CORE: v2.2.0 (ATOMIC-PURGE) initialized.');
+    console.log('🚀 SYSTEM_CORE: v2.5.0 (NEW-ENTRY) - TIME: ' + new Date().toLocaleTimeString());
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        // Registro Unificado de Service Worker (Firebase + PWA)
-        navigator.serviceWorker.register('./firebase-messaging-sw.js?v=2.0.0')
-          .then(reg => {
-            console.log('Operational SW Registered v2.0.0', reg);
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-          })
-          .catch(err => console.log('SW Registration Error:', err));
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister().then(success => {
+            if (success) console.log('✅ ServiceWorker UNREGISTERED successfully.');
+          });
+        }
       });
     }
   </script>

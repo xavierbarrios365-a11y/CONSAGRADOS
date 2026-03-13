@@ -2,7 +2,8 @@
  * Servicio para conectarse al backend Vercel (api/notify) 
  * Manda alertas de Push y Telegram sin usar Google Sheets
  */
-import { supabase } from './supabaseService';
+import { supabase } from './supabaseClient';
+import { InboxNotification } from '../types';
 
 const getBaseUrl = () => {
     return import.meta.env.DEV ? 'https://consagrados.vercel.app' : '';
@@ -163,3 +164,53 @@ export const sendSocialNotification = async (
         console.error("Error en sendSocialNotification:", e);
     }
 }
+
+/**
+ * @description Actualiza preferencias de lectura/eliminación de notificaciones.
+ */
+export const updateNotifPrefsSupabase = async (agentId: string, prefs: { read?: string[], deleted?: string[] }) => {
+    try {
+        const { error } = await supabase.from('notif_prefs').upsert({
+            agent_id: agentId,
+            read_ids: prefs.read || [],
+            deleted_ids: prefs.deleted || [],
+            updated_at: new Date().toISOString()
+        });
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+};
+/**
+ * @description Sincroniza el token FCM para notificaciones push.
+ */
+export const syncFcmTokenSupabase = async (agentId: string, token: string) => {
+    try {
+        const { error } = await supabase.from('agentes').update({ fcm_token: token }).eq('id', agentId);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Obtiene las notificaciones del usuario (Inbox).
+ */
+export const fetchNotificationsSupabase = async (agentId?: string): Promise<InboxNotification[]> => {
+    try {
+        let query = supabase.from('notificaciones_push').select('*').order('created_at', { ascending: false });
+        if (agentId) {
+            query = query.or(`agent_id.eq.${agentId},agent_id.is.null`);
+        } else {
+            query = query.is('agent_id', null);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    } catch (e: any) {
+        console.error('Error fetching notifications:', e.message);
+        return [];
+    }
+};

@@ -277,9 +277,10 @@ export function useAuth() {
                 const agent = JSON.parse(storedUser);
                 const lastActive = storedLastActive ? parseInt(storedLastActive) : 0;
                 const now = Date.now();
+                const SESSION_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000; // 30 días (igual que el interval)
 
-                // Si es PWA, ignoramos el timeout de 1 hora
-                if (!isPwa && now - lastActive > 3600000 && lastActive !== 0) {
+                // Si es PWA, nunca expirar. En browser, dar 30 días
+                if (!isPwa && lastActive !== 0 && (now - lastActive) > SESSION_TIMEOUT_MS) {
                     handleLogout();
                 } else {
                     setIsLoggedIn(true);

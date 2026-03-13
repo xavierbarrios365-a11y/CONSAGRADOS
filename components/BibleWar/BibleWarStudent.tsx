@@ -189,7 +189,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
         });
 
         // Aseguramos pasar el ID actual para evitar escrituras tardías en rondas nuevas
-        const res = await submitBibleWarAnswer(myTeam, option, session.current_question_id || '');
+        const res = await submitBibleWarAnswer(String(currentUser.id), option, myTeam as 'A' | 'B');
         if (!res.success) {
             alert("Error enviando respuesta.");
             setSelectedOption(null);

@@ -4,7 +4,7 @@ import {
     Heart, Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
     GraduationCap, Award, Flame, AlertCircle, Share2, Trash2, Gift,
-    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown, BookOpen
+    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown, BookOpen, Eye
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
 import {
@@ -50,6 +50,74 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
     'BIBLE_SHARE': { icon: <BookOpen size={16} />, color: '#ffb700', label: 'REFLEXIÓN' },
 };
 
+const TacticalMedia = ({ url, type, onClick, isTrending = false }: { url: string; type: 'image' | 'video'; onClick: () => void; isTrending?: boolean }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const mediaRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '200px' });
+
+        if (mediaRef.current) observer.observe(mediaRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div
+            ref={mediaRef}
+            className={`mt-3 relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black cursor-pointer hover:scale-[1.02] transition-all duration-500 shadow-2xl group ${!isLoaded ? 'animate-pulse' : ''}`}
+            onClick={onClick}
+        >
+            {isVisible && (
+                type === 'video' ? (
+                    <div className="relative w-full h-full">
+                        <video
+                            src={url}
+                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            muted
+                            playsInline
+                            onLoadedData={() => setIsLoaded(true)}
+                        />
+                        {!isLoaded && <div className="absolute inset-0 flex items-center justify-center bg-white/5"><Activity size={24} className="text-[#ffb700]/30 animate-spin" /></div>}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                            <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/20">
+                                <Zap size={20} className="text-white animate-pulse" />
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <img
+                            src={url}
+                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            alt="Media content"
+                            onLoad={() => setIsLoaded(true)}
+                        />
+                        {!isLoaded && <div className="absolute inset-0 flex items-center justify-center bg-white/5"><Activity size={24} className="text-[#ffb700]/30 animate-spin" /></div>}
+                    </>
+                )
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                <span className="text-[8px] text-white font-black tracking-widest uppercase flex items-center gap-2">
+                    <Eye size={12} /> VER EN DETALLE
+                </span>
+            </div>
+            {isTrending && (
+                <div className="absolute top-3 left-3 px-3 py-1 bg-[#ff6b00]/20 backdrop-blur-md border border-[#ff6b00]/30 rounded-full flex items-center gap-2 text-[#ff6b00] text-[8px] font-black tracking-widest">
+                    <Flame size={10} /> TRENDING
+                </div>
+            )}
+        </div>
+    );
+};
+
 const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser, filterType, onAgentClick }) => {
     const { showAlert } = useTacticalAlert();
     const [news, setNews] = useState<NewsFeedItem[]>([]);
@@ -93,17 +161,34 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             // Cleanup fire-and-forget (48h policy)
             Promise.resolve(supabase.rpc('cleanup_expired_intel_feed')).catch(() => { });
 
-            const data = await fetchNewsFeed();
-            setNews(data || []);
+            const rawData = await fetchNewsFeed();
+            // Map raw DB rows (asistencia_visitas) → NewsFeedItem
+            const mapped: NewsFeedItem[] = (rawData || []).map((item: any) => {
+                const { message, verse, reference, mediaUrl, mediaType } = parseNewsMessage(item.detalle || item.message || '');
+                return {
+                    id: item.id,
+                    agentId: item.agent_id ?? item.agentId,
+                    agentName: item.agent_name ?? item.agentName,
+                    type: item.tipo ?? item.type,
+                    message,
+                    verse,
+                    reference,
+                    mediaUrl,
+                    mediaType: (mediaType as any)?.toLowerCase() || undefined,
+                    parentId: item.parent_id ?? item.parentId,
+                    date: new Date(item.registrado_en ?? item.date ?? Date.now()).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase()
+                };
+            });
+            setNews(mapped);
             setCurrentPage(0);
 
-            if (data && data.length > 0) {
-                const ids = data.map(i => i.id);
+            if (mapped && mapped.length > 0) {
+                const ids = mapped.map(i => i.id);
                 const counts = await fetchNewsLikesSupabase(ids);
                 setLikesCount(counts);
 
                 const dCounts: Record<string, number> = {};
-                data.forEach(item => {
+                mapped.forEach((item: any) => {
                     if (item.dislikesCount !== undefined) dCounts[item.id] = item.dislikesCount;
                 });
                 setDislikesCount(dCounts);
@@ -373,7 +458,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             [noticiaId]: Math.max(0, (prev[noticiaId] || 0) + (isCurrentlyLiked ? -1 : 1))
         }));
 
-        const res = await toggleLikeSupabase(noticiaId, currentUser.id, currentUser.name);
+        const res = await toggleLikeSupabase(noticiaId, currentUser.id);
         if (!res.success) {
             setUserLikes(prev => isCurrentlyLiked ? [...prev, noticiaId] : prev.filter(id => id !== noticiaId));
             setLikesCount(prev => ({
@@ -455,7 +540,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                     verse: verse,
                     reference: reference,
                     mediaUrl: mediaUrl,
-                    mediaType: mediaType,
+                    mediaType: (mediaType as any)?.toLowerCase?.() || 'image',
                     parentId: item.parent_id,
                     date: new Date(item.registrado_en).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase()
                 };
@@ -528,6 +613,22 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             <div id="intel-feed-scroll-container" className="flex-1 overflow-y-auto pr-2 no-scrollbar space-y-4">
                 <div className="grid grid-cols-1 gap-2 relative">
                     <AnimatePresence mode="popLayout">
+                        {displayedNews.length === 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="flex flex-col items-center justify-center py-20 text-center"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 mb-4">
+                                    <Activity size={32} className="text-[#ffb700]/50" />
+                                </div>
+                                <h3 className="text-white/60 font-black tracking-widest text-[12px]">TRANSMISIÓN DESPEJADA</h3>
+                                <p className="text-white/40 text-[10px] mt-2 max-w-[220px] mx-auto leading-relaxed">
+                                    No hay reportes activos en la frecuencia. Sé el primero en emitir un comunicado a la red Consagrados.
+                                </p>
+                            </motion.div>
+                        )}
                         {displayedNews.map((item, idx) => {
                             const config = TACTICAL_CONFIG[item.type] || { icon: <AlertCircle size={16} />, color: '#9ca3af', label: 'NOTIFICACIÓN' };
                             const agent = agents.find(a => String(a.id) === String(item.agentId));
@@ -545,7 +646,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                 showAlert({
                                                     title: "ELIMINAR NOTICIA", message: "¿Seguro?", type: 'CONFIRM',
                                                     onConfirm: async () => {
-                                                        const res = await deleteNewsItemSupabase(item.id, currentUser?.id);
+                                                        const res = await deleteNewsItemSupabase(item.id);
                                                         if (res.success) { showAlert({ title: "ÉXITO", message: "ELIMINADA", type: 'SUCCESS' }); loadNews(true); }
                                                     }
                                                 });
@@ -581,26 +682,11 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                         <p className="text-[12px] text-white/90 font-medium leading-relaxed whitespace-pre-wrap font-montserrat">{item.message}</p>
 
                                                         {item.mediaUrl && (
-                                                            <div
-                                                                className="mt-3 relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black cursor-pointer hover:scale-[1.02] transition-transform shadow-2xl group"
+                                                            <TacticalMedia
+                                                                url={item.mediaUrl}
+                                                                type={item.mediaType as any}
                                                                 onClick={() => item.mediaUrl && item.mediaType && setViewingMedia({ url: item.mediaUrl, type: item.mediaType })}
-                                                            >
-                                                                {item.mediaType === 'video' ? (
-                                                                    <div className="relative w-full h-full">
-                                                                        <video src={item.mediaUrl} className="w-full h-full object-cover" muted playsInline />
-                                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                                                                            <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/40">
-                                                                                <Zap size={20} className="text-white animate-pulse" />
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <img src={item.mediaUrl} className="w-full h-full object-cover" alt="Media content" />
-                                                                )}
-                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                                                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Ver en pantalla completa</span>
-                                                                </div>
-                                                            </div>
+                                                            />
                                                         )}
                                                         <span className="text-[11px] font-black text-[#ffb700] uppercase mt-2 block">{item.reference}</span>
                                                     </div>
@@ -618,24 +704,18 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                     const m = item.message.match(/\[MEDIA\]: (\S+)/);
                                                     const v = item.message.match(/\[VIDEO\]: (\S+)/);
                                                     if (v) return (
-                                                        <div
-                                                            className="mt-3 rounded-2xl overflow-hidden border border-[#ffb700]/20 bg-black aspect-video cursor-pointer relative group"
+                                                        <TacticalMedia
+                                                            url={v[1]}
+                                                            type="video"
                                                             onClick={() => setViewingMedia({ url: v[1], type: 'video' })}
-                                                        >
-                                                            <video src={v[1]} className="w-full h-full object-cover" />
-                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                                                                <Zap className="text-[#ffb700] w-12 h-12" />
-                                                            </div>
-                                                        </div>
+                                                        />
                                                     );
                                                     if (m) return (
-                                                        <div
-                                                            className="mt-3 rounded-2xl overflow-hidden border border-white/10 aspect-video cursor-pointer relative group"
+                                                        <TacticalMedia
+                                                            url={m[1]}
+                                                            type="image"
                                                             onClick={() => setViewingMedia({ url: m[1], type: 'image' })}
-                                                        >
-                                                            <img src={m[1]} className="w-full h-full object-cover" alt="" />
-                                                            <div className="absolute inset-0 bg-[#ffb700]/0 group-hover:bg-[#ffb700]/10 transition-colors" />
-                                                        </div>
+                                                        />
                                                     );
                                                     return null;
                                                 })()}
@@ -657,7 +737,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                             <div className="flex flex-col gap-2">
                                                 <button onClick={() => setSharePreview({ agent, newsItem: item })} className="p-2 text-white/20 hover:text-[#ffb700]"><Share2 size={16} /></button>
                                                 {userRole === UserRole.DIRECTOR && (
-                                                    <button onClick={() => showAlert({ title: "ELIMINAR", message: "¿?", type: 'CONFIRM', onConfirm: async () => { if ((await deleteNewsItemSupabase(item.id, currentUser?.id)).success) { loadNews(true); } } })} className="p-2 text-red-500/40 hover:text-red-500"><Trash2 size={14} /></button>
+                                                    <button onClick={() => showAlert({ title: "ELIMINAR", message: "¿?", type: 'CONFIRM', onConfirm: async () => { if ((await deleteNewsItemSupabase(item.id)).success) { loadNews(true); } } })} className="p-2 text-red-500/40 hover:text-red-500"><Trash2 size={14} /></button>
                                                 )}
                                             </div>
                                         </div>
@@ -696,9 +776,9 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                 </div>
                             );
                         })}
-                    </AnimatePresence>
-                </div>
-            </div>
+                    </AnimatePresence >
+                </div >
+            </div >
 
             {sharePreview && <AchievementShareCard agent={sharePreview.agent} newsItem={sharePreview.newsItem} onClose={() => setSharePreview(null)} />}
 
@@ -756,7 +836,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                     to { transform: rotate(360deg); }
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 

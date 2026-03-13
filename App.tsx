@@ -1,3 +1,5 @@
+window.alert('APP.TSX EXECUTING');
+console.log('--- APP.TSX TOP-LEVEL LOADED ---');
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
@@ -6,36 +8,37 @@ import DigitalIdCard from './components/DigitalIdCard';
 import { formatDriveUrl, compressImage } from './services/storageUtils';
 import { uploadToCloudinary } from './services/cloudinaryService';
 import IntelFeed from './components/IntelFeed';
-import AcademyModule from './components/AcademyModule';
-import CIUModule from './components/IntelligenceCenter';
-import BibleWarDisplay from './components/BibleWar/BibleWarDisplay';
-import BibleWarStudent from './components/BibleWar/BibleWarStudent';
+// --- Heavy Components (Lazy Loaded) ---
+const AcademyModule = React.lazy(() => import('./components/AcademyModule'));
+const CIUModule = React.lazy(() => import('./components/IntelligenceCenter'));
+const BibleWarDisplay = React.lazy(() => import('./components/BibleWar/BibleWarDisplay'));
+const BibleWarStudent = React.lazy(() => import('./components/BibleWar/BibleWarStudent'));
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import BibleReader from './components/BibleReader';
-import EliteRecruitmentTest from './components/EliteRecruitmentTest';
-import TacticalProfileDetail from './components/TacticalProfileDetail';
+const EliteRecruitmentTest = React.lazy(() => import('./components/EliteRecruitmentTest'));
+const TacticalProfileDetail = React.lazy(() => import('./components/TacticalProfileDetail'));
 import TutorialOverlay from './components/TutorialOverlay';
 import { DailyVerse as DailyVerseType, InboxNotification } from './types';
-import TacticalExpediente from './components/TacticalExpediente';
-import ContentModule from './components/ContentModule';
+const TacticalExpediente = React.lazy(() => import('./components/TacticalExpediente'));
+const ContentModule = React.lazy(() => import('./components/ContentModule'));
 import NotificationInbox from './components/NotificationInbox';
 import { TacticalAlertProvider, useTacticalAlert } from './components/TacticalAlert';
 import TacticalChat from './components/TacticalChat';
 import TacticalRanking from './components/TacticalRanking';
-import PromotionModule from './components/PromotionModule';
-import TasksModule from './components/TasksModule';
+const PromotionModule = React.lazy(() => import('./components/PromotionModule'));
+const TasksModule = React.lazy(() => import('./components/TasksModule'));
 import PromotionProgressCard from './components/PromotionProgressCard';
-import TrainingCenter from './components/TrainingCenter';
-import BadgeShowcase from './components/BadgeShowcase';
-import TacticalCertificate from './components/TacticalCertificate';
+const TrainingCenter = React.lazy(() => import('./components/TrainingCenter'));
+const BadgeShowcase = React.lazy(() => import('./components/BadgeShowcase'));
+const TacticalCertificate = React.lazy(() => import('./components/TacticalCertificate'));
 import LoadingScreen from './components/LoadingScreen';
 import LighthouseIndicator from './components/LighthouseIndicator';
-import AdminDashboard from './components/AdminDashboard';
-import LandingInversion from './components/LandingInversion';
-import PublicWebsite from './components/PublicWebsite';
-import TacticalIQ from './components/TacticalIQ';
-import TacticalDuelArena from './components/TacticalDuelArena';
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const LandingInversion = React.lazy(() => import('./components/LandingInversion'));
+const PublicWebsite = React.lazy(() => import('./components/PublicWebsite'));
+const TacticalIQ = React.lazy(() => import('./components/TacticalIQ'));
+const TacticalDuelArena = React.lazy(() => import('./components/TacticalDuelArena'));
 import TacticalHelp from './components/TacticalHelp';
 // --- Modularized Views ---
 import StudentView from './components/views/StudentView';
@@ -107,6 +110,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 );
 
 const App: React.FC = () => {
+  console.log('App component executing...');
   const APP_VERSION = "2.0.0"; // Mega Actualización - Tutorial, Persistence & Likes
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
@@ -691,10 +695,12 @@ const App: React.FC = () => {
   if (view === AppView.PUBLIC_WEB) {
     return (
       <TacticalAlertProvider>
-        <PublicWebsite
-          onLoginClick={() => setView(AppView.HOME)}
-          onInvestmentClick={() => setView(AppView.LANDING)}
-        />
+        <React.Suspense fallback={<LoadingScreen message="SINCRONIZANDO ADN..." />}>
+          <PublicWebsite
+            onLoginClick={() => setView(AppView.HOME)}
+            onInvestmentClick={() => setView(AppView.LANDING)}
+          />
+        </React.Suspense>
       </TacticalAlertProvider>
     );
   }
@@ -703,7 +709,9 @@ const App: React.FC = () => {
   if (view === AppView.LANDING) {
     return (
       <TacticalAlertProvider>
-        <LandingInversion onBack={() => setView(AppView.PUBLIC_WEB)} />
+        <React.Suspense fallback={<LoadingScreen message="ACCEDIENDO A PLAN DE INVERSIÓN..." />}>
+          <LandingInversion onBack={() => setView(AppView.PUBLIC_WEB)} />
+        </React.Suspense>
       </TacticalAlertProvider>
     );
   }
@@ -1039,10 +1047,12 @@ const App: React.FC = () => {
           {isUpdatingAiProfile ? (
             <LoadingScreen message="PROCESANDO INTELIGENCIA TÁCTICA..." />
           ) : (
-            <EliteRecruitmentTest
-              agentName={currentUser.name}
-              onComplete={handleGlobalTestComplete}
-            />
+            <React.Suspense fallback={<LoadingScreen message="CARGANDO TEST DE ÉLITE..." />}>
+              <EliteRecruitmentTest
+                agentName={currentUser.name}
+                onComplete={handleGlobalTestComplete}
+              />
+            </React.Suspense>
           )}
         </div>
       </div>
@@ -1133,7 +1143,9 @@ const App: React.FC = () => {
   if (view === AppView.BIBLE_WAR_DISPLAY) {
     return (
       <TacticalAlertProvider>
-        <BibleWarDisplay />
+        <React.Suspense fallback={<LoadingScreen message="DESPLEGANDO BIBLE WAR..." />}>
+          <BibleWarDisplay />
+        </React.Suspense>
       </TacticalAlertProvider>
     );
   }
@@ -1197,7 +1209,9 @@ const App: React.FC = () => {
       >
         <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
           <AnimatePresence mode="wait">
-            {renderContent()}
+            <React.Suspense fallback={<LoadingScreen message="DESPLEGANDO MÓDULO OESTE..." />}>
+              {renderContent()}
+            </React.Suspense>
           </AnimatePresence>
         </div>
       </Layout>

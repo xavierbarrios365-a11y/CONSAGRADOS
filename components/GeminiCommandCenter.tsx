@@ -140,7 +140,7 @@ const GeminiCommandCenter: React.FC<GeminiCommandCenterProps> = ({ agents, curre
                 });
                 if (onUpdateNeeded) onUpdateNeeded();
             } else {
-                throw new Error(result.error || `${result.failures} fallos al publicar`);
+                throw new Error(result.error || `${result.error} fallos al publicar`);
             }
         } catch (err: any) {
             showAlert({ title: "ERROR", message: `❌ Error al publicar: ${err.message}`, type: 'ERROR' });

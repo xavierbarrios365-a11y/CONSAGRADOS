@@ -64,6 +64,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
     } = props;
 
     // --- AUTOPLAY SLIDER LOGIC ---
+    const sliderRef = React.useRef<HTMLDivElement>(null);
     const [sliderIndex, setSliderIndex] = React.useState(0);
     const sliderItems = React.useMemo(() => {
         const items = [
@@ -82,6 +83,18 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         return () => clearInterval(interval);
     }, [sliderItems.length]);
 
+    // SCROLL SILENCIOSO (Evita saltos de página)
+    React.useEffect(() => {
+        if (sliderRef.current) {
+            const container = sliderRef.current;
+            const targetScroll = sliderIndex * container.clientWidth;
+            container.scrollTo({
+                left: targetScroll,
+                behavior: 'smooth'
+            });
+        }
+    }, [sliderIndex]);
+
     switch (view) {
         case AppView.HOME:
             return (
@@ -96,18 +109,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                         <div className="mb-6 -mx-4 relative group overflow-hidden">
                             <div
                                 className="flex overflow-x-auto no-scrollbar pb-4 scroll-smooth snap-x snap-mandatory"
-                                ref={(el) => {
-                                    if (el) {
-                                        const children = el.children;
-                                        if (children[sliderIndex]) {
-                                            (children[sliderIndex] as HTMLElement).scrollIntoView({
-                                                behavior: 'smooth',
-                                                block: 'nearest',
-                                                inline: 'center'
-                                            });
-                                        }
-                                    }
-                                }}
+                                ref={sliderRef}
                             >
                                 {sliderItems.map((item: any, idx) => (
                                     <div key={item.id} className="w-full shrink-0 px-4 snap-center">

@@ -9,6 +9,7 @@ export const fetchVisitorRadarSupabase = async (): Promise<Visitor[]> => {
         const { data, error } = await supabase
             .from('asistencia_visitas')
             .select('*')
+            .is('tipo', null)
             .order('registrado_en', { ascending: false });
         if (error) throw error;
         return (data || []).map(v => ({

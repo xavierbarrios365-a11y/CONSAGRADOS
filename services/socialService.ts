@@ -179,8 +179,21 @@ export const markStoryAsSeenSupabase = async (storyId: string, agentId: string) 
 };
 
 
+const FALLBACK_VERSES = [
+    { verse: 'Todo lo puedo en Cristo que me fortalece.', reference: 'Filipenses 4:13' },
+    { verse: 'Jehová es mi pastor; nada me faltará.', reference: 'Salmos 23:1' },
+    { verse: 'Porque yo sé los pensamientos que tengo acerca de vosotros...', reference: 'Jeremías 29:11' },
+    { verse: 'Mira que te mando que te esfuerces y seas valiente...', reference: 'Josué 1:9' },
+    { verse: 'Mas buscad primeramente el reino de Dios y su justicia...', reference: 'Mateo 6:33' },
+    { verse: 'Pero los que esperan a Jehová tendrán nuevas fuerzas...', reference: 'Isaías 40:31' },
+    { verse: 'Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien...', reference: 'Romanos 8:28' },
+    { verse: 'Confía en Jehová con todo tu corazón, Y no te apoyes en tu propia prudencia.', reference: 'Proverbios 3:5' },
+    { verse: 'Estad quietos, y conoced que yo soy Dios...', reference: 'Salmos 46:10' },
+    { verse: 'El Señor es mi luz y mi salvación; ¿de quién temeré?', reference: 'Salmos 27:1' }
+];
+
 /**
- * @description Obtiene el versículo diario.
+ * @description Obtiene el versículo diario. Rota cada 3 horas automáticamente si la BD no se actualiza.
  */
 export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
     try {
@@ -189,12 +202,22 @@ export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
             .select('*')
             .order('fecha', { ascending: false })
             .limit(1);
-        if (error) throw error;
-        return data && data.length > 0 ? data[0] : null;
+
+        if (!error && data && data.length > 0) {
+            const dbDateString = String(data[0].fecha).split('T')[0];
+            const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+            if (dbDateString === todayStr) {
+                return data[0];
+            }
+        }
     } catch (e: any) {
-        // Fallback handled in App.tsx
-        return null;
+        console.warn("Error fetching daily verse from DB:", e.message);
     }
+
+    // Fallback: rotación automática cada 3 horas (10800000 ms)
+    const period = Math.floor(Date.now() / 10800000);
+    return FALLBACK_VERSES[period % FALLBACK_VERSES.length];
 };
 
 /**

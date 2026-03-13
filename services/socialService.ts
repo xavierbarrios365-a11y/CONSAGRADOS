@@ -189,7 +189,17 @@ const FALLBACK_VERSES = [
     { verse: 'Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien...', reference: 'Romanos 8:28' },
     { verse: 'Confía en Jehová con todo tu corazón, Y no te apoyes en tu propia prudencia.', reference: 'Proverbios 3:5' },
     { verse: 'Estad quietos, y conoced que yo soy Dios...', reference: 'Salmos 46:10' },
-    { verse: 'El Señor es mi luz y mi salvación; ¿de quién temeré?', reference: 'Salmos 27:1' }
+    { verse: 'El Señor es mi luz y mi salvación; ¿de quién temeré?', reference: 'Salmos 27:1' },
+    { verse: 'Acerquémonos, pues, confiadamente al trono de la gracia...', reference: 'Hebreos 4:16' },
+    { verse: 'La gracia del Señor Jesucristo sea con todos vosotros.', reference: 'Apocalipsis 22:21' },
+    { verse: 'El que habita al abrigo del Altísimo morará bajo la sombra del Omnipotente.', reference: 'Salmos 91:1' },
+    { verse: 'Lámpara es a mis pies tu palabra, y lumbrera a mi camino.', reference: 'Salmos 119:105' },
+    { verse: 'Clama a mí, y yo te responderé...', reference: 'Jeremías 33:3' },
+    { verse: 'Porque de tal manera amó Dios al mundo...', reference: 'Juan 3:16' },
+    { verse: 'En el principio creó Dios los cielos y la tierra.', reference: 'Génesis 1:1' },
+    { verse: 'Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él.', reference: 'Proverbios 22:6' },
+    { verse: 'El corazón alegre hermosea el rostro.', reference: 'Proverbios 15:13' },
+    { verse: 'Siembra en la mañana tu semilla...', reference: 'Eclesiastés 11:6' }
 ];
 
 /**
@@ -215,9 +225,13 @@ export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
         console.warn("Error fetching daily verse from DB:", e.message);
     }
 
-    // Fallback: rotación automática cada 3 horas (10800000 ms)
-    const period = Math.floor(Date.now() / 10800000);
-    return FALLBACK_VERSES[period % FALLBACK_VERSES.length];
+    // Fallback: rotación dinámica por día y bloque de 3 horas
+    const now = new Date();
+    const day = now.getDate();
+    const period = Math.floor(now.getHours() / 3);
+    const index = (day + period) % FALLBACK_VERSES.length;
+
+    return FALLBACK_VERSES[index];
 };
 
 /**
@@ -398,6 +412,8 @@ export const validateContent = (text: string) => {
  * @description Parsea el mensaje del feed para extraer metadatos (Versículos, Media, etc).
  */
 export const parseNewsMessage = (detalle: string) => {
+    if (!detalle) return { message: '', verse: undefined, reference: undefined, mediaUrl: undefined, mediaType: undefined };
+
     let message = detalle;
     let verse = undefined;
     let reference = undefined;
@@ -421,7 +437,8 @@ export const parseNewsMessage = (detalle: string) => {
     }
 
     // 2. Extraer Media: [MEDIA]: URL o [VIDEO]: URL
-    const mediaRegex = /\[(MEDIA|VIDEO)\]:\s*(https?:\/\/[^\s]+)/i;
+    // Mejorar Regex para soportar espacios, linebreaks u otros artefactos
+    const mediaRegex = /\[(MEDIA|VIDEO)\]:\s*([^\s]+)/i;
     const match = message.match(mediaRegex);
     if (match) {
         mediaType = match[1].toUpperCase() === 'VIDEO' ? 'VIDEO' : 'IMAGE';

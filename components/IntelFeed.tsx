@@ -707,25 +707,13 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                     </p>
                                                 )}
 
-                                                {(() => {
-                                                    const m = item.message.match(/\[MEDIA\]: (\S+)/);
-                                                    const v = item.message.match(/\[VIDEO\]: (\S+)/);
-                                                    if (v) return (
-                                                        <TacticalMedia
-                                                            url={v[1]}
-                                                            type="video"
-                                                            onClick={() => setViewingMedia({ url: v[1], type: 'video' })}
-                                                        />
-                                                    );
-                                                    if (m) return (
-                                                        <TacticalMedia
-                                                            url={m[1]}
-                                                            type="image"
-                                                            onClick={() => setViewingMedia({ url: m[1], type: 'image' })}
-                                                        />
-                                                    );
-                                                    return null;
-                                                })()}
+                                                {item.mediaUrl && (
+                                                    <TacticalMedia
+                                                        url={item.mediaUrl}
+                                                        type={item.mediaType as any}
+                                                        onClick={() => item.mediaUrl && item.mediaType && setViewingMedia({ url: item.mediaUrl, type: item.mediaType })}
+                                                    />
+                                                )}
 
                                                 <div className="flex items-center gap-6 mt-4">
                                                     <button onClick={() => handleToggleLike(item.id)} className={`flex items-center gap-2 ${userLikes.includes(item.id) ? 'text-[#ff4d00]' : 'text-white/30 hover:text-[#ff4d00]'}`}>

@@ -59,22 +59,22 @@ ALTER TABLE public.intel_likes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Acceso total anon intel_likes" ON public.intel_likes;
 CREATE POLICY "Acceso total anon intel_likes" ON public.intel_likes FOR ALL USING (true) WITH CHECK (true);
 
--- 4. TABLA: daily_verse (Versículo Diario)
--- Nota: En algunas versiones se llamaba versiculos_diarios, lo creamos como tabla independiente para compatibilidad directa.
-CREATE TABLE IF NOT EXISTS public.daily_verse (
+-- 4. TABLA: versiculos_diarios (Versículo Diario)
+CREATE TABLE IF NOT EXISTS public.versiculos_diarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    fecha DATE NOT NULL UNIQUE,
+    fecha DATE NOT NULL,
     cita TEXT,
     texto TEXT NOT NULL,
-    reference TEXT,
-    verse TEXT,
-    version TEXT DEFAULT 'RVR1960',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-ALTER TABLE public.daily_verse ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Acceso total anon daily_verse" ON public.daily_verse;
-CREATE POLICY "Acceso total anon daily_verse" ON public.daily_verse FOR ALL USING (true) WITH CHECK (true);
+-- Nota: Permitimos duplicados de fecha en esta tabla si la lógica es rotar cada 3 horas, 
+-- pero para evitar errores de select, quitamos el UNIQUE de fecha si estaba.
+-- Si queremos un historial completo, simplemente insertamos con la fecha de hoy.
+
+ALTER TABLE public.versiculos_diarios ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acceso total anon versiculos_diarios" ON public.versiculos_diarios;
+CREATE POLICY "Acceso total anon versiculos_diarios" ON public.versiculos_diarios FOR ALL USING (true) WITH CHECK (true);
 
 -- 5. FUNCION: cleanup_expired_intel_feed (Limpieza automática)
 CREATE OR REPLACE FUNCTION public.cleanup_expired_intel_feed()
@@ -88,6 +88,41 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.cleanup_expired_intel_feed() TO anon;
 GRANT EXECUTE ON FUNCTION public.cleanup_expired_intel_feed() TO authenticated;
+
+-- 6. TABLA: web_banners (Banners de la Plataforma)
+CREATE TABLE IF NOT EXISTS public.web_banners (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    image_url TEXT NOT NULL,
+    link_url TEXT,
+    title TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.web_banners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acceso total anon web_banners" ON public.web_banners;
+CREATE POLICY "Acceso total anon web_banners" ON public.web_banners FOR ALL USING (true) WITH CHECK (true);
+
+-- 7. PERMISOS ADICIONALES (Para errores 401/404)
+-- asistencia_visitas
+ALTER TABLE IF EXISTS public.asistencia_visitas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acceso total anon asistencia_visitas" ON public.asistencia_visitas;
+CREATE POLICY "Acceso total anon asistencia_visitas" ON public.asistencia_visitas FOR ALL USING (true) WITH CHECK (true);
+
+-- academy_lessons (Para error 400/401)
+ALTER TABLE IF EXISTS public.academy_lessons ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acceso total anon academy_lessons" ON public.academy_lessons;
+CREATE POLICY "Acceso total anon academy_lessons" ON public.academy_lessons FOR ALL USING (true) WITH CHECK (true);
+
+-- academy_courses
+ALTER TABLE IF EXISTS public.academy_courses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acceso total anon academy_courses" ON public.academy_courses;
+CREATE POLICY "Acceso total anon academy_courses" ON public.academy_courses FOR ALL USING (true) WITH CHECK (true);
+
+-- academy_progress
+ALTER TABLE IF EXISTS public.academy_progress ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acceso total anon academy_progress" ON public.academy_progress;
+CREATE POLICY "Acceso total anon academy_progress" ON public.academy_progress FOR ALL USING (true) WITH CHECK (true);
 
 -- Refrescar caché del esquema de Supabase para que la app vea las tablas inmediatamente
 NOTIFY pgrst, 'reload schema';

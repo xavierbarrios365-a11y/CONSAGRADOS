@@ -135,6 +135,13 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         }
       });
       setOnlineAgencies(presenceMap);
+    }, (error) => {
+      // Silenciar error de permisos de Firebase si no estamos usando Firebase Auth
+      if (error.code === 'permission-denied') {
+        console.warn("⚠️ Firebase Presence: Acceso denegado (Reglas de Seguridad).");
+      } else {
+        console.error("🔥 Firebase Error:", error);
+      }
     });
     return () => unsubscribe();
   }, []);

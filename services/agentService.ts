@@ -392,8 +392,8 @@ export const addVisitorXPSupabase = async (visitorId: string, visitorName: strin
         const { error } = await supabase.from('asistencia_visitas').insert({
             nombre: visitorName,
             detalle: `XP Táctica: +${xp} (${reason})`,
-            id: visitorId, // Asumiendo que usamos el ID si existe
-            created_at: new Date().toISOString()
+            agent_id: visitorId,
+            registrado_en: new Date().toISOString()
         });
         if (error) throw error;
         return { success: true };

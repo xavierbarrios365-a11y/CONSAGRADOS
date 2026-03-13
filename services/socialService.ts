@@ -187,6 +187,7 @@ export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
         const { data, error } = await supabase
             .from('daily_verse')
             .select('*')
+            .order('fecha', { ascending: false })
             .limit(1);
         if (error) throw error;
         return data && data.length > 0 ? data[0] : null;
@@ -292,9 +293,9 @@ export const toggleDislikeSupabase = async (agentId: string, noticiaId: string):
 export const fetchAllBannersSupabase = async () => {
     try {
         const { data, error } = await supabase.from('web_banners').select('*').order('created_at', { ascending: false });
-        if (error) throw error;
         return data || [];
     } catch (e: any) {
+        console.warn('⚠️ No se pudieron obtener todos los banners (posible tabla faltante):', e.message);
         return [];
     }
 };
@@ -308,6 +309,7 @@ export const fetchActiveBannersSupabase = async () => {
         if (error) throw error;
         return data || [];
     } catch (e: any) {
+        console.warn('⚠️ No se pudieron obtener banners activos:', e.message);
         return [];
     }
 };

@@ -75,9 +75,9 @@ export const fetchUserEventConfirmationsSupabase = async (agentId: string) => {
         const { data, error } = await supabase
             .from('asistencia_visitas')
             .select('*')
-            .eq('agente_id', agentId)
+            .eq('agent_id', agentId)
             .ilike('detalle', 'Confirmación para evento:%')
-            .order('created_at', { ascending: false });
+            .order('registrado_en', { ascending: false });
         if (error) throw error;
         return data || [];
     } catch (e: any) {
@@ -92,10 +92,11 @@ export const fetchUserEventConfirmationsSupabase = async (agentId: string) => {
 export const confirmEventAttendanceSupabase = async (payload: { agentId: string, agentName: string, eventId: string, eventTitle: string }) => {
     try {
         const { data, error } = await supabase.from('asistencia_visitas').insert({
-            agente_id: payload.agentId,
+            agent_id: payload.agentId,
             nombre: payload.agentName,
+            tipo: 'EVENTO_CONFIRMADO',
             detalle: `Confirmación para evento: ${payload.eventTitle}`,
-            created_at: new Date().toISOString()
+            registrado_en: new Date().toISOString()
         });
         if (error) throw error;
         return { success: true };
@@ -114,9 +115,9 @@ export const confirmDirectorAttendanceSupabase = async (agentId: string, agentNa
         const { data: existing } = await supabase
             .from('asistencia_visitas')
             .select('id')
-            .eq('agente_id', agentId)
+            .eq('agent_id', agentId)
             .ilike('detalle', 'Confirmación Director:%')
-            .gte('created_at', today)
+            .gte('registrado_en', today)
             .single();
 
         if (existing) {
@@ -124,10 +125,11 @@ export const confirmDirectorAttendanceSupabase = async (agentId: string, agentNa
         }
 
         const { error } = await supabase.from('asistencia_visitas').insert({
-            agente_id: agentId,
+            agent_id: agentId,
             nombre: agentName,
+            tipo: 'DIRECTOR_ASISTENCIA',
             detalle: `Confirmación Director: ${today}`,
-            created_at: new Date().toISOString()
+            registrado_en: new Date().toISOString()
         });
         if (error) throw error;
         return { success: true };
@@ -142,10 +144,11 @@ export const confirmDirectorAttendanceSupabase = async (agentId: string, agentNa
 export const submitTransactionSupabase = async (agentId: string, type: string, agentName?: string) => {
     try {
         const { error } = await supabase.from('asistencia_visitas').insert({
-            agente_id: agentId,
+            agent_id: agentId,
             nombre: agentName || 'Agente',
+            tipo: 'QR_SCAN',
             detalle: `Escaneo QR: ${type}`,
-            created_at: new Date().toISOString()
+            registrado_en: new Date().toISOString()
         });
         if (error) throw error;
         return { success: true };

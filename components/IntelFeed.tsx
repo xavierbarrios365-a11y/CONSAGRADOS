@@ -158,8 +158,15 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const loadNews = async (silent = false) => {
         if (!silent || news.length === 0) setLoading(true);
         try {
-            // Cleanup fire-and-forget (48h policy)
-            Promise.resolve(supabase.rpc('cleanup_expired_intel_feed')).catch(() => { });
+            // Cleanup fire-and-forget: eliminar posts sociales con más de 48h
+            const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+            Promise.resolve(
+                supabase
+                    .from('asistencia_visitas')
+                    .delete()
+                    .in('tipo', ['SOCIAL', 'VERSICULO', 'ORACION'])
+                    .lt('registrado_en', cutoff48h)
+            ).catch(() => { });
 
             const rawData = await fetchNewsFeed();
             // Map raw DB rows (asistencia_visitas) → NewsFeedItem

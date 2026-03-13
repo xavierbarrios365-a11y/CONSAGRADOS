@@ -248,7 +248,9 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showExitModal, setShowExitModal] = useState(false);
+  const lastProcessedAgentsRef = useRef<string>('');
 
+  // Sincronizar currentUser automáticamente cuando la lista de agentes se actualiza
   // --- NAVIGATION HISTORY logic ---
   // Sincronizar el estado del navegador con la vista de la app
   useEffect(() => {
@@ -358,12 +360,13 @@ const App: React.FC = () => {
 
   // Sincronizar currentUser automáticamente cuando la lista de agentes se actualiza
   useEffect(() => {
-    if (isLoggedIn && agents.length > 0) {
+    const agentsString = JSON.stringify(agents);
+    if (isLoggedIn && agents.length > 0 && agentsString !== lastProcessedAgentsRef.current) {
+      lastProcessedAgentsRef.current = agentsString;
       refreshCurrentUser(agents);
 
       // --- SINCRONIZACIÓN PARALELA A SUPABASE ---
       // Realizamos una sincronización en segundo plano con un pequeño retraso
-      // para no saturar si hay actualizaciones seguidas.
       const timer = setTimeout(() => {
         syncAllAgentsToSupabase(agents);
       }, 5000);

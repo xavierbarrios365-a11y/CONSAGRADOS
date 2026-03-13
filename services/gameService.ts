@@ -40,12 +40,48 @@ export const submitIQLevelComplete = async (agentId: string, level: number, time
  */
 export const fetchAcademyDataSupabase = async (agentId: string) => {
     try {
-        const { data: courses } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('order_index');
-        const { data: lessons } = await supabase.from('academy_lessons').select('*').order('order_index');
-        const { data: progress } = await supabase.from('academy_progress').select('*').eq('agent_id', agentId);
-        return { courses: courses || [], lessons: lessons || [], progress: progress || [] };
+        const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('order_index');
+        const { data: lessonsRaw } = await supabase.from('academy_lessons').select('*').order('order_index');
+        const { data: progressRaw } = await supabase.from('academy_progress').select('*').eq('agent_id', agentId);
+
+        // Mapeo de DB -> Frontend (Cursos)
+        const mappedCourses = (coursesRaw || []).map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            description: c.description,
+            imageUrl: c.image_url,
+            requiredLevel: c.required_level,
+            orderIndex: c.order_index
+        }));
+
+        // Mapeo de DB -> Frontend (Lecciones)
+        const mappedLessons = (lessonsRaw || []).map((l: any) => ({
+            id: l.id,
+            courseId: l.course_id,
+            order: l.order_index,
+            title: l.title,
+            videoUrl: l.video_url,
+            content: l.content,
+            questions: l.questions || [],
+            xpReward: l.xp_reward || 0,
+            startTime: l.start_time,
+            endTime: l.end_time,
+            resultAlgorithm: l.result_algorithm,
+            resultMappings: l.result_mappings
+        }));
+
+        // Mapeo de DB -> Frontend (Progreso)
+        const mappedProgress = (progressRaw || []).map((p: any) => ({
+            lessonId: p.lesson_id,
+            status: p.is_completed ? 'COMPLETADO' : 'FALLIDO',
+            score: p.score || 0,
+            date: p.completed_at || '',
+            attempts: p.attempts || 0
+        }));
+
+        return { courses: mappedCourses, lessons: mappedLessons, progress: mappedProgress };
     } catch (e: any) {
-        console.error('❌ Error acadamy:', e.message);
+        console.error('❌ Error academy:', e.message);
         return { courses: [], lessons: [], progress: [] };
     }
 };
@@ -269,10 +305,11 @@ export const submitQuizResultSupabase = async (
         const { error } = await supabase.from('academy_progress').upsert({
             agent_id: agentId,
             lesson_id: lessonId,
+            course_id: courseId,
             score: score,
-            completed: passed,
+            is_completed: passed,
             attempts: attempts,
-            updated_at: new Date().toISOString()
+            completed_at: new Date().toISOString()
         });
         if (error) throw error;
         return { success: true };

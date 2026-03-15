@@ -304,14 +304,56 @@ export const checkAndPublishBirthdays = async (agents: Agent[]) => {
     try {
         const { publishNewsSupabase } = await import('./socialService');
         const today = new Date();
-        // Usar zona horaria de Caracas para consistencia
-        const mmdd = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }).substring(5, 10); // "MM-DD"
-        const todayFull = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }); // "YYYY-MM-DD"
+
+        // Determinar fecha en Caracas para precisión
+        const caracasTime = today.toLocaleString('en-US', { timeZone: 'America/Caracas' });
+        const caracasDate = new Date(caracasTime);
+
+        const currentMonth = caracasDate.getMonth() + 1;
+        const currentDay = caracasDate.getDate();
+        const todayFull = caracasDate.toISOString().split('T')[0];
+
+        console.log(`🔍 VERIFICANDO CUMPLEAÑOS: MES ${currentMonth}, DÍA ${currentDay}`);
 
         for (const agent of agents) {
-            // Comparar MM-DD (asumiendo formato YYYY-MM-DD o MM-DD)
-            if (agent.birthday && agent.birthday.includes(mmdd)) {
-                console.log(`🎂 CUMPLEAÑOS DETECTADO HOY (${todayFull}): ${agent.name}`);
+            if (!agent.birthday) continue;
+
+            let isBirthday = false;
+            // Limpieza agresiva de la cadena de fecha
+            const bdayStr = agent.birthday.trim().replace(/\s/g, '');
+
+            // Analizador Táctico de Fechas
+            // Caso 1: ISO o Guiones (YYYY-MM-DD o MM-DD o DD-MM-YYYY)
+            if (bdayStr.includes('-')) {
+                const parts = bdayStr.split('-');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) { // YYYY-MM-DD
+                        if (parseInt(parts[1]) === currentMonth && parseInt(parts[2]) === currentDay) isBirthday = true;
+                    } else { // DD-MM-YYYY
+                        if (parseInt(parts[1]) === currentMonth && parseInt(parts[0]) === currentDay) isBirthday = true;
+                    }
+                } else if (parts.length === 2) { // MM-DD
+                    if (parseInt(parts[0]) === currentMonth && parseInt(parts[1]) === currentDay) isBirthday = true;
+                }
+            }
+            // Caso 2: Slashes (DD/MM/YYYY o DD/MM)
+            else if (bdayStr.includes('/')) {
+                const parts = bdayStr.split('/');
+                if (parts.length >= 2) {
+                    // DD/MM/YYYY -> [0]=DD, [1]=MM
+                    if (parseInt(parts[1]) === currentMonth && parseInt(parts[0]) === currentDay) isBirthday = true;
+                }
+            }
+
+            // Caso 3: Fallback por inclusión (Seguridad redundante)
+            if (!isBirthday) {
+                const mmdd = `${currentMonth.toString().padStart(2, '0')}-${currentDay.toString().padStart(2, '0')}`;
+                const ddmm = `${currentDay.toString().padStart(2, '0')}/${currentMonth.toString().padStart(2, '0')}`;
+                if (bdayStr.includes(mmdd) || bdayStr.includes(ddmm)) isBirthday = true;
+            }
+
+            if (isBirthday) {
+                console.log(`🎂 ¡CUMPLEAÑOS DETECTADO HOY! -> ${agent.name} (${agent.birthday})`);
 
                 // 1. Verificar si ya se publicó hoy para este agente
                 const { data: existingPost } = await supabase
@@ -360,7 +402,7 @@ export const checkAndPublishBirthdays = async (agents: Agent[]) => {
             }
         }
     } catch (e: any) {
-        console.error('Error in checkAndPublishBirthdays:', e.message);
+        console.error('Error en checkAndPublishBirthdays:', e.message);
     }
 };
 

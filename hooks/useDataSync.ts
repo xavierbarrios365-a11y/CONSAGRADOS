@@ -35,11 +35,11 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             if (sheetAgents && sheetAgents.length > 0) {
                 setAgents(sheetAgents);
 
-                // Run birthday check once per day locally
+                // Run birthday check once per day locally (v3 for robust logic)
                 const todayStr = new Date().toISOString().split('T')[0];
-                if (localStorage.getItem('last_birthday_check') !== todayStr) {
+                if (localStorage.getItem('last_birthday_check_v3') !== todayStr) {
                     checkAndPublishBirthdays(sheetAgents).then(() => {
-                        localStorage.setItem('last_birthday_check', todayStr);
+                        localStorage.setItem('last_birthday_check_v3', todayStr);
                     });
                 }
 

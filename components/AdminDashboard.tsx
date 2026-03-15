@@ -26,7 +26,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         try {
             const { data, error } = await supabase
                 .from('agentes')
-                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp')
+                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp, birthday, status, user_role, talent, baptism_status, relationship_with_god')
                 .order('nombre', { ascending: true });
             if (error) throw error;
 
@@ -39,12 +39,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                     role: d.cargo,
                     whatsapp: d.whatsapp,
                     photoUrl: d.foto_url,
-                    pin: d.pin,
-                    isAiProfilePending: d.is_ai_profile_pending,
-                    tacticalStats: d.tactical_stats,
-                    tacticalSummary: d.tactor_summary,
-                    // Defaults for missing data mapped from sheet
-                    talent: '', baptismStatus: '', status: '', userRole: UserRole.STUDENT, idSignature: '', joinedDate: '', bible: 0, notes: 0, leadership: 0, mustChangePassword: false
+                    // Mapeo detallado de campos adicionales
+                    birthday: d.birthday || '',
+                    status: d.status || 'ACTIVO',
+                    userRole: d.user_role || UserRole.STUDENT,
+                    talent: d.talent || '',
+                    baptismStatus: d.baptism_status || 'NO',
+                    relationshipWithGod: d.relationship_with_god || '',
+                    pin: d.pin || '',
+                    // Defaults for remaining structure
+                    idSignature: `V37-SIG-${d.id}`,
+                    joinedDate: d.joined_date || '',
+                    bible: d.bible || 0,
+                    notes: d.notes || 0,
+                    leadership: d.leadership || 0,
+                    mustChangePassword: d.must_change_password || false
                 }));
                 setAgents(mappedAgentes);
             }
@@ -67,7 +76,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                 p_cargo: editingAgent.role || null,
                 p_whatsapp: editingAgent.whatsapp || null,
                 p_pin: editingAgent.pin || null,
-                p_foto_url: editingAgent.photoUrl || null
+                p_foto_url: editingAgent.photoUrl || null,
+                p_birthday: editingAgent.birthday || null,
+                p_status: editingAgent.status || null,
+                p_user_role: editingAgent.userRole || null,
+                p_talent: editingAgent.talent || null,
+                p_baptism_status: editingAgent.baptismStatus || null,
+                p_relationship_with_god: editingAgent.relationshipWithGod || null
             });
 
             if (error) throw error;
@@ -165,8 +180,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                             <input type="text" value={editingAgent.whatsapp || ''} onChange={e => setEditingAgent({ ...editingAgent, whatsapp: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="WHATSAPP" />
                                             <input type="text" value={editingAgent.pin || ''} onChange={e => setEditingAgent({ ...editingAgent, pin: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="PIN" />
-
-                                            <div className="md:col-span-2 relative">
+                                            <input type="text" value={editingAgent.birthday || ''} onChange={e => setEditingAgent({ ...editingAgent, birthday: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="CUMPLEAÑOS (YYYY-MM-DD)" />
+                                            <select value={editingAgent.status} onChange={e => setEditingAgent({ ...editingAgent, status: e.target.value as any })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
+                                                <option value="ACTIVO">ACTIVO</option>
+                                                <option value="INACTIVO">INACTIVO</option>
+                                                <option value="SANCIONADO">SANCIONADO</option>
+                                                <option value="ELIMINADO">ELIMINADO</option>
+                                            </select>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <input type="text" value={editingAgent.talent || ''} onChange={e => setEditingAgent({ ...editingAgent, talent: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="TALENTO" />
+                                            <select value={editingAgent.baptismStatus} onChange={e => setEditingAgent({ ...editingAgent, baptismStatus: e.target.value as any })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
+                                                <option value="SI">SI BAUTIZADO</option>
+                                                <option value="NO">NO BAUTIZADO</option>
+                                            </select>
+                                            <input type="text" value={editingAgent.relationshipWithGod || ''} onChange={e => setEditingAgent({ ...editingAgent, relationshipWithGod: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="RELACIÓN CON DIOS" />
+                                            <div className="relative">
                                                 <input
                                                     type="file"
                                                     accept="image/*"

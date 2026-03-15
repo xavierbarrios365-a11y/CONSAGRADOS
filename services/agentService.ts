@@ -301,14 +301,61 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
  */
 export const checkAndPublishBirthdays = async (agents: Agent[]) => {
     try {
+        const { publishNewsSupabase } = await import('./socialService');
         const today = new Date();
-        const mmdd = `${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+        // Usar zona horaria de Caracas para consistencia
+        const mmdd = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }).substring(5, 10); // "MM-DD"
+        const todayFull = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }); // "YYYY-MM-DD"
 
         for (const agent of agents) {
+            // Comparar MM-DD (asumiendo formato YYYY-MM-DD o MM-DD)
             if (agent.birthday && agent.birthday.includes(mmdd)) {
-                // Evitar duplicados en el feed mediante lógica en socialService si fuera necesario
-                // Por ahora solo logueamos la intención corporativa
-                console.log(`🎂 CUMPLEAÑOS DETECTADO: ${agent.name}`);
+                console.log(`🎂 CUMPLEAÑOS DETECTADO HOY (${todayFull}): ${agent.name}`);
+
+                // 1. Verificar si ya se publicó hoy para este agente
+                const { data: existingPost } = await supabase
+                    .from('asistencia_visitas')
+                    .select('id')
+                    .eq('agent_id', agent.id)
+                    .eq('tipo', 'CUMPLEAÑOS')
+                    .gte('registrado_en', `${todayFull}T00:00:00`)
+                    .lte('registrado_en', `${todayFull}T23:59:59`)
+                    .maybeSingle();
+
+                if (!existingPost) {
+                    console.log(`📢 Publicando felicitación para ${agent.name}...`);
+
+                    // 1. Publicar en el Intel Feed
+                    await publishNewsSupabase(
+                        agent.id,
+                        agent.name,
+                        'CUMPLEAÑOS',
+                        `🎉 ¡HOY ES EL CUMPLEAÑOS DEL AGENTE ${agent.name.toUpperCase()}! 🎖️ ¡FELICITALO EN ESTE DÍA DE OPERACIÓN ESPECIAL! 🎂`
+                    );
+
+                    // 2. Notificación PERSONALIZADA al agente (Inbox)
+                    const { logNotificationSupabase, sendPushBroadcast, sendTelegramAlert } = await import('./notifyService');
+                    await logNotificationSupabase(
+                        "🎂 ¡FELIZ CUMPLEAÑOS, AGENTE!",
+                        `Felicitaciones ${agent.name}. Hoy el Mando Central celebra tu vida y tu servicio. Tu misión de hoy: ¡Disfrutar al máximo! 🎖️`,
+                        'ALERTA',
+                        'Mando Central',
+                        agent.id
+                    );
+
+                    // 3. Notificación GLOBAL (Broadcast) para que todos se enteren
+                    await sendPushBroadcast(
+                        "🎈 CELEBRACIÓN TÁCTICA",
+                        `Hoy es el cumpleaños de ${agent.name}. ¡Pasa por el Intel Feed a dejar tu felicitación! 🎂`
+                    );
+
+                    // 4. Alerta Telegram (Broadcast masivo)
+                    await sendTelegramAlert(
+                        `🎂 <b>CAMARADA DE CUMPLEAÑOS</b>\n🎉 Hoy celebramos al Agente: <b>${agent.name.toUpperCase()}</b>\n\n🎖️ <i>"Fidelidad hasta el final."</i>\n\n¡Felicitaciones en el Intel Feed!`
+                    );
+                } else {
+                    console.log(`✅ Ya existe una publicación de cumpleaños para ${agent.name} hoy.`);
+                }
             }
         }
     } catch (e: any) {

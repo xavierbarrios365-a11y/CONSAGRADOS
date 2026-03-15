@@ -92,20 +92,42 @@ export const toggleLikeSupabase = async (noticiaId: string, agentId: string, age
 // --- STORIES LOGIC ---
 
 /**
- * @description Obtiene las historias activas (últimas 24h).
+ * @description Obtiene las historias activas (últimas 24h) junto con sus visualizaciones.
  */
 export const fetchActiveStoriesSupabase = async () => {
     try {
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data, error } = await supabase
+
+        // 1. Obtener historias activas
+        const { data: stories, error: storiesError } = await supabase
             .from('agent_stories')
             .select('*')
             .gt('created_at', yesterday)
             .order('created_at', { ascending: false });
-        if (error) throw error;
-        return data || [];
+
+        if (storiesError) throw storiesError;
+        if (!stories || stories.length === 0) return [];
+
+        // 2. Obtener vistas de estas historias
+        const storyIds = stories.map(s => s.id);
+        const { data: views, error: viewsError } = await supabase
+            .from('story_views')
+            .select('story_id, agent_id')
+            .in('story_id', storyIds);
+
+        // Si falla obtener vistas, retornamos historias sin vistas pero no bloqueamos todo
+        if (viewsError) {
+            console.warn('⚠️ No se pudieron cargar las vistas de las historias:', viewsError.message);
+            return stories.map(s => ({ ...s, vistas: [] }));
+        }
+
+        // 3. Mapear vistas a historias
+        return stories.map(s => ({
+            ...s,
+            vistas: (views || []).filter(v => v.story_id === s.id).map(v => v.agent_id)
+        }));
     } catch (e: any) {
-        console.error('Error fetching stories:', e.message);
+        console.error('❌ Error fetching stories:', e.message);
         return [];
     }
 };

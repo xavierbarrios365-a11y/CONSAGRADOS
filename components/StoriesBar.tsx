@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchActiveStoriesSupabase, createStorySupabase, reactToStorySupabase, sendStoryReplySupabase, markStoryAsSeenSupabase, deleteStorySupabase } from '../services/socialService';
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart, BookOpen, Trash2 } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart, BookOpen, Trash2, User } from 'lucide-react';
 import { Agent } from '../types';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { formatDriveUrl } from '../services/storageUtils';
+import { supabase } from '../services/supabaseClient';
 
 const STORY_EMOJIS = ['❤️', '🏆', '😂', '😮', '🙏'];
 
@@ -27,6 +28,13 @@ interface Story {
     }[];
 }
 
+interface StoryGroup {
+    agentId: string;
+    name: string;
+    photoUrl: string;
+    items: Story[];
+}
+
 interface ActiveHeart {
     id: number;
     name: string;
@@ -41,7 +49,7 @@ interface StoriesBarProps {
 const STORIES_TIMER_MS = 5000;
 
 const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => {
-    const [stories, setStories] = useState<Story[]>([]);
+    const [stories, setStories] = useState<StoryGroup[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
 
@@ -50,8 +58,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
 
-    const [selectedStory, setSelectedStory] = useState<any | null>(null);
-    const [storyIndex, setStoryIndex] = useState(0);
+    const [selectedStoryGroup, setSelectedStoryGroup] = useState<{ agentId: string, index: number } | null>(null);
     const [storyContext, setStoryContext] = useState('');
     const [replyText, setReplyText] = useState('');
     const [isSendingReply, setIsSendingReply] = useState(false);
@@ -63,12 +70,21 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
     const progressRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        if (!currentUser?.id) return;
         loadStories();
-    }, []);
+        const channel = supabase
+            .channel('stories-track')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_stories' }, () => {
+                loadStories();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [currentUser?.id]);
 
     // Auto-advance timer
     useEffect(() => {
-        if (selectedStory && !isSendingReply) {
+        if (selectedStoryGroup && !isSendingReply) {
             timerRef.current = setTimeout(() => {
                 nextStory();
             }, STORIES_TIMER_MS);
@@ -77,35 +93,37 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                 if (timerRef.current) clearTimeout(timerRef.current);
             };
         }
-    }, [selectedStory, storyIndex, isSendingReply]);
+    }, [selectedStoryGroup, selectedStoryGroup?.index, isSendingReply]);
 
     const loadStories = async () => {
         if (!currentUser) return;
         setIsLoading(true);
         const data = await fetchActiveStoriesSupabase();
-        const grouped = data.reduce((acc: any, story: Story) => {
+        const grouped = data.reduce((acc: { [key: string]: StoryGroup }, story: Story) => {
             if (!acc[story.agent_id]) {
                 acc[story.agent_id] = {
-                    ...story,
-                    allStories: [story]
+                    agentId: story.agent_id,
+                    name: story.agentes?.nombre || 'Agente',
+                    photoUrl: story.agentes?.foto_url || '',
+                    items: [story]
                 };
             } else {
-                acc[story.agent_id].allStories.push(story);
+                acc[story.agent_id].items.push(story);
             }
             return acc;
-        }, {});
+        }, {} as { [key: string]: StoryGroup });
 
         // Convertir a array y ordenar: No vistas primero (basado en vistas de cada historia)
-        const sortedGroups = Object.values(grouped).sort((a: any, b: any) => {
-            const aHasUnseen = a.allStories.some((s: any) => !s.vistas?.includes(currentUser.id));
-            const bHasUnseen = b.allStories.some((s: any) => !s.vistas?.includes(currentUser.id));
+        const sortedGroups = (Object.values(grouped) as StoryGroup[]).sort((a: StoryGroup, b: StoryGroup) => {
+            const aHasUnseen = a.items.some((s: Story) => !s.vistas?.includes(currentUser.id));
+            const bHasUnseen = b.items.some((s: Story) => !s.vistas?.includes(currentUser.id));
 
             if (aHasUnseen && !bHasUnseen) return -1;
             if (!aHasUnseen && bHasUnseen) return 1;
             return 0;
         });
 
-        setStories(sortedGroups as unknown as Story[]);
+        setStories(sortedGroups);
         setIsLoading(false);
     };
 
@@ -158,41 +176,62 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         setPreviewUrl(null);
     };
 
-    const openStory = (agentStories: any) => {
-        setSelectedStory(agentStories);
-        setStoryIndex(0);
+    const openStory = (agentGroup: StoryGroup) => {
+        setSelectedStoryGroup({ agentId: agentGroup.agentId, index: 0 });
         setReplyText('');
         setShowReactions(false);
 
         // Marcar como vista la primera historia del grupo
-        if (currentUser && agentStories.allStories?.[0]) {
-            markStoryAsSeenSupabase(agentStories.allStories[0].id, currentUser.id);
+        if (currentUser && agentGroup.items?.[0]) {
+            markStoryAsSeenSupabase(agentGroup.items[0].id, currentUser.id);
         }
     };
 
     const nextStory = () => {
-        const agentStories = selectedStory?.allStories || [];
-        if (storyIndex < agentStories.length - 1) {
-            const nextIdx = storyIndex + 1;
-            setStoryIndex(nextIdx);
+        if (!selectedStoryGroup) return;
+        const currentGroup = stories.find(g => g.agentId === selectedStoryGroup.agentId);
+        if (!currentGroup) return;
 
-            // Marcar como vista la siguiente historia
-            if (currentUser && agentStories[nextIdx]) {
-                markStoryAsSeenSupabase(agentStories[nextIdx].id, currentUser.id);
+        if (selectedStoryGroup.index < currentGroup.items.length - 1) {
+            setSelectedStoryGroup({ ...selectedStoryGroup, index: selectedStoryGroup.index + 1 });
+            if (currentUser && currentGroup.items[selectedStoryGroup.index + 1]) {
+                markStoryAsSeenSupabase(currentGroup.items[selectedStoryGroup.index + 1].id, currentUser.id);
             }
         } else {
-            setSelectedStory(null);
+            const nextGroupIdx = stories.findIndex(g => g.agentId === selectedStoryGroup.agentId) + 1;
+            if (nextGroupIdx < stories.length) {
+                setSelectedStoryGroup({ agentId: stories[nextGroupIdx].agentId, index: 0 });
+                if (currentUser && stories[nextGroupIdx].items[0]) {
+                    markStoryAsSeenSupabase(stories[nextGroupIdx].items[0].id, currentUser.id);
+                }
+            } else {
+                setSelectedStoryGroup(null);
+            }
         }
     };
 
     const prevStory = () => {
-        if (storyIndex > 0) {
-            setStoryIndex(storyIndex - 1);
+        if (!selectedStoryGroup) return;
+        const currentGroup = stories.find(g => g.agentId === selectedStoryGroup.agentId);
+        if (!currentGroup) return;
+
+        if (selectedStoryGroup.index > 0) {
+            setSelectedStoryGroup({ ...selectedStoryGroup, index: selectedStoryGroup.index - 1 });
+        } else {
+            const prevGroupIdx = stories.findIndex(g => g.agentId === selectedStoryGroup.agentId) - 1;
+            if (prevGroupIdx >= 0) {
+                const prevGroup = stories[prevGroupIdx];
+                setSelectedStoryGroup({ agentId: prevGroup.agentId, index: prevGroup.items.length - 1 });
+            } else {
+                setSelectedStoryGroup(null);
+            }
         }
     };
 
     const getCurrentStory = (): Story | null => {
-        return selectedStory?.allStories?.[storyIndex] || null;
+        if (!selectedStoryGroup) return null;
+        const group = stories.find(g => g.agentId === selectedStoryGroup.agentId);
+        return group?.items[selectedStoryGroup.index] || null;
     };
 
     const handleReact = async (emoji: string) => {
@@ -217,7 +256,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         try {
             await reactToStorySupabase(story.id, story.agent_id, currentUser.id, currentUser.name, emoji);
             await loadStories();
-            setSelectedStory((prev: any) => prev ? { ...prev } : prev);
+            setSelectedStoryGroup((prev: any) => prev ? { ...prev } : prev); // Trigger re-render to update reactions
         } catch (e) {
             console.error("Error reacting:", e);
         } finally {
@@ -235,7 +274,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
 
         try {
             await sendStoryReplySupabase(
-                story.agent_id, story.agentes.nombre,
+                story.agent_id, story.agentes?.nombre || 'Agente',
                 currentUser.id, currentUser.name,
                 replyText.trim(),
                 story.id,
@@ -272,63 +311,67 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         return `${hrs}h`;
     };
 
+    const currentStory = getCurrentStory();
+    const currentStoryGroup = selectedStoryGroup ? stories.find(g => g.agentId === selectedStoryGroup.agentId) : null;
+
     return (
         <div className="bg-transparent overflow-hidden">
             <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1 text-montserrat">
                 {/* My Story / Upload Button */}
-                <div className="flex flex-col items-center gap-1 shrink-0">
-                    <div
-                        onClick={handleUploadClick}
-                        className="relative w-16 h-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-[#ffb700] transition-colors group"
-                    >
-                        {isUploading ? (
-                            <Loader2 className="w-6 h-6 text-[#ffb700] animate-spin" />
-                        ) : (
-                            <>
-                                <img
-                                    src={formatDriveUrl(currentUser?.photoUrl, currentUser?.name)}
-                                    className="w-14 h-14 rounded-full object-cover opacity-50 group-hover:opacity-100 transition-opacity"
-                                    alt="Tu historia"
-                                />
-                                <div className="absolute bottom-0 right-0 bg-[#ffb700] rounded-full p-1 border-2 border-[#001f3f]">
-                                    <Plus className="w-3 h-3 text-[#001f3f]" />
+                {currentUser && (
+                    <div className="flex flex-col items-center gap-1.5 scroll-ml-6 first:ml-4">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#ffb700] to-orange-500 p-[2px] active:scale-95 transition-all shadow-[0_0_15px_rgba(255,183,0,0.2)] group relative"
+                        >
+                            <div className="w-full h-full rounded-[1.4rem] bg-[#001f3f] flex items-center justify-center border border-white/10 group-hover:bg-[#002a54] transition-colors overflow-hidden">
+                                {isUploading ? (
+                                    <Loader2 className="animate-spin text-[#ffb700]" size={24} />
+                                ) : (
+                                    currentUser.photoUrl ? (
+                                        <img src={formatDriveUrl(currentUser.photoUrl)} className="w-full h-full object-cover opacity-50 contrast-125" alt="Tu historia" />
+                                    ) : (
+                                        <User size={24} className="text-white/20" />
+                                    )
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors">
+                                    <Plus className="text-white" size={24} />
                                 </div>
-                            </>
-                        )}
-                        <input
-                            id="story-file-input"
-                            name="story-file-input"
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                        />
+                            </div>
+                        </button>
+                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest font-bebas">Tu Historia</span>
                     </div>
-                    <span className="text-[10px] text-white/60 font-medium tracking-tight">Tu historia</span>
-                </div>
+                )}
 
                 {/* Other Stories */}
-                {stories.map((agentGroup: any) => (
-                    <div
-                        key={agentGroup.agent_id}
-                        className="flex flex-col items-center gap-1 shrink-0 cursor-pointer"
-                        onClick={() => openStory(agentGroup)}
-                    >
-                        <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-[#ffb700] to-[#ff4d00]">
-                            <div className="p-[2px] bg-[#001f3f] rounded-full">
-                                <img
-                                    src={formatDriveUrl(agentGroup.agentes.foto_url, agentGroup.agentes.nombre)}
-                                    className="w-14 h-14 rounded-full object-cover"
-                                    alt={agentGroup.agentes.nombre}
-                                />
+                {stories.map((group: StoryGroup) => {
+                    const hasUnseen = group.items.some(it => !(it.vistas || []).includes(currentUser?.id || ''));
+                    return (
+                        <button
+                            key={group.agentId}
+                            onClick={() => openStory(group)}
+                            className="flex flex-col items-center gap-1.5 active:scale-95 transition-all"
+                        >
+                            <div className={`w-16 h-16 rounded-3xl p-[2px] ${hasUnseen ? 'bg-gradient-to-tr from-[#ffb700] to-[#ffb700] shadow-[0_0_15px_rgba(255,183,0,0.3)] anim-gradient-orbit' : 'bg-white/10'}`}>
+                                <div className="w-full h-full rounded-[1.4rem] bg-[#0c1427] p-0.5 overflow-hidden">
+                                    <img
+                                        src={formatDriveUrl(group.photoUrl)}
+                                        className="w-full h-full rounded-[1.2rem] object-cover"
+                                        alt={group.name}
+                                        onError={(e) => {
+                                            const target = e.currentTarget as HTMLImageElement;
+                                            target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name)}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                                        }}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <span className="text-[10px] text-white/80 font-medium truncate w-16 text-center">
-                            {agentGroup.agentes.nombre.split(' ')[0]}
-                        </span>
-                    </div>
-                ))}
+                            <span className={`text-[10px] font-black uppercase tracking-widest font-bebas ${hasUnseen ? 'text-white' : 'text-white/40'}`}>
+                                {group.name.split(' ')[0]}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             {/* PRE-UPLOAD PREVIEW MODAL */}
@@ -395,7 +438,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
 
             {/* Story Viewer Overlay */}
             <AnimatePresence>
-                {selectedStory && (
+                {selectedStoryGroup && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -407,17 +450,17 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                             <div className="absolute top-0 inset-x-0 p-4 z-30 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pt-8 pointer-events-none">
                                 <div className="flex items-center gap-3 pointer-events-auto">
                                     <img
-                                        src={formatDriveUrl(selectedStory.agentes.foto_url, selectedStory.agentes.nombre)}
+                                        src={formatDriveUrl(currentStoryGroup?.photoUrl || '')}
                                         className="w-10 h-10 rounded-full border-2 border-[#ffb700]/50 object-cover shadow-lg"
                                         alt=""
                                     />
                                     <div className="flex flex-col">
-                                        <span className="text-white text-xs font-black uppercase tracking-wide drop-shadow-md">{selectedStory.agentes.nombre}</span>
-                                        {getCurrentStory() && (
-                                            <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-wider">{getTimeAgo(getCurrentStory()!.created_at)}</p>
+                                        <span className="text-white text-xs font-black uppercase tracking-wide drop-shadow-md">{currentStoryGroup?.name || 'Agente'}</span>
+                                        {currentStory && (
+                                            <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-wider">{getTimeAgo(currentStory.created_at)}</p>
                                         )}
                                     </div>
-                                    {currentUser?.id === selectedStory.agent_id && (
+                                    {currentUser?.id === currentStoryGroup?.agentId && (
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
@@ -426,7 +469,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                                     const res = await deleteStorySupabase(story.id);
                                                     if (res.success) {
                                                         loadStories();
-                                                        setSelectedStory(null);
+                                                        setSelectedStoryGroup(null);
                                                     }
                                                 }
                                             }}
@@ -436,7 +479,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                         </button>
                                     )}
                                 </div>
-                                <button onClick={() => setSelectedStory(null)} className="text-white/80 p-2 pointer-events-auto hover:scale-110 active:scale-95 transition-transform">
+                                <button onClick={() => setSelectedStoryGroup(null)} className="text-white/80 p-2 pointer-events-auto hover:scale-110 active:scale-95 transition-transform">
                                     <X className="w-8 h-8 drop-shadow-lg" />
                                 </button>
                             </div>
@@ -454,12 +497,11 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
 
                             {/* Progress Indicators */}
                             <div className="absolute top-4 inset-x-4 flex gap-1.5 z-20">
-                                {selectedStory.allStories.map((_: any, idx: number) => (
+                                {currentStoryGroup?.items.map((_: any, idx: number) => (
                                     <div key={idx} className="h-[3px] flex-1 bg-white/20 rounded-full overflow-hidden shadow-sm">
                                         <div
-                                            ref={idx === storyIndex ? progressRef : undefined}
-                                            className={`h-full bg-[#ffb700] rounded-full ${idx < storyIndex ? 'w-full' : idx === storyIndex ? '' : 'w-0'}`}
-                                            style={idx === storyIndex ? { animation: `progress ${STORIES_TIMER_MS}ms linear forwards` } : {}}
+                                            className={`h-full bg-[#ffb700] rounded-full ${idx < (selectedStoryGroup?.index || 0) ? 'w-full' : idx === (selectedStoryGroup?.index || 0) ? '' : 'w-0'}`}
+                                            style={idx === (selectedStoryGroup?.index || 0) ? { animation: `progress ${STORIES_TIMER_MS}ms linear forwards` } : {}}
                                         />
                                     </div>
                                 ))}
@@ -468,7 +510,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                             {/* Image Container */}
                             <div className="flex-1 flex items-center justify-center relative bg-black overflow-hidden">
                                 <img
-                                    src={getCurrentStory()?.image_url}
+                                    src={currentStory?.image_url}
                                     className="w-full h-full object-cover"
                                     alt=""
                                 />

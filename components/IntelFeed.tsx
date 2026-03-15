@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Heart, Shield, Activity, Cpu, Target, Zap,
     ChevronRight, RefreshCw, Trophy,
     GraduationCap, Award, Flame, AlertCircle, Share2, Trash2, Gift,
-    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown, BookOpen, Eye
+    MessageCircle, AtSign, X, ThumbsUp, ThumbsDown, BookOpen, Eye,
+    VolumeX, Volume2, Pause, Play, Maximize
 } from 'lucide-react';
 import { Agent, NewsFeedItem, UserRole } from '../types';
 import {
@@ -54,65 +55,142 @@ const TACTICAL_CONFIG: Record<string, { icon: React.ReactNode; color: string; la
 const TacticalMedia = ({ url, type, onClick, isTrending = false }: { url: string; type: 'image' | 'video'; onClick: () => void; isTrending?: boolean }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
-    const mediaRef = React.useRef<HTMLDivElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
+    const [progress, setProgress] = useState(0);
+    const mediaRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     setIsVisible(true);
-                    observer.unobserve(entry.target);
+                    if (type === 'video') {
+                        videoRef.current?.play().catch(() => { });
+                        setIsPlaying(true);
+                    }
+                } else {
+                    if (type === 'video') {
+                        videoRef.current?.pause();
+                        setIsPlaying(false);
+                    }
                 }
             });
-        }, { threshold: 0.1, rootMargin: '200px' });
+        }, { threshold: 0.6 });
 
         if (mediaRef.current) observer.observe(mediaRef.current);
         return () => observer.disconnect();
-    }, []);
+    }, [type]);
+
+    const handleTimeUpdate = () => {
+        if (videoRef.current) {
+            const current = videoRef.current.currentTime;
+            const duration = videoRef.current.duration;
+            setProgress((current / duration) * 100);
+        }
+    };
+
+    const togglePlay = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (videoRef.current) {
+            if (isPlaying) videoRef.current.pause();
+            else videoRef.current.play();
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    const toggleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsMuted(!isMuted);
+    };
 
     return (
         <div
             ref={mediaRef}
-            className={`mt-3 relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black cursor-pointer hover:scale-[1.02] transition-all duration-500 shadow-2xl group ${!isLoaded ? 'animate-pulse' : ''}`}
+            className={`mt-4 relative rounded-3xl overflow-hidden border border-white/10 aspect-video bg-black/40 cursor-pointer shadow-2xl group transition-all duration-500 hover:border-[#ffb700]/30 ${!isLoaded ? 'animate-pulse' : ''}`}
             onClick={onClick}
         >
             {isVisible && (
                 type === 'video' ? (
                     <div className="relative w-full h-full">
                         <video
+                            ref={videoRef}
                             src={url}
-                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                            muted
+                            className={`w-full h-full object-cover transition-opacity duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            muted={isMuted}
                             playsInline
+                            loop
+                            onTimeUpdate={handleTimeUpdate}
                             onLoadedData={() => setIsLoaded(true)}
+                            onClick={togglePlay}
                         />
-                        {!isLoaded && <div className="absolute inset-0 flex items-center justify-center bg-white/5"><Activity size={24} className="text-[#ffb700]/30 animate-spin" /></div>}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all duration-500">
-                            <div className="w-14 h-14 bg-[#ffb700]/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-[#ffb700]/30 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(255,183,0,0.2)]">
-                                <Zap size={24} className="text-[#ffb700] fill-[#ffb700]/20" />
+
+                        {/* Inline Controls (Threads Style) */}
+                        <div className="absolute inset-0 flex flex-col justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/40 via-transparent to-black/60">
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={toggleMute}
+                                    className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-white hover:bg-[#ffb700] hover:text-[#001f3f] transition-all"
+                                >
+                                    {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                                </button>
                             </div>
-                            <span className="mt-4 text-[9px] font-black text-[#ffb700] tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-opacity">REDUCIR BRIEFING</span>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-[#ffb700]/20 backdrop-blur-xl rounded-xl flex items-center justify-center border border-[#ffb700]/40">
+                                            {isPlaying ? <Pause size={14} className="text-[#ffb700]" /> : <Play size={14} className="text-[#ffb700] fill-[#ffb700]/20" />}
+                                        </div>
+                                        <span className="text-[9px] font-black text-white tracking-[0.2em] uppercase shadow-sm">REPRODUCCIÓN EN CURSO</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
+                                        <Maximize size={10} className="text-white/60" />
+                                        <span className="text-[8px] font-bold text-white/80 uppercase">Expandir</span>
+                                    </div>
+                                </div>
+
+                                {/* Minimal Progress Bar */}
+                                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-[#ffb700] shadow-[0_0_10px_rgba(255,183,0,0.5)]"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                            </div>
                         </div>
+
+                        {!isLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+                                <Activity size={24} className="text-[#ffb700]/30 animate-spin" />
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <>
                         <img
                             src={url}
-                            className={`w-full h-full object-cover transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                            className={`w-full h-full object-cover transition-opacity duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                             alt="Media content"
                             onLoad={() => setIsLoaded(true)}
                         />
-                        {!isLoaded && <div className="absolute inset-0 flex items-center justify-center bg-white/5"><Activity size={24} className="text-[#ffb700]/30 animate-spin" /></div>}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                            <div className="flex items-center gap-2 px-3 py-1 bg-[#ffb700] rounded-full">
+                                <Maximize size={10} className="text-[#001f3f]" />
+                                <span className="text-[8px] font-black text-[#001f3f] uppercase">Ver Inteligencia</span>
+                            </div>
+                        </div>
+                        {!isLoaded && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+                                <Activity size={24} className="text-[#ffb700]/30 animate-spin" />
+                            </div>
+                        )}
                     </>
                 )
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                <span className="text-[8px] text-white font-black tracking-widest uppercase flex items-center gap-2">
-                    <Eye size={12} /> VER EN DETALLE
-                </span>
-            </div>
             {isTrending && (
-                <div className="absolute top-3 left-3 px-3 py-1 bg-[#ff6b00]/20 backdrop-blur-md border border-[#ff6b00]/30 rounded-full flex items-center gap-2 text-[#ff6b00] text-[8px] font-black tracking-widest">
+                <div className="absolute top-3 left-3 px-3 py-1 bg-[#ff6b00]/20 backdrop-blur-md border border-[#ff6b00]/30 rounded-full flex items-center gap-2 text-[#ff6b00] text-[8px] font-black tracking-widest z-10">
                     <Flame size={10} /> TRENDING
                 </div>
             )}

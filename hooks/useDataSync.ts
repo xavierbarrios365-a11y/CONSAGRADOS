@@ -148,13 +148,25 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
     // Badging API Synchronization
     useEffect(() => {
-        if ('setAppBadge' in navigator) {
+        const anyNav = navigator as any;
+        const supportsBadging = 'setAppBadge' in anyNav || 'setExperimentalAppBadge' in anyNav;
+
+        console.log(`📊 Badging API Check: ${supportsBadging ? 'Soportado' : 'No Soportado'}. Unread: ${unreadNotifications}`);
+
+        if (supportsBadging) {
+            const setBadge = anyNav.setAppBadge || anyNav.setExperimentalAppBadge;
+            const clearBadge = anyNav.clearAppBadge || anyNav.clearExperimentalAppBadge;
+
             if (unreadNotifications > 0) {
-                (navigator as any).setAppBadge(unreadNotifications).catch((err: any) => {
+                setBadge.call(anyNav, unreadNotifications).then(() => {
+                    console.log(`✅ Badge seteado a: ${unreadNotifications}`);
+                }).catch((err: any) => {
                     console.warn("⚠️ Badging API failed:", err);
                 });
             } else {
-                (navigator as any).clearAppBadge().catch((err: any) => {
+                clearBadge.call(anyNav).then(() => {
+                    console.log(`✅ Badge limpiado`);
+                }).catch((err: any) => {
                     console.warn("⚠️ Badging API clear failed:", err);
                 });
             }
@@ -163,10 +175,15 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
     // Periodic data sync (every 60s)
     useEffect(() => {
-        syncData();
+        // Ejecución inmediata al montar si hay usuario
+        if (isLoggedIn) {
+            syncData();
+            checkHeadlines();
+        }
+
         const interval = setInterval(() => syncData(true), 60000);
         return () => clearInterval(interval);
-    }, [syncData]);
+    }, [syncData, isLoggedIn, checkHeadlines]);
 
     // Realtime Notifications Subscription
     useEffect(() => {

@@ -845,9 +845,15 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                 <div className="flex-1 space-y-8">
                     {activeLesson ? (
                         <div key={activeLesson.id} className="animate-in slide-in-from-bottom-4">
-                            <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl mb-10">
+                            <div className="aspect-video bg-black rounded-[2rem] border border-white/10 overflow-hidden relative shadow-2xl mb-10 group/video">
                                 {activeLesson.videoUrl ? (
                                     <>
+                                        {/* TACTICAL LOADING PLACEHOLDER */}
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#001f3f] z-0">
+                                            <Loader2 size={40} className="text-[#ffb700] animate-spin mb-4" />
+                                            <span className="text-[10px] font-black text-[#ffb700] tracking-[0.3em] uppercase animate-pulse">Cargando Briefing...</span>
+                                        </div>
+
                                         <iframe
                                             id="academy-player"
                                             src={`${(() => {
@@ -857,25 +863,37 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
                                                 else if (url.includes('embed/')) videoId = url.split('embed/')[1].split(/[?#]/)[0];
                                                 if (videoId) {
-                                                    let b = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
+                                                    let b = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&textcolor=white`;
                                                     if (activeLesson.startTime) b += `&start=${activeLesson.startTime}`;
                                                     if (activeLesson.endTime) b += `&end=${activeLesson.endTime}`;
                                                     return b;
                                                 }
                                                 return url;
                                             })()}`}
-                                            className="w-full h-full"
+                                            className="w-full h-full relative z-10 border-0"
                                             allowFullScreen
                                             onLoad={() => setTimeout(() => setIsVideoWatched(true), 3000)}
                                         ></iframe>
+
                                         {!isVideoWatched && (
-                                            <button
+                                            <motion.button
+                                                initial={{ opacity: 0, x: 20 }}
+                                                animate={{ opacity: 1, x: 0 }}
                                                 onClick={() => setIsVideoWatched(true)}
-                                                className="absolute bottom-4 right-4 bg-black/80 hover:bg-[#ffb700] hover:text-[#001f3f] px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border border-white/10 transition-all z-10"
+                                                className="absolute bottom-6 right-6 bg-[#ffb700] text-[#001f3f] hover:bg-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl transition-all z-20 flex items-center gap-2 group/btn"
                                             >
-                                                Omitir Video
-                                            </button>
+                                                Omitir Briefing
+                                                <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                            </motion.button>
                                         )}
+
+                                        {/* TACTICAL OVERLAY */}
+                                        <div className="absolute top-6 left-6 z-20 pointer-events-none opacity-0 group-hover/video:opacity-100 transition-opacity">
+                                            <div className="flex items-center gap-3 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
+                                                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                                                <span className="text-[8px] font-black text-white uppercase tracking-widest">Enlace Satelital Activo</span>
+                                            </div>
+                                        </div>
                                     </>
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center space-y-4">

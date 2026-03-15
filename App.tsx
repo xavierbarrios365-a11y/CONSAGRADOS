@@ -222,9 +222,9 @@ const App: React.FC = () => {
           setLastStreakNotif(notifKey);
           localStorage.setItem('last_streak_notif', notifKey);
 
-          supabase.from('agentes').select('push_token').eq('id', currentUser.id).single().then(({ data }) => {
-            if (data?.push_token) {
-              sendPushBroadcast("🔥 OPERACIÓN SALVA TU RACHA", reminder.message, data.push_token, 'streak');
+          supabase.from('agentes').select('fcm_token').eq('id', currentUser.id).single().then(({ data }) => {
+            if (data?.fcm_token) {
+              sendPushBroadcast("🔥 OPERACIÓN SALVA TU RACHA", reminder.message, data.fcm_token, 'streak');
             }
           });
         }

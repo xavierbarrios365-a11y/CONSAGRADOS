@@ -227,29 +227,40 @@ const FALLBACK_VERSES = [
 ];
 
 /**
- * @description Obtiene el versículo diario. Rota cada 3 horas automáticamente si la BD no se actualiza.
+ * @description Obtiene el versículo diario. Rota cada 3 horas automáticamente si la BD no se actualiza o para mayor dinamismo.
  */
 export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
     try {
+        // Corregido: La tabla real es 'versiculos_diarios'
         const { data, error } = await supabase
-            .from('daily_verse')
-            .select('*')
+            .from('versiculos_diarios')
+            .select('texto, cita, fecha')
             .order('fecha', { ascending: false })
-            .limit(1);
+            .limit(100); // Traemos un pool para rotar
 
         if (!error && data && data.length > 0) {
-            const dbDateString = String(data[0].fecha).split('T')[0];
-            const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+            // Lógica de rotación táctica: 
+            // Usamos el bloque de 3 horas del día como semilla para elegir del pool
+            const now = new Date();
+            const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+            const period3h = Math.floor(now.getHours() / 3);
 
-            if (dbDateString === todayStr) {
-                return data[0];
-            }
+            // Semilla única que cambia cada 3 horas
+            const seed = dayOfYear + period3h;
+            const index = seed % data.length;
+
+            const selected = data[index];
+            return {
+                verse: selected.texto,
+                reference: selected.cita,
+                fecha: selected.fecha
+            };
         }
     } catch (e: any) {
         console.warn("Error fetching daily verse from DB:", e.message);
     }
 
-    // Fallback: rotación dinámica por día y bloque de 3 horas
+    // Fallback: rotación dinámica por día y bloque de 3 horas sobre la lista hardcoded
     const now = new Date();
     const day = now.getDate();
     const period = Math.floor(now.getHours() / 3);

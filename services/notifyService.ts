@@ -148,15 +148,15 @@ export const sendSocialNotification = async (
         const telegramMsg = `🔔 [SOCIAL]: <b>${title}</b>\n${body}`;
         await sendTelegramAlert(telegramMsg);
 
-        // 4. Obtener el push_token para el envío móvil (SI EXISTE)
+        // 4. Obtener el fcm_token para el envío móvil (SI EXISTE)
         const { data: agent } = await supabase
             .from('agentes')
-            .select('push_token')
+            .select('fcm_token')
             .eq('id', targetAgentId)
             .single();
 
-        if (agent?.push_token) {
-            return await sendPushBroadcast(title, body, agent.push_token, 'social');
+        if (agent?.fcm_token) {
+            return await sendPushBroadcast(title, body, agent.fcm_token, 'social');
         }
 
         return true;

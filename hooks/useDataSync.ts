@@ -9,7 +9,8 @@ import {
     fetchUserEventConfirmationsSupabase as fetchUserEventConfirmations,
     checkAndPublishBirthdays,
     computeBadgesSupabase,
-    fetchNotificationsSupabase
+    fetchNotificationsSupabase,
+    supabase
 } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
@@ -82,7 +83,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const checkHeadlines = useCallback(async () => {
         try {
             // 1. Notifications
-            const notifs = await fetchNotificationsSupabase() || [];
+            const notifs = await fetchNotificationsSupabase(currentUser?.id) || [];
             const agentId = currentUser?.id?.toUpperCase();
 
             const READ_KEY = agentId ? `read_notifications_${agentId}` : 'read_notifications';
@@ -143,7 +144,7 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         } catch (e) {
             console.error("Error en pulso de datos para ticker:", e);
         }
-    }, [currentUser]);
+    }, [currentUser, agents]);
 
     // Periodic data sync (every 60s)
     useEffect(() => {
@@ -152,7 +153,37 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         return () => clearInterval(interval);
     }, [syncData]);
 
-    // Headlines refresh (every 2 min)
+    // Realtime Notifications Subscription
+    useEffect(() => {
+        if (!isLoggedIn || !currentUser) return;
+
+        console.log("📡 Iniciando suscripción Realtime para notificaciones...");
+        const channel = supabase
+            .channel('notificaciones-realtime')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notificaciones_push'
+                },
+                (payload) => {
+                    console.log("🔔 Nueva notificación recibida en Realtime:", payload.new);
+                    // Si es para mí o global, refrescar headlines
+                    const newNotif = payload.new;
+                    if (!newNotif.agent_id || newNotif.agent_id.toUpperCase() === currentUser.id.toUpperCase()) {
+                        checkHeadlines();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isLoggedIn, currentUser, checkHeadlines]);
+
+    // Headlines refresh (every 2 min - periodic safety backup)
     useEffect(() => {
         if (isLoggedIn) {
             checkHeadlines();

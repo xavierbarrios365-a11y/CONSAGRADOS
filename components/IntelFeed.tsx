@@ -25,6 +25,7 @@ import { sendSocialNotification } from '../services/notifyService';
 import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
 import { useTacticalAlert } from './TacticalAlert';
+import TacticalMediaPlayer from './TacticalMediaPlayer';
 
 interface NewsFeedProps {
     onActivity?: () => void;
@@ -86,10 +87,11 @@ const TacticalMedia = ({ url, type, onClick, isTrending = false }: { url: string
                             onLoadedData={() => setIsLoaded(true)}
                         />
                         {!isLoaded && <div className="absolute inset-0 flex items-center justify-center bg-white/5"><Activity size={24} className="text-[#ffb700]/30 animate-spin" /></div>}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                            <div className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/20">
-                                <Zap size={20} className="text-white animate-pulse" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all duration-500">
+                            <div className="w-14 h-14 bg-[#ffb700]/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-[#ffb700]/30 group-hover:scale-110 transition-transform shadow-[0_0_30px_rgba(255,183,0,0.2)]">
+                                <Zap size={24} className="text-[#ffb700] fill-[#ffb700]/20" />
                             </div>
+                            <span className="mt-4 text-[9px] font-black text-[#ffb700] tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-opacity">REDUCIR BRIEFING</span>
                         </div>
                     </div>
                 ) : (
@@ -777,48 +779,15 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
             {sharePreview && <AchievementShareCard agent={sharePreview.agent} newsItem={sharePreview.newsItem} onClose={() => setSharePreview(null)} />}
 
-            {/* FULL SCREEN MEDIA VIEWER */}
+            {/* FULL SCREEN MEDIA VIEWER (TACTICAL UPGRADE) */}
             <AnimatePresence>
                 {viewingMedia && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4"
-                        onClick={() => setViewingMedia(null)}
-                    >
-                        <button
-                            className="absolute top-8 right-8 text-white/60 hover:text-white transition-colors"
-                            onClick={() => setViewingMedia(null)}
-                        >
-                            <X size={40} />
-                        </button>
-
-                        <div className="w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black flex items-center justify-center">
-                            {viewingMedia.type === 'video' ? (
-                                <video
-                                    src={viewingMedia.url}
-                                    controls
-                                    autoPlay
-                                    className="w-full h-full object-contain"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            ) : (
-                                <img
-                                    src={viewingMedia.url}
-                                    className="w-full h-full object-contain"
-                                    alt="Visualización táctica"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            )}
-                        </div>
-
-                        <div className="mt-8 flex flex-col items-center gap-2 pointer-events-none">
-                            <span className="bg-[#ffb700] text-[#001f3f] px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
-                                Visualizador de Inteligencia
-                            </span>
-                        </div>
-                    </motion.div>
+                    <TacticalMediaPlayer
+                        url={viewingMedia.url}
+                        type={viewingMedia.type}
+                        onClose={() => setViewingMedia(null)}
+                        title={news.find(n => n.mediaUrl === viewingMedia.url)?.agentName ? `Briefing de ${news.find(n => n.mediaUrl === viewingMedia.url)?.agentName}` : undefined}
+                    />
                 )}
             </AnimatePresence>
 

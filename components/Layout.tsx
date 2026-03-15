@@ -55,7 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
   const filteredSecondaryItems = filterItemsByRole(secondaryNavItems);
 
   return (
-    <div className="flex flex-col h-screen bg-[#000810] text-[#f4f4f4] overflow-hidden font-montserrat relative">
+    <div className="flex flex-col h-[100dvh] bg-[#000810] text-[#f4f4f4] overflow-hidden font-montserrat relative">
 
       {/* CAPA DE FONDO CINEMÁTICO UNIVERSAL */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -148,7 +148,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
       </header>
 
       <div className="flex flex-1 overflow-hidden relative z-10">
-        <aside className="hidden md:flex w-64 border-r border-white/5 bg-black/20 flex-col py-6">
+        <aside className="hidden lg:flex w-64 border-r border-white/5 bg-black/20 flex-col py-6">
           <nav className="flex-1 px-4 space-y-1">
             {filteredBottomItems.map((item) => (
               <motion.button
@@ -190,14 +190,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-0 bg-transparent custom-scrollbar">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-transparent custom-scrollbar">
           <div className="max-w-screen-xl mx-auto h-full">
             {children}
           </div>
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/60 backdrop-blur-2xl px-2 py-2 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 border-t border-white/5 bg-black/60 backdrop-blur-2xl px-2 py-2 flex justify-around items-center z-40 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
         {filteredBottomItems.map((item) => (
           <button
             key={item.id}

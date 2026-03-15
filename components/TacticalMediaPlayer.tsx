@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, X, Loader2, Zap, Target } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Pause, Volume2, VolumeX, Maximize, X, Loader2, Zap, Target, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 
 interface TacticalMediaPlayerProps {
     url: string;
@@ -17,6 +17,11 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
     const [isLoading, setIsLoading] = useState(true);
     const [showControls, setShowControls] = useState(true);
     const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Gestures
+    const y = useMotionValue(0);
+    const opacity = useTransform(y, [0, 200], [1, 0]);
+    const scale = useTransform(y, [0, 200], [1, 0.9]);
 
     const togglePlay = (e?: React.MouseEvent) => {
         e?.stopPropagation();
@@ -43,11 +48,16 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
         }
     };
 
-    const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleSeek = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         e.stopPropagation();
         if (videoRef.current) {
             const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
+            let x = 0;
+            if ('clientX' in e) {
+                x = e.clientX - rect.left;
+            } else if ('touches' in e) {
+                x = e.touches[0].clientX - rect.left;
+            }
             const clickedValue = (x / rect.width) * 100;
             videoRef.current.currentTime = (clickedValue / 100) * videoRef.current.duration;
         }
@@ -68,39 +78,54 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
         };
     }, [isPlaying]);
 
+    const handleDragEnd = (_: any, info: any) => {
+        if (info.offset.y > 150) {
+            onClose();
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center font-bebas"
-            onClick={onClose}
+            className="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center font-bebas overflow-hidden"
             onMouseMove={handleUserActivity}
             onTouchStart={handleUserActivity}
         >
-            {/* Header */}
-            <div className="absolute top-0 inset-x-0 p-6 flex items-center justify-between z-50 bg-gradient-to-b from-black/80 to-transparent">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-[#ffb700] rounded-xl flex items-center justify-center text-[#001f3f] shadow-[0_0_20px_rgba(255,183,0,0.3)]">
-                        {type === 'video' ? <Zap size={20} /> : <Target size={20} />}
+            {/* Background blur/gradient */}
+            <div className="absolute inset-0 bg-[#001f3f]/20 backdrop-blur-3xl z-0" />
+
+            {/* Header - Reponsive padding */}
+            <div className="absolute top-0 inset-x-0 p-4 md:p-8 flex items-center justify-between z-50 bg-gradient-to-b from-black/90 to-transparent">
+                <div className="flex items-center gap-3 md:gap-4">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-[#ffb700] rounded-lg md:rounded-xl flex items-center justify-center text-[#001f3f] shadow-[0_0_20px_rgba(255,183,0,0.3)] shrink-0">
+                        {type === 'video' ? <Zap size={18} /> : <Target size={18} />}
                     </div>
-                    <div>
-                        <h3 className="text-white text-xl uppercase tracking-widest">{title || (type === 'video' ? 'Transmisión Táctica' : 'Revisión de Inteligencia')}</h3>
-                        <p className="text-[#ffb700] text-[9px] font-black uppercase tracking-[0.3em]">Consagrados Network • En Directo</p>
+                    <div className="min-w-0">
+                        <h3 className="text-white text-base md:text-xl uppercase tracking-widest truncate">{title || (type === 'video' ? 'Transmisión Táctica' : 'Revisión de Inteligencia')}</h3>
+                        <p className="text-[#ffb700] text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] opacity-80">Consagrados Network • En Directo</p>
                     </div>
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white transition-all active:scale-95"
+                    className="p-2 md:p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl md:rounded-2xl text-white transition-all active:scale-95"
                 >
-                    <X size={24} />
+                    <X size={20} md:size={24} />
                 </button>
             </div>
 
-            {/* Media Container */}
-            <div
-                className="relative w-full max-w-5xl aspect-video rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl bg-black group"
-                onClick={(e) => e.stopPropagation()}
+            {/* Media Container - Improved for Mobile Portrait */}
+            <motion.div
+                style={{ y, opacity, scale }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                onDragEnd={handleDragEnd}
+                className="relative w-full h-full md:h-auto md:max-w-5xl md:aspect-video md:rounded-[2.5rem] overflow-hidden md:border border-white/10 shadow-2xl bg-black group flex items-center justify-center z-10"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (type === 'video') togglePlay();
+                }}
             >
                 {type === 'video' ? (
                     <>
@@ -114,53 +139,62 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
                             onWaiting={() => setIsLoading(true)}
                             onPlaying={() => setIsLoading(false)}
                             onEnded={() => setIsPlaying(false)}
-                            onClick={() => togglePlay()}
                         />
 
-                        {isLoading && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10">
-                                <Loader2 size={48} className="text-[#ffb700] animate-spin" />
-                            </div>
-                        )}
+                        <AnimatePresence>
+                            {isLoading && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20"
+                                >
+                                    <Loader2 size={48} className="text-[#ffb700] animate-spin mb-4" />
+                                    <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] animate-pulse">Sincronizando...</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         <AnimatePresence>
                             {showControls && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
+                                    initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 10 }}
-                                    className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 via-black/40 to-transparent space-y-6"
+                                    exit={{ opacity: 0, y: 20 }}
+                                    className="absolute bottom-0 inset-x-0 p-6 md:p-10 bg-gradient-to-t from-black/95 via-black/60 to-transparent space-y-4 md:space-y-6 z-30"
+                                    onClick={(e) => e.stopPropagation()}
                                 >
-                                    {/* Progress Bar */}
+                                    {/* Progress Bar (Thicker for touch) */}
                                     <div
-                                        className="relative h-2 w-full bg-white/10 rounded-full cursor-pointer overflow-hidden group/bar transition-all hover:h-3"
+                                        className="relative h-4 w-full flex items-center cursor-pointer group/bar"
                                         onClick={handleSeek}
+                                        onTouchStart={handleSeek}
                                     >
-                                        <div
-                                            className="absolute top-0 left-0 h-full bg-[#ffb700] transition-all duration-100"
-                                            style={{ width: `${progress}%` }}
-                                        />
-                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/bar:opacity-100 transition-opacity" />
+                                        <div className="h-1.5 md:h-2 w-full bg-white/10 rounded-full overflow-hidden relative">
+                                            <motion.div
+                                                className="absolute top-0 left-0 h-full bg-[#ffb700] shadow-[0_0_10px_rgba(255,183,0,0.5)]"
+                                                style={{ width: `${progress}%` }}
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Controls Row */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-6">
-                                            <button onClick={togglePlay} className="text-white hover:text-[#ffb700] transition-colors active:scale-90">
-                                                {isPlaying ? <Pause size={32} /> : <Play size={32} fill="currentColor" />}
+                                    <div className="flex items-center justify-between pb-4 md:pb-0">
+                                        <div className="flex items-center gap-6 md:gap-8">
+                                            <button onClick={togglePlay} className="text-white hover:text-[#ffb700] transition-colors active:scale-90 p-2">
+                                                {isPlaying ? <Pause size={32} md:size={40} /> : <Play size={32} md:size={40} fill="currentColor" />}
                                             </button>
 
                                             <div className="flex items-center gap-4">
-                                                <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors">
-                                                    {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                                                <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors p-2">
+                                                    {isMuted ? <VolumeX size={20} md:size={24} /> : <Volume2 size={20} md:size={24} />}
                                                 </button>
-                                                {/* Timestamp could go here */}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-4">
-                                            <div className="px-3 py-1 bg-[#ffb700]/20 border border-[#ffb700]/30 rounded-lg">
-                                                <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest">4K • HQ</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="px-2 md:px-3 py-1 bg-[#ffb700]/10 border border-[#ffb700]/30 rounded-lg backdrop-blur-md">
+                                                <span className="text-[9px] md:text-[10px] text-[#ffb700] font-black uppercase tracking-widest">EN LINEA • 4K</span>
                                             </div>
                                         </div>
                                     </div>
@@ -173,13 +207,15 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
                         src={url}
                         className="w-full h-full object-contain"
                         alt="Visualización táctica"
+                        draggable={false}
                     />
                 )}
-            </div>
+            </motion.div>
 
-            {/* Footer / Instructions */}
-            <div className="absolute bottom-8 text-center opacity-30 pointer-events-none">
-                <p className="text-[10px] text-white font-black uppercase tracking-[0.5em]">Desliza para cerrar • Consagrados 2026</p>
+            {/* Footer / Instructions - Native look */}
+            <div className="absolute bottom-6 md:bottom-10 flex flex-col items-center gap-2 opacity-40 pointer-events-none z-50">
+                <ChevronDown className="animate-bounce text-white" size={20} />
+                <p className="text-[8px] md:text-[10px] text-white font-black uppercase tracking-[0.4em] md:tracking-[0.6em]">Desliza hacia abajo para cerrar</p>
             </div>
         </motion.div>
     );

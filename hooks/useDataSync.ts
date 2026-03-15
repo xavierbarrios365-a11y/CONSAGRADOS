@@ -146,6 +146,21 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         }
     }, [currentUser, agents]);
 
+    // Badging API Synchronization
+    useEffect(() => {
+        if ('setAppBadge' in navigator) {
+            if (unreadNotifications > 0) {
+                (navigator as any).setAppBadge(unreadNotifications).catch((err: any) => {
+                    console.warn("⚠️ Badging API failed:", err);
+                });
+            } else {
+                (navigator as any).clearAppBadge().catch((err: any) => {
+                    console.warn("⚠️ Badging API clear failed:", err);
+                });
+            }
+        }
+    }, [unreadNotifications]);
+
     // Periodic data sync (every 60s)
     useEffect(() => {
         syncData();

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, X, Loader2, Zap, Target, ChevronDown, Activity } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { Play, Pause, Volume2, VolumeX, X, Loader2 } from 'lucide-react';
 
 interface TacticalMediaPlayerProps {
     url: string;
@@ -9,7 +10,7 @@ interface TacticalMediaPlayerProps {
     type?: 'video' | 'image';
 }
 
-const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose, title, type = 'video' }) => {
+const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose, type = 'video' }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(false);
@@ -18,10 +19,11 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
     const [showControls, setShowControls] = useState(true);
     const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Gestures
+    // Gestos de cierre impecables
     const y = useMotionValue(0);
-    const opacity = useTransform(y, [0, 200], [1, 0]);
-    const scale = useTransform(y, [0, 200], [1, 0.9]);
+    const opacity = useTransform(y, [0, 300], [1, 0]);
+    const scale = useTransform(y, [0, 300], [1, 0.85]);
+    const backdropOpacity = useTransform(y, [0, 300], [0.95, 0]);
 
     const togglePlay = (e?: React.MouseEvent) => {
         e?.stopPropagation();
@@ -42,202 +44,176 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
 
     const handleProgress = () => {
         if (videoRef.current) {
-            const current = videoRef.current.currentTime;
-            const duration = videoRef.current.duration;
-            setProgress((current / duration) * 100);
+            setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
         }
     };
 
-    const handleSeek = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
         if (videoRef.current) {
             const rect = e.currentTarget.getBoundingClientRect();
-            let x = 0;
-            if ('clientX' in e) {
-                x = e.clientX - rect.left;
-            } else if ('touches' in e) {
-                x = e.touches[0].clientX - rect.left;
-            }
+            const x = e.clientX - rect.left;
             const clickedValue = (x / rect.width) * 100;
             videoRef.current.currentTime = (clickedValue / 100) * videoRef.current.duration;
         }
     };
 
-    const handleUserActivity = () => {
+    const resetControlsTimeout = () => {
         setShowControls(true);
         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         controlsTimeoutRef.current = setTimeout(() => {
             if (isPlaying) setShowControls(false);
-        }, 3000);
+        }, 2500);
     };
 
     useEffect(() => {
-        handleUserActivity();
+        resetControlsTimeout();
         return () => {
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
     }, [isPlaying]);
 
     const handleDragEnd = (_: any, info: any) => {
-        if (info.offset.y > 150) {
+        if (info.offset.y > 100 || info.velocity.y > 500) {
             onClose();
         }
     };
 
-    return (
+    const playerContent = (
         <motion.div
-            initial={{ opacity: 0, scale: 0.95, backdropFilter: 'blur(0px)' }}
-            animate={{ opacity: 1, scale: 1, backdropFilter: 'blur(40px)' }}
-            exit={{ opacity: 0, scale: 1.05, backdropFilter: 'blur(0px)' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-[300] bg-black/80 flex flex-col items-center justify-center font-bebas overflow-hidden"
-            onMouseMove={handleUserActivity}
-            onTouchStart={handleUserActivity}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden touch-none"
+            style={{ backgroundColor: `rgba(0, 0, 0, 0.95)` }}
         >
-            {/* Ambient Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] bg-[#ffb70010] rounded-full blur-[120px] pointer-events-none" />
+            {/* Fondo dinámico con desenfoque suave (bokeh) */}
+            <motion.div
+                style={{ opacity: backdropOpacity }}
+                className="absolute inset-0 bg-black/40 backdrop-blur-[60px]"
+            />
 
-            {/* Header - Immersive */}
-            <div className="absolute top-0 inset-x-0 p-6 md:p-10 flex items-center justify-between z-50 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
-                <motion.div
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex items-center gap-4"
-                >
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-[#ffb700] to-[#ff6b00] rounded-2xl flex items-center justify-center text-[#001f3f] shadow-[0_0_30px_rgba(255,183,0,0.4)] shrink-0">
-                        {type === 'video' ? <Zap size={20} className="fill-[#001f3f]/20" /> : <Target size={20} />}
-                    </div>
-                    <div className="min-w-0">
-                        <h3 className="text-white text-lg md:text-2xl uppercase tracking-[0.2em] truncate drop-shadow-lg">{title || (type === 'video' ? 'Transmisión Táctica' : 'Revisión de Inteligencia')}</h3>
-                        <p className="text-[#ffb700] text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] opacity-90">Consagrados Network • Enlace Cuántico</p>
-                    </div>
-                </motion.div>
-                <button
-                    onClick={onClose}
-                    className="p-3 bg-white/10 hover:bg-[#ffb700] hover:text-[#001f3f] border border-white/20 rounded-2xl text-white transition-all active:scale-90 shadow-xl"
-                >
-                    <X size={24} />
-                </button>
-            </div>
+            {/* Botón Cerrar Ultra-Limpio */}
+            <button
+                onClick={(e) => { e.stopPropagation(); onClose(); }}
+                className="absolute top-6 right-6 z-[100] p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all active:scale-90"
+            >
+                <X size={24} strokeWidth={1.5} />
+            </button>
 
-            {/* Media Container - Threads Expansion Feel */}
+            {/* Contenedor de Media con Gestos Físicos */}
             <motion.div
                 style={{ y, opacity, scale }}
                 drag="y"
                 dragConstraints={{ top: 0, bottom: 0 }}
                 onDragEnd={handleDragEnd}
-                className="relative w-full h-full md:h-auto md:max-w-6xl md:aspect-video md:rounded-[3rem] overflow-hidden md:border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] bg-black group flex items-center justify-center z-10"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    if (type === 'video') togglePlay();
-                }}
+                className="relative w-full max-w-5xl aspect-auto max-h-[85vh] flex items-center justify-center z-10"
+                onClick={resetControlsTimeout}
             >
                 {type === 'video' ? (
-                    <>
+                    <div className="relative w-full h-full flex items-center justify-center">
                         <video
                             ref={videoRef}
                             src={url}
                             autoPlay
                             playsInline
-                            className="w-full h-full object-contain md:object-cover"
+                            className="w-full h-full max-h-[85vh] object-contain shadow-2xl"
                             onTimeUpdate={handleProgress}
                             onWaiting={() => setIsLoading(true)}
                             onPlaying={() => setIsLoading(false)}
                             onEnded={() => setIsPlaying(false)}
+                            onClick={togglePlay}
                         />
 
+                        {/* Loading State Minimalista */}
                         <AnimatePresence>
                             {isLoading && (
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-20"
+                                    className="absolute inset-0 flex items-center justify-center z-20"
                                 >
-                                    <div className="relative">
-                                        <Loader2 size={60} className="text-[#ffb700] animate-spin mb-4 opacity-50" />
-                                        <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] text-[#ffb700] animate-pulse" />
-                                    </div>
-                                    <span className="text-[11px] text-[#ffb700] font-black uppercase tracking-[0.5em] animate-pulse">Sincronizando Frecuencia...</span>
+                                    <Loader2 size={32} className="text-white/40 animate-spin" />
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
+                        {/* Overlay de Pausa (Visual Feedback) */}
+                        <AnimatePresence>
+                            {!isPlaying && !isLoading && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 1.2 }}
+                                    className="absolute pointer-events-none"
+                                >
+                                    <div className="p-6 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
+                                        <Play size={40} className="text-white fill-white" />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Controles Estilo Threads (Flotantes y Limpios) */}
                         <AnimatePresence>
                             {showControls && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 30 }}
+                                    initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 30 }}
-                                    className="absolute bottom-0 inset-x-0 p-8 md:p-14 bg-gradient-to-t from-black/95 via-black/40 to-transparent space-y-6 md:space-y-8 z-30"
+                                    exit={{ opacity: 0, y: 20 }}
+                                    className="absolute bottom-0 inset-x-0 p-6 md:p-10 flex flex-col gap-6 z-30"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    {/* Progress Bar (Premium Style) */}
-                                    <div
-                                        className="relative h-6 w-full flex items-center cursor-pointer group/bar"
-                                        onClick={handleSeek}
-                                        onTouchStart={handleSeek}
-                                    >
-                                        <div className="h-1.5 md:h-2 w-full bg-white/10 rounded-full overflow-hidden relative">
+                                    {/* Barra de Progreso (Sleek) */}
+                                    <div className="relative w-full h-8 flex items-center cursor-pointer" onClick={handleSeek}>
+                                        <div className="h-[3px] w-full bg-white/20 rounded-full overflow-hidden">
                                             <motion.div
-                                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ffb700] to-[#ffde59] shadow-[0_0_20px_rgba(255,183,0,0.6)]"
+                                                className="h-full bg-white"
                                                 style={{ width: `${progress}%` }}
                                             />
                                         </div>
-                                        <div
-                                            className="absolute h-4 w-4 bg-white rounded-full shadow-2xl border-2 border-[#ffb700] opacity-0 group-hover/bar:opacity-100 transition-opacity"
-                                            style={{ left: `${progress}%`, transform: 'translateX(-50%)' }}
-                                        />
                                     </div>
 
-                                    {/* Controls Row */}
-                                    <div className="flex items-center justify-between pb-6 md:pb-0">
-                                        <div className="flex items-center gap-8 md:gap-12">
-                                            <button onClick={togglePlay} className="text-white hover:text-[#ffb700] transition-transform active:scale-75 p-2">
-                                                {isPlaying ? <Pause size={48} /> : <Play size={48} fill="currentColor" />}
+                                    {/* Botones de Función */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-6">
+                                            <button onClick={togglePlay} className="text-white transition-transform active:scale-75">
+                                                {isPlaying ? <Pause size={28} /> : <Play size={28} fill="white" />}
                                             </button>
-
-                                            <div className="flex items-center gap-6">
-                                                <button onClick={toggleMute} className="text-white/60 hover:text-[#ffb700] transition-colors p-2">
-                                                    {isMuted ? <VolumeX size={28} /> : <Volume2 size={28} />}
-                                                </button>
-                                            </div>
+                                            <button onClick={toggleMute} className="text-white/80 transition-transform active:scale-75">
+                                                {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                                            </button>
                                         </div>
 
-                                        <div className="hidden md:flex items-center gap-4">
-                                            <div className="px-4 py-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
-                                                <span className="text-[10px] text-white/60 font-black uppercase tracking-widest flex items-center gap-3">
-                                                    <Activity size={12} className="text-[#ffb700]" /> TRANSMISIÓN ENCRIPTADA
-                                                </span>
-                                            </div>
+                                        {/* Timestamp Minimalista */}
+                                        <div className="text-[10px] text-white/60 font-medium tracking-widest uppercase">
+                                            Frecuencia Consagrados • En Línea
                                         </div>
                                     </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                    </>
+                    </div>
                 ) : (
                     <img
                         src={url}
-                        className="w-full h-full object-contain"
-                        alt="Visualización táctica"
+                        className="w-full h-full max-h-[85vh] object-contain shadow-2xl"
+                        alt="Media content"
                         draggable={false}
                     />
                 )}
             </motion.div>
 
-            {/* Swipe Indicator */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.4 }}
-                className="absolute bottom-8 md:bottom-12 flex flex-col items-center gap-3 pointer-events-none z-50 px-8 text-center"
-            >
-                <div className="w-12 h-1.5 bg-white/20 rounded-full mb-2" />
-                <p className="text-[9px] md:text-[11px] text-white font-black uppercase tracking-[0.5em] leading-relaxed">Desliza para finalizar briefing</p>
-            </motion.div>
+            {/* Indicador de Gesto (Sutil) */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-20 pointer-events-none">
+                <div className="w-8 h-1 bg-white rounded-full" />
+                <span className="text-[8px] text-white font-bold uppercase tracking-[0.4em]">Cerrar</span>
+            </div>
         </motion.div>
     );
+
+    return createPortal(playerContent, document.body);
 };
 
 export default TacticalMediaPlayer;

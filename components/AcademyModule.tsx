@@ -854,26 +854,41 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                             <span className="text-[10px] font-black text-[#ffb700] tracking-[0.3em] uppercase animate-pulse">Cargando Briefing...</span>
                                         </div>
 
-                                        <iframe
-                                            id="academy-player"
-                                            src={`${(() => {
-                                                let url = activeLesson.videoUrl;
+                                        {(() => {
+                                            const url = activeLesson.videoUrl || '';
+                                            const isYoutube = url.includes('youtu.be/') || url.includes('watch?v=') || url.includes('embed/');
+
+                                            if (isYoutube) {
                                                 let videoId = '';
                                                 if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split(/[?#]/)[0];
                                                 else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1].split(/[&?#]/)[0];
                                                 else if (url.includes('embed/')) videoId = url.split('embed/')[1].split(/[?#]/)[0];
-                                                if (videoId) {
-                                                    let b = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&textcolor=white`;
-                                                    if (activeLesson.startTime) b += `&start=${activeLesson.startTime}`;
-                                                    if (activeLesson.endTime) b += `&end=${activeLesson.endTime}`;
-                                                    return b;
-                                                }
-                                                return url;
-                                            })()}`}
-                                            className="w-full h-full relative z-10 border-0"
-                                            allowFullScreen
-                                            onLoad={() => setTimeout(() => setIsVideoWatched(true), 3000)}
-                                        ></iframe>
+
+                                                let src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1&textcolor=white`;
+                                                if (activeLesson.startTime) src += `&start=${activeLesson.startTime}`;
+                                                if (activeLesson.endTime) src += `&end=${activeLesson.endTime}`;
+
+                                                return (
+                                                    <iframe
+                                                        id="academy-player"
+                                                        src={src}
+                                                        className="w-full h-full relative z-10 border-0"
+                                                        allowFullScreen
+                                                        onLoad={() => setTimeout(() => setIsVideoWatched(true), 3000)}
+                                                    />
+                                                );
+                                            } else {
+                                                return (
+                                                    <video
+                                                        src={url}
+                                                        controls
+                                                        playsInline
+                                                        className="w-full h-full relative z-10 bg-black object-contain"
+                                                        onPlay={() => setIsVideoWatched(true)}
+                                                    />
+                                                );
+                                            }
+                                        })()}
 
                                         {!isVideoWatched && (
                                             <motion.button

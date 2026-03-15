@@ -127,37 +127,36 @@ const TacticalMedia = ({ url, type, onClick, isTrending = false }: { url: string
                         />
 
                         {/* Inline Controls (Threads Style) */}
-                        <div className="absolute inset-0 flex flex-col justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/40 via-transparent to-black/60">
+                        <div className="absolute inset-0 flex flex-col justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/20 via-transparent to-black/40">
                             <div className="flex justify-end">
                                 <button
                                     onClick={toggleMute}
-                                    className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-white hover:bg-[#ffb700] hover:text-[#001f3f] transition-all"
+                                    className="p-1.5 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 text-white/80 hover:bg-white hover:text-black transition-all"
                                 >
-                                    {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                                    {isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />}
                                 </button>
                             </div>
 
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 bg-[#ffb700]/20 backdrop-blur-xl rounded-xl flex items-center justify-center border border-[#ffb700]/40">
-                                            {isPlaying ? <Pause size={14} className="text-[#ffb700]" /> : <Play size={14} className="text-[#ffb700] fill-[#ffb700]/20" />}
-                                        </div>
-                                        <span className="text-[9px] font-black text-white tracking-[0.2em] uppercase shadow-sm">REPRODUCCIÓN EN CURSO</span>
+                            <div className="flex items-center justify-between pointer-events-none">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-white/10 backdrop-blur-xl rounded-lg flex items-center justify-center border border-white/10">
+                                        {isPlaying ? <Pause size={10} className="text-white" /> : <Play size={10} className="text-white fill-white" />}
                                     </div>
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/10">
-                                        <Maximize size={10} className="text-white/60" />
-                                        <span className="text-[8px] font-bold text-white/80 uppercase">Expandir</span>
-                                    </div>
+                                    <span className="text-[7px] font-bold text-white uppercase tracking-widest opacity-60">En Curso</span>
                                 </div>
 
-                                {/* Minimal Progress Bar */}
-                                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <motion.div
-                                        className="h-full bg-[#ffb700] shadow-[0_0_10px_rgba(255,183,0,0.5)]"
-                                        style={{ width: `${progress}%` }}
-                                    />
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-xl rounded-full border border-white/10">
+                                    <Maximize size={8} className="text-white" />
+                                    <span className="text-[7px] font-black text-white uppercase tracking-widest">Expandir</span>
                                 </div>
+                            </div>
+
+                            {/* Minimal Progress Bar (Bottom) */}
+                            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
+                                <motion.div
+                                    className="h-full bg-white"
+                                    style={{ width: `${progress}%` }}
+                                />
                             </div>
                         </div>
 

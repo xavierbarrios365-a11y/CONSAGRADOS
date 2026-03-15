@@ -300,6 +300,7 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
  * @description Verifica cumpleaños y publica anuncios sociales si es necesario.
  */
 export const checkAndPublishBirthdays = async (agents: Agent[]) => {
+    // [PROX-TS-VERIFY-0711]
     try {
         const { publishNewsSupabase } = await import('./socialService');
         const today = new Date();

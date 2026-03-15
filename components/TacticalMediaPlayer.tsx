@@ -19,7 +19,7 @@ const TacticalMediaPlayer: React.FC<TacticalMediaPlayerProps> = ({ url, onClose,
     const [showControls, setShowControls] = useState(true);
     const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Gestos de cierre impecables
+    // Gestos de cierre impecables [v2-touch]
     const y = useMotionValue(0);
     const opacity = useTransform(y, [0, 300], [1, 0]);
     const scale = useTransform(y, [0, 300], [1, 0.85]);

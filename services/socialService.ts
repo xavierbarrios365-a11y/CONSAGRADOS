@@ -113,10 +113,11 @@ export const fetchActiveStoriesSupabase = async () => {
 /**
  * @description Crea una nueva historia.
  */
-export const createStorySupabase = async (agentId: string, mediaUrl: string, content?: string) => {
+export const createStorySupabase = async (agentId: string, mediaUrl: string, content?: string, agentName?: string) => {
     try {
         const { data, error } = await supabase.from('agent_stories').insert([{
             agent_id: agentId,
+            agent_name: agentName || 'Agente', // Añadido para cumplir constraint NOT NULL
             media_url: mediaUrl,
             content: content || null,
             expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()

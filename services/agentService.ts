@@ -296,10 +296,15 @@ export const computeBadgesSupabase = async (): Promise<Badge[]> => {
     }
 };
 
+// Bloqueo de sesión para evitar ejecuciones concurrentes de cumpleaños
+let isBirthdayCheckInProgress = false;
+
 /**
  * @description Verifica cumpleaños y publica anuncios sociales si es necesario.
  */
 export const checkAndPublishBirthdays = async (agents: Agent[]) => {
+    if (isBirthdayCheckInProgress) return;
+    isBirthdayCheckInProgress = true;
     // [PROX-TS-VERIFY-0711]
     try {
         const { publishNewsSupabase } = await import('./socialService');
@@ -313,7 +318,7 @@ export const checkAndPublishBirthdays = async (agents: Agent[]) => {
         const currentDay = caracasDate.getDate();
         const todayFull = caracasDate.toISOString().split('T')[0];
 
-        console.log(`🔍 VERIFICANDO CUMPLEAÑOS: MES ${currentMonth}, DÍA ${currentDay}`);
+        console.log(`🔍 [COMMAND CENTER] Iniciando verificación de aniversario: Mes ${currentMonth}, Día ${currentDay}`);
 
         for (const agent of agents) {
             if (!agent.birthday) continue;
@@ -366,43 +371,45 @@ export const checkAndPublishBirthdays = async (agents: Agent[]) => {
                     .maybeSingle();
 
                 if (!existingPost) {
-                    console.log(`📢 Publicando felicitación para ${agent.name}...`);
+                    console.log(`📢 Emitiendo comunicado oficial para ${agent.name}...`);
 
-                    // 1. Publicar en el Intel Feed
+                    // 1. Publicar en el Intel Feed (Tono Premium)
                     await publishNewsSupabase(
                         agent.id,
                         agent.name,
                         'CUMPLEAÑOS',
-                        `🎉 ¡HOY ES EL CUMPLEAÑOS DEL AGENTE ${agent.name.toUpperCase()}! 🎖️ ¡FELICITALO EN ESTE DÍA DE OPERACIÓN ESPECIAL! 🎂`
+                        `🎖️ **COMUNICADO OFICIAL: ANIVERSARIO TÁCTICO** 🎖️\n\nHoy el Mando Central reconoce el nacimiento y servicio del Agente **${agent.name.toUpperCase()}**. Su lealtad y compromiso fortalecen nuestra unidad operativa. ¡Felicidades en este nuevo ciclo de operación! 🎂`
                     );
 
-                    // 2. Notificación PERSONALIZADA al agente (Inbox)
+                    // 2. Notificación PERSONALIZADA (Tono Premium)
                     const { logNotificationSupabase, sendPushBroadcast, sendTelegramAlert } = await import('./notifyService');
                     await logNotificationSupabase(
-                        "🎂 ¡FELIZ CUMPLEAÑOS, AGENTE!",
-                        `Felicitaciones ${agent.name}. Hoy el Mando Central celebra tu vida y tu servicio. Tu misión de hoy: ¡Disfrutar al máximo! 🎖️`,
+                        "🎂 ANIVERSARIO RECONOCIDO",
+                        `Felicidades Agente ${agent.name}. El Mando Central celebra tu vida y tu lealtad. Tu misión: Disfrutar este día de victoria personal. 🎖️`,
                         'ALERTA',
                         'Mando Central',
                         agent.id
                     );
 
-                    // 3. Notificación GLOBAL (Broadcast) para que todos se enteren
+                    // 3. Notificación GLOBAL (Broadcast)
                     await sendPushBroadcast(
-                        "🎈 CELEBRACIÓN TÁCTICA",
-                        `Hoy es el cumpleaños de ${agent.name}. ¡Pasa por el Intel Feed a dejar tu felicitación! 🎂`
+                        "🎖️ CELEBRACIÓN EN FILAS",
+                        `Hoy es el aniversario del Agente ${agent.name}. Reportarse al Intel Feed para honrar su servicio. 🎂`
                     );
 
-                    // 4. Alerta Telegram (Broadcast masivo)
+                    // 4. Alerta Telegram
                     await sendTelegramAlert(
-                        `🎂 <b>CAMARADA DE CUMPLEAÑOS</b>\n🎉 Hoy celebramos al Agente: <b>${agent.name.toUpperCase()}</b>\n\n🎖️ <i>"Fidelidad hasta el final."</i>\n\n¡Felicitaciones en el Intel Feed!`
+                        `🎖️ <b>COMUNICADO TÁCTICO: ANIVERSARIO</b>\n\nReconocemos el servicio y vida del Agente: <b>${agent.name.toUpperCase()}</b>\n\n<i>"La lealtad no tiene fecha de caducidad."</i>\n\nFelicitaciones activas en el Intel Feed.`
                     );
                 } else {
-                    console.log(`✅ Ya existe una publicación de cumpleaños para ${agent.name} hoy.`);
+                    console.log(`✅ [SECURITY] Ya existe registro de aniversario activo para ${agent.name}.`);
                 }
             }
         }
     } catch (e: any) {
-        console.error('Error en checkAndPublishBirthdays:', e.message);
+        console.error('❌ Error en el proceso de aniversario:', e.message);
+    } finally {
+        isBirthdayCheckInProgress = false;
     }
 };
 

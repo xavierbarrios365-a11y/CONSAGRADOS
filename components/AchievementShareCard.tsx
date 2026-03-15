@@ -245,7 +245,7 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                 ? `¡Victoria Diaria! ${newsItem.reference}`
                 : newsItem.message;
 
-            const dbRes = await createStorySupabase(agent.id, uploadRes.url, storyContent);
+            const dbRes = await createStorySupabase(agent.id, uploadRes.url, storyContent, agent.name);
             if (dbRes.success) {
                 setStatusMessage({ text: 'Añadido a tus Historias', type: 'SUCCESS' });
             } else {

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { Agent, UserRole, Rank } from '../types';
+import { Agent, UserRole, Rank, Badge } from '../types';
 
 /**
  * @description Sincroniza un agente desde Google Sheets hacia Supabase.
@@ -508,5 +508,3 @@ export const getStreakMultiplier = (streak: number): number => {
     if (streak >= 3) return 1.2;
     return 1.0;
 };
-
-import { Badge } from '../types';

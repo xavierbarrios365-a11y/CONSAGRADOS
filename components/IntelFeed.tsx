@@ -223,7 +223,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
     const [viewingMedia, setViewingMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
-    const mediaInputRef = React.useRef<HTMLInputElement>(null);
+    const mediaInputRef = useRef<HTMLInputElement>(null);
 
     const PAGE_SIZE = 20;
 
@@ -238,16 +238,6 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const loadNews = async (silent = false) => {
         if (!silent || news.length === 0) setLoading(true);
         try {
-            // Cleanup fire-and-forget: eliminar posts sociales con más de 48h
-            const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-            Promise.resolve(
-                supabase
-                    .from('asistencia_visitas')
-                    .delete()
-                    .in('tipo', ['SOCIAL', 'VERSICULO', 'ORACION'])
-                    .lt('registrado_en', cutoff48h)
-            ).catch(() => { });
-
             const rawData = await fetchNewsFeed();
             // Map raw DB rows (asistencia_visitas) → NewsFeedItem
             const mapped: NewsFeedItem[] = (rawData || []).map((item: any) => {
@@ -670,7 +660,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
             container?.removeEventListener('scroll', handleScroll);
             supabase.removeChannel(channel);
         };
-    }, [isAtTop, currentUser?.id]);
+    }, [currentUser?.id]);
 
     if (loading) {
         return (
@@ -684,12 +674,12 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     }
 
     return (
-        <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700 h-full flex flex-col">
+        <div id="intel-feed-container" className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
             {!replyTo && renderPostArea()}
             <AnimatePresence>
                 {newItemsCount > 0 && (
                     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} className="sticky top-4 z-[60] flex justify-center pointer-events-none">
-                        <button onClick={() => { const c = document.getElementById('intel-feed-scroll-container'); c?.scrollTo({ top: 0, behavior: 'smooth' }); setNewItemsCount(0); }} className="pointer-events-auto bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 group hover:scale-105 transition-transform">
+                        <button onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setNewItemsCount(0); }} className="pointer-events-auto bg-[#ffb700] text-[#001f3f] px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 group hover:scale-105 transition-transform">
                             <RefreshCw size={14} className="animate-spin-slow" />
                             <span className="text-[10px] font-black uppercase tracking-widest">Nuevos Mensajes ({newItemsCount})</span>
                         </button>
@@ -697,7 +687,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 )}
             </AnimatePresence>
 
-            <div id="intel-feed-scroll-container" className="flex-1 overflow-y-auto pr-2 no-scrollbar space-y-4">
+            <div id="intel-feed-scroll-container" className="space-y-4">
                 <div className="grid grid-cols-1 gap-2 relative">
                     <AnimatePresence mode="popLayout">
                         {displayedNews.length === 0 && (

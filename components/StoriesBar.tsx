@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart, BookOpen } from 'lucide-react';
+import { fetchActiveStoriesSupabase, createStorySupabase, reactToStorySupabase, sendStoryReplySupabase, markStoryAsSeenSupabase, deleteStorySupabase } from '../services/socialService';
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Camera, Send, Heart, BookOpen, Trash2 } from 'lucide-react';
 import { Agent } from '../types';
-import { fetchActiveStoriesSupabase, createStorySupabase, reactToStorySupabase, sendStoryReplySupabase, markStoryAsSeenSupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { formatDriveUrl } from '../services/storageUtils';
 
@@ -80,6 +80,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
     }, [selectedStory, storyIndex, isSendingReply]);
 
     const loadStories = async () => {
+        if (!currentUser) return;
         setIsLoading(true);
         const data = await fetchActiveStoriesSupabase();
         const grouped = data.reduce((acc: any, story: Story) => {
@@ -399,11 +400,11 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black flex flex-center"
+                        className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
                     >
                         <div className="relative w-full h-full max-w-lg mx-auto bg-black flex flex-col font-montserrat">
                             {/* Header */}
-                            <div className="absolute top-0 inset-x-0 p-4 z-10 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-none pt-8">
+                            <div className="absolute top-0 inset-x-0 p-4 z-30 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pt-8 pointer-events-none">
                                 <div className="flex items-center gap-3 pointer-events-auto">
                                     <img
                                         src={formatDriveUrl(selectedStory.agentes.foto_url, selectedStory.agentes.nombre)}
@@ -416,6 +417,24 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                             <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-wider">{getTimeAgo(getCurrentStory()!.created_at)}</p>
                                         )}
                                     </div>
+                                    {currentUser?.id === selectedStory.agent_id && (
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const story = getCurrentStory();
+                                                if (story && window.confirm('¿ELIMINAR ESTA HISTORIA?')) {
+                                                    const res = await deleteStorySupabase(story.id);
+                                                    if (res.success) {
+                                                        loadStories();
+                                                        setSelectedStory(null);
+                                                    }
+                                                }
+                                            }}
+                                            className="ml-4 p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/30 rounded-xl text-red-400 transition-all pointer-events-auto"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </div>
                                 <button onClick={() => setSelectedStory(null)} className="text-white/80 p-2 pointer-events-auto hover:scale-110 active:scale-95 transition-transform">
                                     <X className="w-8 h-8 drop-shadow-lg" />
@@ -424,7 +443,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
 
                             {/* Story Context Overlay (Pie de foto) */}
                             {getCurrentStory()?.content && (
-                                <div className="absolute top-24 inset-x-0 px-6 py-4 z-10 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <div className="absolute top-24 inset-x-0 px-6 py-4 z-20 animate-in fade-in slide-in-from-top-4 duration-500">
                                     <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-2xl">
                                         <p className="text-white text-[13px] font-medium leading-relaxed italic text-center drop-shadow-sm">
                                             "{getCurrentStory()?.content}"
@@ -446,11 +465,11 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                                 ))}
                             </div>
 
-                            {/* Image Container Enfoced to 9:16 visually */}
+                            {/* Image Container */}
                             <div className="flex-1 flex items-center justify-center relative bg-black overflow-hidden">
                                 <img
                                     src={getCurrentStory()?.image_url}
-                                    className="w-full h-full object-cover" // FORCED 9:16 (Story format)
+                                    className="w-full h-full object-cover"
                                     alt=""
                                 />
 
@@ -531,7 +550,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
                     to { width: 100%; }
                 }
             `}</style>
-        </div >
+        </div>
     );
 };
 

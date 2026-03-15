@@ -118,10 +118,24 @@ export const createStorySupabase = async (agentId: string, mediaUrl: string, con
         const { data, error } = await supabase.from('agent_stories').insert([{
             agent_id: agentId,
             media_url: mediaUrl,
-            content: content || null
+            content: content || null,
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         }]).select();
         if (error) throw error;
         return { success: true, data: data[0] };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+};
+
+/**
+ * @description Elimina una historia.
+ */
+export const deleteStorySupabase = async (storyId: string) => {
+    try {
+        const { error } = await supabase.from('agent_stories').delete().eq('id', storyId);
+        if (error) throw error;
+        return { success: true };
     } catch (e: any) {
         return { success: false, error: e.message };
     }
@@ -199,7 +213,17 @@ const FALLBACK_VERSES = [
     { verse: 'En el principio creó Dios los cielos y la tierra.', reference: 'Génesis 1:1' },
     { verse: 'Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él.', reference: 'Proverbios 22:6' },
     { verse: 'El corazón alegre hermosea el rostro.', reference: 'Proverbios 15:13' },
-    { verse: 'Siembra en la mañana tu semilla...', reference: 'Eclesiastés 11:6' }
+    { verse: 'Siembra en la mañana tu semilla...', reference: 'Eclesiastés 11:6' },
+    { verse: 'Jehová es mi luz y mi salvación; ¿de quién temeré?', reference: 'Salmos 27:1' },
+    { verse: 'Gustad, y ved que es bueno Jehová; dichoso el hombre que confía en él.', reference: 'Salmos 34:8' },
+    { verse: 'Sean gratos los dichos de mi boca y la meditación de mi corazón.', reference: 'Salmos 19:14' },
+    { verse: 'Encomienda a Jehová tu camino, y confía en él; y él hará.', reference: 'Salmos 37:5' },
+    { verse: 'Tu palabra es verdad.', reference: 'Juan 17:17' },
+    { verse: 'Jesucristo es el mismo ayer, y hoy, y por los siglos.', reference: 'Hebreos 13:8' },
+    { verse: 'La paz os dejo, mi paz os doy.', reference: 'Juan 14:27' },
+    { verse: 'El amor nunca deja de ser.', reference: '1 Corintios 13:8' },
+    { verse: 'Si Dios es por nosotros, ¿quién contra nosotros?', reference: 'Romanos 8:31' },
+    { verse: 'Gracia y paz sean a vosotros, de Dios nuestro Padre.', reference: '1 Corintios 1:3' }
 ];
 
 /**

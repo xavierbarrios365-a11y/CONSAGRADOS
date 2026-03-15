@@ -74,9 +74,9 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
 
             // Fix: setProgress must be called even if allAgents is being loaded
             if (isAuditFetch) {
-                setAuditProgress(data.progress || []);
+                setAuditProgress((data.progress as any) || []);
             } else {
-                setProgress(data.progress || []);
+                setProgress((data.progress as any) || []);
             }
 
             // Load all agents if missing (needed for certificates and audit)
@@ -388,15 +388,16 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                     }
                 }
             }
-            const isCompleted = score > 0 || (activeLesson.questions.length === 0 && textAnswer.trim() !== "");
+            const isCompleted = score >= 60 || (activeLesson.questions.length === 0 && textAnswer.trim() !== "");
             const wasAlreadyCompleted = isLessonCompleted(activeLesson.id);
+            const currentAttempts = getLessonAttempts(activeLesson.id);
             const result = await submitQuizResultSupabase(
                 agentId,
                 activeLesson.id,
                 activeLesson.courseId,
                 score,
                 isCompleted,
-                1 // Agrega 1 intento
+                currentAttempts + 1
             );
 
             // Award XP only on FIRST successful completion
@@ -891,7 +892,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                 agentName={allAgents.find(a => a.id === agentId)?.name}
                                 status={isLessonCompleted(activeLesson.id) ? 'COMPLETADO' : (getLessonAttempts(activeLesson.id) >= 2 ? 'FALLIDO' : 'PENDIENTE')}
                             >
-                                {activeLesson.questions && activeLesson.questions.length > 0 && (
+                                {activeLesson.questions && activeLesson.questions.length > 0 ? (
                                     <div className="space-y-10 py-6">
                                         {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
                                             <div className="py-10 text-center space-y-6">
@@ -953,7 +954,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         {activeLesson.questions[currentQuestionIndex].question}
                                                     </p>
 
-                                                    {activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? (
+                                                    {activeLesson.questions[currentQuestionIndex]?.type === 'TEXT' ? (
                                                         <textarea
                                                             value={textAnswer}
                                                             onChange={(e) => setTextAnswer(e.target.value)}
@@ -962,7 +963,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         />
                                                     ) : (
                                                         <div className="grid grid-cols-1 gap-4">
-                                                            {activeLesson.questions[currentQuestionIndex].options.map((option, idx) => (
+                                                            {activeLesson.questions[currentQuestionIndex]?.options?.map((option, idx) => (
                                                                 <button
                                                                     key={idx}
                                                                     onClick={() => handleAnswerSelect(option)}
@@ -1071,7 +1072,7 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                             VOLVER A INTENTAR EVALUACIÓN
                                                         </button>
                                                         <p className="text-[9px] text-gray-500 font-bold uppercase text-center tracking-widest">
-                                                            PUNTAJE MÍNIMO REQUERIDO: 75%
+                                                            PUNTAJE MÍNIMO REQUERIDO: 60%
                                                         </p>
                                                     </div>
                                                 )}
@@ -1097,6 +1098,13 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 })()}
                                             </div>
                                         )}
+                                    </div>
+                                ) : (
+                                    <div className="py-12 border-2 border-dashed border-black/10 rounded-sm text-center space-y-3">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-black uppercase tracking-widest">DETECCIÓN: EVALUACIÓN NO DISPONIBLE</p>
+                                            <p className="text-[9px] text-gray-500 font-bold uppercase">ESTA UNIDAD NO TIENE PREGUNTAS ASIGNADAS EN EL REGISTRO.</p>
+                                        </div>
                                     </div>
                                 )}
                             </TacticalDocument>

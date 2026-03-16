@@ -114,15 +114,23 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     };
 
 
-    const broadcastAction = (event: string, payload: any = {}) => {
+    const broadcastAction = async (event: string, payload: any = {}) => {
         const channel = bcRef.current;
-        if (channel) {
+        if (channel && channel.state === 'joined') {
             console.log(`📤 Enviando Broadcast: ${event}`, payload);
-            channel.send({
-                type: 'broadcast',
-                event: event,
-                payload: payload
-            });
+            try {
+                const response = await channel.send({
+                    type: 'broadcast',
+                    event: event,
+                    payload: payload
+                });
+                console.log(`📡 Broadcast Response (${event}):`, response);
+            } catch (err) {
+                console.error(`❌ Error en broadcast (${event}):`, err);
+            }
+        } else {
+            console.warn(`⚠️ Canal no listo para broadcast (${event}). Re-suscribiendo...`);
+            loadSession(); // Re-trigger load to refresh all
         }
     };
 

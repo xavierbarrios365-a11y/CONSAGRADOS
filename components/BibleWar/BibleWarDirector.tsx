@@ -17,7 +17,8 @@ import {
     RefreshCw,
     Swords,
     X,
-    Layout
+    Layout,
+    Clock
 } from 'lucide-react';
 import { supabase } from '../../services/supabaseClient';
 import {
@@ -249,6 +250,16 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         } else {
             console.error("⚠️ Error en transferencia (¿Falta RPC?):", res.error);
         }
+
+        // 🎖️ ACTUALIZAR ESTADO EN DB (Fallback por si el RPC no lo hizo o falló)
+        await updateBibleWarSession({
+            status: 'RESOLVED',
+            last_winner: winner,
+            current_question_id: null,
+            answer_a: null,
+            answer_b: null,
+            active_team: null
+        });
 
         // 🎖️ BROADCAST RESOLVE regardless of RPC success so the UI moves forward
         broadcastAction('RESOLVE', { winner });

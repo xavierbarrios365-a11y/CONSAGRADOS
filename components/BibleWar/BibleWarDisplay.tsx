@@ -314,7 +314,23 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             broadcastAction('BOTH_ANSWERED', { answer_a: newState.answer_a, answer_b: newState.answer_b });
         }
 
-        if (newState.current_question_id && newState.status !== 'RESOLVED' && !isResolvingRef.current) {
+        if (newState.status === 'RESOLVED' && (newState as any).last_winner && !isResolvingRef.current) {
+            console.log("🏆 Estado RESOLVED detectado en DB. Revelando ganador:", (newState as any).last_winner);
+            isResolvingRef.current = true;
+            if (timerRef.current) clearInterval(timerRef.current);
+            setTimeLeft(0);
+            const winner = (newState as any).last_winner;
+            setShowTransfer(winner);
+            if (winner === 'A' || winner === 'B' || winner === 'TIE') playSound('success');
+            else if (winner === 'NONE') playSound('fail');
+
+            setTimeout(() => {
+                setShowTransfer(null);
+                setActiveQuestion(null);
+                setDisplayPhase('IDLE');
+                isResolvingRef.current = false;
+            }, 5000);
+        } else if (newState.current_question_id && newState.status !== 'RESOLVED' && !isResolvingRef.current) {
             if (activeQuestion?.id !== newState.current_question_id) {
                 const bibleQuestions = await fetchBibleWarQuestions();
                 const q = bibleQuestions.find(q => q.id === newState.current_question_id);
@@ -346,6 +362,12 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
         if (data?.current_question_id && data?.status !== 'RESOLVED' && !isResolvingRef.current) {
             const bibleQuestions = await fetchBibleWarQuestions();
             setActiveQuestion(bibleQuestions.find(q => q.id === data.current_question_id));
+        } else if (data?.status === 'RESOLVED' && (data as any).last_winner && !isResolvingRef.current) {
+            console.log("🏆 Estado RESOLVED detectado al cargar sesión:", (data as any).last_winner);
+            setActiveQuestion(null);
+            setShowTransfer((data as any).last_winner);
+            // No reproducir sonido aquí para evitar ruidos al navegar, 
+            // solo mostrar el estado visual.
         } else if (data?.status === 'RESOLVED' && !isResolvingRef.current) {
             setActiveQuestion(null);
         }

@@ -8,7 +8,8 @@ ADD COLUMN IF NOT EXISTS last_coin_flip TEXT,
 ADD COLUMN IF NOT EXISTS timer_status TEXT DEFAULT 'STOPPED',
 ADD COLUMN IF NOT EXISTS timer_end_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS gladiator_a_id TEXT,
-ADD COLUMN IF NOT EXISTS gladiator_b_id TEXT;
+ADD COLUMN IF NOT EXISTS gladiator_b_id TEXT,
+ADD COLUMN IF NOT EXISTS last_winner TEXT;
 
 -- 2. Crear el RPC transfer_bible_war_xp
 CREATE OR REPLACE FUNCTION public.transfer_bible_war_xp(
@@ -67,6 +68,7 @@ BEGIN
     UPDATE public.bible_war_sessions
     SET 
         status = 'RESOLVED',
+        last_winner = p_winner,
         current_question_id = NULL,
         answer_a = NULL,
         answer_b = NULL,

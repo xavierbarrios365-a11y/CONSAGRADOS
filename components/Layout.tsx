@@ -38,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.VISITOR, icon: <Radar size={20} />, label: 'Radar', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.SCANNER, icon: <QrCode size={20} />, label: 'Asistencia', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
     { id: AppView.ASCENSO, icon: <ChevronUp size={20} />, label: 'Ascenso', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.DIRECTOR] },
+    { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
   ];
 
   const filterItemsByRole = (items: typeof bottomNavItems) => {

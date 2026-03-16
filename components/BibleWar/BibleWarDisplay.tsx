@@ -160,6 +160,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             .channel('bible_war_display_db')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_sessions' }, (payload) => {
                 const newState = payload.new as BibleWarSession;
+                console.log("🔄 Display: DB CHANGE DETECTED", newState);
                 handleUpdate(newState);
             })
             .subscribe();
@@ -216,7 +217,15 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                 if (envelope.payload?.question) {
                     console.log('✅ Pregunta recibida en Display:', envelope.payload.question.id);
                     setActiveQuestion(envelope.payload.question);
-                    setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: envelope.payload.question?.id, show_answer: false, answer_a: null, answer_b: null } : null);
+                    setSession(prev => prev ? {
+                        ...prev,
+                        status: 'ACTIVE',
+                        display_phase: 'READING',
+                        current_question_id: envelope.payload.question?.id,
+                        show_answer: false,
+                        answer_a: null,
+                        answer_b: null
+                    } : null);
                     setDisplayPhase('READING');
                     playSound('reading_pulse', true);
                     startLocalTimer(15, 'READING');
@@ -285,6 +294,23 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
     const handleUpdate = async (newState: BibleWarSession) => {
         setSession(newState);
 
+        // 🔄 SINCRONIZAR FASE DESDE DB (v3.2)
+        if (newState.display_phase && newState.display_phase !== phaseRef.current) {
+            console.log("📍 Sincronizando Fase desde DB:", newState.display_phase);
+            setDisplayPhase(newState.display_phase as any);
+            if (newState.display_phase === 'BATTLE') {
+                stopSound();
+                playSound('battle_transition');
+                startLocalTimer(30, 'BATTLE');
+            } else if (newState.display_phase === 'READING') {
+                playSound('reading_pulse', true);
+                startLocalTimer(15, 'READING');
+            } else {
+                if (timerRef.current) clearInterval(timerRef.current);
+                setTimeLeft(0);
+            }
+        }
+
         // Cargar gladiadores si cambiaron (v4.0)
         if (newState.gladiator_a_id !== session?.gladiator_a_id || newState.gladiator_b_id !== session?.gladiator_b_id) {
             const { data: rawAgents } = await supabase
@@ -307,20 +333,19 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             });
         }
 
-        // Verificamos si ambos equipos han respondido para notificar auto-resolución
-        // Eliminamos la restricción de 'BATTLE' phase para que si responden muy rápido en 'READING' también resuelva de inmediato.
-        if (newState.status === 'ACTIVE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
-            console.log("🎯 Ambos equipos listos. Notificando Director...");
+        // Verificamos si ambos equipos han respondido para notificar auto-resolución (v4.1)
+        if (newState.status === 'ACTIVE' && newState.display_phase === 'BATTLE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
+            console.log("🎯 Ambos equipos listos en fase de batalla. Notificando Director...");
             broadcastAction('BOTH_ANSWERED', { answer_a: newState.answer_a, answer_b: newState.answer_b });
         }
 
-        if (newState.status === 'RESOLVED' && (newState as any).last_winner && !isResolvingRef.current) {
-            console.log("🏆 Estado RESOLVED detectado en DB. Revelando ganador:", (newState as any).last_winner);
+        if (newState.status === 'RESOLVED' && newState.last_winner && !isResolvingRef.current) {
+            console.log("🏆 Estado RESOLVED detectado en DB. Revelando ganador:", newState.last_winner);
             isResolvingRef.current = true;
             if (timerRef.current) clearInterval(timerRef.current);
             setTimeLeft(0);
-            const winner = (newState as any).last_winner;
-            setShowTransfer(winner);
+            const winner = newState.last_winner;
+            setShowTransfer(winner as any);
             if (winner === 'A' || winner === 'B' || winner === 'TIE') playSound('success');
             else if (winner === 'NONE') playSound('fail');
 
@@ -400,15 +425,18 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
     const startLocalTimer = (seconds: number, phase: 'READING' | 'BATTLE' = 'BATTLE') => {
         if (timerRef.current) clearInterval(timerRef.current);
         setTimeLeft(seconds);
+        // NO seteamos displayPhase aquí preventivamente, esperamos al cambio en DB
+        // Pero si es llamado desde LAUNCH_QUESTION ( Reading inicial ), sí.
+        if (phase === 'READING') setDisplayPhase('READING');
+
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     if (timerRef.current) clearInterval(timerRef.current);
                     if (phase === 'READING') {
-                        setDisplayPhase('BATTLE');
-                        stopSound();
-                        playSound('battle_transition');
-                        startLocalTimer(30, 'BATTLE');
+                        // Esperamos el BATTLE desde DB, pero si el Director falla, el display avanza solo
+                        // tras un breve delay o simplemente confiamos en el DB.
+                        // setDisplayPhase('BATTLE');
                     } else {
                         console.log("⏰ Tiempo agotado. Notificando Director...");
                         playSound('timeout');
@@ -459,7 +487,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
 
             {/* Top Bar */}
             <div className="relative z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-3 items-center bg-black/40 backdrop-blur-xl border-b border-white/5 gap-6">
-                <motion.div animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-blue-900/40 p-4 rounded-2xl border border-blue-500/30 shadow-2xl overflow-hidden min-w-0">
+                <motion.div animate={showTransfer === 'A' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-blue-900/40 p-4 rounded-2xl border border-blue-500/30 shadow-2xl overflow-hidden min-w-0 relative">
                     <div className="w-16 h-16 md:w-24 md:h-24 shrink-0 relative">
                         {gladiators.a?.photoUrl ? (
                             <img src={formatDriveUrl(gladiators.a.photoUrl)} className="w-full h-full object-cover rounded-2xl border-2 border-blue-400/50 shadow-[0_0_40px_rgba(37,99,235,0.5)]" />
@@ -468,6 +496,14 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                                 <Shield size={40} className="text-white" />
                             </div>
                         )}
+                        {/* INDICADOR DE RESPUESTA (Badge de Opción Seleccionada) */}
+                        <AnimatePresence>
+                            {session?.answer_a && (
+                                <motion.div initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }} className="absolute -top-2 -right-2 w-8 h-8 md:w-12 md:h-12 bg-blue-600 border-2 border-white rounded-full flex items-center justify-center font-black text-xs md:text-xl shadow-lg z-20">
+                                    {(session.show_answer || session.status === 'RESOLVED') ? (activeQuestion?.options.indexOf(session.answer_a) === 0 ? 'A' : activeQuestion?.options.indexOf(session.answer_a) === 1 ? 'B' : activeQuestion?.options.indexOf(session.answer_a) === 2 ? 'C' : 'D') : '?'}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -490,7 +526,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                     )}
                 </div>
 
-                <motion.div animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-teal-900/40 p-4 rounded-2xl border border-teal-500/30 shadow-2xl flex-row-reverse text-right overflow-hidden min-w-0">
+                <motion.div animate={showTransfer === 'B' ? { scale: [1, 1.1, 1], borderColor: '#ffb700' } : {}} className="flex items-center gap-4 bg-teal-900/40 p-4 rounded-2xl border border-teal-500/30 shadow-2xl flex-row-reverse text-right overflow-hidden min-w-0 relative">
                     <div className="w-16 h-16 md:w-24 md:h-24 shrink-0 relative">
                         {gladiators.b?.photoUrl ? (
                             <img src={formatDriveUrl(gladiators.b.photoUrl)} className="w-full h-full object-cover rounded-2xl border-2 border-teal-400/50 shadow-[0_0_40px_rgba(20,184,166,0.5)]" />
@@ -499,6 +535,14 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                                 <Target size={40} className="text-white" />
                             </div>
                         )}
+                        {/* INDICADOR DE RESPUESTA (Badge de Opción Seleccionada) */}
+                        <AnimatePresence>
+                            {session?.answer_b && (
+                                <motion.div initial={{ scale: 0, rotate: 45 }} animate={{ scale: 1, rotate: 0 }} className="absolute -top-2 -left-2 w-8 h-8 md:w-12 md:h-12 bg-teal-600 border-2 border-white rounded-full flex items-center justify-center font-black text-xs md:text-xl shadow-lg z-20">
+                                    {(session.show_answer || session.status === 'RESOLVED') ? (activeQuestion?.options.indexOf(session.answer_b) === 0 ? 'A' : activeQuestion?.options.indexOf(session.answer_b) === 1 ? 'B' : activeQuestion?.options.indexOf(session.answer_b) === 2 ? 'C' : 'D') : '?'}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-end gap-2">

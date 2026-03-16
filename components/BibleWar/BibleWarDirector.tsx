@@ -73,7 +73,13 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             .channel('bible_war_director_db')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bible_war_sessions' }, (payload) => {
                 console.log("🔄 BibleWarDirector: DB CHANGE DETECTED", payload);
-                setSession(payload.new as BibleWarSession);
+                const newState = payload.new as BibleWarSession;
+                setSession(newState);
+
+                // Sincronizar fase local desde DB si cambió
+                if (newState.display_phase && newState.display_phase !== displayPhase) {
+                    setDisplayPhase(newState.display_phase as any);
+                }
             })
             .subscribe((status) => console.log("📡 Subscripción DB:", status));
 
@@ -99,6 +105,7 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
         return () => {
             console.log("🧹 BibleWarDirector: COMPONENTE DESMONTADO");
+            if (timerRef.current) clearInterval(timerRef.current);
             supabase.removeChannel(dbChannel);
             supabase.removeChannel(bcChannel);
         };
@@ -151,11 +158,12 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         const updates = {
             current_question_id: q.id,
             status: 'ACTIVE' as const,
+            display_phase: 'READING' as const, // Forzar fase inicial
             show_answer: false,
             active_team: null,
             timer_status: 'STOPPED' as const,
             timer_end_at: null,
-            answer_a: null,
+            answer_a: null, // LIMPIAR RESPUESTAS ANTERIORES
             answer_b: null,
             roulette_category: q.category,
             used_questions: Array.from(new Set([...usedIds, q.id])),
@@ -182,11 +190,13 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         setTimeLeft(seconds);
         setDisplayPhase(phase);
 
-        timerRef.current = setInterval(() => {
+        timerRef.current = setInterval(async () => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     if (timerRef.current) clearInterval(timerRef.current);
                     if (phase === 'READING') {
+                        // Sincronizar transición a BATTLE en DB
+                        updateBibleWarSession({ display_phase: 'BATTLE' });
                         startLocalTimer(30, 'BATTLE');
                     } else {
                         setDisplayPhase('IDLE');
@@ -216,6 +226,12 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
         if (!currentSession?.current_question_id) {
             console.log("❌ handleAutoResolve: No hay sesión o question_id activo.");
+            return;
+        }
+
+        // 🛡️ GUARDIA DE FASE: No resolver si estamos en READING
+        if (currentSession.display_phase === 'READING') {
+            console.warn("🚫 handleAutoResolve bloqueado: Estamos en fase de LECTURA.");
             return;
         }
 
@@ -252,12 +268,12 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         }
 
         // 🎖️ ACTUALIZAR ESTADO EN DB (Fallback por si el RPC no lo hizo o falló)
+        // MANTENEMOS answer_a y answer_b para que el display las muestre
         await updateBibleWarSession({
             status: 'RESOLVED',
             last_winner: winner,
+            display_phase: 'IDLE',
             current_question_id: null,
-            answer_a: null,
-            answer_b: null,
             active_team: null
         });
 

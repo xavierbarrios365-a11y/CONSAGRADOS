@@ -42,6 +42,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                     setSession(prev => prev ? {
                         ...prev,
                         status: 'ACTIVE',
+                        display_phase: 'READING',
                         current_question_id: payload.payload.question.id,
                         answer_a: null,
                         answer_b: null,
@@ -123,6 +124,20 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const handleSessionUpdate = async (newState: BibleWarSession) => {
         if (!newState) return;
 
+        // 🔄 SINCRONIZAR FASE DESDE DB (v2.3)
+        if (newState.display_phase && newState.display_phase !== displayPhase) {
+            console.log("📍 Sincronizando Fase desde DB (Student):", newState.display_phase);
+            setDisplayPhase(newState.display_phase as any);
+            if (newState.display_phase === 'BATTLE') {
+                startLocalTimer(30, 'BATTLE');
+            } else if (newState.display_phase === 'READING') {
+                startLocalTimer(15, 'READING');
+            } else {
+                if (timerRef.current) clearInterval(timerRef.current);
+                setTimeLeft(0);
+            }
+        }
+
         // Re-evaluar si sigo siendo gladiador en cada actualización
         const currentIdStr = String(currentUser.id).trim().toUpperCase();
         let currentTeamAssignment: 'A' | 'B' | null = null;
@@ -172,9 +187,9 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     };
 
     const handleSelectOption = async (option: string) => {
-        console.log(`🎯 Selección de opción: ${option} | Team: ${myTeam} | Status: ${session?.status} | isSubmitting: ${isSubmitting}`);
-        if (!myTeam || session?.status !== 'ACTIVE' || isSubmitting) {
-            console.warn("🚫 Selección bloqueada por estado o falta de equipo.");
+        console.log(`🎯 Selección: ${option} | Team: ${myTeam} | Status: ${session?.status} | Phase: ${displayPhase}`);
+        if (!myTeam || session?.status !== 'ACTIVE' || displayPhase !== 'BATTLE' || isSubmitting) {
+            console.warn("🚫 Selección bloqueada por estado, fase o falta de equipo.");
             return;
         }
 
@@ -227,7 +242,8 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                 if (prev <= 1) {
                     if (timerRef.current) clearInterval(timerRef.current);
                     if (phase === 'READING') {
-                        startLocalTimer(30, 'BATTLE');
+                        // El cambio a BATTLE vendrá por DB (Sincronización v2.3)
+                        // Pero por si acaso el Director tarda, no forzamos para evitar desync
                     } else {
                         setDisplayPhase('IDLE');
                     }

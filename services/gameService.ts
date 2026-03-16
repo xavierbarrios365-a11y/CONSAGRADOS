@@ -6,10 +6,10 @@ import { BibleWarSession, IQLevel, Agent } from '../types';
  */
 export const sendDuelChallenge = async (challengerId: string, opponentId: string) => {
     try {
-        const { data, error } = await supabase.from('duel_challenges').insert([{
-            challenger_id: challengerId,
-            opponent_id: opponentId,
-            status: 'PENDING'
+        const { data, error } = await supabase.from('duelo_desafios').insert([{
+            retador_id: challengerId,
+            oponente_id: opponentId,
+            status: 'PENDIENTE'
         }]).select();
         if (error) throw error;
         return { success: true, data: data[0] };
@@ -91,9 +91,9 @@ export const fetchAcademyDataSupabase = async (agentId: string) => {
 export const fetchMyChallenges = async (agentId: string) => {
     try {
         const { data, error } = await supabase
-            .from('duel_challenges')
+            .from('duelo_desafios')
             .select('*')
-            .or(`challenger_id.eq.${agentId},opponent_id.eq.${agentId}`)
+            .or(`retador_id.eq.${agentId},oponente_id.eq.${agentId}`)
             .order('created_at', { ascending: false });
         if (error) throw error;
         return data || [];
@@ -107,7 +107,7 @@ export const fetchMyChallenges = async (agentId: string) => {
  */
 export const acceptDuelChallenge = async (challengeId: string, retadorId?: string, oponenteId?: string) => {
     try {
-        const { error } = await supabase.from('duel_challenges').update({ status: 'ACCEPTED' }).eq('id', challengeId);
+        const { error } = await supabase.from('duelo_desafios').update({ status: 'ACEPTADO' }).eq('id', challengeId);
         if (error) throw error;
 
         // Asumimos que la BDD crea la sesión vía trigger, buscamos la sesión generada.
@@ -132,7 +132,7 @@ export const fetchBibleWarQuestions = async (category?: string) => {
     try {
         let query = supabase.from('bible_war_questions').select('*');
         if (category && category !== 'ALL') {
-            query = query.eq('categoria', category);
+            query = query.eq('category', category);
         }
         const { data, error } = await query;
         if (error) throw error;
@@ -338,7 +338,7 @@ export const resetStudentAttemptsSupabase = async (agentId: string, lessonId: st
  */
 export const clearBibleWarQuestions = async () => {
     try {
-        const { error } = await supabase.from('bible_war_questions').delete().neq('categoria', 'DO_NOT_DELETE');
+        const { error } = await supabase.from('bible_war_questions').delete().neq('category', 'DO_NOT_DELETE');
         if (error) throw error;
         return { success: true };
     } catch (e: any) {

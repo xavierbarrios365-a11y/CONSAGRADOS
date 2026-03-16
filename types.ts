@@ -250,6 +250,7 @@ export interface BibleWarSession {
   used_questions?: string[];
   gladiator_a_id?: string | null;
   gladiator_b_id?: string | null;
+  display_phase?: 'IDLE' | 'READING' | 'BATTLE';
 }
 
 export interface DuelChallenge {

@@ -213,11 +213,14 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             .on('broadcast', { event: 'LAUNCH_QUESTION' }, (envelope) => {
                 console.log('⚡ Display: LAUNCH_QUESTION', envelope.payload);
                 if (envelope.payload?.question) {
+                    console.log('✅ Pregunta recibida en Display:', envelope.payload.question.id);
                     setActiveQuestion(envelope.payload.question);
                     setSession(prev => prev ? { ...prev, status: 'ACTIVE', current_question_id: envelope.payload.question?.id, show_answer: false, answer_a: null, answer_b: null } : null);
                     setDisplayPhase('READING');
                     playSound('reading_pulse', true);
                     startLocalTimer(15, 'READING');
+                } else {
+                    console.warn('⚠️ LAUNCH_QUESTION recibido sin datos de pregunta');
                 }
             })
             .on('broadcast', { event: 'RESOLVE' }, (envelope) => {
@@ -250,7 +253,8 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                 setSession(prev => prev ? { ...prev, show_answer: envelope.payload?.show } : null);
             })
             .on('broadcast', { event: 'START_TIMER' }, (envelope) => {
-                startLocalTimer(envelope.payload?.seconds);
+                console.log('⏱️ START_TIMER recibido en Display:', envelope.payload);
+                startLocalTimer(envelope.payload?.seconds || 30, 'BATTLE');
             })
             .on('broadcast', { event: 'RESET' }, () => {
                 stopSound();

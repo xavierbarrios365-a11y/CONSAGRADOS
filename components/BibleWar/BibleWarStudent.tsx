@@ -17,6 +17,9 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
+    const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         console.log("🛡️ CARGANDO BIBLE WAR STUDENT v2.2.0 (ATOMIC-PURGE)");
@@ -45,6 +48,7 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                         show_answer: false,
                         roulette_category: payload.payload.question.category
                     } : null);
+                    startLocalTimer(15, 'READING');
                 }
             })
             .on('broadcast', { event: 'SPIN_ROULETTE' }, (payload) => {
@@ -63,7 +67,14 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
             })
             .on('broadcast', { event: 'RESET' }, () => {
                 setSelectedOption(null);
+                if (timerRef.current) clearInterval(timerRef.current);
+                setTimeLeft(0);
+                setDisplayPhase('IDLE');
                 loadInitialData();
+            })
+            .on('broadcast', { event: 'START_TIMER' }, (payload) => {
+                console.log("⏱️ START_TIMER RECIBIDO:", payload.payload);
+                startLocalTimer(payload.payload.seconds, 'BATTLE');
             })
             .on('broadcast', { event: 'FORCE_RELOAD' }, () => {
                 window.location.reload();
@@ -206,6 +217,27 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
         setIsSubmitting(false);
     };
 
+    const startLocalTimer = (seconds: number, phase: 'READING' | 'BATTLE' = 'BATTLE') => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setTimeLeft(seconds);
+        setDisplayPhase(phase);
+
+        timerRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    if (phase === 'READING') {
+                        startLocalTimer(30, 'BATTLE');
+                    } else {
+                        setDisplayPhase('IDLE');
+                    }
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
     if (loading) return <div className="p-10 text-center text-white/50">Cargando Arsenal...</div>;
 
     if (!myTeam) {
@@ -321,9 +353,29 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                             )}
                         </div>
 
-                        <div className="text-center space-y-1 md:space-y-2 px-2">
+                        <div className="text-center space-y-1 md:space-y-2 px-2 relative">
+                            <AnimatePresence>
+                                {timeLeft > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 1.5 }}
+                                        className="absolute -top-12 left-1/2 -translate-x-1/2"
+                                    >
+                                        <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 ${timeLeft <= 5 ? 'border-red-500 bg-red-500/10' : 'border-[#ffb700] bg-[#ffb700]/10'} backdrop-blur-md`}>
+                                            <span className={`text-xl font-bebas leading-none ${timeLeft <= 5 ? 'text-red-500 animate-pulse' : 'text-[#ffb700]'}`}>{timeLeft}</span>
+                                            <span className="text-[6px] font-black uppercase tracking-widest opacity-60">
+                                                {displayPhase === 'READING' ? 'LEE' : 'YA'}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-white/40">{activeQuestion.category}</p>
-                            <h3 className="text-base md:text-2xl font-black italic leading-tight">{activeQuestion.question}</h3>
+                            <h3 className={`text-base md:text-2xl font-black italic leading-tight transition-all ${displayPhase === 'READING' ? 'scale-105 text-[#ffb700]' : ''}`}>
+                                {activeQuestion.question}
+                            </h3>
                         </div>
 
                         {myTeamAnswer && session.status !== 'RESOLVED' ? (
@@ -364,9 +416,10 @@ const BibleWarStudent: React.FC<BibleWarStudentProps> = ({ currentUser, onClose 
                                     return (
                                         <button
                                             key={i}
-                                            disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED'}
+                                            disabled={!!myTeamAnswer || isSubmitting || session.status === 'RESOLVED' || displayPhase === 'READING'}
                                             onPointerDown={(e) => {
                                                 e.preventDefault();
+                                                if (displayPhase === 'READING') return;
                                                 handleSelectOption(opt);
                                             }}
                                             className={`p-4 md:p-6 rounded-2xl transition-colors duration-75 relative overflow-hidden text-left flex flex-col justify-center min-h-[85px] w-full border-2 ${bgClass} 

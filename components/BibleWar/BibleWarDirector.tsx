@@ -50,6 +50,9 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
     const [questions, setQuestions] = useState<any[]>([]);
     const [showQuestionImporter, setShowQuestionImporter] = useState(false);
     const [importJson, setImportJson] = useState('');
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [displayPhase, setDisplayPhase] = useState<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
     const sessionRef = useRef<BibleWarSession | null>(null);
     const questionsRef = useRef<any[]>([]);
     const bcRef = useRef<any>(null);
@@ -165,11 +168,33 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
         console.log("📦 Resultado Lanzamiento:", res);
         if (res.success) {
             broadcastAction('LAUNCH_QUESTION', { question: q });
+            startLocalTimer(15, 'READING');
         } else {
             console.error("Error al lanzar pregunta:", res.error);
             alert("Error al lanzar pregunta. Reintentando...");
             loadSession();
         }
+    };
+
+    const startLocalTimer = (seconds: number, phase: 'READING' | 'BATTLE' = 'BATTLE') => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setTimeLeft(seconds);
+        setDisplayPhase(phase);
+
+        timerRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    if (phase === 'READING') {
+                        startLocalTimer(30, 'BATTLE');
+                    } else {
+                        setDisplayPhase('IDLE');
+                    }
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
     };
 
     const handleUpdateStakes = async (val: number) => {
@@ -408,7 +433,15 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
             <div className="p-6 bg-black/20 border-b border-white/10 flex items-center justify-between">
                 <div>
                     <h2 className="text-lg md:text-xl font-bebas tracking-widest uppercase">Panel de Comando: Guerra Bíblica</h2>
-                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest animate-pulse">ESTADO: v2.5.4 (DEBUG ACTIVE - SI VES ESTO, EL BOTÓN SYNC DEBERÍA DAR ALERTA)</p>
+                    <div className="flex items-center gap-3">
+                        <p className="text-[10px] text-red-500 font-black uppercase tracking-widest animate-pulse">ESTADO: v2.5.5 (SYNC OK)</p>
+                        {timeLeft > 0 && (
+                            <div className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${displayPhase === 'READING' ? 'bg-amber-600' : 'bg-red-600'}`}>
+                                <Clock size={12} />
+                                {displayPhase === 'READING' ? 'ESTUDIO' : 'BATALLA'}: {timeLeft}s
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={() => setShowQuestionImporter(!showQuestionImporter)} className={`p-2 rounded-xl transition-all ${showQuestionImporter ? 'bg-purple-600' : 'bg-white/5 border border-white/10'}`}>

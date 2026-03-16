@@ -20,6 +20,7 @@ const AcademyModule = React.lazy(() => import('./components/AcademyModule'));
 const CIUModule = React.lazy(() => import('./components/IntelligenceCenter'));
 const BibleWarDisplay = React.lazy(() => import('./components/BibleWar/BibleWarDisplay'));
 const BibleWarStudent = React.lazy(() => import('./components/BibleWar/BibleWarStudent'));
+const BibleWarDirector = React.lazy(() => import('./components/BibleWar/BibleWarDirector'));
 import { EnrollmentForm } from './components/EnrollmentForm';
 import DailyVerse from './components/DailyVerse';
 import BibleReader from './components/BibleReader';
@@ -664,7 +665,7 @@ const App: React.FC = () => {
         }
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="arena" className="h-full">
-            <BibleWarDisplay isFullScreen={false} />
+            <BibleWarDirector onClose={() => setView(AppView.HOME)} />
           </motion.div>
         );
       }
@@ -673,6 +674,14 @@ const App: React.FC = () => {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="iq_game" className="h-full">
             <TacticalIQ currentUser={currentUser} onClose={() => setView(AppView.HOME)} onUpdateNeeded={syncData} />
+          </motion.div>
+        );
+      }
+
+      if (view === AppView.BIBLE_WAR_DISPLAY) {
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="bible_war_display" className="h-full">
+            <BibleWarDisplay isFullScreen={false} />
           </motion.div>
         );
       }

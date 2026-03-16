@@ -234,7 +234,7 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                             )}
 
                             {(currentUser?.userRole === UserRole.DIRECTOR || currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2') && (
-                                <button id="btn-combatir" onClick={() => setView(AppView.BIBLE_WAR_STUDENT)} className={`p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-blue-500/10 hover:border-blue-500/40 transition-all active:scale-90 shadow-lg group ${currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2' ? 'py-8 border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : ''}`}>
+                                <button id="btn-combatir" onClick={() => setView(AppView.BIBLE_WAR_ARENA)} className={`p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-blue-500/10 hover:border-blue-500/40 transition-all active:scale-90 shadow-lg group ${currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2' ? 'py-8 border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : ''}`}>
                                     <ShieldCheck size={24} className="text-blue-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform" />
                                     <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Combatir</span>
                                 </button>

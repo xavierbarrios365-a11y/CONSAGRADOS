@@ -456,9 +456,14 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
                     <button onClick={() => window.open('?view=bible_war_display', '_blank')} className="p-2 bg-blue-600 rounded-xl">
                         <Eye size={16} />
                     </button>
-                    <button onClick={handleReset} className="p-2 bg-red-600/20 border border-red-600/30 rounded-xl text-red-500">
+                    <button onClick={handleReset} title="RESETEAR SESIÓN" className="p-2 bg-red-600/20 border border-red-600/30 rounded-xl text-red-500">
                         <RotateCcw size={16} />
                     </button>
+                    {onClose && (
+                        <button onClick={onClose} title="CERRAR ARENA" className="p-2 bg-white/10 border border-white/20 rounded-xl text-white/60 hover:text-white transition-colors">
+                            <X size={16} />
+                        </button>
+                    )}
                 </div>
             </div>
 

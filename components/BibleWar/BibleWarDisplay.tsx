@@ -79,6 +79,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
     const isResolvingRef = useRef(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const phaseRef = useRef<'IDLE' | 'READING' | 'BATTLE'>('IDLE');
+    const bcRef = useRef<any>(null);
 
     useEffect(() => {
         phaseRef.current = displayPhase;
@@ -271,6 +272,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
                     console.log('✅ Arena Display v3.1.0 conectada');
+                    bcRef.current = syncChannel;
                 }
             });
 
@@ -309,11 +311,7 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
         // Eliminamos la restricción de 'BATTLE' phase para que si responden muy rápido en 'READING' también resuelva de inmediato.
         if (newState.status === 'ACTIVE' && newState.answer_a && newState.answer_b && !newState.show_answer) {
             console.log("🎯 Ambos equipos listos. Notificando Director...");
-            supabase.channel('bible_war_realtime').send({
-                type: 'broadcast',
-                event: 'BOTH_ANSWERED',
-                payload: { answer_a: newState.answer_a, answer_b: newState.answer_b }
-            });
+            broadcastAction('BOTH_ANSWERED', { answer_a: newState.answer_a, answer_b: newState.answer_b });
         }
 
         if (newState.current_question_id && newState.status !== 'RESOLVED' && !isResolvingRef.current) {
@@ -392,17 +390,26 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                     } else {
                         console.log("⏰ Tiempo agotado. Notificando Director...");
                         playSound('timeout');
-                        supabase.channel('bible_war_realtime').send({
-                            type: 'broadcast',
-                            event: 'TIMER_END',
-                            payload: { phase: 'BATTLE' }
-                        });
+                        broadcastAction('TIMER_END', { phase: 'BATTLE' });
                     }
                     return 0;
                 }
                 return prev - 1;
             });
         }, 1000);
+    };
+
+    const broadcastAction = async (event: string, payload: any = {}) => {
+        if (!bcRef.current) {
+            console.warn(`⚠️ Intento de broadcast '${event}' en Display sin canal listo.`);
+            // Fallback: si no hay canal listo, intentamos configurar uno rápido
+            return;
+        }
+        await bcRef.current.send({
+            type: 'broadcast',
+            event,
+            payload
+        });
     };
 
     const getDifficultyColor = (diff: string) => {

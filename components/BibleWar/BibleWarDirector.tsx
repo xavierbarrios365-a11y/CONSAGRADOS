@@ -245,11 +245,14 @@ const BibleWarDirector: React.FC<BibleWarDirectorProps> = ({ onClose }) => {
 
         const res = await transferBibleWarXP(winner, stakes);
         if (res.success) {
-            broadcastAction('RESOLVE', { winner });
-            setTimeout(loadSession, 1000);
+            console.log("💰 Transferencia de XP exitosa");
         } else {
-            console.error("Error en transferencia:", res.error);
+            console.error("⚠️ Error en transferencia (¿Falta RPC?):", res.error);
         }
+
+        // 🎖️ BROADCAST RESOLVE regardless of RPC success so the UI moves forward
+        broadcastAction('RESOLVE', { winner });
+        setTimeout(loadSession, 1000);
     };
 
     // Registrar handleAutoResolve en el Ref en cada render (v3.5)

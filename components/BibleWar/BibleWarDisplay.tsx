@@ -524,8 +524,9 @@ const BibleWarDisplay: React.FC<BibleWarDisplayProps> = ({ isFullScreen = true, 
                             )}
                         </div>
                     ) : (
-                        <div className="text-center space-y-8">
-                            <h2 className="text-8xl font-bebas text-white/5 tracking-[0.5em]">ARENA LISTA</h2>
+                        <div className="text-center space-y-8 animate-in fade-in duration-1000">
+                            <h2 className="text-6xl md:text-8xl font-bebas text-white/20 tracking-[0.5em] uppercase">Arena de Batalla</h2>
+                            <p className="text-[#ffb700] font-bebas tracking-[0.3em] text-xl opacity-40 uppercase">Esperando Orden del Mando Central</p>
                         </div>
                     )}
                 </AnimatePresence>

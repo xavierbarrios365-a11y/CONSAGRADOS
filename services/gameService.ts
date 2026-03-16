@@ -23,13 +23,13 @@ export const sendDuelChallenge = async (challengerId: string, opponentId: string
  */
 export const submitIQLevelComplete = async (agentId: string, level: number, timeTakenSecs: number = 0) => {
     try {
-        const { data, error } = await supabase.rpc('submit_iq_level_complete', {
-            p_agent_id: agentId,
-            p_level: level,
-            p_time_secs: timeTakenSecs
+        const { data, error } = await supabase.rpc('process_iq_level_complete', {
+            p_agent_id_input: agentId,
+            p_level_achieved: level,
+            p_time_taken_secs: timeTakenSecs
         });
         if (error) throw error;
-        return { success: true, rewardedXp: data };
+        return { success: data.success, error: data.error };
     } catch (e: any) {
         return { success: false, error: e.message };
     }
@@ -128,12 +128,17 @@ export const acceptDuelChallenge = async (challengeId: string, retadorId?: strin
 /**
  * @description Obtiene preguntas para Bible War.
  */
-export const fetchBibleWarQuestions = async (category: string = 'GENERAL') => {
+export const fetchBibleWarQuestions = async (category?: string) => {
     try {
-        const { data, error } = await supabase.from('bible_war_questions').select('*').eq('categoria', category);
+        let query = supabase.from('bible_war_questions').select('*');
+        if (category && category !== 'ALL') {
+            query = query.eq('categoria', category);
+        }
+        const { data, error } = await query;
         if (error) throw error;
         return data || [];
     } catch (e: any) {
+        console.error('❌ Error fetching Bible War questions:', e.message);
         return [];
     }
 };
@@ -363,10 +368,19 @@ export const fetchBibleWarSession = async (): Promise<BibleWarSession | null> =>
 
 export const updateBibleWarSession = async (updates: Partial<BibleWarSession>) => {
     try {
-        const { error } = await supabase.from('bible_war_sessions').update(updates).eq('id', (updates as any).id || 'current');
+        // Intentar obtener el ID desde updates, o buscar el único id existente
+        let sessionId = (updates as any).id;
+
+        if (!sessionId) {
+            const { data: current } = await supabase.from('bible_war_sessions').select('id').limit(1).single();
+            sessionId = current?.id || '00000000-0000-0000-0000-000000000001';
+        }
+
+        const { error } = await supabase.from('bible_war_sessions').update(updates).eq('id', sessionId);
         if (error) throw error;
         return { success: true };
     } catch (e: any) {
+        console.error('❌ Error updating Bible War session:', e.message);
         return { success: false, error: e.message };
     }
 };

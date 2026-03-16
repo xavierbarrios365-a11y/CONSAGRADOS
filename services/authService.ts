@@ -119,14 +119,13 @@ export const enrollAgentSupabase = async (formData: any) => {
             xp: 0,
             status: 'ACTIVO',
             joined_date: new Date().toISOString(),
-            avatar_url: formData.photoUrl || null,
-            talento: formData.talento || null,
-            bautizado: formData.bautizado || 'NO',
+            foto_url: formData.photoUrl || null,
+            talent: formData.talento || null,
+            baptism_status: formData.bautizado || 'NO',
             relationship_with_god: formData.relacion || null,
             birthday: formData.fechaNacimiento || null,
             security_question: formData.preguntaSeguridad || null,
-            security_answer: formData.respuestaSeguridad || null,
-            referido_por: formData.referidoPor || null
+            security_answer: formData.respuestaSeguridad || null
         }]);
 
         if (error) throw error;

@@ -175,15 +175,13 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
     // Periodic data sync (every 60s)
     useEffect(() => {
-        // Ejecución inmediata al montar si hay usuario
-        if (isLoggedIn) {
-            syncData();
-            checkHeadlines();
-        }
+        // Ejecución inmediata al montar para cargar agentes y permitir el login
+        syncData();
+        checkHeadlines();
 
         const interval = setInterval(() => syncData(true), 60000);
         return () => clearInterval(interval);
-    }, [syncData, isLoggedIn, checkHeadlines]);
+    }, [syncData, checkHeadlines]);
 
     // Realtime Notifications Subscription
     useEffect(() => {

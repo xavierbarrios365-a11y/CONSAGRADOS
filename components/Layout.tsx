@@ -224,7 +224,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-50 bg-[#000810]/95 backdrop-blur-3xl flex flex-col md:hidden"
+            className="fixed inset-0 z-50 bg-[#000810]/95 backdrop-blur-3xl flex flex-col lg:hidden"
           >
             <div className="flex justify-between items-center p-6 border-b border-white/10 pt-[max(1.5rem,env(safe-area-inset-top))]">
               <h2 className="text-xl font-bebas text-[#ffb700] tracking-widest uppercase flex items-center gap-2">

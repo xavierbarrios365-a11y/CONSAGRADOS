@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { NewsFeedItem } from '../types';
+import { FALLBACK_VERSES as STATIC_VERSES } from '../utils/versesFallback';
 
 /**
  * @description Obtiene el feed de noticias desde Supabase.
@@ -216,38 +217,11 @@ export const markStoryAsSeenSupabase = async (storyId: string, agentId: string) 
 };
 
 
-const FALLBACK_VERSES = [
-    { verse: 'Todo lo puedo en Cristo que me fortalece.', reference: 'Filipenses 4:13' },
-    { verse: 'Jehová es mi pastor; nada me faltará.', reference: 'Salmos 23:1' },
-    { verse: 'Porque yo sé los pensamientos que tengo acerca de vosotros...', reference: 'Jeremías 29:11' },
-    { verse: 'Mira que te mando que te esfuerces y seas valiente...', reference: 'Josué 1:9' },
-    { verse: 'Mas buscad primeramente el reino de Dios y su justicia...', reference: 'Mateo 6:33' },
-    { verse: 'Pero los que esperan a Jehová tendrán nuevas fuerzas...', reference: 'Isaías 40:31' },
-    { verse: 'Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien...', reference: 'Romanos 8:28' },
-    { verse: 'Confía en Jehová con todo tu corazón, Y no te apoyes en tu propia prudencia.', reference: 'Proverbios 3:5' },
-    { verse: 'Estad quietos, y conoced que yo soy Dios...', reference: 'Salmos 46:10' },
-    { verse: 'El Señor es mi luz y mi salvación; ¿de quién temeré?', reference: 'Salmos 27:1' },
-    { verse: 'Acerquémonos, pues, confiadamente al trono de la gracia...', reference: 'Hebreos 4:16' },
-    { verse: 'La gracia del Señor Jesucristo sea con todos vosotros.', reference: 'Apocalipsis 22:21' },
-    { verse: 'El que habita al abrigo del Altísimo morará bajo la sombra del Omnipotente.', reference: 'Salmos 91:1' },
-    { verse: 'Lámpara es a mis pies tu palabra, y lumbrera a mi camino.', reference: 'Salmos 119:105' },
-    { verse: 'Clama a mí, y yo te responderé...', reference: 'Jeremías 33:3' },
-    { verse: 'Porque de tal manera amó Dios al mundo...', reference: 'Juan 3:16' },
-    { verse: 'En el principio creó Dios los cielos y la tierra.', reference: 'Génesis 1:1' },
-    { verse: 'Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él.', reference: 'Proverbios 22:6' },
-    { verse: 'El corazón alegre hermosea el rostro.', reference: 'Proverbios 15:13' },
-    { verse: 'Siembra en la mañana tu semilla...', reference: 'Eclesiastés 11:6' },
-    { verse: 'Jehová es mi luz y mi salvación; ¿de quién temeré?', reference: 'Salmos 27:1' },
-    { verse: 'Gustad, y ved que es bueno Jehová; dichoso el hombre que confía en él.', reference: 'Salmos 34:8' },
-    { verse: 'Sean gratos los dichos de mi boca y la meditación de mi corazón.', reference: 'Salmos 19:14' },
-    { verse: 'Encomienda a Jehová tu camino, y confía en él; y él hará.', reference: 'Salmos 37:5' },
-    { verse: 'Tu palabra es verdad.', reference: 'Juan 17:17' },
-    { verse: 'Jesucristo es el mismo ayer, y hoy, y por los siglos.', reference: 'Hebreos 13:8' },
-    { verse: 'La paz os dejo, mi paz os doy.', reference: 'Juan 14:27' },
-    { verse: 'El amor nunca deja de ser.', reference: '1 Corintios 13:8' },
-    { verse: 'Si Dios es por nosotros, ¿quién contra nosotros?', reference: 'Romanos 8:31' },
-    { verse: 'Gracia y paz sean a vosotros, de Dios nuestro Padre.', reference: '1 Corintios 1:3' }
-];
+// Ampliación del pool de fallback a unos 300+ si es posible combinando manuales o usando el utilitario
+const FALLBACK_VERSES = STATIC_VERSES.map(v => ({
+    verse: v.text,
+    reference: `${v.book} ${v.chapter}:${v.verse}`
+}));
 
 /**
  * @description Obtiene el versículo diario. Rota cada 3 horas automáticamente si la BD no se actualiza o para mayor dinamismo.
@@ -259,7 +233,7 @@ export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
             .from('versiculos_diarios')
             .select('texto, cita, fecha')
             .order('fecha', { ascending: false })
-            .limit(100); // Traemos un pool para rotar
+            .limit(500); // Aumentado a 500 para cumplir con el requerimiento de ~300 variantes cada día/bloque
 
         if (!error && data && data.length > 0) {
             // Lógica de rotación táctica: 

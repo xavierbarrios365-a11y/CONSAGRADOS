@@ -148,7 +148,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUser, onStoryView }) => 
         try {
             const uploadRes = await uploadToCloudinary(previewFile);
             if (uploadRes.success && uploadRes.url) {
-                const dbRes = await createStorySupabase(currentUser.id, uploadRes.url, storyContext.trim() || undefined);
+                const dbRes = await createStorySupabase(currentUser.id, uploadRes.url, storyContext.trim() || undefined, currentUser.name);
                 if (dbRes.success) {
                     await loadStories();
                     setShowPreview(false);

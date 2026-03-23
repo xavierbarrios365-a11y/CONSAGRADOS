@@ -62,7 +62,7 @@ export const fetchAcademyDataSupabase = async (agentId: string) => {
             title: l.title,
             videoUrl: l.video_url,
             content: l.content,
-            questions: l.questions || [],
+            questions: l.questions_json || l.questions || [],
             xpReward: l.xp_reward || 0,
             startTime: l.start_time,
             endTime: l.end_time,

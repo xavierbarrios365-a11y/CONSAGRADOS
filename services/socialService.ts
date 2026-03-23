@@ -244,9 +244,15 @@ export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
 
             // Semilla única que cambia cada 3 horas
             const seed = dayOfYear + period3h;
-            const index = seed % data.length;
 
-            const selected = data[index];
+            // Combinar para mayor variedad si la BD tiene muy pocos
+            const combinedPool = [
+                ...data,
+                ...FALLBACK_VERSES.map(v => ({ texto: v.verse, cita: v.reference, fecha: now.toISOString() }))
+            ];
+            const index = seed % combinedPool.length;
+
+            const selected = combinedPool[index];
             return {
                 verse: selected.texto,
                 reference: selected.cita,

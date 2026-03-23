@@ -15,11 +15,16 @@ interface LayoutProps {
   notificationCount: number;
   onOpenInbox: () => void;
   onOpenChat?: () => void;
+  notificationPermission?: NotificationPermission;
+  onInitPush?: () => void;
 }
 
 const OFFICIAL_LOGO = "/logo_white.png";
 
-const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole, userName, onLogout, onHardReset, notificationCount, onOpenInbox, onOpenChat }) => {
+const Layout: React.FC<LayoutProps> = ({
+  children, activeView, setView, userRole, userName, onLogout, onHardReset,
+  notificationCount, onOpenInbox, onOpenChat, notificationPermission, onInitPush
+}) => {
   const [logoError, setLogoError] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -27,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Chat Global', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'FIC', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Ranking', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];
@@ -111,7 +116,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
               animate={{ opacity: 1, scale: 1 }}
               onClick={() => setView(AppView.CONTENT)}
               className="relative cursor-pointer group p-2 text-gray-500 hover:text-blue-400 transition-colors"
-              title="Chat Global"
+              title="FIC"
             >
               <Activity size={20} className="group-hover:scale-110 transition-transform" />
             </motion.div>
@@ -202,6 +207,37 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
 
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-transparent custom-scrollbar">
           <div className="max-w-screen-xl mx-auto h-full">
+            {/* ALERTAS PERSISTENTES: NOTIFICACIONES PUSH */}
+            <AnimatePresence>
+              {notificationPermission === 'default' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="bg-[#ffb700] overflow-hidden"
+                >
+                  <div className="px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-black/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-black/10 flex items-center justify-center animate-pulse">
+                        <Bell size={18} className="text-[#001f3f]" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-[#001f3f] uppercase tracking-wider leading-none">Alertas Tácticas Desactivadas</p>
+                        <p className="text-[8px] text-[#001f3f]/70 font-bold uppercase mt-1">Autoriza las notificaciones para recibir órdenes y menciones en tiempo real.</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={onInitPush}
+                      className="w-full sm:w-auto px-6 py-2 bg-[#001f3f] text-[#ffb700] text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2"
+                    >
+                      <Shield size={14} />
+                      Activar Alertas de Mando
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {children}
           </div>
         </main>

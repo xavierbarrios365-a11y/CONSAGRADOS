@@ -327,14 +327,21 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                 if (mentionMatches) {
                     mentionMatches.forEach(tag => {
                         const cleanTag = tag.slice(1).toLowerCase();
+                        // Mejorar matching: ignorar espacios y acentos para encontrar al agente
                         const targetAgent = agents.find(a => {
                             const normalizedName = a.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s/g, '');
                             const normalizedTag = cleanTag.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                            return normalizedName.includes(normalizedTag) || normalizedTag.includes(normalizedName);
+                            // Coincidencia exacta o contenida (para nombres compuestos)
+                            return normalizedName === normalizedTag || normalizedName.includes(normalizedTag) || normalizedTag.includes(normalizedName);
                         });
 
                         if (targetAgent && targetAgent.id !== currentUser.id) {
-                            sendSocialNotification('MENTION', targetAgent.id, { senderName, messageSnippet });
+                            console.log(`[MENTION] Notificando a agentId: ${targetAgent.id} (${targetAgent.name})`);
+                            sendSocialNotification('MENTION', targetAgent.id, {
+                                senderName,
+                                messageSnippet,
+                                senderId: currentUser.id
+                            });
                         }
                     });
                 }

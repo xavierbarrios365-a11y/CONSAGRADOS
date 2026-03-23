@@ -1236,6 +1236,8 @@ const App: React.FC = () => {
         notificationCount={unreadNotifications}
         onOpenInbox={() => setShowInbox(true)}
         onOpenChat={() => setIsChatOpen(true)}
+        notificationPermission={notificationPermission}
+        onInitPush={initFirebaseMessaging}
       >
         <div key={view} className="relative h-full overflow-y-auto no-scrollbar animate-view">
           <AnimatePresence mode="wait">

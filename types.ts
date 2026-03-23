@@ -61,6 +61,7 @@ export interface Agent {
     losses: number;
     draws: number;
   };
+  fcm_token?: string;
 }
 
 export interface DailyVerse {

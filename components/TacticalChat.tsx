@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebase-config';
 import { Agent, UserRole } from '../types';
 import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, Check, CheckCheck, Loader2, Download, MoreVertical, Trash2, Pencil, Smile, ChevronLeft, Search, Crown } from 'lucide-react';
 import { uploadToCloudinary } from '../services/cloudinaryService';
@@ -22,14 +20,15 @@ interface Message {
     text: string;
     senderId: string;
     senderName: string;
-    timestamp: Timestamp;
+    timestamp: string; // ISO string de Supabase
     type?: 'text' | 'image' | 'video' | 'document';
     fileUrl?: string;
     fileName?: string;
     reactions?: { [emoji: string]: string[] };
-    editedAt?: Timestamp;
+    editedAt?: string;
     storyId?: string;
     storyImageUrl?: string;
+    leido?: boolean;
 }
 
 interface Props {
@@ -116,7 +115,31 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         return [currentUser.id, otherId].sort().join('_');
     };
 
-    // Escuchar mensajes DE LA SALA SELECCIONADA
+    const [onlineAgents, setOnlineAgents] = useState<Set<string>>(new Set());
+
+    // --- REALTIME PRESENCE ---
+    useEffect(() => {
+        const channel = supabase.channel('online-agents', {
+            config: { presence: { key: currentUser.id } }
+        });
+
+        channel
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState();
+                const onlineIds = new Set<string>();
+                Object.keys(state).forEach(id => onlineIds.add(id));
+                setOnlineAgents(onlineIds);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({ online_at: new Date().toISOString(), name: currentUser.name });
+                }
+            });
+
+        return () => { channel.unsubscribe(); };
+    }, [currentUser.id, currentUser.name]);
+
+    // Escuchar mensajes DE LA SALA SELECCIONADA (Realtime Supabase)
     useEffect(() => {
         if (!selectedContact) {
             setMessages([]);
@@ -124,23 +147,84 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         }
 
         const roomId = getRoomId(selectedContact.id);
-        const q = query(
-            collection(db, 'direct_rooms', roomId, 'messages'),
-            orderBy('timestamp', 'asc'),
-            limit(100)
-        );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const msgs: Message[] = [];
-            snapshot.forEach((d) => {
-                msgs.push({ id: d.id, ...d.data() } as Message);
-            });
-            setMessages(msgs);
-            setTimeout(scrollToBottom, 100);
-        });
+        const fetchMessages = async () => {
+            const { data, error } = await supabase
+                .from('mensajes_privados')
+                .select('*')
+                .eq('sala_id', roomId)
+                .order('created_at', { ascending: true })
+                .limit(100);
 
-        return () => unsubscribe();
-    }, [currentUser.id, selectedContact, scrollToBottom]);
+            if (!error && data) {
+                const formatted = data.map(m => ({
+                    id: m.id,
+                    text: m.contenido,
+                    senderId: m.emisor_id,
+                    senderName: agents.find(a => a.id === m.emisor_id)?.name || 'Agente',
+                    timestamp: m.created_at,
+                    type: m.metadata?.type || 'text',
+                    fileUrl: m.metadata?.fileUrl,
+                    fileName: m.metadata?.fileName,
+                    reactions: m.metadata?.reactions,
+                    editedAt: m.metadata?.editedAt,
+                    leido: m.leido
+                }));
+                setMessages(formatted as Message[]);
+                setTimeout(scrollToBottom, 100);
+
+                // Marcar como leídos los recibidos
+                const unreadIds = data.filter(m => m.receptor_id === currentUser.id && !m.leido).map(m => m.id);
+                if (unreadIds.length > 0) {
+                    await supabase.from('mensajes_privados').update({ leido: true }).in('id', unreadIds);
+                }
+            }
+        };
+
+        fetchMessages();
+
+        const channel = supabase
+            .channel(`room_${roomId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'mensajes_privados',
+                filter: `sala_id=eq.${roomId}`
+            }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const m = payload.new as any;
+                    const newMsg: Message = {
+                        id: m.id,
+                        text: m.contenido,
+                        senderId: m.emisor_id,
+                        senderName: agents.find(a => a.id === m.emisor_id)?.name || 'Agente',
+                        timestamp: m.created_at,
+                        type: m.metadata?.type || 'text',
+                        fileUrl: m.metadata?.fileUrl,
+                        fileName: m.metadata?.fileName,
+                        leido: m.leido
+                    };
+                    setMessages(prev => {
+                        if (prev.find(x => x.id === newMsg.id)) return prev;
+                        return [...prev, newMsg];
+                    });
+                    setTimeout(scrollToBottom, 50);
+
+                    // Marcar como leído si yo soy el receptor
+                    if (m.receptor_id === currentUser.id) {
+                        supabase.from('mensajes_privados').update({ leido: true }).eq('id', m.id).then();
+                    }
+                } else if (payload.eventType === 'UPDATE') {
+                    const m = payload.new as any;
+                    setMessages(prev => prev.map(msg => msg.id === m.id ? { ...msg, leido: m.leido, text: m.contenido, reactions: m.metadata?.reactions } : msg));
+                } else if (payload.eventType === 'DELETE') {
+                    setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
+        return () => { channel.unsubscribe(); };
+    }, [currentUser.id, selectedContact, agents, scrollToBottom]);
 
     const handleSendMessage = async (e?: React.FormEvent, fileData?: { url: string; type: string; name: string }) => {
         if (e) e.preventDefault();
@@ -152,47 +236,29 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         try {
             const roomId = getRoomId(selectedContact.id);
             const msgData: any = {
-                senderId: currentUser.id,
-                senderName: currentUser.name,
-                timestamp: serverTimestamp(),
+                sala_id: roomId,
+                emisor_id: currentUser.id,
+                receptor_id: selectedContact.id,
+                contenido: text || (fileData ? `Archivo: ${fileData.name}` : ''),
+                metadata: fileData ? {
+                    type: fileData.type,
+                    fileUrl: fileData.url,
+                    fileName: fileData.name
+                } : { type: 'text' }
             };
-
-            if (fileData) {
-                msgData.type = fileData.type;
-                msgData.fileUrl = fileData.url;
-                msgData.fileName = fileData.name;
-                msgData.text = text || `Archivo: ${fileData.name}`;
-            } else {
-                msgData.type = 'text';
-                msgData.text = text;
-            }
 
             setNewMessage('');
             setShowEmojiPicker(false);
 
-            // Guardar en la subcolección de mensajes
-            await addDoc(collection(db, 'direct_rooms', roomId, 'messages'), msgData);
+            // Guardar en Supabase
+            const { error: insertError } = await supabase.from('mensajes_privados').insert(msgData);
+            if (insertError) throw insertError;
 
-            // Actualizar el documento del room con metadata para listar chats recientes = (roomId, lastMessage, updatedAt)
-            await updateDoc(doc(db, 'direct_rooms', roomId), {
-                participants: [currentUser.id, selectedContact.id],
-                lastMessage: msgData.text,
-                updatedAt: serverTimestamp()
-            }).catch(async () => {
-                // Si el documento no existe, crear la cabecera del chat
-                const { setDoc } = await import('firebase/firestore');
-                await setDoc(doc(db, 'direct_rooms', roomId), {
-                    participants: [currentUser.id, selectedContact.id],
-                    lastMessage: msgData.text,
-                    updatedAt: serverTimestamp()
-                });
-            });
-
-            // Disparar Notificación Push Directa a ese agente en específico (vía API Supabase)
+            // Disparar Notificación Push Directa
             if (selectedContact.fcm_token) {
                 sendPushBroadcast(
                     `Mensaje Táctico de ${currentUser.name}`,
-                    msgData.type === 'text' ? msgData.text : '📁 Ha compartido un material de inteligencia',
+                    text || '📁 Ha compartido un material de inteligencia',
                     selectedContact.fcm_token,
                     'chat'
                 ).catch(e => console.log('Push ignorado/fallo:', e));
@@ -200,22 +266,16 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
         } catch (e: any) {
             console.error("❌ ERROR EN TRANSMISIÓN TÁCTICA:", e);
-            // Mostrar error real o descriptivo
-            const errorMsg = e?.message?.includes('permission-denied')
-                ? "ACCESO DENEGADO: Verifica tus permisos de comunicación."
-                : "ERROR DE CONEXIÓN: No se pudo transmitir el mensaje al centro de mando.";
-            alert(errorMsg);
+            alert("ERROR DE CONEXIÓN: No se pudo transmitir el mensaje al centro de mando.");
         }
     };
 
     const handleEditMessage = async (msgId: string) => {
-        if (!editText.trim() || !selectedContact) return;
+        if (!editText.trim()) return;
         try {
-            const roomId = getRoomId(selectedContact.id);
-            await updateDoc(doc(db, 'direct_rooms', roomId, 'messages', msgId), {
-                text: editText.trim(),
-                editedAt: serverTimestamp()
-            });
+            const msg = messages.find(m => m.id === msgId);
+            const metadata = { ...(msg?.reactions ? { reactions: msg.reactions } : {}), editedAt: new Date().toISOString() };
+            await supabase.from('mensajes_privados').update({ contenido: editText.trim(), metadata }).eq('id', msgId);
             setEditingMsg(null);
             setEditText('');
         } catch (err) {
@@ -224,17 +284,15 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     };
 
     const handleDeleteMessage = async (msgId: string) => {
-        if (!window.confirm("¿Eliminar este mensaje permanentemente?") || !selectedContact) return;
+        if (!window.confirm("¿Eliminar este mensaje permanentemente?")) return;
         try {
-            const roomId = getRoomId(selectedContact.id);
-            await deleteDoc(doc(db, 'direct_rooms', roomId, 'messages', msgId));
+            await supabase.from('mensajes_privados').delete().eq('id', msgId);
         } catch (err) {
             console.error("Error eliminando mensaje:", err);
         }
     };
 
     const handleReaction = async (msgId: string, emoji: string) => {
-        if (!selectedContact) return;
         const msg = messages.find(m => m.id === msgId);
         if (!msg) return;
 
@@ -249,12 +307,24 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                 reactions[emoji] = [...userList, currentUser.id];
             }
 
-            const roomId = getRoomId(selectedContact.id);
-            await updateDoc(doc(db, 'direct_rooms', roomId, 'messages', msgId), { reactions });
+            const metadata = {
+                type: msg.type || 'text',
+                fileUrl: msg.fileUrl,
+                fileName: msg.fileName,
+                editedAt: msg.editedAt,
+                reactions
+            };
+
+            await supabase.from('mensajes_privados').update({ metadata }).eq('id', msgId);
             setShowReactions(null);
         } catch (err) {
             console.error("Error con reacción:", err);
         }
+    };
+
+    const insertEmoji = (emoji: string) => {
+        setNewMessage(prev => prev + emoji);
+        setShowEmojiPicker(false);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,9 +348,9 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         }
     };
 
-    const formatMessageDate = (timestamp: Timestamp) => {
-        if (!timestamp) return '';
-        const date = timestamp.toDate();
+    const formatMessageDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
         const now = new Date();
         const diff = now.getTime() - date.getTime();
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -342,7 +412,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                         >
                             <div className="relative shrink-0">
                                 <img src={getAgentPhoto(agent.id)} className="w-12 h-12 rounded-full border border-white/10 object-cover group-hover:scale-110 transition-transform" />
-                                {agent.userRole === UserRole.DIRECTOR && <Crown size={12} className="absolute -bottom-1 -right-1 text-[#ffb700] bg-black rounded-full" />}
+                                {onlineAgents.has(agent.id) && <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-black rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] z-10" />}
+                                {agent.userRole === UserRole.DIRECTOR && <Crown size={12} className="absolute -top-1 -right-1 text-[#ffb700] bg-black rounded-full" />}
                             </div>
                             <div className="flex-1 text-left min-w-0">
                                 <p className="text-[11px] font-black text-white uppercase truncate">{agent.name}</p>
@@ -382,8 +453,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                             <div className="flex-1">
                                 <h2 className="font-bebas text-xl md:text-2xl text-white tracking-[0.1em]">{selectedContact.name}</h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-                                    <span className="text-[8px] font-black tracking-widest uppercase text-white/40">Conexión Directa Establecida</span>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${onlineAgents.has(selectedContact.id) ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-white/20'}`} />
+                                    <span className="text-[8px] font-black tracking-widest uppercase text-white/40">{onlineAgents.has(selectedContact.id) ? 'Agente en Línea' : 'Desconectado'}</span>
                                 </div>
                             </div>
                         </div>
@@ -452,8 +523,17 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                                 )}
 
                                                 <div className={`flex items-center gap-1.5 mt-2 opacity-50 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                                    {isMe && (
+                                                        <span className="flex items-center">
+                                                            {msg.leido ? (
+                                                                <CheckCheck size={10} className="text-blue-400" />
+                                                            ) : (
+                                                                <Check size={10} />
+                                                            )}
+                                                        </span>
+                                                    )}
                                                     <span className="text-[7px] uppercase font-black tracking-widest">
-                                                        {msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
+                                                        {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
                                                     </span>
                                                     {msg.editedAt && <span className="text-[7px] italic font-medium">editado</span>}
                                                 </div>

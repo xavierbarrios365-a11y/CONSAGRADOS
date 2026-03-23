@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Star, Zap, Trophy, HelpCircle, ChevronRight, X, BookOpen, Lightbulb, ChevronLeft, Lock, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Agent, IQLevel } from '../types';
@@ -112,6 +112,8 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
 
     // Pistas y Curriculum Bíblico (Lore) State
     const [hintsUsed, setHintsUsed] = useState(0);
+    const [revealedPipePath, setRevealedPipePath] = useState<number[]>([]);
+    const correctPipePathRef = useRef<number[]>([]);
     const [highlightedPipeIndex, setHighlightedPipeIndex] = useState<number | null>(null);
     const [currentLoreIndex, setCurrentLoreIndex] = useState(0);
     const [showLoreModal, setShowLoreModal] = useState(false);
@@ -299,6 +301,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         const pathDefs: Record<number, number> = {};
         let r = 0, c = 0;
         const route = [{ r, c }];
+        const pathIndices: number[] = [0];
 
         while (r < size - 1 || c < size - 1) {
             if (r === size - 1) c++;
@@ -307,7 +310,9 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 if (Math.random() > 0.5) c++; else r++;
             }
             route.push({ r, c });
+            pathIndices.push(r * size + c);
         }
+        correctPipePathRef.current = pathIndices;
 
         for (let i = 0; i < route.length; i++) {
             const curr = route[i];
@@ -1283,87 +1288,11 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                 setLightsOutGrid(newGrid);
             }
         } else if (level === 6) {
-            // Pipes: Rotar la primera tubería que rompe el flujo
-            const getConnections = (type: number, rot: number) => {
-                let base = type === 0 ? [0, 2] : [0, 1];
-                return base.map(d => (d + rot) % 4);
-            };
-
-            const grid = [...pipesGrid];
-            let currentCell = 0;
-            let incomingDir = 3;
-            const visited = new Set<number>();
-
-            while (currentCell >= 0 && currentCell < grid.length) {
-                if (visited.has(currentCell)) break;
-                visited.add(currentCell);
-
-                const pipe = grid[currentCell];
-                const conns = getConnections(pipe.type, pipe.rot);
-
-                if (!conns.includes(incomingDir)) {
-                    // Esta tubería no recibe flujo. Buscamos rotación que sí lo reciba.
-                    for (let r = 0; r < 4; r++) {
-                        if (getConnections(pipe.type, r).includes(incomingDir)) {
-                            grid[currentCell].rot = r;
-                            setPipesGrid(grid);
-                            // Visual feedback: Highlight the fixed pipe
-                            setHighlightedPipeIndex(currentCell);
-                            setTimeout(() => setHighlightedPipeIndex(null), 3000);
-                            return;
-                        }
-                    }
-                    return; // No hay rotación válida
-                }
-
-                const outDir = conns.find(d => d !== incomingDir);
-                if (outDir === undefined) return;
-
-                // Calcular siguiente celda basándonos en outDir
-                let nextCell = -1;
-                let nextIncomingDir = -1;
-
-                if (outDir === 0) { // N
-                    if (currentCell >= pipeGridSize) {
-                        nextCell = currentCell - pipeGridSize;
-                        nextIncomingDir = 2;
-                    }
-                } else if (outDir === 1) { // E
-                    if ((currentCell + 1) % pipeGridSize !== 0) {
-                        nextCell = currentCell + 1;
-                        nextIncomingDir = 3;
-                    }
-                } else if (outDir === 2) { // S
-                    if (currentCell < grid.length - pipeGridSize) {
-                        nextCell = currentCell + pipeGridSize;
-                        nextIncomingDir = 0;
-                    }
-                } else if (outDir === 3) { // W
-                    if (currentCell % pipeGridSize !== 0) {
-                        nextCell = currentCell - 1;
-                        nextIncomingDir = 1;
-                    }
-                }
-
-                if (nextCell === -1) {
-                    // La salida de esta tubería da contra una pared o es inválida.
-                    // Rotamos esta misma tubería para que apunte a un vecino válido que no sea el de entrada.
-                    for (let r = 0; r < 4; r++) {
-                        const testConns = getConnections(pipe.type, r);
-                        if (testConns.includes(incomingDir)) {
-                            const newOut = testConns.find(d => d !== incomingDir);
-                            if (newOut === 0 && currentCell >= pipeGridSize) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
-                            if (newOut === 1 && (currentCell + 1) % pipeGridSize !== 0) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
-                            if (newOut === 2 && currentCell < grid.length - pipeGridSize) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
-                            if (newOut === 3 && currentCell % pipeGridSize !== 0) { grid[currentCell].rot = r; setPipesGrid(grid); return; }
-                        }
-                    }
-                    return;
-                }
-
-                currentCell = nextCell;
-                incomingDir = nextIncomingDir;
+            if (correctPipePathRef.current.length > 0) {
+                setRevealedPipePath(correctPipePathRef.current);
+                setTimeout(() => setRevealedPipePath([]), 3000);
             }
+            return;
         } else if (level === 7) {
             // Cántaros: El sistema ejecuta un movimiento útil
             if (jugA < jugACap) setJugA(jugACap);
@@ -1961,7 +1890,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     key={`pipe-${idx}`}
                                                     disabled={status !== 'PLAYING'}
                                                     onClick={() => handlePipeClick(idx)}
-                                                    className={`aspect-square bg-[#001d3d]/40 border rounded-md relative overflow-hidden transition-colors hover:bg-blue-900/40 active:scale-95 flex items-center justify-center group ${highlightedPipeIndex === idx ? 'glow-pulse border-[#ffb700]' : 'border-blue-500/10'}`}
+                                                    className={`aspect-square bg-[#001d3d]/40 border rounded-md relative overflow-hidden transition-colors hover:bg-blue-900/40 active:scale-95 flex items-center justify-center group ${highlightedPipeIndex === idx || revealedPipePath.includes(idx) ? 'glow-pulse border-[#ffb700] shadow-[0_0_15px_rgba(255,183,0,0.3)] bg-blue-500/10' : 'border-blue-500/10'}`}
                                                 >
                                                     <div className="w-full h-full absolute inset-0 transition-transform duration-300 pointer-events-none" style={{ transform: `rotate(${pipe.rot * 90}deg)` }}>
                                                         <div className="absolute top-1/2 left-1/2 w-[14px] h-[14px] bg-blue-400/90 rounded-full -mt-[7px] -ml-[7px] z-10 shadow-sm" />

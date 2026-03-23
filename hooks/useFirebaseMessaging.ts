@@ -37,6 +37,11 @@ export function useFirebaseMessaging(
                 subscribeToTopic(token).then(success => {
                     if (success) console.log("✅ Suscrito a anuncios globales.");
                 });
+            } else {
+                // Si el token falló, pero el permiso es granted, algo raro pasa, refrescar estado
+                if (typeof Notification !== 'undefined') {
+                    setNotificationPermission(Notification.permission);
+                }
             }
 
             onMessageListener((payload: any) => {

@@ -55,20 +55,44 @@ export const fetchAcademyDataSupabase = async (agentId: string) => {
         }));
 
         // Mapeo de DB -> Frontend (Lecciones)
-        const mappedLessons = (lessonsRaw || []).map((l: any) => ({
-            id: l.id,
-            courseId: l.course_id,
-            order: l.order_index,
-            title: l.title,
-            videoUrl: l.video_url,
-            content: l.content,
-            questions: l.questions_json || l.questions || [],
-            xpReward: l.xp_reward || 0,
-            startTime: l.start_time,
-            endTime: l.end_time,
-            resultAlgorithm: l.result_algorithm,
-            resultMappings: l.result_mappings
-        }));
+        const mappedLessons = (lessonsRaw || []).map((l: any) => {
+            let parsedQ = [];
+            let parsedJsonObj = null;
+
+            if (typeof l.questions_json === 'string' && l.questions_json.trim()) {
+                try {
+                    parsedJsonObj = JSON.parse(l.questions_json);
+                } catch (e) { }
+            } else if (l.questions_json && typeof l.questions_json === 'object') {
+                parsedJsonObj = l.questions_json;
+            } else if (typeof l.questions === 'string' && l.questions.trim()) {
+                try { parsedJsonObj = JSON.parse(l.questions); } catch (e) { }
+            } else if (l.questions && typeof l.questions === 'object') {
+                parsedJsonObj = l.questions;
+            }
+
+            // Extract array from parsed object
+            if (Array.isArray(parsedJsonObj)) {
+                parsedQ = parsedJsonObj;
+            } else if (parsedJsonObj && Array.isArray(parsedJsonObj.questions)) {
+                parsedQ = parsedJsonObj.questions;
+            }
+
+            return {
+                id: l.id,
+                courseId: l.course_id,
+                order: l.order_index,
+                title: l.title,
+                videoUrl: l.video_url,
+                content: l.content,
+                questions: parsedQ,
+                xpReward: l.xp_reward || (parsedJsonObj?.xpReward) || 0,
+                startTime: l.start_time,
+                endTime: l.end_time,
+                resultAlgorithm: l.result_algorithm || (parsedJsonObj?.resultAlgorithm) || null,
+                resultMappings: l.result_mappings || (parsedJsonObj?.resultMappings) || null
+            };
+        });
 
         // Mapeo de DB -> Frontend (Progreso)
         const mappedProgress = (progressRaw || []).map((p: any) => ({
@@ -265,12 +289,35 @@ export const assignAgentToBibleWarGroup = async (agentId: string, groupId: strin
 export const saveBulkAcademyDataSupabase = async (data: { courses: any[], lessons: any[] }) => {
     try {
         if (data.courses.length > 0) {
-            const { error } = await supabase.from('academy_courses').upsert(data.courses);
-            if (error) throw error;
+            const mappedCourses = data.courses.map(c => ({
+                id: c.id,
+                title: c.title,
+                description: c.description,
+                image_url: c.imageUrl || c.image_url,
+                required_level: c.requiredLevel || c.required_level,
+                order_index: c.orderIndex || c.order_index || c.order || 1,
+                is_active: c.isActive !== undefined ? c.isActive : (c.is_active !== undefined ? c.is_active : true)
+            }));
+            const { error: err1 } = await supabase.from('academy_courses').upsert(mappedCourses);
+            if (err1) throw err1;
         }
         if (data.lessons.length > 0) {
-            const { error } = await supabase.from('academy_lessons').upsert(data.lessons);
-            if (error) throw error;
+            const mappedLessons = data.lessons.map(l => ({
+                id: l.id,
+                course_id: l.courseId || l.course_id,
+                order_index: l.order || l.orderIndex || l.order_index || 1,
+                title: l.title,
+                video_url: l.videoUrl || l.video_url || '',
+                content: l.content || '',
+                questions_json: l.questions || l.questions_json || [],
+                xp_reward: l.xpReward || l.xp_reward || 0,
+                start_time: l.startTime || l.start_time || null,
+                end_time: l.endTime || l.end_time || null,
+                result_algorithm: l.resultAlgorithm || l.result_algorithm || null,
+                result_mappings: l.resultMappings || l.result_mappings || null
+            }));
+            const { error: err2 } = await supabase.from('academy_lessons').upsert(mappedLessons);
+            if (err2) throw err2;
         }
         return { success: true };
     } catch (e: any) {

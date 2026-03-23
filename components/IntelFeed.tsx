@@ -229,6 +229,8 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
     const rootNews = news.filter(item => {
         const isRoot = !item.parentId;
         const matchesType = filterType ? item.type === filterType : true;
+        const author = agents?.find(a => a.id === item.agentId);
+        if (author?.status === 'OCULTO') return false;
         return isRoot && matchesType;
     });
     const totalPages = Math.ceil(rootNews.length / PAGE_SIZE);
@@ -395,7 +397,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                     if (lastWord.startsWith('@') && lastWord.length > 1) {
                                         const search = lastWord.slice(1).toLowerCase();
                                         const filtered = (agents || []).filter(a =>
-                                            a.name.toLowerCase().replace(/\s/g, '').includes(search)
+                                            a.status !== 'OCULTO' && a.name.toLowerCase().replace(/\s/g, '').includes(search)
                                         );
                                         setMentions(filtered);
                                         setShowMentions(filtered.length > 0);

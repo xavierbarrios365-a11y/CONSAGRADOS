@@ -44,8 +44,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
     ];
 
     const filteredAgents = agents.filter(a => {
-        // Ocultar perfiles de prueba
-        if (a.id === 'CON-TEST1' || a.id === 'CON-TEST2') return false;
+        // Ocultar perfiles de prueba y marcados como OCULTO
+        if (a.id === 'CON-TEST1' || a.id === 'CON-TEST2' || a.status === 'OCULTO') return false;
 
         // Normalización Táctica: Ignorar acentos y mayúsculas para el filtrado
         const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();

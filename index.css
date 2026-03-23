@@ -45,3 +45,27 @@
         pointer-events: none;
     }
 }
+
+@keyframes glow-pulse {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 183, 0, 0.5);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(255, 183, 0, 0.9);
+        transform: scale(1.05);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(255, 183, 0, 0.5);
+        transform: scale(1);
+    }
+}
+
+.glow-pulse {
+    animation: glow-pulse 1.5s ease-in-out infinite;
+    z-index: 10;
+    border-color: #ffb700 !important;
+    position: relative;
+}

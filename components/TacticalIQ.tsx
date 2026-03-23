@@ -112,6 +112,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
 
     // Pistas y Curriculum Bíblico (Lore) State
     const [hintsUsed, setHintsUsed] = useState(0);
+    const [highlightedPipeIndex, setHighlightedPipeIndex] = useState<number | null>(null);
     const [currentLoreIndex, setCurrentLoreIndex] = useState(0);
     const [showLoreModal, setShowLoreModal] = useState(false);
     const [loreSelectedOption, setLoreSelectedOption] = useState<number | null>(null);
@@ -290,17 +291,40 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     // Generador Puerta 6 (Pipes)
     const startPipes = (stage: number = 1) => {
         let size = 4;
-        let pathDefs: Record<number, number> = {};
+        if (stage === 1) size = 4;
+        else if (stage === 2) size = 5;
+        else size = 6;
 
-        if (stage === 1) { // 4x4
-            size = 4;
-            pathDefs = { 0: 0, 1: 0, 2: 0, 3: 1, 7: 0, 11: 0, 15: 1 };
-        } else if (stage === 2) { // 5x5
-            size = 5;
-            pathDefs = { 0: 1, 5: 0, 10: 1, 11: 0, 12: 1, 17: 0, 22: 1, 23: 0, 24: 0 };
-        } else { // 6x6
-            size = 6;
-            pathDefs = { 0: 1, 6: 0, 12: 1, 13: 0, 14: 0, 15: 1, 21: 0, 27: 1, 28: 1, 34: 0, 35: 1 };
+        // Dynamic guaranteed path generator
+        const pathDefs: Record<number, number> = {};
+        let r = 0, c = 0;
+        const route = [{ r, c }];
+
+        while (r < size - 1 || c < size - 1) {
+            if (r === size - 1) c++;
+            else if (c === size - 1) r++;
+            else {
+                if (Math.random() > 0.5) c++; else r++;
+            }
+            route.push({ r, c });
+        }
+
+        for (let i = 0; i < route.length; i++) {
+            const curr = route[i];
+            const prev = i > 0 ? route[i - 1] : { r: curr.r, c: curr.c - 1 }; // init from West
+            const next = i < route.length - 1 ? route[i + 1] : { r: curr.r, c: curr.c + 1 }; // exit to East
+
+            const drIn = curr.r - prev.r;
+            const dcIn = curr.c - prev.c;
+            const drOut = next.r - curr.r;
+            const dcOut = next.c - curr.c;
+
+            // if we keep moving in the same direction, it's a straight pipe (0), otherwise corner (1)
+            if (drIn === drOut && dcIn === dcOut) {
+                pathDefs[curr.r * size + curr.c] = 0;
+            } else {
+                pathDefs[curr.r * size + curr.c] = 1;
+            }
         }
 
         const newBoard = Array.from({ length: size * size }, (_, i) => {
@@ -1283,6 +1307,9 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                         if (getConnections(pipe.type, r).includes(incomingDir)) {
                             grid[currentCell].rot = r;
                             setPipesGrid(grid);
+                            // Visual feedback: Highlight the fixed pipe
+                            setHighlightedPipeIndex(currentCell);
+                            setTimeout(() => setHighlightedPipeIndex(null), 3000);
                             return;
                         }
                     }
@@ -1934,7 +1961,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     key={`pipe-${idx}`}
                                                     disabled={status !== 'PLAYING'}
                                                     onClick={() => handlePipeClick(idx)}
-                                                    className="aspect-square bg-[#001d3d]/40 border border-blue-500/10 rounded-md relative overflow-hidden transition-colors hover:bg-blue-900/40 active:scale-95 flex items-center justify-center group"
+                                                    className={`aspect-square bg-[#001d3d]/40 border rounded-md relative overflow-hidden transition-colors hover:bg-blue-900/40 active:scale-95 flex items-center justify-center group ${highlightedPipeIndex === idx ? 'glow-pulse border-[#ffb700]' : 'border-blue-500/10'}`}
                                                 >
                                                     <div className="w-full h-full absolute inset-0 transition-transform duration-300 pointer-events-none" style={{ transform: `rotate(${pipe.rot * 90}deg)` }}>
                                                         <div className="absolute top-1/2 left-1/2 w-[14px] h-[14px] bg-blue-400/90 rounded-full -mt-[7px] -ml-[7px] z-10 shadow-sm" />

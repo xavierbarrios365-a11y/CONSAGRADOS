@@ -27,7 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Feed', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Chat Global', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Ranking', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];
@@ -104,6 +104,16 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView, userRole
                   {notificationCount > 9 ? '+9' : notificationCount}
                 </span>
               )}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={() => setView(AppView.CONTENT)}
+              className="relative cursor-pointer group p-2 text-gray-500 hover:text-blue-400 transition-colors"
+              title="Chat Global"
+            >
+              <Activity size={20} className="group-hover:scale-110 transition-transform" />
             </motion.div>
 
             <motion.div

@@ -198,9 +198,13 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                 ).catch(e => console.log('Push ignorado/fallo:', e));
             }
 
-        } catch (e) {
-            console.error("❌ ERROR EN TRANSMISIÓN:", e);
-            alert("FALLO EN ENCRIPTACIÓN DE MENSAJE PRIVADO");
+        } catch (e: any) {
+            console.error("❌ ERROR EN TRANSMISIÓN TÁCTICA:", e);
+            // Mostrar error real o descriptivo
+            const errorMsg = e?.message?.includes('permission-denied')
+                ? "ACCESO DENEGADO: Verifica tus permisos de comunicación."
+                : "ERROR DE CONEXIÓN: No se pudo transmitir el mensaje al centro de mando.";
+            alert(errorMsg);
         }
     };
 

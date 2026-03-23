@@ -185,6 +185,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                                 <option value="ACTIVO">ACTIVO</option>
                                                 <option value="INACTIVO">INACTIVO</option>
                                                 <option value="SANCIONADO">SANCIONADO</option>
+                                                <option value="OCULTO">OCULTO (PERFIL TEST)</option>
                                                 <option value="ELIMINADO">ELIMINADO</option>
                                             </select>
                                         </div>
@@ -248,6 +249,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <span className="text-[8px] bg-white/5 px-2 py-1 rounded border border-white/10 text-white/60">{agent.rank}</span>
+                                            {agent.status === 'OCULTO' ? (
+                                                <button
+                                                    onClick={async () => {
+                                                        const { error } = await supabase.from('agentes').update({ status: 'ACTIVO' }).eq('id', agent.id);
+                                                        if (!error) fetchAgents();
+                                                    }}
+                                                    className="px-4 py-2 bg-green-500/10 border border-green-500/30 text-green-500 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-all"
+                                                >
+                                                    RESTAURAR
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={async () => {
+                                                        if (confirm(`¿Ocultar perfil de ${agent.name}? Se eliminará de todos los rankings y el chat global.`)) {
+                                                            const { error } = await supabase.from('agentes').update({ status: 'OCULTO' }).eq('id', agent.id);
+                                                            if (!error) fetchAgents();
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                                                >
+                                                    OCULTAR
+                                                </button>
+                                            )}
                                             <button onClick={() => setEditingAgent(agent)} className="px-4 py-2 bg-[#ffb700]/10 border border-[#ffb700]/30 text-[#ffb700] rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#ffb700]/20 transition-all">
                                                 EDITAR
                                             </button>

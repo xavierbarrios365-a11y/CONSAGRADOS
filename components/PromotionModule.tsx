@@ -145,7 +145,30 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                 </div>
             )}
 
-            {rule && (
+            {userRole === UserRole.DIRECTOR ? (
+                <div className="glass-card border border-blue-500/30 rounded-3xl p-8 text-center space-y-4 bg-gradient-to-b from-blue-500/10 to-transparent shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <Shield size={48} className="mx-auto text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+                    <div className="space-y-1">
+                        <h2 className="font-bebas text-3xl text-white tracking-[.25em]">SISTEMA DE MANDO TOTAL</h2>
+                        <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.4em]">ACCESO NIVEL DIRECTOR EXECUTOR</p>
+                    </div>
+                    <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
+                        Como Director de Operaciones, posees la autoridad máxima sobre el despliegue táctico. No se requieren ascensos adicionales para tu unidad.
+                    </p>
+                    <div className="pt-4 flex justify-center gap-6">
+                        <div className="text-center">
+                            <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">XP GLOBAL</p>
+                            <p className="text-xl font-black text-white">{xp}</p>
+                        </div>
+                        <div className="w-px h-10 bg-white/10" />
+                        <div className="text-center">
+                            <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">MISIONES</p>
+                            <p className="text-xl font-black text-white">{tasksCompleted}</p>
+                        </div>
+                    </div>
+                </div>
+            ) : rule && (
                 <>
                     {/* Requirements Title */}
                     <div className="flex items-center gap-2 text-white/60 text-xs uppercase tracking-widest">
@@ -208,24 +231,14 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                         </div>
                     </div>
 
-                    {/* Promote Button (Only if not max rank AND is Director) */}
-                    {!isMaxRank && userRole === UserRole.DIRECTOR && (
-                        <button
-                            onClick={handlePromote}
-                            disabled={!allMet || promoting}
-                            className={`w-full py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3 
-                  ${allMet
-                                    ? 'bg-gradient-to-r from-[#ffb700] to-amber-500 text-[#001f3f] hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,183,0,0.3)] active:scale-95'
-                                    : 'bg-white/5 text-gray-600 cursor-not-allowed border border-white/5'
-                                }`}
-                        >
-                            {promoting ? (
-                                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-current"></div>
-                            ) : allMet ? (
+                    {/* Promote Button (Non-Directors only see status) */}
+                    {!isMaxRank && (
+                        <div className={`w-full py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all flex items-center justify-center gap-3 border border-white/5 
+                  ${allMet ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-gray-600'}`}>
+                            {allMet ? (
                                 <>
-                                    <ChevronUp size={20} />
-                                    SOLICITAR ASCENSO A {rule.nextRank}
-                                    <ArrowRight size={16} />
+                                    <Shield size={16} />
+                                    ESPERANDO APROBACIÓN DEL DIRECTOR
                                 </>
                             ) : (
                                 <>
@@ -233,7 +246,7 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                                     COMPLETA LOS REQUISITOS PARA ASCENDER
                                 </>
                             )}
-                        </button>
+                        </div>
                     )}
                 </>
             )}

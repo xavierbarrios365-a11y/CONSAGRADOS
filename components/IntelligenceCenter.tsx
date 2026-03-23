@@ -1083,6 +1083,25 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                         <RotateCcw size={12} />
                       </button>
                       <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`⚠️ ¿OCULTAR PERFIL DE ${agent.name.toUpperCase()}?\n\nEste perfil ya no será visible en rankings ni en el directorio global para estudiantes.`)) {
+                            try {
+                              const { supabase } = await import('../services/supabaseService');
+                              const { error } = await supabase.from('agentes').update({ status: 'OCULTO' }).eq('id', agent.id);
+                              if (!error) {
+                                alert("✅ PERFIL OCULTADO EXITOSAMENTE.");
+                                if (onUpdateNeeded) onUpdateNeeded();
+                              }
+                            } catch (e) { }
+                          }
+                        }}
+                        className="p-2 bg-zinc-600/20 border border-zinc-500/30 text-zinc-400 rounded-lg hover:bg-zinc-600/40 transition-all active:scale-95"
+                        title="Ocultar Perfil (Test)"
+                      >
+                        Ocultar
+                      </button>
+                      <button
                         onClick={() => showAlert({ title: "ANÁLISIS VERIFICADO", message: "✅ Perfil verificado por el Director. Análisis fijado como 'Real'.", type: 'SUCCESS' })}
                         className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 flex items-center justify-center gap-2"
                         title="Verificar y Aprobar Análisis (Sin XP)"

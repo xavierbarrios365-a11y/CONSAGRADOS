@@ -230,12 +230,29 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         const phrase = phrases[Math.floor(Math.random() * phrases.length)];
         setCryptoPhrase(phrase);
 
-        // Codificador sencillo: mapeo a caracteres rúnicos / símbolos o letras desfasadas
-        const chars = "!@#$%^&*_+-=<>/?XYZWQK";
+        // Codificador 1 a 1: mapeo a caracteres rúnicos / símbolos
+        const chars = "!@#$%^&*_+-=<>/?XYZWQK".split('');
+        // Shuffle chars
+        for (let i = chars.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [chars[i], chars[j]] = [chars[j], chars[i]];
+        }
+
+        const cipherMap: Record<string, string> = {};
+        let charIndex = 0;
+
+        // Crear mapa 1 a 1 para las letras únicas de la frase
+        for (let i = 0; i < phrase.length; i++) {
+            const l = phrase[i];
+            if (l !== " " && !cipherMap[l]) {
+                cipherMap[l] = chars[charIndex++];
+            }
+        }
+
         let ciphered = "";
         for (let i = 0; i < phrase.length; i++) {
             if (phrase[i] === " ") ciphered += " ";
-            else ciphered += chars[Math.floor(Math.random() * chars.length)];
+            else ciphered += cipherMap[phrase[i]];
         }
         setCryptoCipher(ciphered);
         setCryptoGuess("");
@@ -1666,6 +1683,12 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                         }`}
                                 >
                                     <Lightbulb size={12} /> DATOS NÚCLEO
+                                </button>
+                                <button
+                                    onClick={requestHint}
+                                    className="flex-1 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center justify-center gap-1.5 text-purple-400 text-[9px] font-black tracking-widest uppercase font-bebas active:scale-95 transition-all shadow-sm"
+                                >
+                                    <Zap size={12} /> HACK (AYUDA)
                                 </button>
                             </div>
 

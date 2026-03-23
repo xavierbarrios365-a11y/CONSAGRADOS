@@ -84,9 +84,9 @@ export const syncAllAgentsToSupabase = async (agents: Agent[]) => {
 };
 
 /**
- * @description Obtiene la lista completa de agentes desde Supabase.
+ * @description Obtiene la lista completa de agentes desde Supabase. Filtrando los ocultos por defecto.
  */
-export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
+export const fetchAgentsFromSupabase = async (includeHidden = false): Promise<Agent[]> => {
     try {
         const { data, error } = await supabase
             .from('agentes')
@@ -98,7 +98,9 @@ export const fetchAgentsFromSupabase = async (): Promise<Agent[]> => {
 
         if (!data || data.length === 0) return [];
 
-        return data.filter((d: any) => d.id && d.id.trim() !== '').map((d: any) => ({
+        const filteredData = includeHidden ? data : data.filter((d: any) => d.status !== 'OCULTO' && String(d.nombre || '').toUpperCase() !== 'TEST');
+
+        return filteredData.filter((d: any) => d.id && d.id.trim() !== '').map((d: any) => ({
             id: d.id,
             name: d.nombre,
             xp: d.xp || 0,

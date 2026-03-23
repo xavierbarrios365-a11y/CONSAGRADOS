@@ -224,6 +224,7 @@ const DirectorView: React.FC<DirectorViewProps> = (props) => {
                                     </div>
                                     {(() => {
                                         const riskAgents = agents.filter(a => {
+                                            if (a.status === 'OCULTO') return false;
                                             const isStudent = (a.userRole === UserRole.STUDENT || !a.userRole);
                                             if (!isStudent) return false;
                                             if (!a.lastAttendance || a.lastAttendance === 'N/A') return true;
@@ -267,28 +268,49 @@ const DirectorView: React.FC<DirectorViewProps> = (props) => {
                                                                     </div>
                                                                 </div>
                                                                 {currentUser?.userRole === UserRole.DIRECTOR && (
-                                                                    <button
-                                                                        onClick={async (e) => {
-                                                                            e.stopPropagation();
-                                                                            showAlert({
-                                                                                title: "BAJA DE AGENTE",
-                                                                                message: `¿Estás seguro de que deseas eliminar permanentemente al agente ${a.name}?`,
-                                                                                type: 'CONFIRM',
-                                                                                onConfirm: async () => {
-                                                                                    const res = await deleteAgentService(a.id);
-                                                                                    if (res.success) {
-                                                                                        showAlert({ title: "OPERACIÓN EXITOSA", message: `AGENTE ${a.name} ELIMINADO.`, type: 'SUCCESS' });
-                                                                                        syncData();
-                                                                                    } else {
-                                                                                        showAlert({ title: "FALLO TÁCTICO", message: res.error || "Error al eliminar.", type: 'ERROR' });
-                                                                                    }
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                if (window.confirm(`⚠️ ¿OCULTAR PERFIL DE ${a.name.toUpperCase()}?\n\nEste perfil ya no será visible en rankings ni en el radar.`)) {
+                                                                                    try {
+                                                                                        const { supabase } = await import('../../services/supabaseService');
+                                                                                        const { error } = await supabase.from('agentes').update({ status: 'OCULTO' }).eq('id', a.id);
+                                                                                        if (!error) {
+                                                                                            showAlert({ title: "OPERACIÓN EXITOSA", message: "PERFIL OCULTADO.", type: 'SUCCESS' });
+                                                                                            syncData();
+                                                                                        }
+                                                                                    } catch (err) { }
                                                                                 }
-                                                                            });
-                                                                        }}
-                                                                        className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-all active:scale-90"
-                                                                    >
-                                                                        <Trash2 size={16} className="text-red-500" />
-                                                                    </button>
+                                                                            }}
+                                                                            className="p-2 bg-zinc-600/20 border border-zinc-500/30 text-[10px] font-bebas tracking-widest text-zinc-400 rounded-xl hover:bg-zinc-600/40 transition-all active:scale-90 flex items-center justify-center"
+                                                                            title="Ocultar Perfil"
+                                                                        >
+                                                                            Ocultar
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                showAlert({
+                                                                                    title: "BAJA DE AGENTE",
+                                                                                    message: `¿Estás seguro de que deseas eliminar permanentemente al agente ${a.name}?`,
+                                                                                    type: 'CONFIRM',
+                                                                                    onConfirm: async () => {
+                                                                                        const res = await deleteAgentService(a.id);
+                                                                                        if (res.success) {
+                                                                                            showAlert({ title: "OPERACIÓN EXITOSA", message: `AGENTE ${a.name} ELIMINADO.`, type: 'SUCCESS' });
+                                                                                            syncData();
+                                                                                        } else {
+                                                                                            showAlert({ title: "FALLO TÁCTICO", message: res.error || "Error al eliminar.", type: 'ERROR' });
+                                                                                        }
+                                                                                    }
+                                                                                });
+                                                                            }}
+                                                                            className="p-2 bg-red-500/10 border border-red-500/30 rounded-xl hover:bg-red-500/30 transition-all active:scale-90"
+                                                                        >
+                                                                            <Trash2 size={16} className="text-red-500" />
+                                                                        </button>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>

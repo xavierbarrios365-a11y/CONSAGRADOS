@@ -208,8 +208,8 @@ const PromotionModule: React.FC<PromotionModuleProps> = ({ agentId, agentName, u
                         </div>
                     </div>
 
-                    {/* Promote Button (Only if not max rank) */}
-                    {!isMaxRank && (
+                    {/* Promote Button (Only if not max rank AND is Director) */}
+                    {!isMaxRank && userRole === UserRole.DIRECTOR && (
                         <button
                             onClick={handlePromote}
                             disabled={!allMet || promoting}

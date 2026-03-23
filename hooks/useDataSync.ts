@@ -91,8 +91,10 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             // FALLBACK: Si no hay nada en localStorage para este usuario, usamos lo que viene del backend
             // UNIFICACIÓN DE PERSISTENCIA: Mezclar local con backend para evitar que reaparezcan
-            const localReadIds = localRead ? JSON.parse(localRead) : [];
-            const localDelIds = localDeleted ? JSON.parse(localDeleted) : [];
+            const localReadStr = localStorage.getItem(READ_KEY);
+            const localDelStr = localStorage.getItem(DELETED_KEY);
+            const localReadIds = localReadStr ? JSON.parse(localReadStr) : [];
+            const localDelIds = localDelStr ? JSON.parse(localDelStr) : [];
 
             const backendReadIds = currentUser?.notifPrefs?.read || [];
             const backendDelIds = currentUser?.notifPrefs?.deleted || [];

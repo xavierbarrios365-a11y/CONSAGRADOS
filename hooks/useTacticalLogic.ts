@@ -4,6 +4,7 @@ import {
     submitTransactionSupabase,
     updateAgentPointsSupabase,
     updateAgentStreaksSupabase,
+    updateAgentAttendanceSupabase,
     confirmEventAttendanceSupabase as confirmEventAttendanceService,
     fetchAcademyDataSupabase,
     updateAgentAiProfileSupabase,
@@ -64,6 +65,10 @@ export const useTacticalLogic = (
             if (result.success) {
                 // Asignar los puntos reales de Asistencia (XP) a la vez
                 await updateAgentPointsSupabase(id, 'XP', 10);
+
+                // Actualizar la fecha de última asistencia
+                const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                await updateAgentAttendanceSupabase(id, todayStr);
 
                 setScanStatus('SUCCESS');
                 syncData(true); // Se desplaza fuera del timeout para actualización inmediata en UI

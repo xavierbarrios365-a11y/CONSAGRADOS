@@ -240,6 +240,16 @@ export const updateAgentPhotoSupabase = async (agentId: string, photoUrl: string
     }
 };
 
+export const updateAgentAttendanceSupabase = async (agentId: string, dateStr: string) => {
+    try {
+        const { error } = await supabase.from('agentes').update({ last_attendance: dateStr }).eq('id', agentId);
+        if (error) throw error;
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+};
+
 export const updateAgentAiProfileSupabase = async (agentId: string, stats: any, summary: string) => {
     try {
         const { error } = await supabase.from('agentes').update({ tactical_stats: stats, tactor_summary: summary }).eq('id', agentId);

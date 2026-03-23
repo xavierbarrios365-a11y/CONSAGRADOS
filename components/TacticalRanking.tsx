@@ -60,6 +60,61 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
         .sort((a, b) => b.xp - a.xp)
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
+    // --- AUTO-CYCLE AND SWIPE LOGIC ---
+    const [lastInteractionTime, setLastInteractionTime] = useState<number>(Date.now());
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+    const handleInteraction = React.useCallback(() => {
+        setLastInteractionTime(Date.now());
+    }, []);
+
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            if (Date.now() - lastInteractionTime >= 5000) {
+                setActiveTab(current => {
+                    const currentIndex = rankingTabs.findIndex(t => t.id === current);
+                    const nextIndex = (currentIndex + 1) % rankingTabs.length;
+                    return rankingTabs[nextIndex].id;
+                });
+                setLastInteractionTime(Date.now()); // Reset to prevent rapid firing
+            }
+        }, 500); // Check every 500ms
+        return () => clearInterval(interval);
+    }, [lastInteractionTime, rankingTabs]);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+        handleInteraction();
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+        handleInteraction();
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > 50;
+        const isRightSwipe = distance < -50;
+
+        if (isLeftSwipe || isRightSwipe) {
+            setActiveTab(current => {
+                const currentIndex = rankingTabs.findIndex(t => t.id === current);
+                if (isLeftSwipe) {
+                    const nextIndex = (currentIndex + 1) % rankingTabs.length;
+                    return rankingTabs[nextIndex].id;
+                } else {
+                    const nextIndex = (currentIndex - 1 + rankingTabs.length) % rankingTabs.length;
+                    return rankingTabs[nextIndex].id;
+                }
+            });
+        }
+        handleInteraction();
+    };
+
     // --- POSITION CHANGE TRACKING ---
     const [snapshotRanks, setSnapshotRanks] = useState<Record<string, number>>(() => {
         try {
@@ -116,7 +171,15 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
     };
 
     return (
-        <div className="p-2 md:p-8 space-y-6 md:space-y-12 max-w-full overflow-x-hidden pb-32 font-montserrat">
+        <div
+            className="p-2 md:p-8 space-y-6 md:space-y-12 max-w-full overflow-x-hidden pb-32 font-montserrat"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onWheel={handleInteraction}
+            onMouseMove={handleInteraction}
+            onClick={handleInteraction}
+        >
             {/* Header Section */}
             <div className="relative overflow-hidden bg-[#001f3f] border border-[#FFB700]/20 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl">
                 <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-[#FFB700]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>

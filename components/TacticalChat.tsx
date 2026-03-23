@@ -4,6 +4,7 @@ import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, 
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendPushBroadcast } from '../services/notifyService';
 import { supabase } from '../services/supabaseService';
+import { useTacticalAlert } from './TacticalAlert';
 
 // Emoji database for reactions
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '💯'];
@@ -37,6 +38,12 @@ interface Props {
     onClose: () => void;
 }
 
+interface ContactSummary {
+    lastMessage: string;
+    lastTimestamp: string;
+    unreadCount: number;
+}
+
 const StoryPreview: React.FC<{ storyId: string; imageUrl: string }> = ({ storyId, imageUrl }) => {
     const [isActive, setIsActive] = useState<boolean | null>(null);
     useEffect(() => {
@@ -65,6 +72,7 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     const isRecluta = (currentUser.rank?.toUpperCase() === 'RECLUTA' || currentUser.rank?.toUpperCase() === 'RECLUTAS') && currentUser.userRole === UserRole.STUDENT;
     const canModerate = currentUser.userRole === UserRole.DIRECTOR || currentUser.userRole === UserRole.LEADER;
 
+    const { showAlert } = useTacticalAlert();
     const [selectedContact, setSelectedContact] = useState<Agent | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -76,6 +84,7 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [emojiCategory, setEmojiCategory] = useState('Frecuentes');
     const [searchTerm, setSearchTerm] = useState('');
+    const [contactSummaries, setContactSummaries] = useState<{ [agentId: string]: ContactSummary }>({});
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +107,10 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             // Estudiantes (Activo para arriba) SOLO pueden hablar con Líderes/Director
             return otherIsLeaderOrDir;
         }
+    }).sort((a, b) => {
+        const timeA = contactSummaries[a.id]?.lastTimestamp || '0';
+        const timeB = contactSummaries[b.id]?.lastTimestamp || '0';
+        return timeB.localeCompare(timeA);
     }).filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const getAgentPhoto = useCallback((agentId: string) => {
@@ -138,6 +151,62 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
         return () => { channel.unsubscribe(); };
     }, [currentUser.id, currentUser.name]);
+
+    // --- FETCH CONTACT SUMMARIES ---
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const fetchSummaries = async () => {
+            const { data: messages, error } = await supabase
+                .from('mensajes_privados')
+                .select('*')
+                .or(`emisor_id.eq.${currentUser.id},receptor_id.eq.${currentUser.id}`)
+                .order('created_at', { ascending: false });
+
+            if (!error && messages) {
+                const summaries: { [agentId: string]: ContactSummary } = {};
+                messages.forEach(m => {
+                    const otherId = m.emisor_id === currentUser.id ? m.receptor_id : m.emisor_id;
+                    if (!summaries[otherId]) {
+                        summaries[otherId] = {
+                            lastMessage: m.contenido,
+                            lastTimestamp: m.created_at,
+                            unreadCount: 0
+                        };
+                    }
+                    if (m.receptor_id === currentUser.id && !m.leido) {
+                        summaries[otherId].unreadCount++;
+                    }
+                });
+                setContactSummaries(summaries);
+            }
+        };
+
+        fetchSummaries();
+
+        // Listen for new messages to update summaries
+        const channel = supabase
+            .channel('chat-summaries')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'mensajes_privados',
+                filter: `receptor_id=eq.${currentUser.id}`
+            }, () => {
+                fetchSummaries();
+            })
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'mensajes_privados',
+                filter: `emisor_id=eq.${currentUser.id}`
+            }, () => {
+                fetchSummaries();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [currentUser.id]);
 
     // Escuchar mensajes DE LA SALA SELECCIONADA (Realtime Supabase)
     useEffect(() => {
@@ -407,8 +476,16 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                     {allowedContacts.map(agent => (
                         <button
                             key={agent.id}
-                            onClick={() => setSelectedContact(agent)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all active:scale-95 group overflow-hidden ${selectedContact?.id === agent.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/30 shadow-inner' : 'hover:bg-white/5 border border-transparent'}`}
+                            onClick={() => {
+                                setSelectedContact(agent);
+                                if (contactSummaries[agent.id]?.unreadCount > 0) {
+                                    setContactSummaries(prev => ({
+                                        ...prev,
+                                        [agent.id]: { ...prev[agent.id], unreadCount: 0 }
+                                    }));
+                                }
+                            }}
+                            className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all active:scale-95 group overflow-hidden relative ${selectedContact?.id === agent.id ? 'bg-[#ffb700]/10 border border-[#ffb700]/30 shadow-inner' : 'hover:bg-white/5 border border-transparent'}`}
                         >
                             <div className="relative shrink-0">
                                 <img src={getAgentPhoto(agent.id)} className="w-12 h-12 rounded-full border border-white/10 object-cover group-hover:scale-110 transition-transform" />
@@ -416,10 +493,24 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
                                 {agent.userRole === UserRole.DIRECTOR && <Crown size={12} className="absolute -top-1 -right-1 text-[#ffb700] bg-black rounded-full" />}
                             </div>
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-[11px] font-black text-white uppercase truncate">{agent.name}</p>
-                                <p className="text-[9px] font-medium tracking-widest opacity-60 truncate uppercase" style={{ color: agent.userRole === UserRole.LEADER ? '#38bdf8' : (agent.userRole === UserRole.DIRECTOR ? '#ffb700' : '#9ca3af') }}>
-                                    {agent.rank || 'ACTIVO'} • {agent.userRole}
-                                </p>
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <p className="text-[11px] font-black text-white uppercase truncate">{agent.name}</p>
+                                    {contactSummaries[agent.id]?.lastTimestamp && (
+                                        <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter shrink-0">
+                                            {formatMessageDate(contactSummaries[agent.id].lastTimestamp)}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex justify-between items-center gap-2">
+                                    <p className="text-[9px] font-medium text-white/40 truncate flex-1 lowercase first-letter:uppercase">
+                                        {contactSummaries[agent.id]?.lastMessage || `${agent.rank || 'ACTIVO'} • ${agent.userRole}`}
+                                    </p>
+                                    {contactSummaries[agent.id]?.unreadCount > 0 && (
+                                        <span className="h-3.5 min-w-[0.875rem] flex items-center justify-center bg-red-600 text-[7px] font-black text-white px-1 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.4)] shrink-0">
+                                            {contactSummaries[agent.id].unreadCount}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </button>
                     ))}

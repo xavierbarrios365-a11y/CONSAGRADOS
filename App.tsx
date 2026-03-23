@@ -256,6 +256,7 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const lastProcessedAgentsRef = useRef<string>('');
 
   // Sincronizar currentUser automáticamente cuando la lista de agentes se actualiza
@@ -346,6 +347,60 @@ const App: React.FC = () => {
     intelReport, isRefreshingIntel, handleRefreshIntel, handleConfirmDirectorAttendance,
     videoRef, streamRef
   } = tactical;
+
+
+  // --- GLOBAL UNREAD CHAT COUNT ---
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser) return;
+
+    const fetchUnreadCount = async () => {
+      const { count, error } = await supabase
+        .from('mensajes_privados')
+        .select('*', { count: 'exact', head: true })
+        .eq('receptor_id', currentUser.id)
+        .eq('leido', false);
+
+      if (!error && count !== null) {
+        setUnreadChatCount(count);
+      }
+    };
+
+    fetchUnreadCount();
+
+    const channel = supabase
+      .channel('global-unread-chat')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'mensajes_privados',
+        filter: `receptor_id=eq.${currentUser.id}`
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setUnreadChatCount(prev => prev + 1);
+        } else if (payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+          // Re-fetch to be safe when messages are read or deleted
+          fetchUnreadCount();
+        }
+      })
+      .on('presence', { event: 'join' }, ({ key }) => {
+        // Notificación global no invasiva (solo para mandos superiores)
+        if (key !== currentUser.id) {
+          const joinedAgent = agents.find(a => a.id === key);
+          if (joinedAgent && (joinedAgent.userRole === UserRole.DIRECTOR || joinedAgent.userRole === UserRole.LEADER)) {
+            showAlert({
+              title: 'MANDO EN LÍNEA',
+              message: `El ${joinedAgent.userRole} ${joinedAgent.name} ha establecido conexión.`,
+              type: 'INFO'
+            });
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLoggedIn, currentUser]);
 
 
   // --- SISTEMA DE PURGA TÁCTICA (FORCE REFRESH ON UPDATE) ---
@@ -1235,7 +1290,8 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         notificationCount={unreadNotifications}
         onOpenInbox={() => setShowInbox(true)}
-        onOpenChat={() => setIsChatOpen(true)}
+        unreadChatCount={unreadChatCount}
+        onOpenChat={() => { setIsChatOpen(true); setUnreadChatCount(0); }}
         notificationPermission={notificationPermission}
         onInitPush={initFirebaseMessaging}
       >

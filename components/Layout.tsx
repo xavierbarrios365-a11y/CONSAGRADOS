@@ -15,6 +15,7 @@ interface LayoutProps {
   notificationCount: number;
   onOpenInbox: () => void;
   onOpenChat?: () => void;
+  unreadChatCount?: number;
   notificationPermission?: NotificationPermission;
   onInitPush?: () => void;
 }
@@ -23,7 +24,7 @@ const OFFICIAL_LOGO = "/logo_white.png";
 
 const Layout: React.FC<LayoutProps> = ({
   children, activeView, setView, userRole, userName, onLogout, onHardReset,
-  notificationCount, onOpenInbox, onOpenChat, notificationPermission, onInitPush
+  notificationCount, onOpenInbox, onOpenChat, unreadChatCount = 0, notificationPermission, onInitPush
 }) => {
   const [logoError, setLogoError] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -129,10 +130,15 @@ const Layout: React.FC<LayoutProps> = ({
               title="Chat Táctico"
             >
               <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-              </span>
+              {unreadChatCount && unreadChatCount > 0 ? (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center bg-red-600 text-[8px] font-black text-white px-1 rounded-full border-2 border-[#000810] shadow-[0_0_10px_rgba(220,38,38,0.5)]">
+                  {unreadChatCount > 9 ? '+9' : unreadChatCount}
+                </span>
+              ) : (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500/20"></span>
+                </span>
+              )}
             </motion.div>
 
             {/* BOTÓN DE MENÚ LATERAL (REEMPLAZA PURGA) */}

@@ -170,15 +170,19 @@ export const sendSocialNotification = async (
  */
 export const updateNotifPrefsSupabase = async (agentId: string, prefs: { read?: string[], deleted?: string[] }) => {
     try {
-        const { error } = await supabase.from('notif_prefs').upsert({
-            agent_id: agentId,
-            read_ids: prefs.read || [],
-            deleted_ids: prefs.deleted || [],
-            updated_at: new Date().toISOString()
+        // Usar RPC para actualizar directamente en la tabla 'agentes'
+        const { error } = await supabase.rpc('update_agent_notif_prefs', {
+            p_id: agentId,
+            p_prefs: {
+                read: prefs.read || [],
+                deleted: prefs.deleted || []
+            }
         });
+
         if (error) throw error;
         return { success: true };
     } catch (e: any) {
+        console.error('❌ Error sincronizando notificaciones:', e.message);
         return { success: false, error: e.message };
     }
 };

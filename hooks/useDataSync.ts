@@ -90,11 +90,20 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const DELETED_KEY = agentId ? `deleted_notifications_${agentId}` : 'deleted_notifications';
 
             // FALLBACK: Si no hay nada en localStorage para este usuario, usamos lo que viene del backend
-            const localRead = localStorage.getItem(READ_KEY);
-            const localDeleted = localStorage.getItem(DELETED_KEY);
+            // UNIFICACIÓN DE PERSISTENCIA: Mezclar local con backend para evitar que reaparezcan
+            const localReadIds = localRead ? JSON.parse(localRead) : [];
+            const localDelIds = localDeleted ? JSON.parse(localDeleted) : [];
 
-            const readIds = localRead ? JSON.parse(localRead) : (currentUser?.notifPrefs?.read || []);
-            const delIds = localDeleted ? JSON.parse(localDeleted) : (currentUser?.notifPrefs?.deleted || []);
+            const backendReadIds = currentUser?.notifPrefs?.read || [];
+            const backendDelIds = currentUser?.notifPrefs?.deleted || [];
+
+            // Unión de conjuntos para asegurar consistencia total
+            const readIds = Array.from(new Set([...localReadIds, ...backendReadIds]));
+            const delIds = Array.from(new Set([...localDelIds, ...backendDelIds]));
+
+            // Si hubo mezcla y hay más datos, actualizar storage local
+            if (readIds.length > localReadIds.length) localStorage.setItem(READ_KEY, JSON.stringify(readIds));
+            if (delIds.length > localDelIds.length) localStorage.setItem(DELETED_KEY, JSON.stringify(delIds));
 
             // Filtrar: Dirigidas a mí o Globales + No leída + No borrada
             const unreadNotifs = notifs.filter(n => {

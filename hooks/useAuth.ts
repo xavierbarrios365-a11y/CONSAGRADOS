@@ -6,7 +6,7 @@ import { trackEvent } from '../firebase-config';
 
 // --- VERSION TÁCTICA DEL NÚCLEO ---
 // Cambiar el primer dígito (Major) para forzar logout masivo (Mega Actualización)
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '3.0.0';
 
 export interface AuthState {
     isLoggedIn: boolean;

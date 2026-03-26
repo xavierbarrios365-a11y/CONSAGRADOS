@@ -120,7 +120,7 @@ const PointButton = ({ label, onClick, disabled, icon }: { label: string, onClic
 
 const App: React.FC = () => {
   console.log('App component executing...');
-  const APP_VERSION = "2.0.0"; // Mega Actualización - Tutorial, Persistence & Likes
+  const APP_VERSION = "3.0.0"; // Mega Actualización - Presencia & Estabilidad Táctica
 
   // --- Custom Hooks: Auth, Data Sync, Firebase ---
   const auth = useAuth();

@@ -128,34 +128,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     loadPromoData();
   }, [selectedAgentId]);
 
-  React.useEffect(() => {
-    const channel = supabase.channel('global-presence');
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const presenceMap: Record<string, boolean> = {};
-        Object.keys(state).forEach(key => {
-          presenceMap[key] = true;
-        });
-        setOnlineAgencies(presenceMap);
-      })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        setOnlineAgencies(prev => ({ ...prev, [key]: true }));
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        setOnlineAgencies(prev => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   React.useEffect(() => {
     if (userRole === UserRole.DIRECTOR) {

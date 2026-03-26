@@ -11,6 +11,7 @@ import { fetchAcademyDataSupabase } from '../services/supabaseService';
 import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase, getStreakMultiplier } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
+import { usePresence } from '../hooks/usePresence';
 import TacticalRanking from './TacticalRanking';
 import { generateTacticalProfile, getSpiritualCounseling, generateCommunityIntelReport } from '../services/geminiService';
 import { toPng } from 'html-to-image';
@@ -85,30 +86,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     }
   }, [selectedAgentId, showPsychoEdit, agents]);
 
-  React.useEffect(() => {
-    if (!currentUser) return;
-
-    const channel = supabase.channel('global-presence');
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const onlineMap: Record<string, boolean> = {};
-        Object.keys(state).forEach(id => { onlineMap[id] = true; });
-        setOnlineAgencies(onlineMap);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            online_at: new Date().toISOString(),
-            user_id: currentUser.id,
-            name: currentUser.name
-          });
-        }
-      });
-
-    return () => { supabase.removeChannel(channel); };
-  }, [currentUser]);
+  const onlineAgencies = usePresence();
 
   const handleSavePsychoStats = async () => {
     setIsUpdatingPoints(true);

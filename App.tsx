@@ -384,7 +384,7 @@ const App: React.FC = () => {
         if (payload.eventType === 'INSERT') {
           setUnreadChatCount(prev => prev + 1);
           // ALERTA VISUAL TÁCTICA
-          const sender = agents.find(a => a.id === payload.new.emisor_id);
+          const sender = auth.agentsRef.current.find(a => a.id === payload.new.emisor_id);
           showAlert({
             title: 'NUEVO MENSAJE TÁCTICO',
             message: `Has recibido una comunicación de ${sender?.name || 'un agente'}.`,
@@ -415,7 +415,7 @@ const App: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoggedIn, currentUser, agents]); // Agregado agents para que showAlert tenga el nombre correcto
+  }, [isLoggedIn, currentUser]); // Se elimina 'agents' para no destruir el canal en cada recarga de agentes
 
 
   // --- SISTEMA DE PURGA TÁCTICA (FORCE REFRESH ON UPDATE) ---

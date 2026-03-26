@@ -27,6 +27,7 @@ import { formatDriveUrl } from '../services/storageUtils';
 import AchievementShareCard from './AchievementShareCard';
 import { useTacticalAlert } from './TacticalAlert';
 import TacticalMediaPlayer from './TacticalMediaPlayer';
+import { usePresence } from '../hooks/usePresence';
 
 interface NewsFeedProps {
     onActivity?: () => void;
@@ -199,6 +200,7 @@ const TacticalMedia = ({ url, type, onClick, isTrending = false }: { url: string
 
 const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents = [], userRole, currentUser, filterType, onAgentClick }) => {
     const { showAlert } = useTacticalAlert();
+    const onlineAgents = usePresence();
     const [news, setNews] = useState<NewsFeedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(0);
@@ -746,12 +748,24 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                                 {photoUrl ? (
                                                     <div className="relative">
                                                         <img src={photoUrl} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" onClick={() => agent && onAgentClick?.(agent)} />
+                                                        {agent && onlineAgents[agent.id] && (
+                                                            <div className="absolute -top-1 -right-1 z-20 flex items-center justify-center bg-green-500 w-3 h-3 rounded-full animate-pulse shadow-lg shadow-green-900/50">
+                                                                <div className="w-1 h-1 bg-white rounded-full"></div>
+                                                            </div>
+                                                        )}
                                                         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center border border-black/20" style={{ backgroundColor: config.color }}>
                                                             {React.isValidElement(config.icon) ? React.cloneElement(config.icon as React.ReactElement<any>, { size: 10 }) : config.icon}
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${config.color}15`, color: config.color }}>{config.icon}</div>
+                                                    <div className="relative">
+                                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ backgroundColor: `${config.color}15`, color: config.color }}>{config.icon}</div>
+                                                        {agent && onlineAgents[agent.id] && (
+                                                            <div className="absolute -top-1 -right-1 z-20 flex items-center justify-center bg-green-500 w-3 h-3 rounded-full animate-pulse shadow-lg shadow-green-900/50">
+                                                                <div className="w-1 h-1 bg-white rounded-full"></div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
 

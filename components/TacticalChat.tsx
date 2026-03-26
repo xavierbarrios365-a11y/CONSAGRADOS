@@ -3,6 +3,7 @@ import { Agent, UserRole } from '../types';
 import { Send, MessageSquare, X, Shield, Zap, Paperclip, Image, FileText, Play, Check, CheckCheck, Loader2, Download, MoreVertical, Trash2, Pencil, Smile, ChevronLeft, Search, Crown } from 'lucide-react';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendPushBroadcast } from '../services/notifyService';
+import { usePresence } from '../hooks/usePresence';
 import { supabase } from '../services/supabaseService';
 import { useTacticalAlert } from './TacticalAlert';
 
@@ -128,31 +129,8 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
         return [currentUser.id, otherId].sort().join('_');
     };
 
-    const [onlineAgents, setOnlineAgents] = useState<Set<string>>(new Set());
-
-    // --- REALTIME PRESENCE ---
-    useEffect(() => {
-        const channel = supabase.channel('global-presence');
-
-        channel
-            .on('presence', { event: 'sync' }, () => {
-                const state = channel.presenceState();
-                const onlineIds = new Set<string>();
-                Object.keys(state).forEach(id => onlineIds.add(id));
-                setOnlineAgents(onlineIds);
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({
-                        online_at: new Date().toISOString(),
-                        user_id: currentUser.id,
-                        name: currentUser.name
-                    });
-                }
-            });
-
-        return () => { supabase.removeChannel(channel); };
-    }, [currentUser.id, currentUser.name]);
+    const onlineAgentsMap = usePresence();
+    const onlineAgents = new Set(Object.keys(onlineAgentsMap).filter(id => onlineAgentsMap[id]));
 
     // --- FETCH CONTACT SUMMARIES ---
     useEffect(() => {

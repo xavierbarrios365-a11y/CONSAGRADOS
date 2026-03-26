@@ -43,14 +43,27 @@ const initGlobalPresence = (currentUser: Agent | null) => {
     });
 
     globalChannel.subscribe(async (status: string) => {
+        console.log(`Presence Channel Status: ${status}`);
         if (status === 'SUBSCRIBED') {
+            const trackStatus = await globalChannel.track({
+                online_at: new Date().toISOString(),
+                user_id: currentUser.id,
+                name: currentUser.name
+            });
+            console.log("Presence Track Status:", trackStatus);
+        }
+    });
+
+    // Re-track periodico para evitar caidas silenciosas
+    setInterval(async () => {
+        if (globalChannel && isSubscribed) {
             await globalChannel.track({
                 online_at: new Date().toISOString(),
                 user_id: currentUser.id,
                 name: currentUser.name
             });
         }
-    });
+    }, 30000); // Cada 30 segs
 };
 
 export const usePresence = (currentUser?: Agent | null) => {

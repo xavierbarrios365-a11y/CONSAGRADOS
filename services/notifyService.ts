@@ -43,9 +43,8 @@ export const sendPushBroadcast = async (title: string, message: string, targetTo
             body: JSON.stringify({ action: 'push', title, message, targetToken })
         });
 
-        if (!res.ok && res.status === 401 && import.meta.env.DEV) {
-            console.warn("⚠️ API de Push retornó 401. Ignorado en modo DEV.");
-            return true; // Retornamos true para no romper el flujo local
+        if (!res.ok) {
+            console.error(`❌ Push API Error [${res.status}]:`, await res.text());
         }
 
         return res.ok;

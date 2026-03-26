@@ -358,7 +358,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
 
                 {/* Footer */}
                 <div className="p-4 bg-[#000c19] border-t border-white/5 flex justify-center">
-                    <p className="text-[9px] text-white/20 uppercase font-bold tracking-[0.2em]">Cifrado de Extremo a Extremo — Consagrados Tactic v1.6</p>
+                    <p className="text-[9px] text-white/20 uppercase font-bold tracking-[0.2em]">Cifrado de Extremo a Extremo — Consagrados Tactic v3.0.0</p>
                 </div>
             </div>
         </div>

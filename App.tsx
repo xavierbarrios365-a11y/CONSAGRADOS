@@ -1295,6 +1295,11 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* BANNER DE PRUEBA DE VIDA (ELIMINAR TRAS VALIDACIÓN) */}
+      <div className="fixed top-0 left-0 right-0 z-[1000] bg-[#ffb700] text-[#001f3f] py-1 text-center font-black text-[8px] uppercase tracking-[0.4em] shadow-lg">
+        +++ CONECTADO AL NÚCLEO TÁCTICO V3.0.0 +++
+      </div>
+
       <Layout
         activeView={view}
         setView={(newView) => {

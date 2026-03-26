@@ -8,7 +8,11 @@ DECLARE
     v_real_id TEXT;
     v_nombre TEXT;
     v_current_iq INTEGER;
+    v_xp_reward INTEGER;
 BEGIN
+    -- Asegurar que la columna de pozo existe (en un entorno ideal esto sería una migración previa)
+    -- ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS pending_iq_xp INTEGER DEFAULT 0;
+
     SELECT id, nombre, COALESCE(iq_level, 0)
     INTO v_real_id, v_nombre, v_current_iq
     FROM public.agentes
@@ -18,9 +22,15 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Agente no encontrado');
     END IF;
 
+    -- Calcular recompensa de XP base para el pozo (50 base + 5 por nivel)
+    v_xp_reward := 50 + (p_level_achieved * 5);
+
     IF p_level_achieved >= v_current_iq THEN
+        -- Incrementar Nivel de IQ
         UPDATE public.agentes 
-        SET iq_level = p_level_achieved + 1, updated_at = timezone('utc'::text, now())
+        SET iq_level = p_level_achieved + 1, 
+            pending_iq_xp = COALESCE(pending_iq_xp, 0) + v_xp_reward, -- Acumular en el pozo
+            updated_at = timezone('utc'::text, now())
         WHERE id = v_real_id;
     END IF;
 
@@ -36,7 +46,71 @@ BEGIN
         'success', true,
         'real_id', v_real_id,
         'nombre', v_nombre,
-        'current_iq', v_current_iq
+        'xp_added_to_pool', v_xp_reward,
+        'current_iq', p_level_achieved + 1
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC para finalizar la campaña y otorgar XP proporcionales basándose en el examen
+CREATE OR REPLACE FUNCTION public.finalize_iq_campaign(
+    p_agent_id_input TEXT,
+    p_exam_score INTEGER -- Porcentaje de aciertos (0-100)
+)
+RETURNS JSONB AS $$
+DECLARE
+    v_real_id TEXT;
+    v_pending_xp INTEGER;
+    v_final_xp INTEGER;
+BEGIN
+    SELECT id, COALESCE(pending_iq_xp, 0)
+    INTO v_real_id, v_pending_xp
+    FROM public.agentes
+    WHERE id ILIKE p_agent_id_input;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Agente no encontrado');
+    END IF;
+
+    -- Si el puntaje es menor al 50%, no se otorga nada del pozo
+    IF p_exam_score < 50 THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Puntaje insuficiente para reclamar recompensa', 'score', p_exam_score);
+    END IF;
+
+    -- Calcular XP final proporcional: Pozo * (Score / 100)
+    v_final_xp := floor(v_pending_xp * (p_exam_score::float / 100));
+
+    -- Otorgar XP reales y limpiar el pozo
+    UPDATE public.agentes
+    SET pending_iq_xp = 0,
+        updated_at = timezone('utc'::text, now())
+    WHERE id = v_real_id;
+
+    PERFORM public.add_xp(v_real_id, v_final_xp);
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'xp_awarded', v_final_xp,
+        'pool_cleared', v_pending_xp,
+        'score', p_exam_score
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Script de Reinicio General Nehemías
+CREATE OR REPLACE FUNCTION public.reset_nehemias_campaign()
+RETURNS JSONB AS $$
+BEGIN
+    -- No se requiere ALTER TABLE aquí si ya existe la columna
+    UPDATE public.agentes
+    SET iq_level = 1,
+        pending_iq_xp = 0,
+        updated_at = timezone('utc'::text, now());
+    
+    -- Opcional: Limpiar tiempos mejores si se desea un reinicio total de tabla de posiciones
+    -- DELETE FROM public.iq_best_times;
+
+    RETURN jsonb_build_object('success', true, 'message', 'Campaña Nehemías reiniciada para todos los agentes');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+

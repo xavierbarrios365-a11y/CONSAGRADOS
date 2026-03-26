@@ -349,7 +349,7 @@ const App: React.FC = () => {
   } = tactical;
 
 
-  // --- GLOBAL UNREAD CHAT COUNT ---
+  // --- GLOBAL PRESENCE & UNREAD CHAT COUNT ---
   useEffect(() => {
     if (!isLoggedIn || !currentUser) return;
 
@@ -368,7 +368,13 @@ const App: React.FC = () => {
     fetchUnreadCount();
 
     const channel = supabase
-      .channel('global-unread-chat')
+      .channel('global-presence', {
+        config: {
+          presence: {
+            key: currentUser.id,
+          },
+        },
+      })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -377,8 +383,16 @@ const App: React.FC = () => {
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           setUnreadChatCount(prev => prev + 1);
+          // ALERTA VISUAL TÁCTICA
+          const sender = agents.find(a => a.id === payload.new.emisor_id);
+          showAlert({
+            title: 'NUEVO MENSAJE TÁCTICO',
+            message: `Has recibido una comunicación de ${sender?.name || 'un agente'}.`,
+            type: 'INFO'
+          });
+          // Sonido sutil (opcional)
+          try { new Audio('/notify.mp3').play().catch(() => { }); } catch (e) { }
         } else if (payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
-          // Re-fetch to be safe when messages are read or deleted
           fetchUnreadCount();
         }
       })
@@ -395,12 +409,20 @@ const App: React.FC = () => {
           }
         }
       })
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            online_at: new Date().toISOString(),
+            user_id: currentUser.id,
+            name: currentUser.name
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoggedIn, currentUser]);
+  }, [isLoggedIn, currentUser, agents]); // Agregado agents para que showAlert tenga el nombre correcto
 
 
   // --- SISTEMA DE PURGA TÁCTICA (FORCE REFRESH ON UPDATE) ---
@@ -1306,7 +1328,10 @@ const App: React.FC = () => {
 
       {showInbox && (
         <NotificationInbox
-          onClose={() => setShowInbox(false)}
+          onClose={() => {
+            setShowInbox(false);
+            checkHeadlines();
+          }}
           onTotalReadUpdate={setUnreadNotifications}
           onRequestPermission={initFirebaseMessaging}
           agentId={currentUser?.id}

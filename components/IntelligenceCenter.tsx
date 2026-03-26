@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
 import { Search, Users, Activity, Target, Zap, TrendingUp, AlertCircle, ChevronRight, ChevronLeft, MoreVertical, X, Filter, Download, UserPlus, Shield, UserCheck, UserX, Award, Star, Mail, Phone, Calendar, Clock, MapPin, RefreshCw, Plus, Minus, Send, Camera, ArrowUpCircle, AlertTriangle, Gavel, Sparkles, Loader2, MessageSquare, BookOpen, Fingerprint, FileText, Settings, RotateCcw, ChevronUp, Cpu, Brain, Bell, Trash2, Radio, Trophy, CheckCircle2 } from 'lucide-react';
-import { onSnapshot, collection } from 'firebase/firestore';
-import { db } from '../firebase-config';
+import { supabase } from '../services/supabaseService';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
@@ -127,23 +126,32 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   }, [selectedAgentId]);
 
   React.useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'presence'), (snapshot) => {
-      const presenceMap: Record<string, boolean> = {};
-      snapshot.forEach(doc => {
-        if (doc.data().status === 'online') {
-          presenceMap[doc.id] = true;
-        }
-      });
-      setOnlineAgencies(presenceMap);
-    }, (error) => {
-      // Silenciar error de permisos de Firebase si no estamos usando Firebase Auth
-      if (error.code === 'permission-denied') {
-        console.warn("⚠️ Firebase Presence: Acceso denegado (Reglas de Seguridad).");
-      } else {
-        console.error("🔥 Firebase Error:", error);
-      }
-    });
-    return () => unsubscribe();
+    const channel = supabase.channel('global-presence');
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const presenceMap: Record<string, boolean> = {};
+        Object.keys(state).forEach(key => {
+          presenceMap[key] = true;
+        });
+        setOnlineAgencies(presenceMap);
+      })
+      .on('presence', { event: 'join' }, ({ key }) => {
+        setOnlineAgencies(prev => ({ ...prev, [key]: true }));
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        setOnlineAgencies(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   React.useEffect(() => {

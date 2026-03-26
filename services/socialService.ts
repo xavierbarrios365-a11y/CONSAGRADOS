@@ -226,50 +226,43 @@ const FALLBACK_VERSES = STATIC_VERSES.map(v => ({
 /**
  * @description Obtiene el versículo diario. Rota cada 3 horas automáticamente si la BD no se actualiza o para mayor dinamismo.
  */
+/**
+ * @description Obtiene el versículo diario con rotación dinámica y alta entropía para evitar repeticiones.
+ */
 export const fetchDailyVerseSupabase = async (): Promise<any | null> => {
     try {
-        // Corregido: La tabla real es 'versiculos_diarios'
         const { data, error } = await supabase
             .from('versiculos_diarios')
             .select('texto, cita, fecha')
             .order('fecha', { ascending: false })
-            .limit(500); // Aumentado a 500 para cumplir con el requerimiento de ~300 variantes cada día/bloque
+            .limit(1000);
 
-        if (!error && data && data.length > 0) {
-            // Lógica de rotación táctica: 
-            // Usamos el bloque de 3 horas del día como semilla para elegir del pool
-            const now = new Date();
-            const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
-            const period3h = Math.floor(now.getHours() / 3);
+        const pool = (data && data.length > 0) ? data : FALLBACK_VERSES.map(v => ({ texto: v.verse, cita: v.reference, fecha: new Date().toISOString() }));
 
-            // Semilla única que cambia cada 3 horas
-            const seed = dayOfYear + period3h;
+        // Generar una semilla diaria estable pero variada
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 0);
+        const diff = now.getTime() - startOfYear.getTime();
+        const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-            // Combinar para mayor variedad si la BD tiene muy pocos
-            const combinedPool = [
-                ...data,
-                ...FALLBACK_VERSES.map(v => ({ texto: v.verse, cita: v.reference, fecha: now.toISOString() }))
-            ];
-            const index = seed % combinedPool.length;
+        // Cada 6 horas cambiamos el versículo (4 veces al día)
+        const period6h = Math.floor(now.getHours() / 6);
 
-            const selected = combinedPool[index];
-            return {
-                verse: selected.texto,
-                reference: selected.cita,
-                fecha: selected.fecha
-            };
-        }
+        // Algoritmo de mezcla determinista para el índice
+        // Usamos una combinación de día, año y periodo para que no sea una secuencia lineal simple
+        const deterministicIndex = ((dayOfYear * 31) + (period6h * 7) + now.getFullYear()) % pool.length;
+
+        const selected = pool[deterministicIndex];
+        return {
+            verse: selected.texto,
+            reference: selected.cita,
+            fecha: selected.fecha || now.toISOString()
+        };
     } catch (e: any) {
-        console.warn("Error fetching daily verse from DB:", e.message);
+        console.warn("⚠️ Fallo en Versículo Táctico:", e.message);
+        const day = new Date().getDate();
+        return FALLBACK_VERSES[day % FALLBACK_VERSES.length];
     }
-
-    // Fallback: rotación dinámica por día y bloque de 3 horas sobre la lista hardcoded
-    const now = new Date();
-    const day = now.getDate();
-    const period = Math.floor(now.getHours() / 3);
-    const index = (day + period) % FALLBACK_VERSES.length;
-
-    return FALLBACK_VERSES[index];
 };
 
 /**

@@ -132,7 +132,7 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
     // --- REALTIME PRESENCE ---
     useEffect(() => {
-        const channel = supabase.channel('online-agents', {
+        const channel = supabase.channel('global-presence', {
             config: { presence: { key: currentUser.id } }
         });
 
@@ -145,11 +145,15 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    await channel.track({ online_at: new Date().toISOString(), name: currentUser.name });
+                    await channel.track({
+                        online_at: new Date().toISOString(),
+                        user_id: currentUser.id,
+                        name: currentUser.name
+                    });
                 }
             });
 
-        return () => { channel.unsubscribe(); };
+        return () => { supabase.removeChannel(channel); };
     }, [currentUser.id, currentUser.name]);
 
     // --- FETCH CONTACT SUMMARIES ---

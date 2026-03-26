@@ -397,16 +397,9 @@ const App: React.FC = () => {
         }
       })
       .on('presence', { event: 'join' }, ({ key }) => {
-        // Notificación global no invasiva (solo para mandos superiores)
+        // La sincronización de presencia ahora es puramente visual en el chat/feed
         if (key !== currentUser.id) {
-          const joinedAgent = agents.find(a => a.id === key);
-          if (joinedAgent && (joinedAgent.userRole === UserRole.DIRECTOR || joinedAgent.userRole === UserRole.LEADER)) {
-            showAlert({
-              title: 'MANDO EN LÍNEA',
-              message: `El ${joinedAgent.userRole} ${joinedAgent.name} ha establecido conexión.`,
-              type: 'INFO'
-            });
-          }
+          // No emitir avisos invasivos. Solo permitir que el estado de Presence se actualice internamente
         }
       })
       .subscribe(async (status) => {

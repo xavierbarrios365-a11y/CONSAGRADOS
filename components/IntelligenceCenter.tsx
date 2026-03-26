@@ -85,6 +85,33 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     }
   }, [selectedAgentId, showPsychoEdit, agents]);
 
+  React.useEffect(() => {
+    if (!currentUser) return;
+
+    const channel = supabase.channel('global-presence', {
+      config: { presence: { key: currentUser.id } }
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const onlineMap: Record<string, boolean> = {};
+        Object.keys(state).forEach(id => { onlineMap[id] = true; });
+        setOnlineAgencies(onlineMap);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            online_at: new Date().toISOString(),
+            user_id: currentUser.id,
+            name: currentUser.name
+          });
+        }
+      });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUser]);
+
   const handleSavePsychoStats = async () => {
     setIsUpdatingPoints(true);
     try {

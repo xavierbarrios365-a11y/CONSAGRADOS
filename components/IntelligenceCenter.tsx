@@ -88,9 +88,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   React.useEffect(() => {
     if (!currentUser) return;
 
-    const channel = supabase.channel('global-presence', {
-      config: { presence: { key: currentUser.id } }
-    });
+    const channel = supabase.channel('global-presence');
 
     channel
       .on('presence', { event: 'sync' }, () => {

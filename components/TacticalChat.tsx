@@ -132,9 +132,7 @@ const TacticalChat: React.FC<Props> = ({ currentUser, agents, onClose }) => {
 
     // --- REALTIME PRESENCE ---
     useEffect(() => {
-        const channel = supabase.channel('global-presence', {
-            config: { presence: { key: currentUser.id } }
-        });
+        const channel = supabase.channel('global-presence');
 
         channel
             .on('presence', { event: 'sync' }, () => {

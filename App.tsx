@@ -1,5 +1,5 @@
 // --- PURGE SYSTEM: FORZAR RECARGA PARA LIMPIAR CACHÉ ANTIGUO ---
-const APP_PURGE_VERSION = '2026_PURGE_V5_RELOAD';
+const APP_PURGE_VERSION = '2026_PURGE_V6_PRESENCE_FIX';
 if (typeof window !== 'undefined') {
   if (localStorage.getItem('APP_PURGE_ID') !== APP_PURGE_VERSION) {
     localStorage.setItem('APP_PURGE_ID', APP_PURGE_VERSION);

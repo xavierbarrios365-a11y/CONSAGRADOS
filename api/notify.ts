@@ -88,6 +88,18 @@ async function sendPushNotification(title: string, message: string, targetToken?
                     title: `📢 ${title.toUpperCase()}`,
                     body: message
                 },
+                android: {
+                    notification: {
+                        sound: "default"
+                    }
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            sound: "default"
+                        }
+                    }
+                },
                 webpush: {
                     notification: {
                         icon: "https://lh3.googleusercontent.com/d/" + OFFICIAL_LOGO_ID,

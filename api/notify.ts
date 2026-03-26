@@ -8,7 +8,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8514450878:AAElk5X
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '1009537014';
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'consagrados-c2d78';
 const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || 'firebase-adminsdk-fbsvc@consagrados-c2d78.iam.gserviceaccount.com';
-const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDmAuEFgVoH56H2\nl4RsBF6PM3th0Psw/mkvNb3yeXEc+p81TgoD1aiY4P980jiegalIcq/trZmi5FRD\ntv+OPlJYesaU8bVcHRiGTGmhLeo3cYHgvDNESInUHk4zWsO+RI4Upx/jo1mxTkhA\nxd53mTe0HOPK/FWjhYh9LWkc89VWgpodmLAABjaltTfGEuFITZA3SiV7qHrSXuj7\ngR206GrfwiM4G4zTcx/Ov7SB9zZlcAdzldsGvxlpiYntiFFW8wu8EdtM1pi3shMM\nKKGNPnb5VopMSr5cWdEKxV1n1OK/IGc/vZF1i0c/nb4odhptCKdrdZFyM1mKlsGr\nqf6BDfj/AgMBAAECggEABQFdXeN4OZbP/qVCc5/5YiVifc5F68WFispLxWSLfRrJ\nGdMGbcSZrtCqo/qRJ9s2JgZKOiJefF3P+vSXBW8+wdUo0CHzFTuUMTalenqcz7MP\nz/utzpfDhBMFbExWg86gcZDyJTUvT6fz85Dla/XbcUx1pTuuLhOgVOpcO2M6VRpn\nkubCNPt+L4FH37Inkxk6msoh109DDQXi6AxJaClxkm7pGrlHHEEIAxh303ZCL3Rw\ntlf9IzbkdxHSUjzmvcXSw1p4oheb4J/rqoUfjL5S44QPQejFrWsVqer1Qj4VqPwf\nNtSosw0Kv5NtMFEOCu0RXAziQDzQBrLtStFLYqwiBQKBgQD7+8HGYSMoIZ5muq3i\nBY7eXfSqNQ8Emr9Zc4DGXRkOj9Cmue1ZM1cfO2DhWAUHIzRKBSUjjbTA/lKaiucx\n5EboKl9nY7WyJf2nibpXi6Qr0i2hNhWXg2dXKc5+ZVotq3MZ1+kkBQAvONI4lXRg\nODyac90PrtnVHoTFHrXwIA2kWwKBgQDprXZhfB4Nh3IlJTzcF7rE33RNdA4LJyZ4\nHjXATRi8KJsE80RXEkb5pF3pWE1gC4XBLg18OwRcE1OlJoQbaGY3Zv5LezrQcs6L\nj7EkIBS4YP+qaonUz4k+QPI7cnyjtmemU9aL09q9NQuWInHxBIVlK9jVkZ29l22v\nDTErjdBPLQKBgAm/MDyjLz/zJPRmTimK+37AdaFL0hvkfHhSTm3d1gVJLNH2KScl\nJD6SBmpRBEjFZNVkI46fgZlhfQJ7UvwMD24VjYErSzDr5UbgvfN69Eu5oog01lr4\n+ztU46bh9r4Dfr1GK7937gzljsQfi9PY+Qckai2cHtLujkYtrO3v33c3AoGALcvd\nI4XbrfMZn8YIg2nzJJpWhMd16SGnHGtvRVzWuCmNGA9FGXtvhYV9EjpID8ayVAXe\nhrZaSGFRR1ChG23+emUo+UoRYMDfUeK7aMUQyoHYGWH/2UFDOHwp/RSW8M7SyXos\n1gKTH/nBZ48gnYexTP6m5FRBgeKnkGMZe9uzM5ECgYEAmkbl6gfBi8bs1p29xFng\n7zax4GU8sLovre2FEdZ0o5r9NA8WyqT9jqX6N+tGto6xdsuVet06bVL+0cPQO1Dq\nuoDtAqC9+K88n5zFFR7ABeq1a6Mp4u0xQOTGhhi7ECy8Sk5jra5VOiewU8NhnaC0\nb8nRN8/Ed2fExIbS3FETDIk=\n-----END PRIVATE KEY-----\n';
+const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDmAuEFgVoH56H2\nl4RsBF6PM3th0Psw/mkvNb3yeXEc+p81TgoD1aiY4P980jiegalIcq/trZmi5FRD\ntv+OPlJYesaU8bVcHRiGTGmhLeo3cYHgvDNESInUHk4zWsO+RI4Upx/jo1mxTkhA\nxd53mTe0HOPK/FWjhYh9LWkc89VWgpodmLAABjaltTfGEuFITZA3SiV7qHrSXuj7\ngR206GrfwiM4G4zTcx/Ov7SB9zZlcAdzldsGvxlpiYntiFFW8wu8EdtM1pi3shMM\nKKGNPnb5VopMSr5cWdEKxV1n1OK/IGc/vZF1i0c/nb4odhptCKdrdZFyM1mKlsGr\nqf6BDfj/AgMBAAECggEABQFdXeN4OZbP/qVCc5/5YiVifc5F68WFispLxWSLfRrJ\nGdMGbcSZrtCqo/qRJ9s2JgZKOiJefF3P+vSXBW8+wdUo0CHzFTuUMTalenqcz7MP\nz/utzpfDhBMFbExWg86gcZDyJTUvT6fz85Dla/XbcUx1pTuuLhOgVOpcO2M6VRpn\nkubCNPt+L4FH37Inkxk6msoh109DDQXi6AxJaClxkm7pGrlHHEEIAxh303ZCL3Rw\ntlf9IzbkdxHSUjzmvcXSw1p4oheb4J/rqoUfjL5S44QPQejFrWsVqer1Qj4VqPwf\nNtSosw0Kv5NtMFEOCu0RXAziQDzQBrLtStFLYqwiBQKBgQD7+8HGYSMoIZ5muq3i\nBY7eXfSqNQ8Emr9Zc4DGXRkOj9Cmue1ZM1cfO2DhWAUHIzRKBSUjjbTA/lKaiucx\n5EboKl9nY7WyJf2nibpXi6Qr0i2hNhWXg2dXKc5+ZVotq3MZ1+kkBQAvONI4lXRg\nODyac90PrtnVHoTFHrXwIA2kWwKBgQDprXZhfB4Nh3IlJTzcF7rE33RNdA4LJyZ4\nHjXATRi8KJsE80RXEkb5pF3pWE1gC4XBLg18OwRcE1OlJoQbaGY3Zv5LezrQcs6L\nj7EkIBS4YP+qaonUz4k+QPI7cnyjtmemU9aL09q9NQuWInHxBIVlK9jVkZ29l22v\nDTErjdBPLQKBgAm/MDyjLz/zJPRmTimK+37AdaFL0hvkfHhSTm3d1gVJLNH2KScl\nJD6SBmpRBEjFZNVkI46fgZlhfQJ7UvwMD24VjYErSzDr5UbgvfN69Eu5oog01lr4\n+ztU46bh9r4Dfr1GK7937gzljsQfi9PY+Qckai2cHtLujkYtrO3v33c3AoGALcvd\nI4XbrfMZn8YIg2nzJJpWhMd16SGnHGtvRVzWuCmNGA9FGXtvhYV9EjpID8ayVAXe\nhrZaSGFRR1ChG23+emUo+UoRYMDfUeK7aMUQyoHYGWH/2UFDOHwp/RSW8M7SyXos\n1gKTH/nBZ48gnYexTP6m5FRBgeKnkGMZe9uzM5ECgYEAmkbl6gfBi8bs1p29xFng\n7zax4GU8sLovre2FEdZ0o5r9NA8WyqT9jqX6I+tGto6xdsuVet06bVL+0cPQO1Dq\nuoDtAqC9+K88n5zFFR7ABeq1a6Mp4u0xQOTGhhi7ECy8Sk5jra5VOiewU8NhnaC0\nb8nRN8/Ed2fExIbS3FETDIk=\n-----END PRIVATE KEY-----\n';
 const OFFICIAL_LOGO_ID = '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f';
 
 async function sendTelegramNotification(message: string) {
@@ -49,10 +49,10 @@ async function getFcmAccessToken() {
     sign.update(signatureInput);
     sign.end();
 
-    // Normalizar la clave para que funcione tanto con \n reales como con \\n de variables de entorno
-    const normalizedKey = FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+    const normalizedKey = FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
     if (!normalizedKey || !normalizedKey.includes('PRIVATE KEY')) {
-        throw new Error("Credencial de Firebase (Private Key) no configurada o malformada.");
+        console.error("❌ ERROR: FIREBASE_PRIVATE_KEY is missing or invalid in Vercel Env Vars.");
+        throw new Error("Credencial de Firebase (Private Key) no configurada en Vercel Dashboard.");
     }
 
     try {
@@ -145,16 +145,22 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method !== 'POST') {
+        console.warn(`Method Not Allowed: ${req.method}`);
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     try {
         // En Vercel Serverless para NodeJS, el body ya viene parseado si el Content-Type es application/json
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        console.log("Request body:", JSON.stringify(body));
         const { action, title, message, targetToken } = body || {};
 
         if (action === 'telegram') {
-            if (!message) return res.status(400).json({ error: 'Missing message' });
+            console.log("Action: telegram");
+            if (!message) {
+                console.warn("Missing message for telegram action.");
+                return res.status(400).json({ error: 'Missing message' });
+            }
             await sendTelegramNotification(message);
         } else if (action === 'subscribe') {
             if (!targetToken) return res.status(400).json({ error: 'Missing targetToken' });

@@ -1,5 +1,5 @@
 // --- PURGE SYSTEM: FORZAR RECARGA PARA LIMPIAR CACHÉ ANTIGUO ---
-const APP_PURGE_VERSION = '2026_PURGE_V6_PRESENCE_FIX';
+const APP_PURGE_VERSION = '2026_PURGE_V6_PRESENCE_FIX_V3';
 if (typeof window !== 'undefined') {
   if (localStorage.getItem('APP_PURGE_ID') !== APP_PURGE_VERSION) {
     localStorage.setItem('APP_PURGE_ID', APP_PURGE_VERSION);
@@ -1013,6 +1013,23 @@ const App: React.FC = () => {
               onSubmit={handleLogin}
               className="space-y-4"
             >
+              {/* BANNER DE ACTUALIZACIÓN / REINICIO GENERAL */}
+              {window.location.search.includes('update_reset=true') && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-start gap-3"
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                    <Sparkles size={16} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Canal Sincronizado</p>
+                    <p className="text-[8px] text-blue-300/70 font-bold uppercase mt-1">El sistema se ha optimizado a la V3.0. Reingresa tus credenciales para activar la nueva presencia táctica.</p>
+                  </div>
+                </motion.div>
+              )}
+
               <div className="space-y-4">
                 <div className="relative group">
                   <input

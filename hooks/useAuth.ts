@@ -265,10 +265,36 @@ export function useAuth() {
         const storedVersion = localStorage.getItem('app_version');
         const isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
-        // MEGA ACTUALIZACIÓN: Forzar logout si la versión mayor cambió
+        // MEGA ACTUALIZACIÓN: Forzar logout y PURGA DE CACHÉ si la versión mayor cambió
         if (storedVersion && storedVersion.split('.')[0] !== APP_VERSION.split('.')[0]) {
-            console.log("🚀 MEGA ACTUALIZACIÓN DETECTADA. REINICIANDO SESIÓN...");
-            handleLogout(true);
+            console.log("🚀 MEGA ACTUALIZACIÓN DETECTADA (V3). EJECUTANDO PURGA MAESTRA...");
+
+            const performMegaPurge = async () => {
+                // 1. Limpiar Storage
+                localStorage.clear();
+                sessionStorage.clear();
+
+                // 2. Limpiar Caches de Navegador
+                if ('caches' in window) {
+                    try {
+                        const names = await caches.keys();
+                        await Promise.all(names.map(n => caches.delete(n)));
+                    } catch (e) { }
+                }
+
+                // 3. Matar Service Workers viejos
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(r => r.unregister()));
+                    } catch (e) { }
+                }
+
+                // 4. Redirigir con bandera de aviso
+                window.location.replace(window.location.origin + window.location.pathname + "?update_reset=true&v=" + APP_VERSION);
+            };
+
+            performMegaPurge();
             return;
         }
 

@@ -91,7 +91,7 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchNotificationsSupabase();
+            const data = await fetchNotificationsSupabase(agentId);
             if (!Array.isArray(data)) {
                 throw new Error('Formato de respuesta inválido');
             }

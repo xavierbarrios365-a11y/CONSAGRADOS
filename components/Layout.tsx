@@ -112,15 +112,7 @@ const Layout: React.FC<LayoutProps> = ({
               )}
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              onClick={() => setView(AppView.CONTENT)}
-              className="relative cursor-pointer group p-2 text-gray-500 hover:text-blue-400 transition-colors"
-              title="FIC"
-            >
-              <Activity size={20} className="group-hover:scale-110 transition-transform" />
-            </motion.div>
+
 
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}

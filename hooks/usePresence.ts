@@ -30,6 +30,18 @@ const initGlobalPresence = (currentUser: Agent | null) => {
         listeners.forEach(fn => fn({ ...newMap }));
     });
 
+    globalChannel.on('presence', { event: 'join' }, ({ key }: any) => {
+        globalOnlineMap = { ...globalOnlineMap, [key]: true };
+        listeners.forEach(fn => fn({ ...globalOnlineMap }));
+    });
+
+    globalChannel.on('presence', { event: 'leave' }, ({ key }: any) => {
+        const newMap = { ...globalOnlineMap };
+        delete newMap[key];
+        globalOnlineMap = newMap;
+        listeners.forEach(fn => fn({ ...globalOnlineMap }));
+    });
+
     globalChannel.subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
             await globalChannel.track({

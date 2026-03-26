@@ -40,7 +40,7 @@ export const submitIQLevelComplete = async (agentId: string, level: number, time
  */
 export const fetchAcademyDataSupabase = async (agentId: string) => {
     try {
-        const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('order_index');
+        const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('created_at', { ascending: false });
         const { data: lessonsRaw } = await supabase.from('academy_lessons').select('*').order('order_index');
         const { data: progressRaw } = await supabase.from('academy_progress').select('*').eq('agent_id', agentId);
 

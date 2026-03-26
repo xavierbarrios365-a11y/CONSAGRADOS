@@ -91,6 +91,7 @@ import { sendPushBroadcast } from './services/notifyService';
 // --- Custom Hooks ---
 import { useAuth } from './hooks/useAuth';
 import { useDataSync } from './hooks/useDataSync';
+import { usePresence } from './hooks/usePresence';
 import { useFirebaseMessaging } from './hooks/useFirebaseMessaging';
 import { useTacticalLogic } from './hooks/useTacticalLogic';
 
@@ -128,6 +129,9 @@ const App: React.FC = () => {
 
   // Keep the auth hook's agents ref in sync with the latest fetched agents
   useEffect(() => { auth.agentsRef.current = dataSync.agents; }, [dataSync.agents]);
+
+  // Inicializar Presencia Global para este usuario
+  usePresence(auth.isLoggedIn && auth.currentUser ? auth.currentUser : null);
 
   // Destructure for convenience (backward compatible with existing render code)
   const {
@@ -367,14 +371,8 @@ const App: React.FC = () => {
 
     fetchUnreadCount();
 
-    const channel = supabase
-      .channel('global-presence', {
-        config: {
-          presence: {
-            key: currentUser.id,
-          },
-        },
-      })
+    const dbChannel = supabase
+      .channel(`user-messages-${currentUser.id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -396,24 +394,10 @@ const App: React.FC = () => {
           fetchUnreadCount();
         }
       })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        // La sincronización de presencia ahora es puramente visual en el chat/feed
-        if (key !== currentUser.id) {
-          // No emitir avisos invasivos. Solo permitir que el estado de Presence se actualice internamente
-        }
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            online_at: new Date().toISOString(),
-            user_id: currentUser.id,
-            name: currentUser.name
-          });
-        }
-      });
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(dbChannel);
     };
   }, [isLoggedIn, currentUser]); // Se elimina 'agents' para no destruir el canal en cada recarga de agentes
 

@@ -86,11 +86,22 @@ export const syncAllAgentsToSupabase = async (agents: Agent[]) => {
 /**
  * @description Obtiene la lista completa de agentes desde Supabase. Filtrando los ocultos por defecto.
  */
-export const fetchAgentsFromSupabase = async (includeHidden = false): Promise<Agent[]> => {
+export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?: string): Promise<Agent[]> => {
     try {
+        // NIVEL 3: Consulta diferenciada por rol
+        // STUDENT: Solo columnas esenciales (~12 cols, ~40% del tamaño)
+        // LEADER: Columnas operativas (~20 cols, ~65% del tamaño)
+        // DIRECTOR: Todas las columnas (~30 cols, 100%)
+        const STUDENT_COLS = 'id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, bible, notes, leadership, streak_count, pin, baptism_status, iq_level, notif_prefs, fcm_token';
+        const LEADER_COLS = STUDENT_COLS + ', whatsapp, joined_date, birthday, last_attendance, last_streak_date, tactical_stats, tactor_summary, must_change_password, is_ai_profile_pending';
+        const DIRECTOR_COLS = LEADER_COLS + ', weekly_tasks, relationship_with_god, biometric_credential, security_question, security_answer';
+
+        const role = (callerRole || '').toUpperCase();
+        const cols = role === 'DIRECTOR' ? DIRECTOR_COLS : role === 'LEADER' ? LEADER_COLS : STUDENT_COLS;
+
         const { data, error } = await supabase
             .from('agentes')
-            .select('id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, joined_date, bible, notes, leadership, streak_count, last_attendance, last_streak_date, weekly_tasks, pin, whatsapp, baptism_status, birthday, relationship_with_god, must_change_password, is_ai_profile_pending, tactical_stats, tactor_summary, iq_level, biometric_credential, security_question, security_answer, notif_prefs, fcm_token');
+            .select(cols);
         if (error) {
             console.error('❌ Error obteniendo agentes de Supabase:', error);
             return [];

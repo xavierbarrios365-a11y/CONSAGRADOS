@@ -475,13 +475,27 @@ export function useAuth() {
      */
     const refreshCurrentUser = useCallback((freshAgents: Agent[]) => {
         const session = localStorage.getItem('consagrados_session');
-        const sessionUser = session ? JSON.parse(session) : null;
-        if (sessionUser) {
+        if (!session) return;
+
+        try {
+            const sessionUser = JSON.parse(session) as Agent;
             const updatedSelf = freshAgents.find(a => String(a.id).toUpperCase() === String(sessionUser.id).toUpperCase());
-            if (updatedSelf && JSON.stringify(updatedSelf) !== JSON.stringify(sessionUser)) {
-                setCurrentUser(updatedSelf);
-                localStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
+
+            if (updatedSelf) {
+                // Comparación profunda simplificada para campos críticos
+                const hasStreakChanged = updatedSelf.streakCount !== sessionUser.streakCount ||
+                    updatedSelf.lastStreakDate !== sessionUser.lastStreakDate;
+                const hasXpChanged = updatedSelf.xp !== sessionUser.xp;
+
+                // Si hubo cambios críticos o el JSON es diferente (fallback)
+                if (hasStreakChanged || hasXpChanged || JSON.stringify(updatedSelf) !== JSON.stringify(sessionUser)) {
+                    console.log(`🔄 Sincronización de Perfil: ${updatedSelf.name} (Streak: ${updatedSelf.streakCount}, Date: ${updatedSelf.lastStreakDate})`);
+                    setCurrentUser(updatedSelf);
+                    localStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
+                }
             }
+        } catch (e) {
+            console.error("Error en refreshCurrentUser:", e);
         }
     }, []);
 

@@ -166,14 +166,20 @@ export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?
                 const raw = d.last_streak_date || '';
                 if (!raw || (d.streak_count || 0) === 0) return 0;
                 try {
-                    const now = new Date();
-                    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-                    const yesterday = new Date(now);
+                    const today = new Date();
+                    const todayStr = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                    const yesterday = new Date(today);
                     yesterday.setDate(yesterday.getDate() - 1);
                     const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-                    const ts = Number(raw);
-                    const lastDate = (!isNaN(ts) && ts > 1e12) ? new Date(ts) : new Date(raw);
-                    const lastDateStr = lastDate.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+                    let lastDateStr = '';
+                    if (raw.match(/^\d+$/)) {
+                        lastDateStr = new Date(parseInt(raw, 10)).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+                    } else {
+                        // Si ya es YYYY-MM-DD, no pasar por Date() para evitar desajuste de zona horaria
+                        lastDateStr = raw.split(' ')[0]; // Tomar solo la parte de la fecha
+                    }
+
                     return (lastDateStr === todayStr || lastDateStr === yesterdayStr) ? (d.streak_count || 0) : 0;
                 } catch { return 0; }
             })(),

@@ -418,6 +418,8 @@ const App: React.FC = () => {
     const viewParam = params.get('view');
     if (viewParam === 'bible_war_display') {
       setView(AppView.BIBLE_WAR_DISPLAY);
+    } else if (viewParam === 'autorizacion') {
+      setView(AppView.DEPLOYMENT_AUTH);
     }
   }, []);
 
@@ -799,12 +801,16 @@ const App: React.FC = () => {
   }
 
   // VISTA DE LANDING (PÚBLICA)
-  if (view === AppView.LANDING) {
+  // VISTA DE AUTORIZACIÓN (PÚBLICA / COMPARTIBLE)
+  if (view === AppView.DEPLOYMENT_AUTH) {
     return (
       <TacticalAlertProvider>
-        <React.Suspense fallback={<LoadingScreen message="ACCEDIENDO A PLAN DE INVERSIÓN..." />}>
-          <LandingInversion onBack={() => setView(AppView.PUBLIC_WEB)} />
-        </React.Suspense>
+        <div className="h-screen overflow-y-auto no-scrollbar">
+          <DeploymentAuthorization
+            onBack={() => setView(isLoggedIn ? AppView.HOME : AppView.PUBLIC_WEB)}
+            agents={agents}
+          />
+        </div>
       </TacticalAlertProvider>
     );
   }

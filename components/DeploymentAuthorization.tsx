@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import html2canvas from 'html2canvas';
-import { ShieldCheck, Download, Trash2, User, CreditCard, Phone, MapPin } from 'lucide-react';
+import { ShieldCheck, Download, Trash2, User, CreditCard, Phone, CheckCircle2 } from 'lucide-react';
 import { Agent } from '../types';
 
 interface DeploymentAuthorizationProps {
@@ -28,6 +28,8 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
         "LUISANGELIS ALBERLISMAR LINARES ALDAZORA"
     ];
 
+    const allAgents = Array.from(new Set([...predefinedAgents, ...agents.map(a => a.name.toUpperCase())])).sort();
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -36,11 +38,13 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
         if (!ctx) return;
 
         const resizeCanvas = () => {
-            canvas.width = canvas.parentElement?.clientWidth || 0;
-            canvas.height = 150;
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#0F172A';
+            if (canvas.parentElement) {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = 160;
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#0F172A';
+            }
         };
 
         window.addEventListener('resize', resizeCanvas);
@@ -49,7 +53,7 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
         return () => window.removeEventListener('resize', resizeCanvas);
     }, []);
 
-    const getCoordinates = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
+    const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
         const canvas = canvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
 
@@ -61,14 +65,16 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
             };
         } else {
             return {
-                x: (e as React.MouseEvent).nativeEvent.offsetX,
-                y: (e as React.MouseEvent).nativeEvent.offsetY
+                x: e.nativeEvent.offsetX,
+                y: e.nativeEvent.offsetY
             };
         }
     };
 
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        if ('touches' in e) e.preventDefault();
+        if ('touches' in e) {
+            // No llamar a e.preventDefault() aquí para permitir scroll si no están sobre el canvas
+        }
         setIsDrawing(true);
         const { x, y } = getCoordinates(e);
         const ctx = canvasRef.current?.getContext('2d');
@@ -80,7 +86,9 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing) return;
-        if ('touches' in e) e.preventDefault();
+        if ('touches' in e) {
+            e.preventDefault(); // Bloquear scroll solo mientras dibujan
+        }
         const { x, y } = getCoordinates(e);
         const ctx = canvasRef.current?.getContext('2d');
         if (ctx) {
@@ -112,7 +120,7 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
 
         // Ocultar elementos que no deben salir en la imagen
         const buttons = document.querySelectorAll('.no-capture');
-        buttons.forEach(b => (b as HTMLElement).style.display = 'none');
+        buttons.forEach(b => (b as HTMLElement).style.opacity = '0');
 
         try {
             const canvas = await html2canvas(documentRef.current, {
@@ -126,154 +134,228 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
             link.href = canvas.toDataURL('image/jpeg', 0.9);
             link.click();
 
-            alert('¡Documento generado con éxito! Por favor envíe la imagen descargada por WhatsApp.');
+            alert('¡Documento generado con éxito! El archivo se ha descargado en su dispositivo. Por favor envíelo por WhatsApp al Director Sahel Barrios.');
         } catch (err) {
             console.error('Error generating image:', err);
             alert('Error al generar la imagen. Intente nuevamente.');
         } finally {
-            buttons.forEach(b => (b as HTMLElement).style.display = 'flex');
+            buttons.forEach(b => (b as HTMLElement).style.opacity = '1');
         }
     };
 
+    const isPublic = window.location.search.includes('view=autorizacion');
+
     return (
-        <div className="min-h-screen bg-slate-900 p-4 pb-20 flex flex-col items-center">
+        <div className="min-h-screen bg-[#020617] p-4 pb-20 flex flex-col items-center relative overflow-x-hidden">
+            {/* Background elements for premium feel */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-red-600/10 blur-[120px] rounded-full"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[120px] rounded-full"></div>
+            </div>
+
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-2xl"
+                className="w-full max-w-2xl z-10"
             >
-                <button
-                    onClick={onBack}
-                    className="mb-4 text-white/60 hover:text-white flex items-center gap-2 transition-colors uppercase text-xs font-bold tracking-widest"
-                >
-                    ← Volver al Panel
-                </button>
+                <div className="flex justify-between items-center mb-6">
+                    <button
+                        onClick={onBack}
+                        className="text-white/40 hover:text-white flex items-center gap-2 transition-all uppercase text-[10px] font-black tracking-widest"
+                    >
+                        ← {isPublic ? 'IR A LA WEB OFICIAL' : 'VOLVER AL PANEL'}
+                    </button>
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-8 bg-red-600 rounded-full animate-pulse"></div>
+                        <span className="text-white/40 text-[8px] font-black uppercase tracking-[0.4em]">Canal Seguro / En Línea</span>
+                    </div>
+                </div>
 
                 <div
                     ref={documentRef}
-                    className="bg-white p-6 rounded-sm border-t-[10px] border-slate-900 shadow-2xl overflow-hidden"
+                    className="bg-white p-6 md:p-12 rounded-sm border-t-[12px] border-slate-900 shadow-2xl overflow-hidden relative"
                     style={{ fontFamily: "'Space Mono', monospace" }}
                 >
+                    {/* Watermark style background for the document */}
+                    <div className="absolute inset-0 opacity-[0.02] pointer-events-none flex items-center justify-center rotate-[-45deg] scale-150 overflow-hidden select-none">
+                        <div className="text-[120px] font-black leading-none text-slate-900 border-y-8 border-slate-900 py-4">
+                            CONSAGRADOS
+                        </div>
+                    </div>
+
                     {/* Header */}
-                    <div className="border-b-2 border-slate-900 pb-4 mb-6">
-                        <div className="text-[10px] font-bold text-red-600 tracking-widest mb-1">
+                    <div className="relative border-b-2 border-slate-900 pb-6 mb-8">
+                        <div className="text-[10px] font-black text-red-600 tracking-[0.3em] mb-2">
                             PROYECTO JUVENIL CONSAGRADOS 2026 - BASE IJELS
                         </div>
-                        <h1 className="text-2xl font-black text-slate-900 uppercase leading-none mb-2" style={{ fontFamily: "'Oswald', sans-serif" }}>
+                        <h1 className="text-4xl font-black text-slate-900 uppercase leading-[0.9] mb-4" style={{ fontFamily: "'Oswald', sans-serif" }}>
                             AUTORIZACIÓN DE DESPLIEGUE OFICIAL
                         </h1>
-                        <div className="text-[10px] font-bold text-right text-slate-500">
-                            CÓDIGO: MOV-ARAURE-001
+                        <div className="flex justify-between items-end">
+                            <div className="space-y-1">
+                                <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                    ESTADO: EXPEDIENTE OPERATIVO
+                                </div>
+                                <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                    <ShieldCheck size={10} /> AUTENTICACIÓN DIGITAL NIVEL 1
+                                </div>
+                            </div>
+                            <div className="text-[10px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-sm">
+                                CÓDIGO: <span className="text-slate-900 font-black">MOV-ARAURE-001</span>
+                            </div>
                         </div>
                     </div>
 
                     {/* Body Text */}
-                    <p className="text-[11px] leading-relaxed text-slate-800 text-justify mb-6">
-                        Certifico que he sido informado de la misión a <strong>Araure (Festival de la Familia)</strong>. Autorizo la movilización de mi representado bajo la custodia del equipo directivo de Consagrados 2026. Hora de salida: 4:00 PM. Retorno: Mismo punto en horas de la noche. Se garantiza transporte y seguridad.
-                    </p>
+                    <div className="relative mb-10 p-5 bg-slate-50 border-l-[6px] border-red-600 shadow-inner">
+                        <p className="text-[13px] leading-relaxed text-slate-800 text-justify font-bold">
+                            Certifico que he sido informado de la misión a <span className="text-red-600">Araure (Festival de la Familia)</span>. Autorizo formalmente la movilización de mi representado bajo la custodia del equipo directivo de Consagrados 2026. Hora de salida estimada: 4:00 PM. Retorno: Mismo punto en horas de la noche. Se garantiza transporte, logística y seguridad en todo momento durante el despliegue técnico y espiritual.
+                        </p>
+                    </div>
 
                     {/* Form Fields */}
-                    <div className="space-y-4">
-                        <div>
-                            <label className="flex items-center gap-2 text-[10px] font-bold text-red-600 uppercase mb-2">
-                                <User size={12} /> 1. SELECCIONE EL AGENTE CONVOCADO:
+                    <div className="relative space-y-6">
+                        <div className="group">
+                            <label className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase mb-2 tracking-widest group-focus-within:translate-x-1 transition-transform">
+                                <User size={14} className="text-red-600" /> 1. AGENTE CONVOCADO (ESTUDIANTE):
                             </label>
-                            <select
-                                value={selectedAgent}
-                                onChange={(e) => setSelectedAgent(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 p-2 text-sm outline-none focus:border-red-600 transition-colors"
-                                required
-                            >
-                                <option value="">Seleccione un agente...</option>
-                                {predefinedAgents.map(name => (
-                                    <option key={name} value={name}>{name}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={selectedAgent}
+                                    onChange={(e) => setSelectedAgent(e.target.value)}
+                                    className="w-full bg-slate-100 border-b-2 border-slate-300 p-4 text-sm font-black text-slate-900 outline-none focus:border-red-600 focus:bg-white transition-all appearance-none cursor-pointer"
+                                    required
+                                >
+                                    <option value="">-- SELECCIONE EL NOMBRE DEL AGENTE --</option>
+                                    {allAgents.map(name => (
+                                        <option key={name} value={name}>{name}</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="flex items-center gap-2 text-[10px] font-bold text-red-600 uppercase mb-2">
-                                <ShieldCheck size={12} /> 2. NOMBRE Y APELLIDO DEL REPRESENTANTE LEGAL:
+                        <div className="group">
+                            <label className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase mb-2 tracking-widest group-focus-within:translate-x-1 transition-transform">
+                                <ShieldCheck size={14} className="text-red-600" /> 2. NOMBRE COMPLETO DEL REPRESENTANTE:
                             </label>
                             <input
                                 type="text"
                                 value={repNombre}
                                 onChange={(e) => setRepNombre(e.target.value)}
-                                placeholder="Ej: Juan Pérez"
-                                className="w-full bg-slate-50 border border-slate-200 p-2 text-sm outline-none focus:border-red-600 transition-colors"
+                                placeholder="ESCRIBA SU NOMBRE Y APELLIDO"
+                                className="w-full bg-slate-100 border-b-2 border-slate-300 p-4 text-sm font-black text-slate-900 outline-none focus:border-red-600 focus:bg-white transition-all placeholder:text-slate-300 placeholder:font-bold"
                                 required
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="flex items-center gap-2 text-[10px] font-bold text-red-600 uppercase mb-2">
-                                    <CreditCard size={12} /> 3. CÉDULA DE IDENTIDAD:
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="group">
+                                <label className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase mb-2 tracking-widest group-focus-within:translate-x-1 transition-transform">
+                                    <CreditCard size={14} className="text-red-600" /> 3. NÚMERO DE CÉDULA:
                                 </label>
                                 <input
                                     type="text"
                                     value={repCedula}
                                     onChange={(e) => setRepCedula(e.target.value)}
-                                    placeholder="V-12345678"
-                                    className="w-full bg-slate-50 border border-slate-200 p-2 text-sm outline-none focus:border-red-600 transition-colors"
+                                    placeholder="V-00.000.000"
+                                    className="w-full bg-slate-100 border-b-2 border-slate-300 p-4 text-sm font-black text-slate-900 outline-none focus:border-red-600 focus:bg-white transition-all placeholder:text-slate-300"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="flex items-center gap-2 text-[10px] font-bold text-red-600 uppercase mb-2">
-                                    <Phone size={12} /> 4. TELÉFONO DE EMERGENCIA:
+                            <div className="group">
+                                <label className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase mb-2 tracking-widest group-focus-within:translate-x-1 transition-transform">
+                                    <Phone size={14} className="text-red-600" /> 4. TELÉFONO DE EMERGENCIA:
                                 </label>
                                 <input
                                     type="tel"
                                     value={repTelefono}
                                     onChange={(e) => setRepTelefono(e.target.value)}
                                     placeholder="04XX-XXXXXXX"
-                                    className="w-full bg-slate-50 border border-slate-200 p-2 text-sm outline-none focus:border-red-600 transition-colors"
+                                    className="w-full bg-slate-100 border-b-2 border-slate-300 p-4 text-sm font-black text-slate-900 outline-none focus:border-red-600 focus:bg-white transition-all placeholder:text-slate-300"
                                     required
                                 />
                             </div>
                         </div>
 
                         {/* Signature Area */}
-                        <div className="relative border-2 border-dashed border-slate-200 bg-slate-50 rounded-lg overflow-hidden mt-6">
-                            <label className="absolute top-2 left-2 text-[10px] font-bold text-red-600 uppercase pointer-events-none">
-                                5. DIBUJE SU FIRMA AQUÍ ABAJO:
+                        <div className="relative mt-10">
+                            <label className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest">
+                                5. FIRMA DIGITAL DEL REPRESENTANTE:
                             </label>
-                            <button
-                                onClick={clearSignature}
-                                className="no-capture absolute top-2 right-2 flex items-center gap-1 bg-red-600 text-white text-[9px] font-bold py-1 px-2 rounded hover:bg-red-700 transition-colors"
-                            >
-                                <Trash2 size={10} /> BORRAR
-                            </button>
-                            <canvas
-                                ref={canvasRef}
-                                onMouseDown={startDrawing}
-                                onMouseMove={draw}
-                                onMouseUp={stopDrawing}
-                                onMouseOut={stopDrawing}
-                                onTouchStart={startDrawing}
-                                onTouchMove={draw}
-                                onTouchEnd={stopDrawing}
-                                className="w-full h-[150px] cursor-crosshair touch-none"
-                            />
+                            <div className="relative border-2 border-slate-900 bg-slate-50 overflow-hidden shadow-inner group">
+                                <button
+                                    onClick={clearSignature}
+                                    className="no-capture absolute top-4 right-4 flex items-center gap-1 bg-red-600 text-white text-[10px] font-black py-1.5 px-4 rounded-full hover:bg-red-700 transition-all shadow-lg active:scale-95 z-20"
+                                >
+                                    <Trash2 size={12} /> LIMPIAR FIRMA
+                                </button>
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+                                    <span className="text-[12px] font-black uppercase tracking-[0.6em] text-slate-900">FIRME AQUÍ CON SU DEDO</span>
+                                </div>
+                                <canvas
+                                    ref={canvasRef}
+                                    onMouseDown={startDrawing}
+                                    onMouseMove={draw}
+                                    onMouseUp={stopDrawing}
+                                    onMouseOut={stopDrawing}
+                                    onTouchStart={startDrawing}
+                                    onTouchMove={draw}
+                                    onTouchEnd={stopDrawing}
+                                    className="w-full h-[180px] cursor-crosshair touch-none relative z-10"
+                                />
+                                <div className="absolute bottom-2 left-0 right-0 text-center pointer-events-none no-capture">
+                                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">DIBUJE SU FIRMA SOBRE LA LÍNEA O EN EL ESPACIO BLANCO</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-4 border-t border-slate-200 text-center">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                            AUTORIZADO POR: SAHEL BARRIOS (COORD. GENERAL - CONSAGRADOS 2026)
+                    <div className="mt-16 pt-8 border-t-2 border-slate-100 text-center space-y-6">
+                        <div className="flex items-center justify-center gap-4 opacity-30">
+                            <div className="h-px w-12 bg-slate-900"></div>
+                            <div className="text-[10px] font-black text-slate-900 uppercase tracking-[0.4em]">EXPEDIENTE OFICIAL</div>
+                            <div className="h-px w-12 bg-slate-900"></div>
+                        </div>
+
+                        <div className="inline-block p-4 border-2 border-slate-900 rounded-sm bg-slate-50 shadow-sm">
+                            <div className="text-[12px] font-black text-slate-900 uppercase tracking-tight leading-tight mb-1">
+                                SAHEL BARRIOS
+                            </div>
+                            <div className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em]">
+                                COORDINADOR GENERAL - CONSAGRADOS 2026
+                            </div>
+                        </div>
+
+                        <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                            LA PRESENTE AUTORIZACIÓN TIENE VALIDEZ PARA LA MISIÓN ESPECIFICADA. <br />
+                            GENERADO DIGITALMENTE A TRAVÉS DEL CENTRO DE MANDO CONSAGRADOS.
                         </div>
                     </div>
                 </div>
 
-                <button
-                    onClick={generateImage}
-                    className="no-capture mt-6 w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl flex items-center justify-center gap-3 font-black text-lg transition-all shadow-xl active:scale-95"
-                    style={{ fontFamily: "'Oswald', sans-serif" }}
-                >
-                    <Download size={24} />
-                    FORJAR Y DESCARGAR AUTORIZACIÓN
-                </button>
+                <div className="no-capture mt-10 space-y-6">
+                    <button
+                        onClick={generateImage}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white py-6 rounded-2xl flex items-center justify-center gap-4 font-black text-2xl transition-all shadow-[0_20px_50px_rgba(220,38,38,0.3)] active:scale-95 group overflow-hidden relative"
+                        style={{ fontFamily: "'Oswald', sans-serif" }}
+                    >
+                        <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>
+                        <Download size={28} className="group-hover:animate-bounce" />
+                        DESCARGAR AUTORIZACIÓN (JPG)
+                    </button>
+
+                    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 text-center space-y-3">
+                        <div className="flex items-center justify-center gap-2 text-[#25D366]">
+                            <CheckCircle2 size={16} />
+                            <span className="text-[11px] font-black uppercase tracking-widest">INSTRUCCIÓN DE ENVÍO</span>
+                        </div>
+                        <p className="text-white/60 text-[11px] font-medium leading-relaxed uppercase tracking-widest">
+                            UNA VEZ DESCARGADO EL DOCUMENTO, POR FAVOR ENVÍE LA IMAGEN POR <span className="text-white font-black underline">WHATSAPP</span> AL AGENTE SAHEL BARRIOS PARA EL REGISTRO FINAL DE LA MISIÓN.
+                        </p>
+                    </div>
+                </div>
             </motion.div>
         </div>
     );

@@ -1,5 +1,5 @@
 // --- PURGE SYSTEM: FORZAR RECARGA PARA LIMPIAR CACHÉ ANTIGUO ---
-const APP_PURGE_VERSION = '2026_PURGE_V6_PRESENCE_FIX_V3';
+const APP_PURGE_VERSION = '2026_PURGE_V6_PRESENCE_FIX_V4_DEPLOY_AUTH';
 if (typeof window !== 'undefined') {
   if (localStorage.getItem('APP_PURGE_ID') !== APP_PURGE_VERSION) {
     localStorage.setItem('APP_PURGE_ID', APP_PURGE_VERSION);
@@ -47,7 +47,7 @@ const LandingInversion = React.lazy(() => import('./components/LandingInversion'
 const PublicWebsite = React.lazy(() => import('./components/PublicWebsite'));
 const TacticalIQ = React.lazy(() => import('./components/TacticalIQ'));
 const TacticalDuelArena = React.lazy(() => import('./components/TacticalDuelArena'));
-const DeploymentAuthorization = React.lazy(() => import('./components/DeploymentAuthorization'));
+import DeploymentAuthorization from './components/DeploymentAuthorization';
 import TacticalHelp from './components/TacticalHelp';
 // --- Modularized Views ---
 import StudentView from './components/views/StudentView';
@@ -665,7 +665,7 @@ const App: React.FC = () => {
     }
 
     // Shared Views
-    if ([AppView.DIRECTORY, AppView.PROFILE, AppView.BIBLE_WAR_DISPLAY, AppView.RANKING, AppView.ENROLLMENT, AppView.BIBLE_WAR_ARENA, AppView.BIBLE_WAR_STUDENT, AppView.BIBLE, AppView.IQ_GAME, AppView.DUEL_ARENA, AppView.HELP_CENTER].includes(view)) {
+    if ([AppView.DIRECTORY, AppView.PROFILE, AppView.BIBLE_WAR_DISPLAY, AppView.RANKING, AppView.ENROLLMENT, AppView.BIBLE_WAR_ARENA, AppView.BIBLE_WAR_STUDENT, AppView.BIBLE, AppView.IQ_GAME, AppView.DUEL_ARENA, AppView.HELP_CENTER, AppView.DEPLOYMENT_AUTH].includes(view)) {
       if (view === AppView.HELP_CENTER) {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="help_center" className="h-full">

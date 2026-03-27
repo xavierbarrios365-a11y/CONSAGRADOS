@@ -187,7 +187,7 @@ export const useTacticalLogic = (
                     updateAgentLocalState({
                         ...currentUser,
                         streakCount: res.newStreak !== undefined ? res.newStreak : safeStreak,
-                        lastStreakDate: String(Date.now()), // Usar string para complacer el tipo Agent
+                        lastStreakDate: localToday,
                         weeklyTasks: updatedTasks
                     });
                 }

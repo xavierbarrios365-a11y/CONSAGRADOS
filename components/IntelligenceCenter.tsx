@@ -50,7 +50,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [photoStatus, setPhotoStatus] = useState<'IDLE' | 'UPLOADING' | 'SAVING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [promoData, setPromoData] = useState<{ xp: number; certificates: number } | null>(null);
   const [isLoadingPromo, setIsLoadingPromo] = useState(false);
-  const [onlineAgencies, setOnlineAgencies] = useState<Record<string, boolean>>({});
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', time: '', description: '' });

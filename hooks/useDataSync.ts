@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
 import { INITIAL_AGENTS } from '../mockData';
 
@@ -167,6 +167,12 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         }
     }, [currentUser, agents]);
 
+    // === REFS ESTABLES para romper ciclos de dependencia ===
+    const syncDataRef = useRef(syncData);
+    syncDataRef.current = syncData;
+    const checkHeadlinesRef = useRef(checkHeadlines);
+    checkHeadlinesRef.current = checkHeadlines;
+
     // Badging API Synchronization
     useEffect(() => {
         const anyNav = navigator as any;
@@ -202,43 +208,35 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     // 4. Sync de RESPALDO cada 10 min (seguridad)
     // ==========================================
 
-    // 1. Fetch inicial al montar + sync de RESPALDO cada 10 min
+    // 1. Fetch inicial al montar (UNA SOLA VEZ)
     useEffect(() => {
-        syncData();
-        checkHeadlines();
+        syncDataRef.current();
+        checkHeadlinesRef.current();
 
-        // Respaldo: Sync completo cada 10 min (reduce de ~14,400 a ~4,320 requests/día para 30 usuarios)
-        const interval = setInterval(() => syncData(true), 600000); // 10 min
+        // Respaldo: Sync cada 10 min
+        const interval = setInterval(() => syncDataRef.current(true), 600000);
         return () => clearInterval(interval);
-    }, [syncData, checkHeadlines]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // MOUNT ONLY - NO DEPS
 
-    // 2. Realtime: Escuchar cambios en la tabla 'agentes' (XP, rachas, fotos, etc.)
+    // 2. Realtime: Escuchar cambios en la tabla 'agentes'
     useEffect(() => {
         if (!isLoggedIn) return;
 
         let debounceTimer: ReturnType<typeof setTimeout> | null = null;
         let isSyncingFromRealtime = false;
 
-        console.log("📡 Activando Realtime para tabla 'agentes'...");
         const agentChannel = supabase
             .channel('agentes-realtime')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'agentes'
-                },
+                { event: '*', schema: 'public', table: 'agentes' },
                 () => {
-                    // Debounce: esperar 5 seg desde el último cambio antes de sincronizar
-                    // Esto evita que 30 cambios rápidos disparen 30 syncs
                     if (debounceTimer) clearTimeout(debounceTimer);
                     if (isSyncingFromRealtime) return;
-
                     debounceTimer = setTimeout(async () => {
                         isSyncingFromRealtime = true;
-                        console.log("⚡ Cambio en 'agentes' → sync (debounced 5s)");
-                        await syncData(true);
+                        await syncDataRef.current(true);
                         isSyncingFromRealtime = false;
                     }, 5000);
                 }
@@ -249,45 +247,35 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             if (debounceTimer) clearTimeout(debounceTimer);
             supabase.removeChannel(agentChannel);
         };
-    }, [isLoggedIn, syncData]);
+    }, [isLoggedIn]);
 
     // 3. Realtime: Escuchar nuevas notificaciones
     useEffect(() => {
         if (!isLoggedIn || !currentUser) return;
 
-        console.log("📡 Activando Realtime para notificaciones...");
         const channel = supabase
             .channel('notificaciones-realtime')
             .on(
                 'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'notificaciones_push'
-                },
+                { event: 'INSERT', schema: 'public', table: 'notificaciones_push' },
                 (payload) => {
-                    console.log("🔔 Nueva notificación via Realtime:", payload.new);
                     const newNotif = payload.new;
                     if (!newNotif.agent_id || newNotif.agent_id.toUpperCase() === currentUser.id.toUpperCase()) {
-                        checkHeadlines();
+                        checkHeadlinesRef.current();
                     }
                 }
             )
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [isLoggedIn, currentUser, checkHeadlines]);
+        return () => { supabase.removeChannel(channel); };
+    }, [isLoggedIn, currentUser]);
 
-    // 4. Headlines: refresh de seguridad cada 10 min (usa datos en memoria, no refetch)
+    // 4. Headlines: refresh cada 10 min
     useEffect(() => {
-        if (isLoggedIn) {
-            checkHeadlines();
-            const interval = setInterval(checkHeadlines, 600000); // 10 min
-            return () => clearInterval(interval);
-        }
-    }, [isLoggedIn, checkHeadlines]);
+        if (!isLoggedIn) return;
+        const interval = setInterval(() => checkHeadlinesRef.current(), 600000);
+        return () => clearInterval(interval);
+    }, [isLoggedIn]);
 
     return {
         agents, setAgents,

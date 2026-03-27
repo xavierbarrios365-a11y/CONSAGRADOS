@@ -33,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({
     { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'FIC', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Feed', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Ranking', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
     { id: AppView.PROFILE, icon: <User size={20} />, label: 'Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];

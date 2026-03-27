@@ -247,6 +247,11 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 </button>
                             )}
 
+                            <button onClick={() => setView(AppView.DEPLOYMENT_AUTH)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-red-500/10 hover:border-red-500/40 transition-all active:scale-90 shadow-lg group">
+                                <ShieldCheck size={24} className="text-red-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Autorización</span>
+                            </button>
+
                             <button onClick={() => setView(AppView.HELP_CENTER)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
                                 <HelpCircle size={24} className="text-blue-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform" />
                                 <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ayuda</span>

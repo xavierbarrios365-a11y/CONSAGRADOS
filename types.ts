@@ -104,7 +104,8 @@ export enum AppView {
   PUBLIC_WEB = 'public_web',
   IQ_GAME = 'IQ_GAME',
   DUEL_ARENA = 'DUEL_ARENA',
-  HELP_CENTER = 'HELP_CENTER'
+  HELP_CENTER = 'HELP_CENTER',
+  DEPLOYMENT_AUTH = 'DEPLOY_AUTH'
 }
 
 export interface Visitor {

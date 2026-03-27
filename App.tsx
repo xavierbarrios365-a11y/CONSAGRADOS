@@ -47,6 +47,7 @@ const LandingInversion = React.lazy(() => import('./components/LandingInversion'
 const PublicWebsite = React.lazy(() => import('./components/PublicWebsite'));
 const TacticalIQ = React.lazy(() => import('./components/TacticalIQ'));
 const TacticalDuelArena = React.lazy(() => import('./components/TacticalDuelArena'));
+const DeploymentAuthorization = React.lazy(() => import('./components/DeploymentAuthorization'));
 import TacticalHelp from './components/TacticalHelp';
 // --- Modularized Views ---
 import StudentView from './components/views/StudentView';
@@ -744,6 +745,14 @@ const App: React.FC = () => {
         return (
           <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="duel_arena" className="h-full">
             <TacticalDuelArena currentUser={currentUser} onClose={() => setView(AppView.HOME)} onUpdateNeeded={syncData} />
+          </motion.div>
+        );
+      }
+
+      if (view === AppView.DEPLOYMENT_AUTH) {
+        return (
+          <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="deploy_auth" className="h-full">
+            <DeploymentAuthorization onBack={() => setView(AppView.HOME)} agents={agents} />
           </motion.div>
         );
       }

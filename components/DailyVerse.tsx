@@ -29,28 +29,31 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
             const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
             const localToday = localStorage.getItem('verse_completed_date');
 
+            // Si no hay datos en el servidor Y no hay nada en local, no está hecho
             if (!verse?.lastStreakDate && localToday !== todayStr) {
                 setQuizCompleted(false);
                 return;
             }
+
             let lastMs = 0;
-            const raw = verse?.lastStreakDate || '';
-            const numVal = Number(raw);
-            if (!isNaN(numVal) && numVal > 1000000000000) {
-                lastMs = numVal;
+            const raw = String(verse?.lastStreakDate || '');
+
+            // Intentar parsear el valor del servidor
+            if (raw.match(/^\d+$/)) {
+                lastMs = parseInt(raw, 10);
             } else if (raw !== '') {
                 const pd = new Date(raw);
                 if (!isNaN(pd.getTime())) lastMs = pd.getTime();
             }
 
-            if (lastMs === 0 && localToday !== todayStr) {
-                setQuizCompleted(false);
-                return;
-            }
-
             // --- LÓGICA DE DÍA CALENDARIO (GMT-4 / Caracas) ---
             const lastDateStr = lastMs > 0 ? new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }) : '';
             const isCompletedToday = (lastDateStr === todayStr) || (localToday === todayStr);
+
+            // Sincronizar local si el servidor ya lo tiene confirmado
+            if (lastDateStr === todayStr && localToday !== todayStr) {
+                localStorage.setItem('verse_completed_date', todayStr);
+            }
 
             if (isCompletedToday) {
                 setQuizCompleted(true);

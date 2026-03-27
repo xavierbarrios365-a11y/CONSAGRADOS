@@ -140,11 +140,15 @@ export const useTacticalLogic = (
         // También verificar con la fecha del servidor para prevenir abuso entre dispositivos/sesiones
         let serverAlreadyDone = false;
         if (currentUser.lastStreakDate) {
-            const raw = currentUser.lastStreakDate;
-            const numVal = Number(raw);
+            const raw = String(currentUser.lastStreakDate);
             let lastMs = 0;
-            if (!isNaN(numVal) && numVal > 1e12) lastMs = numVal;
-            else { const pd = new Date(raw); if (!isNaN(pd.getTime())) lastMs = pd.getTime(); }
+            if (raw.match(/^\d+$/)) {
+                lastMs = parseInt(raw, 10);
+            } else if (raw !== '') {
+                const pd = new Date(raw);
+                if (!isNaN(pd.getTime())) lastMs = pd.getTime();
+            }
+
             if (lastMs > 0) {
                 const serverDateStr = new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
                 serverAlreadyDone = serverDateStr === localToday;

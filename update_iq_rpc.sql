@@ -9,10 +9,8 @@ DECLARE
     v_nombre TEXT;
     v_current_iq INTEGER;
     v_xp_reward INTEGER;
+    v_first_time BOOLEAN;
 BEGIN
-    -- Asegurar que la columna de pozo existe (en un entorno ideal esto sería una migración previa)
-    -- ALTER TABLE public.agentes ADD COLUMN IF NOT EXISTS pending_iq_xp INTEGER DEFAULT 0;
-
     SELECT id, nombre, COALESCE(iq_level, 0)
     INTO v_real_id, v_nombre, v_current_iq
     FROM public.agentes
@@ -22,35 +20,40 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Agente no encontrado');
     END IF;
 
-    -- Calcular recompensa de XP base para el pozo (50 base + 5 por nivel)
+    -- FIX: Solo acumular XP si es la PRIMERA VEZ que completa este nivel
+    -- Si iq_level ya es mayor, el nivel fue completado antes → no sumar XP al pozo
+    v_first_time := (p_level_achieved >= v_current_iq);
     v_xp_reward := 50 + (p_level_achieved * 5);
 
-    IF p_level_achieved >= v_current_iq THEN
-        -- Incrementar Nivel de IQ
-        UPDATE public.agentes 
-        SET iq_level = p_level_achieved + 1, 
-            pending_iq_xp = COALESCE(pending_iq_xp, 0) + v_xp_reward, -- Acumular en el pozo
+    IF v_first_time THEN
+        UPDATE public.agentes
+        SET iq_level = GREATEST(iq_level, p_level_achieved + 1),
+            pending_iq_xp = COALESCE(pending_iq_xp, 0) + v_xp_reward,
             updated_at = timezone('utc'::text, now())
         WHERE id = v_real_id;
     END IF;
 
+    -- Siempre guardar mejor tiempo (rejugar está permitido para batir récords)
     IF p_time_taken_secs > 0 THEN
         INSERT INTO public.iq_best_times (agent_id, level, time_seconds)
         VALUES (v_real_id, p_level_achieved, p_time_taken_secs)
-        ON CONFLICT (agent_id, level) DO UPDATE 
+        ON CONFLICT (agent_id, level) DO UPDATE
         SET time_seconds = LEAST(public.iq_best_times.time_seconds, EXCLUDED.time_seconds),
-            created_at = CASE WHEN EXCLUDED.time_seconds < public.iq_best_times.time_seconds THEN timezone('utc'::text, now()) ELSE public.iq_best_times.created_at END;
+            created_at = CASE
+                WHEN EXCLUDED.time_seconds < public.iq_best_times.time_seconds
+                THEN timezone('utc'::text, now())
+                ELSE public.iq_best_times.created_at
+            END;
     END IF;
 
     RETURN jsonb_build_object(
         'success', true,
-        'real_id', v_real_id,
-        'nombre', v_nombre,
-        'xp_added_to_pool', v_xp_reward,
-        'current_iq', p_level_achieved + 1
+        'first_time', v_first_time,
+        'xp_added_to_pool', CASE WHEN v_first_time THEN v_xp_reward ELSE 0 END,
+        'current_iq', GREATEST(v_current_iq, p_level_achieved + 1)
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- RPC para finalizar la campaña y otorgar XP proporcionales basándose en el examen
 CREATE OR REPLACE FUNCTION public.finalize_iq_campaign(

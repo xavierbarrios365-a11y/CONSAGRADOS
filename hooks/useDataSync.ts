@@ -120,7 +120,8 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
             // Filtrar: Dirigidas a mí o Globales + No leída + No borrada
             const unreadNotifs = notifs.filter(n => {
-                const isMyNotif = !n.agent_id || n.agent_id.toUpperCase() === agentId;
+                const nAgentId = (n.agent_id || '').toUpperCase();
+                const isMyNotif = !n.agent_id || nAgentId === agentId;
                 const isNotRead = !readIds.includes(n.id);
                 const isNotDeleted = !delIds.includes(n.id);
                 return isMyNotif && isNotRead && isNotDeleted;
@@ -221,7 +222,10 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
 
     // 2. Realtime: Escuchar cambios en la tabla 'agentes'
     useEffect(() => {
-        if (!isLoggedIn) return;
+        if (!isLoggedIn) {
+            setUnreadNotifications(0);
+            return;
+        }
 
         let debounceTimer: ReturnType<typeof setTimeout> | null = null;
         let isSyncingFromRealtime = false;
@@ -270,12 +274,13 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         return () => { supabase.removeChannel(channel); };
     }, [isLoggedIn, currentUser]);
 
-    // 4. Headlines: refresh cada 10 min
+    // 4. Headlines: refresh cada 10 min o cuando cambie el usuario (notifPrefs)
     useEffect(() => {
         if (!isLoggedIn) return;
+        checkHeadlinesRef.current();
         const interval = setInterval(() => checkHeadlinesRef.current(), 600000);
         return () => clearInterval(interval);
-    }, [isLoggedIn]);
+    }, [isLoggedIn, currentUser?.notifPrefs]);
 
     return {
         agents, setAgents,

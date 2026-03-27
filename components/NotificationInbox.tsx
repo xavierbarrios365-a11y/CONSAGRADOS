@@ -201,10 +201,12 @@ const NotificationInbox: React.FC<NotificationInboxProps> = ({ onClose, onTotalR
     const visibleNotifications = notifications
         .filter(n => !deletedIds.includes(n.id))
         .filter(n => {
+            const nAgentId = (n.agent_id || '').toUpperCase();
+            const uAgentId = (agentId || '').toUpperCase();
             // Notificaciones Globales (agent_id vacío o null)
             if (!n.agent_id) return true;
             // Notificaciones Dirigidas (solo para este agente)
-            return n.agent_id === agentId;
+            return nAgentId === uAgentId;
         });
 
     return (

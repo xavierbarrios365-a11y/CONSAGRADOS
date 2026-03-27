@@ -134,34 +134,32 @@ export const useTacticalLogic = (
 
     const handleVerseQuizComplete = useCallback(async (): Promise<void> => {
         if (!currentUser) return;
-        const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-        const alreadyDone = localStorage.getItem('verse_completed_date') === localToday;
 
-        // También verificar con la fecha del servidor para prevenir abuso entre dispositivos/sesiones
-        let serverAlreadyDone = false;
+        // Formato estándar YYYY-MM-DD
+        const localToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+        // 1. Verificar LocalStorage
+        const alreadyDoneLocal = localStorage.getItem('verse_completed_date') === localToday;
+
+        // 2. Verificar datos del Servidor (Prioritario)
+        let alreadyDoneServer = false;
         if (currentUser.lastStreakDate) {
             const raw = String(currentUser.lastStreakDate);
-            let lastMs = 0;
+            // Si es un timestamp numérico (legacy), convertirlo. Si es YYYY-MM-DD, usarlo directo.
             if (raw.match(/^\d+$/)) {
-                lastMs = parseInt(raw, 10);
-            } else if (raw !== '') {
-                const pd = new Date(raw);
-                if (!isNaN(pd.getTime())) lastMs = pd.getTime();
-            }
-
-            if (lastMs > 0) {
-                const serverDateStr = new Date(lastMs).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-                serverAlreadyDone = serverDateStr === localToday;
+                alreadyDoneServer = new Date(parseInt(raw, 10)).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' }) === localToday;
+            } else {
+                alreadyDoneServer = raw === localToday;
             }
         }
 
-        if (alreadyDone || serverAlreadyDone) {
-            // Asegurar localStorage sincronizado para evitar re-cálculos
+        if (alreadyDoneLocal || alreadyDoneServer) {
+            console.log("📍 Racha ya detectada como completada (Sincronía OK)");
             localStorage.setItem('verse_completed_date', localToday);
             return;
         }
 
-        // MARK AS DONE IMMEDIATELY — never block the UI
+        // MARCAR COMO HECHO LOCALMENTE DE INMEDIATO
         localStorage.setItem('verse_completed_date', localToday);
 
         const safeStreak = currentUser.streakCount || 0;

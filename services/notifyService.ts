@@ -203,7 +203,7 @@ export const syncFcmTokenSupabase = async (agentId: string, token: string) => {
  */
 export const fetchNotificationsSupabase = async (agentId?: string): Promise<InboxNotification[]> => {
     try {
-        let query = supabase.from('notificaciones_push').select('*').order('created_at', { ascending: false });
+        let query = supabase.from('notificaciones_push').select('*').order('created_at', { ascending: false }).limit(50);
         if (agentId) {
             query = query.or(`agent_id.eq.${agentId},agent_id.is.null`);
         } else {

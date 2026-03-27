@@ -35,35 +35,45 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             if (sheetAgents && sheetAgents.length > 0) {
                 setAgents(sheetAgents);
 
-                // Run birthday check once per day locally (v4 for robust logic and manual reset)
+                // Run birthday check once per day locally
                 const todayStr = new Date().toISOString().split('T')[0];
                 if (localStorage.getItem('last_birthday_check_v4') !== todayStr) {
                     checkAndPublishBirthdays(sheetAgents).then(() => {
                         localStorage.setItem('last_birthday_check_v4', todayStr);
                     });
                 }
-
             } else {
                 console.warn('⚠️ SYNC: Empty response, keeping existing agents');
             }
-            const radar = await fetchVisitorRadar();
-            setVisitorRadar(radar || []);
 
+            // Eventos: fetch ligero (pocas filas)
             const events = await fetchActiveEvents();
             setActiveEvents(events || []);
 
-            const badgeData = await computeBadgesSupabase();
-            setBadges(badgeData || []);
+            // Badges: cachear con TTL de 10 min para no re-calcular cada ciclo
+            const BADGE_CACHE_KEY = 'cached_badges';
+            const BADGE_TTL = 600000; // 10 min
+            const cachedBadges = localStorage.getItem(BADGE_CACHE_KEY);
+            let badgeData: Badge[] = [];
+            if (cachedBadges) {
+                const parsed = JSON.parse(cachedBadges);
+                if (Date.now() - parsed.ts < BADGE_TTL) {
+                    badgeData = parsed.data;
+                }
+            }
+            if (badgeData.length === 0) {
+                badgeData = await computeBadgesSupabase() || [];
+                localStorage.setItem(BADGE_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: badgeData }));
+            }
+            setBadges(badgeData);
 
             if (currentUser) {
                 const confs = await fetchUserEventConfirmations(currentUser.id);
-                // Extraer los nombres de los eventos del detalle (ej. "Confirmación para evento: Retiro...")
-                // o si es la data antigua de google sheets, viene en otra columna. Pero ahora usamos detalle.
                 const titles = confs.map((c: any) => {
                     if (c.detalle && c.detalle.includes('Confirmación para evento: ')) {
                         return c.detalle.replace('Confirmación para evento: ', '').trim();
                     }
-                    return c.detalle || c.titulo || ''; // fallback
+                    return c.detalle || c.titulo || '';
                 });
                 setUserConfirmations(titles.filter(Boolean));
             }
@@ -136,9 +146,8 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const leadershipHeadlines = topLeadership.map((a, i) => `🎖️ TOP ${i + 1} LIDERAZGO: ${a.name} (${a.leadership} PTS)`);
             const streakHeadlines = topStreaks.map((a, i) => `⚡ RACHA TOP: ${a.name} (${a.streakCount} DÍAS)`);
 
-            // 3. Badges
-            const badgeData = await computeBadgesSupabase() || [];
-            const badgeHeadlines = badgeData.slice(0, 5).map(b => `🎖️ LOGRO: ${b.agentName} ganó ${b.label} (${b.value})`);
+            // 3. Badges (usar los ya cacheados, NO re-fetch)
+            const badgeHeadlines = badges.slice(0, 5).map(b => `🎖️ LOGRO: ${b.agentName} ganó ${b.label} (${b.value})`);
 
             // Combine
             setHeadlines([
@@ -190,7 +199,8 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
         syncData();
         checkHeadlines();
 
-        const interval = setInterval(() => syncData(true), 60000);
+        // Optimización: Sync cada 3 min en vez de 1 min (reduce egress ~66%)
+        const interval = setInterval(() => syncData(true), 180000);
         return () => clearInterval(interval);
     }, [syncData, checkHeadlines]);
 
@@ -228,7 +238,8 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     useEffect(() => {
         if (isLoggedIn) {
             checkHeadlines();
-            const interval = setInterval(checkHeadlines, 120000);
+            // Optimización: Headlines cada 5 min en vez de 2 min (reduce egress ~60%)
+            const interval = setInterval(checkHeadlines, 300000);
             return () => clearInterval(interval);
         }
     }, [isLoggedIn, checkHeadlines]);

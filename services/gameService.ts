@@ -40,9 +40,9 @@ export const submitIQLevelComplete = async (agentId: string, level: number, time
  */
 export const fetchAcademyDataSupabase = async (agentId: string) => {
     try {
-        const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('created_at', { ascending: false });
-        const { data: lessonsRaw } = await supabase.from('academy_lessons').select('*').order('order_index');
-        const { data: progressRaw } = await supabase.from('academy_progress').select('*').eq('agent_id', agentId);
+        const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(50);
+        const { data: lessonsRaw } = await supabase.from('academy_lessons').select('*').order('order_index').limit(200);
+        const { data: progressRaw } = await supabase.from('academy_progress').select('*').eq('agent_id', agentId).limit(100);
 
         // Mapeo de DB -> Frontend (Cursos)
         const mappedCourses = (coursesRaw || []).map((c: any) => ({
@@ -173,7 +173,7 @@ export const fetchBibleWarQuestions = async (category?: string) => {
 
 export const fetchTasksSupabase = async () => {
     try {
-        const { data, error } = await supabase.from('tareas_tacticas').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('tareas_tacticas').select('*').order('created_at', { ascending: false }).limit(50);
         if (error) throw error;
         return data || [];
     } catch (e: any) {

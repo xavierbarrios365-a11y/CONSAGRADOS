@@ -8,6 +8,7 @@ export interface DeploymentAuthorizationData {
     representative_id: string;
     phone: string;
     signature_data: string;
+    tutor_name?: string;
     created_at?: string;
 }
 

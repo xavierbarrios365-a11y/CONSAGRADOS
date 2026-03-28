@@ -497,10 +497,20 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       doc.setTextColor(15, 23, 42); doc.text(auth.representative_id, 20, 172);
       doc.setTextColor(185, 28, 28); doc.text("4. TELÉFONO DE EMERGENCIA:", pageWidth / 2 + 10, 165);
       doc.setTextColor(15, 23, 42); doc.text(auth.phone, pageWidth / 2 + 10, 172);
-      doc.setTextColor(185, 28, 28); doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 190);
-      doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.2); doc.rect(20, 195, pageWidth - 40, 40);
+
+      // TUTOR SECTION
+      if (auth.tutor_name) {
+        doc.setTextColor(185, 28, 28); doc.text("➤ TUTOR RESPONSABLE (1 A 1):", 20, 182);
+        doc.setTextColor(15, 23, 42); doc.text(auth.tutor_name.toUpperCase(), 20, 187);
+        doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+        doc.text("(Tutor es el encargado y responsable del joven durante la actividad)", 20, 191);
+        doc.setFontSize(10);
+      }
+
+      doc.setTextColor(185, 28, 28); doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 205);
+      doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.2); doc.rect(20, 210, pageWidth - 40, 40);
       if (auth.signature_data) {
-        doc.addImage(auth.signature_data, 'PNG', 25, 198, pageWidth - 50, 34);
+        doc.addImage(auth.signature_data, 'PNG', 25, 213, pageWidth - 50, 34);
       }
       doc.setFontSize(10); doc.setTextColor(15, 23, 42); doc.text("SAHEL BARRIOS", pageWidth / 2, 260, { align: "center" });
       doc.setFontSize(8); doc.setTextColor(185, 28, 28); doc.text("COORDINADOR GENERAL - CONSAGRADOS 2026", pageWidth / 2, 265, { align: "center" });
@@ -1613,6 +1623,12 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                                     <p className="text-[6px] text-white/40 font-black uppercase mb-0.5">ID / Cédula</p>
                                     <p className="text-[9px] text-white font-bold">{auth.representative_id}</p>
                                   </div>
+                                  {auth.tutor_name && (
+                                    <div className="col-span-2 border-t border-white/5 pt-2 mt-1">
+                                      <p className="text-[6px] text-red-400 font-black uppercase mb-0.5">Tutor Responsable (1 a 1)</p>
+                                      <p className="text-[9px] text-white font-bold">{auth.tutor_name}</p>
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div className="flex gap-2">

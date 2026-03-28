@@ -14,6 +14,7 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
     const [repNombre, setRepNombre] = useState('');
     const [repCedula, setRepCedula] = useState('');
     const [repTelefono, setRepTelefono] = useState('');
+    const [repTutor, setRepTutor] = useState('');
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const documentRef = useRef<HTMLDivElement>(null);
@@ -28,7 +29,27 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
         "LUISANGELIS ALBERLISMAR LINARES ALDAZORA"
     ];
 
+    const STUDENT_TUTOR_MAP: Record<string, string> = {
+        "DAIVIS CORDERO": "SAHEL",
+        "JAIHELYER YAIR MEZA CARVAJAL": "DAVID JOEL MERCADO",
+        "PAOLA VALENTINA RODRIGUEZ TORIN": "JADHEILY CHIRINOS",
+        "PAOLA VALENTINA RODRIGUEZ": "JADHEILY CHIRINOS",
+        "LUISANGELIS ALBERLISMAR LINARES ALDAZORA": "SOLISBETH BARRIOS",
+        "DINOSKA CORDERO": "ANTONELLA CUSATO",
+        "DINOSKA (DINOS) CORDERO": "ANTONELLA CUSATO",
+        "VALERIA PETIT": "NAILETH GEORGINA TORRES",
+        "LORELIS MAVARES": "NAIRELIS MARTINEZ",
+        "LORELIS MAVARE": "NAIRELIS MARTINEZ"
+    };
+
     const allAgents = Array.from(new Set([...predefinedAgents, ...agents.map(a => a.name.toUpperCase())])).sort();
+
+    useEffect(() => {
+        if (selectedAgent) {
+            const tutor = STUDENT_TUTOR_MAP[selectedAgent.toUpperCase()] || '';
+            setRepTutor(tutor);
+        }
+    }, [selectedAgent]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -200,17 +221,26 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
             doc.setTextColor(15, 23, 42);
             doc.text(repTelefono, pageWidth / 2 + 10, 172);
 
+            // TUTOR SECTION
+            if (repTutor) {
+                doc.setTextColor(185, 28, 28); doc.text("➤ TUTOR RESPONSABLE (1 A 1):", 20, 182);
+                doc.setTextColor(15, 23, 42); doc.text(repTutor.toUpperCase(), 20, 187);
+                doc.setFontSize(7); doc.setTextColor(100, 116, 139);
+                doc.text("(Tutor es el encargado y responsable del joven durante la actividad)", 20, 191);
+                doc.setFontSize(10);
+            }
+
             // Firma
             doc.setTextColor(185, 28, 28);
-            doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 190);
+            doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 205);
 
             doc.setDrawColor(15, 23, 42);
             doc.setLineWidth(0.2);
-            doc.rect(20, 195, pageWidth - 40, 40);
+            doc.rect(20, 210, pageWidth - 40, 40);
 
             if (canvas) {
                 const sigData = canvas.toDataURL('image/png');
-                doc.addImage(sigData, 'PNG', 25, 198, pageWidth - 50, 34);
+                doc.addImage(sigData, 'PNG', 25, 213, pageWidth - 50, 34);
             }
 
             // Footer (Director)
@@ -233,7 +263,8 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
                 representative_name: repNombre,
                 representative_id: repCedula,
                 phone: repTelefono,
-                signature_data: signatureBase64
+                signature_data: signatureBase64,
+                tutor_name: repTutor
             });
 
             if (res.success) {
@@ -340,6 +371,16 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
                                     ))}
                                 </select>
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+
+                                {repTutor && (
+                                    <div className="mt-2 flex items-center gap-2 bg-red-600/5 border border-red-600/20 p-3 rounded-xl animate-in fade-in slide-in-from-top-2 duration-500">
+                                        <ShieldCheck size={14} className="text-red-600" />
+                                        <div className="text-left">
+                                            <p className="text-[8px] text-red-600 font-black uppercase tracking-widest leading-none mb-0.5">Tutor Asignado (Líder 1 a 1):</p>
+                                            <p className="text-[10px] text-slate-900 font-black uppercase">{repTutor}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

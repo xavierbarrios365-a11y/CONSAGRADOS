@@ -9,6 +9,7 @@ import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
 import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase, getStreakMultiplier } from '../services/supabaseService';
+import { fetchAuthorizationsSupabase, deleteAuthorizationSupabase, DeploymentAuthorizationData } from '../services/authPortalService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import { usePresence } from '../hooks/usePresence';
@@ -69,6 +70,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [isCreatingBanner, setIsCreatingBanner] = useState(false);
   const [newBanner, setNewBanner] = useState({ titulo: '', subtitulo: '', imagen_url: '', cta_label: '', cta_link: '', tipo: 'EVENTO' });
   const [showBannerManager, setShowBannerManager] = useState(false);
+  const [authorizations, setAuthorizations] = useState<DeploymentAuthorizationData[]>([]);
+  const [showAuthManager, setShowAuthManager] = useState(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(false);
 
   React.useEffect(() => {
     const currentAgent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
@@ -132,8 +136,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (userRole === UserRole.DIRECTOR) {
       loadEvents();
       loadBanners();
+      loadAuthorizations();
     }
   }, [userRole]);
+
+  const loadAuthorizations = async () => {
+    const data = await fetchAuthorizationsSupabase();
+    setAuthorizations(data);
+  };
 
   const loadBanners = async () => {
     const data = await fetchAllBannersSupabase();
@@ -458,19 +468,54 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     });
   };
 
-  const handleTestNotification = async () => {
-    if (!currentUser) return;
-    setIsSendingBroadcast(true);
+  const handleDownloadAuthPDF = async (auth: DeploymentAuthorizationData) => {
     try {
-      const success = await sendPushBroadcast("PRUEBA DE SISTEMA", `Hola ${currentUser.name}, esta es una transmisión de prueba para verificar tu canal de notificaciones.`);
-      if (success) {
-        showAlert({ title: "PRUEBA ENVIADA", message: "✅ PRUEBA ENVIADA. Verifica tu bandeja de notificaciones.", type: 'SUCCESS' });
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Mismo diseño que en DeploymentAuthorization
+      doc.setFillColor(15, 23, 42); doc.rect(0, 0, pageWidth, 10, 'F');
+      doc.setFont("helvetica", "bold"); doc.setFontSize(28); doc.setTextColor(15, 23, 42);
+      doc.text("AUTORIZACIÓN DE", 20, 30); doc.text("DESPLIEGUE OFICIAL", 20, 42);
+      doc.setFontSize(10); doc.setTextColor(185, 28, 28);
+      doc.text("PROYECTO JUVENIL CONSAGRADOS 2026 - BASE IJELS", 20, 52);
+      doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.5); doc.line(20, 58, pageWidth - 20, 58);
+      doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+      doc.text("CÓDIGO: MOV-ARAURE-001", 20, 65); doc.text("ESTADO: EXPEDIENTE OPERATIVO", pageWidth - 70, 65);
+      doc.setFillColor(248, 250, 252); doc.rect(20, 75, pageWidth - 40, 35, 'F');
+      doc.setDrawColor(185, 28, 28); doc.setLineWidth(1); doc.line(20, 75, 20, 110);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(30, 41, 59);
+      const text = `Certifico que he sido informado de la misión a Araure (Festival de la Familia). Autorizo formalmente la movilización de mi representado bajo la custodia del equipo directivo de Consagrados 2026. Hora de salida estimada: 4:00 PM. Retorno: Mismo punto en horas de la noche. Se garantiza transporte, logística y seguridad en todo momento durante el despliegue técnico y espiritual.`;
+      const splitText = doc.splitTextToSize(text, pageWidth - 50);
+      doc.text(splitText, 25, 85);
+      doc.setFontSize(10); doc.setTextColor(185, 28, 28); doc.text("1. AGENTE CONVOCADO (ESTUDIANTE):", 20, 125);
+      doc.setTextColor(15, 23, 42); doc.text(auth.agent_name.toUpperCase(), 20, 132);
+      doc.setTextColor(185, 28, 28); doc.text("2. NOMBRE DEL REPRESENTANTE:", 20, 145);
+      doc.setTextColor(15, 23, 42); doc.text(auth.representative_name.toUpperCase(), 20, 152);
+      doc.setTextColor(185, 28, 28); doc.text("3. NÚMERO DE CÉDULA:", 20, 165);
+      doc.setTextColor(15, 23, 42); doc.text(auth.representative_id, 20, 172);
+      doc.setTextColor(185, 28, 28); doc.text("4. TELÉFONO DE EMERGENCIA:", pageWidth / 2 + 10, 165);
+      doc.setTextColor(15, 23, 42); doc.text(auth.phone, pageWidth / 2 + 10, 172);
+      doc.setTextColor(185, 28, 28); doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 190);
+      doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.2); doc.rect(20, 195, pageWidth - 40, 40);
+      if (auth.signature_data) {
+        doc.addImage(auth.signature_data, 'PNG', 25, 198, pageWidth - 50, 34);
       }
+      doc.setFontSize(10); doc.setTextColor(15, 23, 42); doc.text("SAHEL BARRIOS", pageWidth / 2, 260, { align: "center" });
+      doc.setFontSize(8); doc.setTextColor(185, 28, 28); doc.text("COORDINADOR GENERAL - CONSAGRADOS 2026", pageWidth / 2, 265, { align: "center" });
+
+      doc.save(`Autorizacion_${auth.agent_name.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
-      showAlert({ title: "ERROR", message: "❌ FALLO EN EL TEST", type: 'ERROR' });
-    } finally {
-      setIsSendingBroadcast(false);
+      console.error("Error generating PDF in Intel Center:", err);
+      showAlert({ title: "ERROR TÁCTICO", message: "No se pudo regenerar el PDF.", type: 'ERROR' });
     }
+  };
+
+  const handleDeleteAuth = async (id: string) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta autorización del registro?")) return;
+    const res = await deleteAuthorizationSupabase(id);
+    if (res.success) loadAuthorizations();
   };
 
   return (
@@ -911,612 +956,711 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* PERFIL DEL AGENTE SELECCIONADO */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="relative bg-[#001833] border border-white/10 rounded-3xl p-6 flex flex-col items-center text-center shadow-xl overflow-hidden font-montserrat">
-              <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-30"></div>
+        {selectedAgentId ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* PERFIL DEL AGENTE SELECCIONADO */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="relative bg-[#001833] border border-white/10 rounded-3xl p-6 flex flex-col items-center text-center shadow-xl overflow-hidden font-montserrat">
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-[#ffb700] to-transparent opacity-30"></div>
 
-              <div className="relative mb-6 group">
-                <div className="absolute inset-0 bg-[#ffb700] rounded-2xl blur-xl opacity-10"></div>
-                {onlineAgencies[agent.id] && (
-                  <div className="absolute -top-1 -right-1 z-20 flex items-center gap-1.5 bg-green-500 text-white text-[8px] font-black px-2 py-1 rounded-full animate-pulse shadow-lg shadow-green-900/50">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                    ONLINE
-                  </div>
-                )}
-                <div className="w-32 h-32 rounded-2xl border-2 border-white/5 p-1 bg-[#000c19] shadow-inner relative overflow-hidden">
-                  <img
-                    src={formatDriveUrl(agent.photoUrl)}
-                    className="w-full h-full rounded-xl object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                    onError={(e) => {
-                      const target = e.currentTarget as HTMLImageElement;
-                      if (!target.src.includes('ui-avatars.com')) {
-                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
-                        target.className = "w-full h-full object-cover opacity-80";
-                      }
-                    }}
-                  />
-
-                  {isProspectoAscender && (
-                    <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
-                      PROSPECTO ASCENDER
+                <div className="relative mb-6 group">
+                  <div className="absolute inset-0 bg-[#ffb700] rounded-2xl blur-xl opacity-10"></div>
+                  {onlineAgencies[agent.id] && (
+                    <div className="absolute -top-1 -right-1 z-20 flex items-center gap-1.5 bg-green-500 text-white text-[8px] font-black px-2 py-1 rounded-full animate-pulse shadow-lg shadow-green-900/50">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                      ONLINE
                     </div>
                   )}
+                  <div className="w-32 h-32 rounded-2xl border-2 border-white/5 p-1 bg-[#000c19] shadow-inner relative overflow-hidden">
+                    <img
+                      src={formatDriveUrl(agent.photoUrl)}
+                      className="w-full h-full rounded-xl object-cover grayscale hover:grayscale-0 transition-all duration-700"
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        if (!target.src.includes('ui-avatars.com')) {
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Agente')}&background=1A1A1A&color=FFB700&size=200&bold=true`;
+                          target.className = "w-full h-full object-cover opacity-80";
+                        }
+                      }}
+                    />
 
-                  {(userRole === UserRole.DIRECTOR || agent.id === currentUser?.id) && (
-                    <>
-                      <div
-                        onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
-                        className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
-                      >
-                        {photoStatus === 'IDLE' ? (
-                          <>
-                            <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
-                            <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
-                            <p className="text-[9px] text-white font-black uppercase tracking-widest">
-                              {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
-                            </p>
+                    {isProspectoAscender && (
+                      <div className="absolute top-4 -right-4 bg-orange-500 text-white text-[8px] font-black py-1 px-4 rotate-45 shadow-lg border border-white/20 z-20 animate-pulse">
+                        PROSPECTO ASCENDER
+                      </div>
+                    )}
+
+                    {(userRole === UserRole.DIRECTOR || agent.id === currentUser?.id) && (
+                      <>
+                        <div
+                          onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                          className={`absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer group`}
+                        >
+                          {photoStatus === 'IDLE' ? (
+                            <>
+                              <Camera className="text-[#ffb700] mb-2 group-hover:scale-110 transition-transform" size={32} />
+                              <p className="text-[9px] text-white font-black uppercase tracking-widest">Cambiar Foto</p>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center">
+                              <Loader2 className="text-[#ffb700] animate-spin mb-2" size={32} />
+                              <p className="text-[9px] text-white font-black uppercase tracking-widest">
+                                {photoStatus === 'UPLOADING' ? 'Subiendo...' : 'Guardando...'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        {/* Mobile tap target — always visible */}
+                        <button
+                          onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
+                          className="absolute bottom-2 right-2 z-20 bg-[#ffb700] p-2 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-transform md:hidden"
+                        >
+                          <Camera size={16} className="text-black" />
+                        </button>
+                      </>
+                    )}
+                    <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
+                  </div>
+                </div>
+
+                <div className="space-y-4 z-10 w-full">
+                  <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
+                      <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
+                    </div>
+                    {(() => {
+                      const status = getPromotionStatus(agent);
+                      if (status === 'APTO') return (
+                        <div className="mt-2 bg-emerald-500 text-[#001f3f] font-black text-[10px] px-4 py-1.5 rounded-full animate-bounce shadow-lg shadow-emerald-900/40 font-bebas flex items-center gap-2">
+                          <ArrowUpCircle size={12} />
+                          APTO PARA ASCENSO
+                        </div>
+                      );
+                      if (status === 'PROXIMAMENTE') return (
+                        <div className="mt-2 bg-blue-600 text-white font-black text-[10px] px-4 py-1.5 rounded-full animate-pulse shadow-lg shadow-blue-900/40 font-bebas flex items-center gap-2 uppercase tracking-widest">
+                          <Target size={12} />
+                          Próximamente al Ascenso
+                        </div>
+                      );
+                      return null;
+                    })()}
+                    {(() => {
+                      const lastDate = agent.lastAttendance ? new Date(agent.lastAttendance) : null;
+                      if (lastDate) {
+                        const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diffDays >= 21) {
+                          return (
+                            <div className="flex items-center gap-1.5 bg-red-600/20 border border-red-500/30 px-4 py-1.5 rounded-full mt-1 animate-pulse">
+                              <AlertCircle size={10} className="text-red-500" />
+                              <span className="text-red-500 font-black text-[7px] uppercase tracking-widest">PELIGRO DE DESERCIÓN</span>
+                            </div>
+                          );
+                        }
+                      }
+                      return null;
+                    })()}
+                  </div>
+
+                  <div className="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-4 mt-2">
+                    <p className="text-[7px] text-indigo-400 font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <Sparkles size={10} /> Resumen Táctico de IA
+                    </p>
+                    <p className="text-[9px] text-slate-300 italic leading-relaxed">
+                      {agent.tacticalSummary || '"Sin análisis táctico reciente. Solicite actualización."'}
+                    </p>
+                    {userRole === UserRole.DIRECTOR && (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={handleGenerateAiProfile}
+                          disabled={isGeneratingAi}
+                          className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar IA'}
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`⚠️ ¿ACTIVAR RE-EVALUACIÓN ÉLITE PARA ${agent.name.toUpperCase()}?\n\nEl agente deberá completar el test táctico la próxima vez que inicie sesión, pero conservará su perfil actual hasta completar el nuevo.`)) {
+                              const res = await updateAgentAiPendingStatusSupabase(agent.id, true);
+                              if (res.success) {
+                                showAlert({ title: "ÉXITO", message: "✅ RE-EVALUACIÓN ACTIVADA.", type: 'SUCCESS' });
+                                if (onUpdateNeeded) onUpdateNeeded();
+                              }
+                            }
+                          }}
+                          className="flex-1 py-2 bg-amber-600/20 border border-amber-500/30 text-amber-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-amber-600/40 transition-all active:scale-95"
+                          title="Programar Re-evaluación"
+                        >
+                          <Brain size={12} className="mx-auto" />
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`⚠️ ¿FORZAR RE-INICIO TOTAL DE PERFIL PARA ${agent.name.toUpperCase()}?\n\n¡ALERTA! Esto BORRARÁ el perfil actual de inmediato.`)) {
+                              const res = await updateAgentAiProfileSupabase(agent.id, null, null);
+                              if (res.success) {
+                                alert("✅ PERFIL RESETEADO. TEST REQUERIDO DE INMEDIATO.");
+                                if (onUpdateNeeded) onUpdateNeeded();
+                              }
+                            }
+                          }}
+                          className="p-2 bg-red-600/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-600/40 transition-all active:scale-95"
+                          title="Borrar Perfil Actual"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`⚠️ ¿OCULTAR PERFIL DE ${agent.name.toUpperCase()}?\n\nEste perfil ya no será visible en rankings ni en el directorio global para estudiantes.`)) {
+                              try {
+                                const { supabase } = await import('../services/supabaseService');
+                                const { error } = await supabase.from('agentes').update({ status: 'OCULTO' }).eq('id', agent.id);
+                                if (!error) {
+                                  alert("✅ PERFIL OCULTADO EXITOSAMENTE.");
+                                  if (onUpdateNeeded) onUpdateNeeded();
+                                }
+                              } catch (e) { }
+                            }
+                          }}
+                          className="p-2 bg-zinc-600/20 border border-zinc-500/30 text-zinc-400 rounded-lg hover:bg-zinc-600/40 transition-all active:scale-95"
+                          title="Ocultar Perfil (Test)"
+                        >
+                          Ocultar
+                        </button>
+                        <button
+                          onClick={() => showAlert({ title: "ANÁLISIS VERIFICADO", message: "✅ Perfil verificado por el Director. Análisis fijado como 'Real'.", type: 'SUCCESS' })}
+                          className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                          title="Verificar y Aprobar Análisis (Sin XP)"
+                        >
+                          <CheckCircle2 size={12} />
+                          Aprobar Análisis
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* VISUALIZACIÓN DE PROGRESO DE ASCENSO - SOLICITADO POR DIRECTOR */}
+                  {(() => {
+                    const currentRank = (agent.rank || 'RECLUTA').toUpperCase();
+                    let rule = PROMOTION_RULES[currentRank];
+                    let isMaxRank = !rule;
+                    let targetRank = rule?.nextRank || 'MAX';
+
+                    if (isMaxRank) {
+                      const lastRuleKey = Object.keys(PROMOTION_RULES).find(key => PROMOTION_RULES[key].nextRank === agent.rank);
+                      if (lastRuleKey) rule = PROMOTION_RULES[lastRuleKey];
+                    }
+
+                    if (!rule) return null;
+
+                    const xp = promoData?.xp || agent.xp || 0;
+                    const certs = promoData?.certificates || 0;
+                    const xpMet = xp >= rule.requiredXp;
+                    const certMet = certs >= rule.requiredCertificates;
+                    const xpProgress = Math.min((xp / rule.requiredXp) * 100, 100);
+                    const certProgress = Math.min((certs / rule.requiredCertificates) * 100, 100);
+                    const totalProgress = Math.round((xpProgress + certProgress) / 2);
+
+                    const handlePromoteAgent = async () => {
+                      if (!xpMet || !certMet) return;
+                      const confirmPromote = window.confirm(`⚠️ PROTOCOLO DE ASCENSO\n\n¿Deseas ascender oficialmente a ${agent.name} al rango de ${targetRank.toUpperCase()}?`);
+                      if (confirmPromote) {
+                        setIsLoadingPromo(true);
+                        try {
+                          const res = await promoteAgentAction(agent.id, targetRank);
+                          if (res.success) {
+                            alert(`✅ ASCENSO EXITOSO: ${agent.name} ahora es ${targetRank}`);
+                            onUpdateNeeded?.();
+                          } else {
+                            alert(`❌ ERROR EN ASCENSO: ${res.error}`);
+                          }
+                        } catch (e) {
+                          alert("❌ FALLO CRÍTICO EN PROTOCOLO");
+                        } finally {
+                          setIsLoadingPromo(false);
+                        }
+                      }
+                    };
+
+                    return (
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-4 text-left space-y-4 shadow-inner relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-3 opacity-5">
+                          <ArrowUpCircle size={40} className="text-[#ffb700]" />
+                        </div>
+
+                        <div className="flex items-center justify-between relative z-10">
+                          <div>
+                            <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.2em] mb-0.5">Estado de Ascenso</p>
+                            <h4 className="text-[12px] font-bebas font-black text-white tracking-widest uppercase">
+                              {isMaxRank ? 'HITO MÁXIMO ALCANZADO' : `OBJETIVO: ${targetRank}`}
+                            </h4>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[14px] font-bebas font-black text-white leading-none">{totalProgress}%</p>
+                            <p className="text-[6px] text-white/30 font-bold uppercase">Consumado</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 relative z-10">
+                          {/* XP Progress */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[8px] font-bold uppercase">
+                              <span className="text-white/50">Experiencia Táctica</span>
+                              <span className={xpMet ? 'text-green-400' : 'text-[#ffb700]'}>
+                                {xp} / {rule.requiredXp} XP
+                                {xpMet && " ✓"}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                              <div
+                                className={`h-full transition-all duration-1000 ${xpMet ? 'bg-green-500' : 'bg-gradient-to-r from-[#ffb700] to-orange-500'}`}
+                                style={{ width: `${xpProgress}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Certificates Progress */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[8px] font-bold uppercase">
+                              <span className="text-white/50">Certificados Academia</span>
+                              <span className={certMet ? 'text-green-400' : 'text-blue-400'}>
+                                {certs} / {rule.requiredCertificates}
+                                {certMet && " ✓"}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                              <div
+                                className={`h-full transition-all duration-1000 ${certMet ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
+                                style={{ width: `${certProgress}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {!isMaxRank && xpMet && certMet && (
+                          <div className="space-y-2">
+                            <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-lg flex items-center gap-2 animate-pulse mt-1">
+                              <Trophy size={14} className="text-green-400" />
+                              <p className="text-[8px] text-green-400 font-black uppercase tracking-widest">Apto para examen de ascenso</p>
+                            </div>
+
+                            {userRole === UserRole.DIRECTOR && (
+                              <button
+                                onClick={handlePromoteAgent}
+                                disabled={isLoadingPromo}
+                                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-green-900/30 flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/10"
+                              >
+                                {isLoadingPromo ? <Loader2 size={14} className="animate-spin" /> : <ChevronUp size={14} />}
+                                Ejecutar Ascenso Táctico
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
-                      {/* Mobile tap target — always visible */}
-                      <button
-                        onClick={() => photoStatus === 'IDLE' && fileInputRef.current?.click()}
-                        className="absolute bottom-2 right-2 z-20 bg-[#ffb700] p-2 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-transform md:hidden"
-                      >
-                        <Camera size={16} className="text-black" />
-                      </button>
-                    </>
-                  )}
-                  <input type="file" ref={fileInputRef} onChange={handlePhotoUpdate} className="hidden" accept="image/*" />
+                    );
+                  })()}
                 </div>
-              </div>
 
-              <div className="space-y-4 z-10 w-full">
-                <h2 className="text-2xl font-bebas font-black text-white uppercase tracking-tight leading-none">{agent.name}</h2>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="inline-flex items-center gap-3 bg-[#FFB700]/10 border border-[#FFB700]/30 px-6 py-2 rounded-xl">
-                    <span className="text-[#FFB700] font-black text-[10px] uppercase tracking-[0.3em] font-bebas">{levelInfo?.current}</span>
+                <div className="mt-4 w-full grid grid-cols-2 gap-2">
+                  <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
+                    <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
+                    <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
                   </div>
-                  {(() => {
-                    const status = getPromotionStatus(agent);
-                    if (status === 'APTO') return (
-                      <div className="mt-2 bg-emerald-500 text-[#001f3f] font-black text-[10px] px-4 py-1.5 rounded-full animate-bounce shadow-lg shadow-emerald-900/40 font-bebas flex items-center gap-2">
-                        <ArrowUpCircle size={12} />
-                        APTO PARA ASCENSO
-                      </div>
-                    );
-                    if (status === 'PROXIMAMENTE') return (
-                      <div className="mt-2 bg-blue-600 text-white font-black text-[10px] px-4 py-1.5 rounded-full animate-pulse shadow-lg shadow-blue-900/40 font-bebas flex items-center gap-2 uppercase tracking-widest">
-                        <Target size={12} />
-                        Próximamente al Ascenso
-                      </div>
-                    );
-                    return null;
-                  })()}
-                  {(() => {
-                    const lastDate = agent.lastAttendance ? new Date(agent.lastAttendance) : null;
-                    if (lastDate) {
-                      const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                      if (diffDays >= 21) {
-                        return (
-                          <div className="flex items-center gap-1.5 bg-red-600/20 border border-red-500/30 px-4 py-1.5 rounded-full mt-1 animate-pulse">
-                            <AlertCircle size={10} className="text-red-500" />
-                            <span className="text-red-500 font-black text-[7px] uppercase tracking-widest">PELIGRO DE DESERCIÓN</span>
-                          </div>
-                        );
-                      }
-                    }
-                    return null;
-                  })()}
+                  <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
+                    <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
+                    <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
+                      {agent.role || 'ESTUDIANTE'}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-4 mt-2">
-                  <p className="text-[7px] text-indigo-400 font-black uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <Sparkles size={10} /> Resumen Táctico de IA
-                  </p>
-                  <p className="text-[9px] text-slate-300 italic leading-relaxed">
-                    {agent.tacticalSummary || '"Sin análisis táctico reciente. Solicite actualización."'}
-                  </p>
-                  {userRole === UserRole.DIRECTOR && (
-                    <div className="flex gap-2 mt-3">
+                {/* RADAR TÁCTICO IN-CENTER */}
+                <div className="mt-4 p-4 bg-gradient-to-b from-white/5 to-transparent rounded-[2rem] border border-white/5 w-full flex flex-col items-center">
+                  <div className="w-full flex justify-between items-center mb-4 px-2">
+                    <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas">Análisis Psicométrico Directivo</p>
+                    {(currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER) && (
                       <button
-                        onClick={handleGenerateAiProfile}
-                        disabled={isGeneratingAi}
-                        className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 disabled:opacity-50"
+                        onClick={() => setShowPsychoEdit(!showPsychoEdit)}
+                        className={`p-1.5 rounded-lg transition-colors ${showPsychoEdit ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/10 text-[#ffb700] hover:bg-white/20'}`}
                       >
-                        {isGeneratingAi ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Sincronizar IA'}
+                        <Settings size={12} />
                       </button>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`⚠️ ¿ACTIVAR RE-EVALUACIÓN ÉLITE PARA ${agent.name.toUpperCase()}?\n\nEl agente deberá completar el test táctico la próxima vez que inicie sesión, pero conservará su perfil actual hasta completar el nuevo.`)) {
-                            const res = await updateAgentAiPendingStatusSupabase(agent.id, true);
-                            if (res.success) {
-                              showAlert({ title: "ÉXITO", message: "✅ RE-EVALUACIÓN ACTIVADA.", type: 'SUCCESS' });
-                              if (onUpdateNeeded) onUpdateNeeded();
-                            }
-                          }
-                        }}
-                        className="flex-1 py-2 bg-amber-600/20 border border-amber-500/30 text-amber-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-amber-600/40 transition-all active:scale-95"
-                        title="Programar Re-evaluación"
-                      >
-                        <Brain size={12} className="mx-auto" />
-                      </button>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`⚠️ ¿FORZAR RE-INICIO TOTAL DE PERFIL PARA ${agent.name.toUpperCase()}?\n\n¡ALERTA! Esto BORRARÁ el perfil actual de inmediato.`)) {
-                            const res = await updateAgentAiProfileSupabase(agent.id, null, null);
-                            if (res.success) {
-                              alert("✅ PERFIL RESETEADO. TEST REQUERIDO DE INMEDIATO.");
-                              if (onUpdateNeeded) onUpdateNeeded();
-                            }
-                          }
-                        }}
-                        className="p-2 bg-red-600/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-600/40 transition-all active:scale-95"
-                        title="Borrar Perfil Actual"
-                      >
-                        <RotateCcw size={12} />
-                      </button>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`⚠️ ¿OCULTAR PERFIL DE ${agent.name.toUpperCase()}?\n\nEste perfil ya no será visible en rankings ni en el directorio global para estudiantes.`)) {
-                            try {
-                              const { supabase } = await import('../services/supabaseService');
-                              const { error } = await supabase.from('agentes').update({ status: 'OCULTO' }).eq('id', agent.id);
-                              if (!error) {
-                                alert("✅ PERFIL OCULTADO EXITOSAMENTE.");
-                                if (onUpdateNeeded) onUpdateNeeded();
-                              }
-                            } catch (e) { }
-                          }
-                        }}
-                        className="p-2 bg-zinc-600/20 border border-zinc-500/30 text-zinc-400 rounded-lg hover:bg-zinc-600/40 transition-all active:scale-95"
-                        title="Ocultar Perfil (Test)"
-                      >
-                        Ocultar
-                      </button>
-                      <button
-                        onClick={() => showAlert({ title: "ANÁLISIS VERIFICADO", message: "✅ Perfil verificado por el Director. Análisis fijado como 'Real'.", type: 'SUCCESS' })}
-                        className="flex-1 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[8px] font-black uppercase tracking-[0.2em] rounded-lg hover:bg-indigo-600/40 transition-all active:scale-95 flex items-center justify-center gap-2"
-                        title="Verificar y Aprobar Análisis (Sin XP)"
-                      >
-                        <CheckCircle2 size={12} />
-                        Aprobar Análisis
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* VISUALIZACIÓN DE PROGRESO DE ASCENSO - SOLICITADO POR DIRECTOR */}
-                {(() => {
-                  const currentRank = (agent.rank || 'RECLUTA').toUpperCase();
-                  let rule = PROMOTION_RULES[currentRank];
-                  let isMaxRank = !rule;
-                  let targetRank = rule?.nextRank || 'MAX';
-
-                  if (isMaxRank) {
-                    const lastRuleKey = Object.keys(PROMOTION_RULES).find(key => PROMOTION_RULES[key].nextRank === agent.rank);
-                    if (lastRuleKey) rule = PROMOTION_RULES[lastRuleKey];
-                  }
-
-                  if (!rule) return null;
-
-                  const xp = promoData?.xp || agent.xp || 0;
-                  const certs = promoData?.certificates || 0;
-                  const xpMet = xp >= rule.requiredXp;
-                  const certMet = certs >= rule.requiredCertificates;
-                  const xpProgress = Math.min((xp / rule.requiredXp) * 100, 100);
-                  const certProgress = Math.min((certs / rule.requiredCertificates) * 100, 100);
-                  const totalProgress = Math.round((xpProgress + certProgress) / 2);
-
-                  const handlePromoteAgent = async () => {
-                    if (!xpMet || !certMet) return;
-                    const confirmPromote = window.confirm(`⚠️ PROTOCOLO DE ASCENSO\n\n¿Deseas ascender oficialmente a ${agent.name} al rango de ${targetRank.toUpperCase()}?`);
-                    if (confirmPromote) {
-                      setIsLoadingPromo(true);
-                      try {
-                        const res = await promoteAgentAction(agent.id, targetRank);
-                        if (res.success) {
-                          alert(`✅ ASCENSO EXITOSO: ${agent.name} ahora es ${targetRank}`);
-                          onUpdateNeeded?.();
-                        } else {
-                          alert(`❌ ERROR EN ASCENSO: ${res.error}`);
-                        }
-                      } catch (e) {
-                        alert("❌ FALLO CRÍTICO EN PROTOCOLO");
-                      } finally {
-                        setIsLoadingPromo(false);
-                      }
-                    }
-                  };
-
-                  return (
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-4 text-left space-y-4 shadow-inner relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-3 opacity-5">
-                        <ArrowUpCircle size={40} className="text-[#ffb700]" />
-                      </div>
-
-                      <div className="flex items-center justify-between relative z-10">
-                        <div>
-                          <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.2em] mb-0.5">Estado de Ascenso</p>
-                          <h4 className="text-[12px] font-bebas font-black text-white tracking-widest uppercase">
-                            {isMaxRank ? 'HITO MÁXIMO ALCANZADO' : `OBJETIVO: ${targetRank}`}
-                          </h4>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[14px] font-bebas font-black text-white leading-none">{totalProgress}%</p>
-                          <p className="text-[6px] text-white/30 font-bold uppercase">Consumado</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 relative z-10">
-                        {/* XP Progress */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[8px] font-bold uppercase">
-                            <span className="text-white/50">Experiencia Táctica</span>
-                            <span className={xpMet ? 'text-green-400' : 'text-[#ffb700]'}>
-                              {xp} / {rule.requiredXp} XP
-                              {xpMet && " ✓"}
-                            </span>
+                  {showPsychoEdit ? (
+                    <div className="w-full space-y-3 bg-[#001f3f]/50 p-4 rounded-xl border border-[#ffb700]/30 shadow-inner">
+                      {['liderazgo', 'servicio', 'analisis', 'potencial', 'adaptabilidad'].map((trait) => (
+                        <div key={trait} className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/70">{trait}</span>
+                            <span className="text-[10px] font-black text-[#ffb700]">{tempPsychoStats[trait as keyof typeof tempPsychoStats]} / 100</span>
                           </div>
-                          <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
-                            <div
-                              className={`h-full transition-all duration-1000 ${xpMet ? 'bg-green-500' : 'bg-gradient-to-r from-[#ffb700] to-orange-500'}`}
-                              style={{ width: `${xpProgress}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Certificates Progress */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[8px] font-bold uppercase">
-                            <span className="text-white/50">Certificados Academia</span>
-                            <span className={certMet ? 'text-green-400' : 'text-blue-400'}>
-                              {certs} / {rule.requiredCertificates}
-                              {certMet && " ✓"}
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
-                            <div
-                              className={`h-full transition-all duration-1000 ${certMet ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
-                              style={{ width: `${certProgress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {!isMaxRank && xpMet && certMet && (
-                        <div className="space-y-2">
-                          <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-lg flex items-center gap-2 animate-pulse mt-1">
-                            <Trophy size={14} className="text-green-400" />
-                            <p className="text-[8px] text-green-400 font-black uppercase tracking-widest">Apto para examen de ascenso</p>
-                          </div>
-
-                          {userRole === UserRole.DIRECTOR && (
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={handlePromoteAgent}
-                              disabled={isLoadingPromo}
-                              className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-green-900/30 flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/10"
-                            >
-                              {isLoadingPromo ? <Loader2 size={14} className="animate-spin" /> : <ChevronUp size={14} />}
-                              Ejecutar Ascenso Táctico
-                            </button>
-                          )}
+                              onClick={() => setTempPsychoStats(prev => ({ ...prev, [trait]: Math.max(0, prev[trait as keyof typeof tempPsychoStats] - 5) }))}
+                              className="p-1.5 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30"
+                            ><Minus size={12} /></button>
+                            <input
+                              type="range"
+                              min="0" max="100" step="5"
+                              value={tempPsychoStats[trait as keyof typeof tempPsychoStats]}
+                              onChange={(e) => setTempPsychoStats(prev => ({ ...prev, [trait]: parseInt(e.target.value) }))}
+                              className="flex-1 accent-[#ffb700]"
+                            />
+                            <button
+                              onClick={() => setTempPsychoStats(prev => ({ ...prev, [trait]: Math.min(100, prev[trait as keyof typeof tempPsychoStats] + 5) }))}
+                              className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-md hover:bg-emerald-500/30"
+                            ><Plus size={12} /></button>
+                          </div>
                         </div>
-                      )}
+                      ))}
+                      <button
+                        onClick={handleSavePsychoStats}
+                        disabled={isUpdatingPoints}
+                        className="w-full mt-4 py-2 bg-[#ffb700] text-[#001f3f] font-black text-[10px] uppercase tracking-widest rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 font-bebas"
+                      >
+                        {isUpdatingPoints ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                        GUARDAR PERFIL
+                      </button>
                     </div>
-                  );
-                })()}
-              </div>
-
-              <div className="mt-4 w-full grid grid-cols-2 gap-2">
-                <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
-                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ID AGENTE</p>
-                  <p className="text-[9px] font-mono text-[#FFB700] font-bold">{agent.id}</p>
-                </div>
-                <div className="bg-[#3A3A3A]/20 p-3 rounded-2xl border border-white/5 text-left">
-                  <p className="text-[6px] text-white/40 font-black uppercase mb-1">ACCESO</p>
-                  <p className="text-[9px] font-black text-blue-400 uppercase truncate font-bebas">
-                    {agent.role || 'ESTUDIANTE'}
-                  </p>
-                </div>
-              </div>
-
-              {/* RADAR TÁCTICO IN-CENTER */}
-              <div className="mt-4 p-4 bg-gradient-to-b from-white/5 to-transparent rounded-[2rem] border border-white/5 w-full flex flex-col items-center">
-                <div className="w-full flex justify-between items-center mb-4 px-2">
-                  <p className="text-[7px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas">Análisis Psicométrico Directivo</p>
-                  {(currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER) && (
-                    <button
-                      onClick={() => setShowPsychoEdit(!showPsychoEdit)}
-                      className={`p-1.5 rounded-lg transition-colors ${showPsychoEdit ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-white/10 text-[#ffb700] hover:bg-white/20'}`}
-                    >
-                      <Settings size={12} />
-                    </button>
+                  ) : (
+                    agent.tacticalStats ? (
+                      <TacticalRadar stats={agent.tacticalStats} size={180} />
+                    ) : (
+                      <div className="py-10 text-center opacity-30">
+                        <Sparkles size={32} className="mx-auto mb-2" />
+                        <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA o Ingreso Manual</p>
+                      </div>
+                    )
                   )}
                 </div>
+              </div>
+            </div>
 
-                {showPsychoEdit ? (
-                  <div className="w-full space-y-3 bg-[#001f3f]/50 p-4 rounded-xl border border-[#ffb700]/30 shadow-inner">
-                    {['liderazgo', 'servicio', 'analisis', 'potencial', 'adaptabilidad'].map((trait) => (
-                      <div key={trait} className="flex flex-col gap-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-white/70">{trait}</span>
-                          <span className="text-[10px] font-black text-[#ffb700]">{tempPsychoStats[trait as keyof typeof tempPsychoStats]} / 100</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setTempPsychoStats(prev => ({ ...prev, [trait]: Math.max(0, prev[trait as keyof typeof tempPsychoStats] - 5) }))}
-                            className="p-1.5 bg-red-500/20 text-red-400 rounded-md hover:bg-red-500/30"
-                          ><Minus size={12} /></button>
-                          <input
-                            type="range"
-                            min="0" max="100" step="5"
-                            value={tempPsychoStats[trait as keyof typeof tempPsychoStats]}
-                            onChange={(e) => setTempPsychoStats(prev => ({ ...prev, [trait]: parseInt(e.target.value) }))}
-                            className="flex-1 accent-[#ffb700]"
-                          />
-                          <button
-                            onClick={() => setTempPsychoStats(prev => ({ ...prev, [trait]: Math.min(100, prev[trait as keyof typeof tempPsychoStats] + 5) }))}
-                            className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-md hover:bg-emerald-500/30"
-                          ><Plus size={12} /></button>
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      onClick={handleSavePsychoStats}
-                      disabled={isUpdatingPoints}
-                      className="w-full mt-4 py-2 bg-[#ffb700] text-[#001f3f] font-black text-[10px] uppercase tracking-widest rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 font-bebas"
-                    >
-                      {isUpdatingPoints ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                      GUARDAR PERFIL
-                    </button>
+            {/* ESTADÍSTICAS Y ACCIONES */}
+            <div className="lg:col-span-8 space-y-4">
+              {/* SELECTOR DE MONTO DE AJUSTE */}
+              <div className="bg-[#001833] border border-[#ffb700]/20 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#ffb700]/10 rounded-lg">
+                    <Star className="text-[#ffb700]" size={16} />
                   </div>
-                ) : (
-                  agent.tacticalStats ? (
-                    <TacticalRadar stats={agent.tacticalStats} size={180} />
-                  ) : (
-                    <div className="py-10 text-center opacity-30">
-                      <Sparkles size={32} className="mx-auto mb-2" />
-                      <p className="text-[8px] font-black uppercase tracking-widest">Esperando Sincronización de IA o Ingreso Manual</p>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ESTADÍSTICAS Y ACCIONES */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* SELECTOR DE MONTO DE AJUSTE */}
-            <div className="bg-[#001833] border border-[#ffb700]/20 rounded-2xl p-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#ffb700]/10 rounded-lg">
-                  <Star className="text-[#ffb700]" size={16} />
-                </div>
-                <div>
-                  <p className="text-[8px] text-white/40 font-black uppercase tracking-widest font-bebas">Monto de Operación</p>
-                  <p className="text-[10px] text-white font-bold uppercase font-montserrat">XP a Sumar/Restar</p>
-                </div>
-              </div>
-              <div className="flex items-center bg-black/40 rounded-xl border border-white/10 p-1">
-                <button
-                  onClick={() => setAdjustmentAmount(Math.max(1, adjustmentAmount - 1))}
-                  className="p-2 text-white/40 hover:text-white transition-colors"
-                >
-                  <Minus size={14} />
-                </button>
-                <input
-                  type="number"
-                  value={adjustmentAmount}
-                  onChange={(e) => setAdjustmentAmount(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 bg-transparent text-center text-white font-black font-bebas text-lg outline-none"
-                />
-                <button
-                  onClick={() => setAdjustmentAmount(adjustmentAmount + 1)}
-                  className="p-2 text-white/40 hover:text-white transition-colors"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <MetricCard
-                icon={<Zap className="text-[#ffb700]" size={16} />}
-                label="COMPROMISO"
-                value={agent.bible}
-                color="from-[#ffb700] to-orange-600"
-                onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
-                disabled={isUpdatingPoints}
-                adjustmentAmount={adjustmentAmount}
-              />
-              <MetricCard
-                icon={<Star className="text-blue-400" size={16} />}
-                label="SERVICIO"
-                value={agent.notes}
-                color="from-blue-400 to-blue-600"
-                onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
-                disabled={isUpdatingPoints}
-                adjustmentAmount={adjustmentAmount}
-              />
-            </div>
-
-            {/* PANEL DE SANCIONES */}
-            <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-red-500/20 rounded-lg">
-                  <Gavel className="text-red-500" size={20} />
-                </div>
-                <div>
-                  <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
-                  <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <SanctionOption
-                  label="Protocolo"
-                  sub="Falla técnica de conducta"
-                  pts="-5"
-                  onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
-                  disabled={isUpdatingPoints}
-                />
-                <SanctionOption
-                  label="No Participó"
-                  sub="Sin aportes en clase"
-                  pts="-2"
-                  onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
-                  disabled={isUpdatingPoints}
-                />
-                <SanctionOption
-                  label="Indisciplina"
-                  sub="Falta de respeto o orden"
-                  pts="-5"
-                  onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
-                  disabled={isUpdatingPoints}
-                />
-                <SanctionOption
-                  label="Expulsión"
-                  sub="Sanción Definitiva"
-                  pts="-50%"
-                  isCritical
-                  onClick={() => handlePercentageDeduction(50)}
-                  disabled={isUpdatingPoints}
-                />
-              </div>
-            </div>
-
-
-            {/* GESTIÓN DE BANNERS ESTRATÉGICOS */}
-            {userRole === UserRole.DIRECTOR && (
-              <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-[2.5rem] p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-amber-500/10 rounded-xl">
-                      <Radio className="text-amber-500 animate-pulse" size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-black text-lg uppercase tracking-widest font-bebas">Banners de Web Pública</h3>
-                      <p className="text-[8px] text-amber-500/60 font-black uppercase tracking-[0.3em] font-montserrat">Inyección de información en tiempo real</p>
-                    </div>
+                  <div>
+                    <p className="text-[8px] text-white/40 font-black uppercase tracking-widest font-bebas">Monto de Operación</p>
+                    <p className="text-[10px] text-white font-bold uppercase font-montserrat">XP a Sumar/Restar</p>
                   </div>
+                </div>
+                <div className="flex items-center bg-black/40 rounded-xl border border-white/10 p-1">
                   <button
-                    onClick={() => setShowBannerManager(!showBannerManager)}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-600/20 border border-amber-500/30 text-amber-500 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-600/30 transition-all font-bebas"
+                    onClick={() => setAdjustmentAmount(Math.max(1, adjustmentAmount - 1))}
+                    className="p-2 text-white/40 hover:text-white transition-colors"
                   >
-                    {showBannerManager ? 'Cerrar Gestor' : 'Nuevo Banner'}
+                    <Minus size={14} />
+                  </button>
+                  <input
+                    type="number"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-16 bg-transparent text-center text-white font-black font-bebas text-lg outline-none"
+                  />
+                  <button
+                    onClick={() => setAdjustmentAmount(adjustmentAmount + 1)}
+                    className="p-2 text-white/40 hover:text-white transition-colors"
+                  >
+                    <Plus size={14} />
                   </button>
                 </div>
+              </div>
 
-                {showBannerManager && (
-                  <div className="bg-black/20 p-5 rounded-2xl border border-white/5 space-y-4 animate-in slide-in-from-top-4 duration-300">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[7px] text-white/40 font-black uppercase ml-2">Título del Banner</label>
-                        <input
-                          type="text"
-                          placeholder="EJ: NUEVA FRANELA CONSAGRADOS"
-                          value={newBanner.titulo}
-                          onChange={(e) => setNewBanner({ ...newBanner, titulo: e.target.value.toUpperCase() })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white font-bold outline-none focus:border-amber-500"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[7px] text-white/40 font-black uppercase ml-2">Subtítulo / Info</label>
-                        <input
-                          type="text"
-                          placeholder="EJ: OBTÉN LA TUYA EN EL COMANDO"
-                          value={newBanner.subtitulo}
-                          onChange={(e) => setNewBanner({ ...newBanner, subtitulo: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[7px] text-white/40 font-black uppercase ml-2">URL de Imagen (Opcional)</label>
-                        <input
-                          type="text"
-                          placeholder="https://..."
-                          value={newBanner.imagen_url}
-                          onChange={(e) => setNewBanner({ ...newBanner, imagen_url: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[7px] text-white/40 font-black uppercase ml-2">Texto Botón</label>
-                          <input
-                            type="text"
-                            placeholder="VER INFO"
-                            value={newBanner.cta_label}
-                            onChange={(e) => setNewBanner({ ...newBanner, cta_label: e.target.value.toUpperCase() })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white font-bold outline-none focus:border-amber-500"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[7px] text-white/40 font-black uppercase ml-2">Link Botón</label>
-                          <input
-                            type="text"
-                            placeholder="https://..."
-                            value={newBanner.cta_link}
-                            onChange={(e) => setNewBanner({ ...newBanner, cta_link: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleCreateBanner}
-                      disabled={isCreatingBanner || !newBanner.titulo}
-                      className="w-full py-4 bg-amber-600 text-[#001f3f] text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-amber-500 transition-all font-bebas shadow-lg shadow-amber-900/20 active:scale-95"
-                    >
-                      {isCreatingBanner ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Publicar en Web Pública'}
-                    </button>
+              <div className="grid grid-cols-2 gap-4">
+                <MetricCard
+                  icon={<Zap className="text-[#ffb700]" size={16} />}
+                  label="COMPROMISO"
+                  value={agent.bible}
+                  color="from-[#ffb700] to-orange-600"
+                  onAdjust={(val) => handleUpdatePoints('BIBLIA', val)}
+                  disabled={isUpdatingPoints}
+                  adjustmentAmount={adjustmentAmount}
+                />
+                <MetricCard
+                  icon={<Star className="text-blue-400" size={16} />}
+                  label="SERVICIO"
+                  value={agent.notes}
+                  color="from-blue-400 to-blue-600"
+                  onAdjust={(val) => handleUpdatePoints('APUNTES', val)}
+                  disabled={isUpdatingPoints}
+                  adjustmentAmount={adjustmentAmount}
+                />
+              </div>
+
+              {/* PANEL DE SANCIONES */}
+              <div className="bg-red-500/5 border border-red-500/20 rounded-[2.5rem] p-6 relative overflow-hidden group shadow-2xl animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-red-500/20 rounded-lg">
+                    <Gavel className="text-red-500" size={20} />
                   </div>
-                )}
+                  <div>
+                    <h3 className="text-white font-black text-[10px] uppercase tracking-widest font-bebas">Protocolo Disciplinario</h3>
+                    <p className="text-[7px] text-red-500/70 font-bold uppercase tracking-widest font-montserrat">Sanciones por Inconducta o Inasistencia</p>
+                  </div>
+                </div>
 
-                {banners.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {banners.map((b) => (
-                      <div key={b.id} className="bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#ffb700]/30 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full ${b.activo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                          <div>
-                            <p className="text-[10px] font-black text-white uppercase font-bebas">{b.titulo}</p>
-                            <p className="text-[7px] text-white/40 font-bold uppercase">{b.tipo}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <SanctionOption
+                    label="Protocolo"
+                    sub="Falla técnica de conducta"
+                    pts="-5"
+                    onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+                    disabled={isUpdatingPoints}
+                  />
+                  <SanctionOption
+                    label="No Participó"
+                    sub="Sin aportes en clase"
+                    pts="-2"
+                    onClick={() => handleUpdatePoints('LIDERAZGO', -2)}
+                    disabled={isUpdatingPoints}
+                  />
+                  <SanctionOption
+                    label="Indisciplina"
+                    sub="Falta de respeto o orden"
+                    pts="-5"
+                    onClick={() => handleUpdatePoints('LIDERAZGO', -5)}
+                    disabled={isUpdatingPoints}
+                  />
+                  <SanctionOption
+                    label="Expulsión"
+                    sub="Sanción Definitiva"
+                    pts="-50%"
+                    isCritical
+                    onClick={() => handlePercentageDeduction(50)}
+                    disabled={isUpdatingPoints}
+                  />
+                </div>
+              </div>
+
+
+              {/* GESTIÓN DE BANNERS ESTRATÉGICOS */}
+              {userRole === UserRole.DIRECTOR && (
+                <>
+                  <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-[2.5rem] p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-amber-500/10 rounded-xl">
+                          <Radio className="text-amber-500 animate-pulse" size={24} />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-black text-lg uppercase tracking-widest font-bebas">Banners de Web Pública</h3>
+                          <p className="text-[8px] text-amber-500/60 font-black uppercase tracking-[0.3em] font-montserrat">Inyección de información en tiempo real</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowBannerManager(!showBannerManager)}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-600/20 border border-amber-500/30 text-amber-500 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-600/30 transition-all font-bebas"
+                      >
+                        {showBannerManager ? 'Cerrar Gestor' : 'Nuevo Banner'}
+                      </button>
+                    </div>
+
+                    {showBannerManager && (
+                      <div className="bg-black/20 p-5 rounded-2xl border border-white/5 space-y-4 animate-in slide-in-from-top-4 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[7px] text-white/40 font-black uppercase ml-2">Título del Banner</label>
+                            <input
+                              type="text"
+                              placeholder="EJ: NUEVA FRANELA CONSAGRADOS"
+                              value={newBanner.titulo}
+                              onChange={(e) => setNewBanner({ ...newBanner, titulo: e.target.value.toUpperCase() })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white font-bold outline-none focus:border-amber-500"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[7px] text-white/40 font-black uppercase ml-2">Subtítulo / Info</label>
+                            <input
+                              type="text"
+                              placeholder="EJ: OBTÉN LA TUYA EN EL COMANDO"
+                              value={newBanner.subtitulo}
+                              onChange={(e) => setNewBanner({ ...newBanner, subtitulo: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[7px] text-white/40 font-black uppercase ml-2">URL de Imagen (Opcional)</label>
+                            <input
+                              type="text"
+                              placeholder="https://..."
+                              value={newBanner.imagen_url}
+                              onChange={(e) => setNewBanner({ ...newBanner, imagen_url: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[7px] text-white/40 font-black uppercase ml-2">Texto Botón</label>
+                              <input
+                                type="text"
+                                placeholder="VER INFO"
+                                value={newBanner.cta_label}
+                                onChange={(e) => setNewBanner({ ...newBanner, cta_label: e.target.value.toUpperCase() })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white font-bold outline-none focus:border-amber-500"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[7px] text-white/40 font-black uppercase ml-2">Link Botón</label>
+                              <input
+                                type="text"
+                                placeholder="https://..."
+                                value={newBanner.cta_link}
+                                onChange={(e) => setNewBanner({ ...newBanner, cta_link: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white outline-none focus:border-amber-500"
+                              />
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleToggleBanner(b.id, !b.activo)}
-                            className={`p-2 rounded-lg transition-all ${b.activo ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}
-                            title={b.activo ? 'Desactivar' : 'Activar'}
-                          >
-                            {b.activo ? <X size={14} /> : <UserCheck size={14} />}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteBanner(b.id)}
-                            className="p-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition-all"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        <button
+                          onClick={handleCreateBanner}
+                          disabled={isCreatingBanner || !newBanner.titulo}
+                          className="w-full py-4 bg-amber-600 text-[#001f3f] text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-amber-500 transition-all font-bebas shadow-lg shadow-amber-900/20 active:scale-95"
+                        >
+                          {isCreatingBanner ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Publicar en Web Pública'}
+                        </button>
+                      </div>
+                    )}
+
+                    {banners.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {banners.map((b) => (
+                          <div key={b.id} className="bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#ffb700]/30 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-2 h-2 rounded-full ${b.activo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                              <div>
+                                <p className="text-[10px] font-black text-white uppercase font-bebas">{b.titulo}</p>
+                                <p className="text-[7px] text-white/40 font-bold uppercase">{b.tipo}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleToggleBanner(b.id, !b.activo)}
+                                className={`p-2 rounded-lg transition-all ${b.activo ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'}`}
+                                title={b.activo ? 'Desactivar' : 'Activar'}
+                              >
+                                {b.activo ? <X size={14} /> : <UserCheck size={14} />}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBanner(b.id)}
+                                className="p-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* GESTIÓN DE AUTORIZACIONES DE DESPLIEGUE */}
+                  <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-[2.5rem] p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-indigo-500/10 rounded-xl">
+                          <FileText className="text-indigo-400" size={24} />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-black text-lg uppercase tracking-widest font-bebas">Autorizaciones de Despliegue</h3>
+                          <p className="text-[8px] text-indigo-400/60 font-black uppercase tracking-[0.3em] font-montserrat">Documentos firmados por representantes</p>
                         </div>
                       </div>
-                    ))}
+                      <button
+                        onClick={() => setShowAuthManager(!showAuthManager)}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600/30 transition-all font-bebas"
+                      >
+                        {showAuthManager ? 'Cerrar Listado' : `Ver Registros (${authorizations.length})`}
+                      </button>
+                    </div>
+
+                    {showAuthManager && (
+                      <div className="space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                        {authorizations.length === 0 ? (
+                          <div className="text-center py-10 opacity-30 border-2 border-dashed border-white/10 rounded-2xl">
+                            <FileText size={40} className="mx-auto mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No hay autorizaciones registradas aún.</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                            {authorizations.map((auth) => (
+                              <div key={auth.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-4 hover:border-indigo-500/40 transition-all group">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="text-[11px] font-black text-white uppercase font-bebas">{auth.agent_name}</p>
+                                    <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">Agente</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[9px] font-black text-indigo-400 uppercase font-bebas">{new Date(auth.created_at || '').toLocaleDateString()}</p>
+                                    <p className="text-[7px] text-white/20 font-bold uppercase">Fecha de Firma</p>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
+                                  <div>
+                                    <p className="text-[6px] text-white/40 font-black uppercase mb-0.5">Representante</p>
+                                    <p className="text-[9px] text-white font-bold truncate">{auth.representative_name}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[6px] text-white/40 font-black uppercase mb-0.5">ID / Cédula</p>
+                                    <p className="text-[9px] text-white font-bold">{auth.representative_id}</p>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleDownloadAuthPDF(auth)}
+                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95"
+                                  >
+                                    <Download size={14} /> Descargar / Imprimir
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteAuth(auth.id!)}
+                                    className="p-2.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-xl transition-all"
+                                    title="Eliminar Registro"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={loadAuthorizations}
+                          className="w-full py-3 bg-white/5 border border-white/10 text-white/40 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                        >
+                          <RefreshCw size={12} /> Refrescar Listado
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-32 text-center space-y-6 animate-in fade-in duration-1000">
+            <div className="relative">
+              <div className="absolute inset-0 bg-[#ffb700] blur-3xl opacity-10 animate-pulse"></div>
+              <Shield size={80} className="text-[#ffb700]/20 relative z-10" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-white font-bebas text-2xl tracking-[0.3em] uppercase">Esperando Selección de Agente</h3>
+              <p className="text-[10px] text-white/40 font-black uppercase tracking-widest font-montserrat max-w-xs mx-auto">
+                Acceda a la base de datos superior para iniciar el análisis táctico de un elemento.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ===== GEMINI COMMAND CENTER (Director Only) ===== */}
         {(userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.DIRECTOR) && (

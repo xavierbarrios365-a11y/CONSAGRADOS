@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import html2canvas from 'html2canvas';
-import { ShieldCheck, Download, Trash2, User, CreditCard, Phone, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Download, Trash2, User, CreditCard, Phone, CheckCircle2, FileText } from 'lucide-react';
 import { Agent } from '../types';
 
 interface DeploymentAuthorizationProps {
@@ -110,36 +110,143 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
         }
     };
 
-    const generateImage = async () => {
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const generatePDF = async () => {
         if (!selectedAgent || !repNombre || !repCedula || !repTelefono) {
             alert('Por favor complete todos los campos y la firma antes de generar.');
             return;
         }
 
-        if (!documentRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        // Verificar si el canvas está vacío (opcional, pero recomendado)
 
-        // Ocultar elementos que no deben salir en la imagen
-        const buttons = document.querySelectorAll('.no-capture');
-        buttons.forEach(b => (b as HTMLElement).style.opacity = '0');
+        setIsGenerating(true);
 
         try {
-            const canvas = await html2canvas(documentRef.current, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff'
+            const { jsPDF } = await import('jspdf');
+            const { submitAuthorizationSupabase } = await import('../services/authPortalService');
+
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
             });
 
-            const link = document.createElement('a');
-            link.download = `Autorizacion_${selectedAgent.replace(/\s+/g, '_')}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.9);
-            link.click();
+            const pageWidth = doc.internal.pageSize.getWidth();
 
-            alert('¡Documento generado con éxito! El archivo se ha descargado en su dispositivo. Por favor envíelo por WhatsApp al Director Sahel Barrios.');
+            // --- DISEÑO DEL PDF ---
+            // Borde Superior
+            doc.setFillColor(15, 23, 42); // Navy
+            doc.rect(0, 0, pageWidth, 10, 'F');
+
+            // Título Principal
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(28);
+            doc.setTextColor(15, 23, 42);
+            doc.text("AUTORIZACIÓN DE", 20, 30);
+            doc.text("DESPLIEGUE OFICIAL", 20, 42);
+
+            // Subtítulo
+            doc.setFontSize(10);
+            doc.setTextColor(185, 28, 28); // Red
+            doc.text("PROYECTO JUVENIL CONSAGRADOS 2026 - BASE IJELS", 20, 52);
+
+            // Línea Divisoria
+            doc.setDrawColor(15, 23, 42);
+            doc.setLineWidth(0.5);
+            doc.line(20, 58, pageWidth - 20, 58);
+
+            // Código y Estado
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text("CÓDIGO: MOV-ARAURE-001", 20, 65);
+            doc.text("ESTADO: EXPEDIENTE OPERATIVO", pageWidth - 70, 65);
+
+            // Cuerpo del Texto (Caja)
+            doc.setFillColor(248, 250, 252);
+            doc.rect(20, 75, pageWidth - 40, 35, 'F');
+            doc.setDrawColor(185, 28, 28);
+            doc.setLineWidth(1);
+            doc.line(20, 75, 20, 110);
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(30, 41, 59);
+            const text = `Certifico que he sido informado de la misión a Araure (Festival de la Familia). Autorizo formalmente la movilización de mi representado bajo la custodia del equipo directivo de Consagrados 2026. Hora de salida estimada: 4:00 PM. Retorno: Mismo punto en horas de la noche. Se garantiza transporte, logística y seguridad en todo momento durante el despliegue técnico y espiritual.`;
+            const splitText = doc.splitTextToSize(text, pageWidth - 50);
+            doc.text(splitText, 25, 85);
+
+            // Datos del Formulario
+            doc.setFontSize(10);
+            doc.setTextColor(185, 28, 28);
+            doc.text("1. AGENTE CONVOCADO (ESTUDIANTE):", 20, 125);
+            doc.setTextColor(15, 23, 42);
+            doc.text(selectedAgent.toUpperCase(), 20, 132);
+
+            doc.setTextColor(185, 28, 28);
+            doc.text("2. NOMBRE DEL REPRESENTANTE:", 20, 145);
+            doc.setTextColor(15, 23, 42);
+            doc.text(repNombre.toUpperCase(), 20, 152);
+
+            doc.setTextColor(185, 28, 28);
+            doc.text("3. NÚMERO DE CÉDULA:", 20, 165);
+            doc.setTextColor(15, 23, 42);
+            doc.text(repCedula, 20, 172);
+
+            doc.setTextColor(185, 28, 28);
+            doc.text("4. TELÉFONO DE EMERGENCIA:", pageWidth / 2 + 10, 165);
+            doc.setTextColor(15, 23, 42);
+            doc.text(repTelefono, pageWidth / 2 + 10, 172);
+
+            // Firma
+            doc.setTextColor(185, 28, 28);
+            doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 190);
+
+            doc.setDrawColor(15, 23, 42);
+            doc.setLineWidth(0.2);
+            doc.rect(20, 195, pageWidth - 40, 40);
+
+            if (canvas) {
+                const sigData = canvas.toDataURL('image/png');
+                doc.addImage(sigData, 'PNG', 25, 198, pageWidth - 50, 34);
+            }
+
+            // Footer (Director)
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
+            doc.text("SAHEL BARRIOS", pageWidth / 2, 260, { align: "center" });
+            doc.setFontSize(8);
+            doc.setTextColor(185, 28, 28);
+            doc.text("COORDINADOR GENERAL - CONSAGRADOS 2026", pageWidth / 2, 265, { align: "center" });
+
+            // --- GUARDAR Y ENVIAR ---
+            // 1. Descargar PDF
+            doc.save(`Autorizacion_${selectedAgent.replace(/\s+/g, '_')}.pdf`);
+
+            // 2. Sincronizar con base de datos
+            const signatureBase64 = canvas ? canvas.toDataURL('image/png') : '';
+            const res = await submitAuthorizationSupabase({
+                agent_id: agents.find(a => a.name.toUpperCase() === selectedAgent.toUpperCase())?.id || 'EXTERNAL',
+                agent_name: selectedAgent,
+                representative_name: repNombre,
+                representative_id: repCedula,
+                phone: repTelefono,
+                signature_data: signatureBase64
+            });
+
+            if (res.success) {
+                alert('¡Autorización generada y guardada con éxito! El PDF se ha descargado. Ya no es obligatorio enviarlo por WhatsApp, pero puede hacerlo para confirmar.');
+            } else {
+                alert('El PDF se generó pero hubo un error al sincronizar con el panel central. Por favor envíe el archivo descargado por WhatsApp.');
+            }
+
         } catch (err) {
-            console.error('Error generating image:', err);
-            alert('Error al generar la imagen. Intente nuevamente.');
+            console.error('Error generating PDF:', err);
+            alert('Error técnico al generar el PDF. Por favor tome captura de pantalla del formulario lleno y envíelo manualmente.');
         } finally {
-            buttons.forEach(b => (b as HTMLElement).style.opacity = '1');
+            setIsGenerating(false);
         }
     };
 
@@ -337,13 +444,23 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
 
                 <div className="no-capture mt-10 space-y-6">
                     <button
-                        onClick={generateImage}
+                        onClick={generatePDF}
+                        disabled={isGenerating}
                         className="w-full bg-red-600 hover:bg-red-700 text-white py-6 rounded-2xl flex items-center justify-center gap-4 font-black text-2xl transition-all shadow-[0_20px_50px_rgba(220,38,38,0.3)] active:scale-95 group overflow-hidden relative"
                         style={{ fontFamily: "'Oswald', sans-serif" }}
                     >
                         <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>
-                        <Download size={28} className="group-hover:animate-bounce" />
-                        DESCARGAR AUTORIZACIÓN (JPG)
+                        {isGenerating ? (
+                            <div className="flex items-center gap-2">
+                                <FileText className="animate-pulse" size={28} />
+                                FORJANDO PDF...
+                            </div>
+                        ) : (
+                            <>
+                                <FileText size={28} className="group-hover:animate-bounce" />
+                                GENERAR AUTORIZACIÓN (PDF)
+                            </>
+                        )}
                     </button>
 
                     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 text-center space-y-3">
@@ -352,7 +469,7 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
                             <span className="text-[11px] font-black uppercase tracking-widest">INSTRUCCIÓN DE ENVÍO</span>
                         </div>
                         <p className="text-white/60 text-[11px] font-medium leading-relaxed uppercase tracking-widest">
-                            UNA VEZ DESCARGADO EL DOCUMENTO, POR FAVOR ENVÍE LA IMAGEN POR <span className="text-white font-black underline">WHATSAPP</span> AL AGENTE SAHEL BARRIOS PARA EL REGISTRO FINAL DE LA MISIÓN.
+                            UNA VEZ DESCARGADO EL DOCUMENTO, PUEDE ENVIAR EL <span className="text-white font-black underline">PDF</span> POR WHATSAPP AL DIRECTOR PARA DOBLE CONFIRMACIÓN, AUNQUE YA QUEDARÁ REGISTRADO EN EL SISTEMA.
                         </p>
                     </div>
                 </div>

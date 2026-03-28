@@ -86,8 +86,8 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
             };
         } else {
             return {
-                x: e.nativeEvent.offsetX,
-                y: e.nativeEvent.offsetY
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
             };
         }
     };
@@ -157,103 +157,102 @@ const DeploymentAuthorization: React.FC<DeploymentAuthorizationProps> = ({ onBac
 
             const pageWidth = doc.internal.pageSize.getWidth();
 
-            // --- DISEÑO DEL PDF ---
-            // Borde Superior
-            doc.setFillColor(15, 23, 42); // Navy
-            doc.rect(0, 0, pageWidth, 10, 'F');
+            // --- DISEÑO OFICIAL DNA CONSAGRADOS ---
+            // 1. Fondo Header Navy Profundo
+            doc.setFillColor(15, 23, 42); // Navy #0F172A
+            doc.rect(0, 0, pageWidth, 55, 'F');
 
-            // Título Principal
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(28);
-            doc.setTextColor(15, 23, 42);
-            doc.text("AUTORIZACIÓN DE", 20, 30);
-            doc.text("DESPLIEGUE OFICIAL", 20, 42);
+            // 2. Línea de Acento Roja (Glossy look)
+            doc.setFillColor(185, 28, 28); // Red #B91212
+            doc.rect(0, 55, pageWidth, 2, 'F');
 
-            // Subtítulo
-            doc.setFontSize(10);
-            doc.setTextColor(185, 28, 28); // Red
-            doc.text("PROYECTO JUVENIL CONSAGRADOS 2026 - BASE IJELS", 20, 52);
-
-            // Línea Divisoria
-            doc.setDrawColor(15, 23, 42);
-            doc.setLineWidth(0.5);
-            doc.line(20, 58, pageWidth - 20, 58);
-
-            // Código y Estado
-            doc.setFontSize(8);
-            doc.setTextColor(100, 116, 139);
-            doc.text("CÓDIGO: MOV-ARAURE-001", 20, 65);
-            doc.text("ESTADO: EXPEDIENTE OPERATIVO", pageWidth - 70, 65);
-
-            // Cuerpo del Texto (Caja)
-            doc.setFillColor(248, 250, 252);
-            doc.rect(20, 75, pageWidth - 40, 35, 'F');
-            doc.setDrawColor(185, 28, 28);
+            // 3. Logotipo / Escudo Simbolizado
+            doc.setDrawColor(255, 183, 0); // Gold #FFB700
             doc.setLineWidth(1);
-            doc.line(20, 75, 20, 110);
+            doc.line(pageWidth - 40, 15, pageWidth - 15, 15);
+            doc.line(pageWidth - 40, 15, pageWidth - 40, 40);
+            doc.line(pageWidth - 40, 40, pageWidth - 27.5, 45);
+            doc.line(pageWidth - 15, 15, pageWidth - 15, 40);
+            doc.line(pageWidth - 15, 40, pageWidth - 27.5, 45);
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
-            doc.setTextColor(30, 41, 59);
-            const text = `Certifico que he sido informado de la misión a Araure (Festival de la Familia). Autorizo formalmente la movilización de mi representado bajo la custodia del equipo directivo de Consagrados 2026. Hora de salida estimada: 4:00 PM. Retorno: Mismo punto en horas de la noche. Se garantiza transporte, logística y seguridad en todo momento durante el despliegue técnico y espiritual.`;
-            const splitText = doc.splitTextToSize(text, pageWidth - 50);
-            doc.text(splitText, 25, 85);
+            doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(255, 255, 255);
+            doc.text("C365", pageWidth - 32, 30);
+            doc.setFontSize(6); doc.text("TACTICAL ID", pageWidth - 35, 34);
 
-            // Datos del Formulario
-            doc.setFontSize(10);
-            doc.setTextColor(185, 28, 28);
-            doc.text("1. AGENTE CONVOCADO (ESTUDIANTE):", 20, 125);
-            doc.setTextColor(15, 23, 42);
-            doc.text(selectedAgent.toUpperCase(), 20, 132);
+            // 4. Título Principal (DNA IMPACT)
+            doc.setFont("helvetica", "bold"); doc.setFontSize(26); doc.setTextColor(255, 255, 255);
+            doc.text("AUTORIZACIÓN TÁCTICA", 20, 25);
+            doc.setFontSize(14); doc.setTextColor(255, 183, 0); // Gold
+            doc.text("DESPLIEGUE OPERATIVO ARAURE 2026", 20, 35);
 
-            doc.setTextColor(185, 28, 28);
-            doc.text("2. NOMBRE DEL REPRESENTANTE:", 20, 145);
-            doc.setTextColor(15, 23, 42);
-            doc.text(repNombre.toUpperCase(), 20, 152);
+            doc.setFontSize(8); doc.setTextColor(148, 163, 184); // Slate-400
+            doc.text("COD: MOV-ARAURE-001 | NIVEL DE ACCESO: ELITE", 20, 45);
 
-            doc.setTextColor(185, 28, 28);
-            doc.text("3. NÚMERO DE CÉDULA:", 20, 165);
-            doc.setTextColor(15, 23, 42);
-            doc.text(repCedula, 20, 172);
+            // 5. Cuerpo del Documento
+            doc.setFillColor(255, 255, 255);
+            // No need to fill white, default is white
 
-            doc.setTextColor(185, 28, 28);
-            doc.text("4. TELÉFONO DE EMERGENCIA:", pageWidth / 2 + 10, 165);
-            doc.setTextColor(15, 23, 42);
-            doc.text(repTelefono, pageWidth / 2 + 10, 172);
+            // Bloque de Certificación
+            doc.setFillColor(241, 245, 249); doc.roundedRect(15, 65, pageWidth - 30, 40, 3, 3, 'F');
+            doc.setDrawColor(185, 28, 28); doc.setLineWidth(1.5); doc.line(15, 65, 15, 105);
 
-            // TUTOR SECTION
-            if (repTutor) {
-                doc.setTextColor(185, 28, 28); doc.text("➤ TUTOR RESPONSABLE (1 A 1):", 20, 182);
-                doc.setTextColor(15, 23, 42); doc.text(repTutor.toUpperCase(), 20, 187);
-                doc.setFontSize(7); doc.setTextColor(100, 116, 139);
-                doc.text("(Tutor es el encargado y responsable del joven durante la actividad)", 20, 191);
-                doc.setFontSize(10);
-            }
+            doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(30, 41, 59);
+            const text = `YO, EL ABAJO FIRMANTE, EN MI CONDICIÓN DE REPRESENTANTE LEGAL, CERTIFICO QUE HE SIDO INFORMADO DE LOS DETALLES DE LA MISIÓN A ARAURE. AUTORIZO FORMALMENTE LA MOVILIZACIÓN DE MI REPRESENTADO BAJO LA CUSTODIA DIRECTA DEL EQUIPO DE CONSAGRADOS 2026. SE GARANTIZA PROTOCOLO DE SEGURIDAD Y LOGÍSTICA TÁCTICA DURANTE TODO EL TRAYECTO.`;
+            const splitText = doc.splitTextToSize(text, pageWidth - 45);
+            doc.text(splitText, 22, 78);
 
-            // Firma
-            doc.setTextColor(185, 28, 28);
-            doc.text("5. FIRMA DIGITAL DEL REPRESENTANTE:", 20, 205);
+            // 6. Grid de Datos (Tactical Style)
+            let currentY = 120;
+            const drawMetric = (label: string, value: string, x: number, y: number, w: number) => {
+                doc.setFontSize(7); doc.setTextColor(185, 28, 28); doc.text(label, x, y);
+                doc.setFontSize(11); doc.setTextColor(15, 23, 42); doc.text(value.toUpperCase(), x, y + 6);
+                doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.2); doc.line(x, y + 8, x + w, y + 8);
+            };
 
-            doc.setDrawColor(15, 23, 42);
-            doc.setLineWidth(0.2);
-            doc.rect(20, 210, pageWidth - 40, 40);
+            drawMetric("01. AGENTE (ESTUDIANTE)", selectedAgent, 20, currentY, (pageWidth / 2) - 30);
+            drawMetric("02. TUTOR RESPONSABLE (1:1)", repTutor || "NO ASIGNADO", pageWidth / 2 + 5, currentY, (pageWidth / 2) - 25);
+
+            currentY += 20;
+            drawMetric("03. REPRESENTANTE LEGAL", repNombre, 20, currentY, (pageWidth / 2) - 30);
+            drawMetric("04. CÉDULA DE IDENTIDAD", repCedula, pageWidth / 2 + 5, currentY, (pageWidth / 2) - 25);
+
+            currentY += 20;
+            drawMetric("05. TELÉFONO DE EMERGENCIA", repTelefono, 20, currentY, pageWidth - 40);
+
+            // 7. Área de Firma (The core DNA part)
+            currentY += 25;
+            doc.setFontSize(8); doc.setTextColor(185, 28, 28); doc.text("➤ 06. CONFIRMACIÓN BIOMÉTRICA (FIRMA DIGITAL)", 20, currentY);
+
+            doc.setDrawColor(15, 23, 42); doc.setLineWidth(0.5);
+            doc.rect(20, currentY + 4, pageWidth - 40, 45);
+            doc.setFontSize(6); doc.setTextColor(203, 213, 225);
+            doc.text("SISTEMA DE CAPTURA DIGITAL - CONSAGRADOS ID", pageWidth / 2, currentY + 30, { align: "center" });
 
             if (canvas) {
                 const sigData = canvas.toDataURL('image/png');
-                doc.addImage(sigData, 'PNG', 25, 213, pageWidth - 50, 34);
+                // Ensure there is drawing (simple check)
+                if (sigData.length > 2000) {
+                    doc.addImage(sigData, 'PNG', 25, currentY + 7, pageWidth - 50, 39);
+                } else {
+                    console.warn("Signature might be empty or too small");
+                }
             }
 
-            // Footer (Director)
-            doc.setFontSize(10);
-            doc.setTextColor(15, 23, 42);
-            doc.text("SAHEL BARRIOS", pageWidth / 2, 260, { align: "center" });
-            doc.setFontSize(8);
-            doc.setTextColor(185, 28, 28);
-            doc.text("COORDINADOR GENERAL - CONSAGRADOS 2026", pageWidth / 2, 265, { align: "center" });
+            // 8. Footer Premium
+            currentY = 255;
+            doc.setDrawColor(15, 23, 42); doc.setLineWidth(1); doc.line(pageWidth / 2 - 20, currentY, pageWidth / 2 + 20, currentY);
+            doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+            doc.text("SAHEL BARRIOS", pageWidth / 2, currentY + 5, { align: "center" });
+            doc.setFontSize(7); doc.setTextColor(185, 28, 28);
+            doc.text("COORDINADOR GENERAL - CONSAGRADOS 2026", pageWidth / 2, currentY + 9, { align: "center" });
+
+            doc.setFontSize(6); doc.setTextColor(148, 163, 184);
+            doc.text("DOCUMENTO GENERADO POR EL NODO CENTRAL DE INTELIGENCIA. VALIDEZ TÁCTICA PARA DESPLIEGUE ARAURE.", pageWidth / 2, 285, { align: "center" });
 
             // --- GUARDAR Y ENVIAR ---
             // 1. Descargar PDF
-            doc.save(`Autorizacion_${selectedAgent.replace(/\s+/g, '_')}.pdf`);
+            const fileName = `Autorizacion_${selectedAgent.replace(/\s+/g, '_')}_DNA.pdf`;
+            doc.save(fileName);
 
             // 2. Sincronizar con base de datos
             const signatureBase64 = canvas ? canvas.toDataURL('image/png') : '';

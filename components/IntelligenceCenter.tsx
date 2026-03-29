@@ -9,7 +9,7 @@ import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
 import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase, getStreakMultiplier } from '../services/supabaseService';
-import { fetchAuthorizationsSupabase, deleteAuthorizationSupabase, DeploymentAuthorizationData } from '../services/authPortalService';
+import { fetchAuthorizationsSupabase, deleteAuthorizationSupabase, DeploymentAuthorizationData, fetchAuthorizationSignatureSupabase } from '../services/authPortalService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
 import { usePresence } from '../hooks/usePresence';
@@ -534,8 +534,14 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
       doc.setFontSize(6); doc.setTextColor(203, 213, 225);
       doc.text("SISTEMA DE CAPTURA DIGITAL - CONSAGRADOS ID", pageWidth / 2, currentY + 30, { align: "center" });
 
-      if (auth.signature_data) {
-        doc.addImage(auth.signature_data, 'PNG', 25, currentY + 7, pageWidth - 50, 39);
+      // Cargar firma solo si no está en el objeto (Lazy Load)
+      const signature = auth.signature_data || await fetchAuthorizationSignatureSupabase(auth.id!);
+
+      if (signature) {
+        doc.addImage(signature, 'PNG', 25, currentY + 7, pageWidth - 50, 39);
+      } else {
+        doc.setFontSize(8); doc.setTextColor(15, 23, 42);
+        doc.text("FIRMA NO DISPONIBLE O FALLO DE CARGA", pageWidth / 2, currentY + 25, { align: "center" });
       }
 
       currentY = 255;

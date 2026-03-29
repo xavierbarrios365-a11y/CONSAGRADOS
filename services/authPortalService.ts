@@ -7,7 +7,7 @@ export interface DeploymentAuthorizationData {
     representative_name: string;
     representative_id: string;
     phone: string;
-    signature_data: string;
+    signature_data?: string;
     tutor_name?: string;
     created_at?: string;
 }
@@ -30,13 +30,13 @@ export const submitAuthorizationSupabase = async (data: DeploymentAuthorizationD
 };
 
 /**
- * @description Obtiene todas las autorizaciones registradas.
+ * @description Obtiene todas las autorizaciones registradas (Sin la firma pesada).
  */
 export const fetchAuthorizationsSupabase = async (): Promise<DeploymentAuthorizationData[]> => {
     try {
         const { data, error } = await supabase
             .from('deployment_authorizations')
-            .select('*')
+            .select('id, agent_id, agent_name, representative_name, representative_id, phone, tutor_name, created_at')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -44,6 +44,25 @@ export const fetchAuthorizationsSupabase = async (): Promise<DeploymentAuthoriza
     } catch (e: any) {
         console.error('❌ Error obteniendo autorizaciones:', e.message);
         return [];
+    }
+};
+
+/**
+ * @description Obtiene solo la firma de una autorización específica (Lazy Loading).
+ */
+export const fetchAuthorizationSignatureSupabase = async (id: string): Promise<string | null> => {
+    try {
+        const { data, error } = await supabase
+            .from('deployment_authorizations')
+            .select('signature_data')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data?.signature_data || null;
+    } catch (e: any) {
+        console.error('❌ Error obteniendo firma:', e.message);
+        return null;
     }
 };
 

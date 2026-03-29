@@ -217,22 +217,36 @@ const App: React.FC = () => {
 
       if (reminder && lastStreakNotif !== timeStr) {
         // Verificar si el usuario ya registró racha hoy
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
         const lastStreak = currentUser.lastStreakDate;
 
         if (lastStreak !== today) {
           const notifKey = `${today}_${timeStr}`;
           if (lastStreakNotif === notifKey) return;
 
-          console.log(`[STREAK] Disparando recordatorio: ${reminder.message}`);
+          console.log(`[STREAK] Disparando recordatorio local: ${reminder.message}`);
           setLastStreakNotif(notifKey);
           localStorage.setItem('last_streak_notif', notifKey);
 
-          supabase.from('agentes').select('fcm_token').eq('id', currentUser.id).single().then(({ data }) => {
-            if (data?.fcm_token) {
-              sendPushBroadcast("🔥 OPERACIÓN SALVA TU RACHA", reminder.message, data.fcm_token, 'streak');
-            }
+          // FIX: No preguntar a Supabase cada minuto. El token ya lo tenemos en el currentUser o lo manejamos localmente.
+          // Además, para recordatorios LOCALES, no necesitamos loguear en notificaciones_push global (que dispara syncs).
+
+          // Alerta visual local inmediata
+          showAlert({
+            title: "🔥 RACHA EN PELIGRO",
+            message: reminder.message,
+            type: 'WARNING'
           });
+
+          // Solo enviar Push si tenemos el token y no estamos en modo dev (Vercel API)
+          if (currentUser.fcmToken) {
+            // Usamos un fetch directo a la API sin loguear en Supabase para evitar el bucle de Realtime
+            fetch(`${import.meta.env.DEV ? 'https://consagrados.vercel.app' : ''}/api/notify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'push', title: "🔥 OPERACIÓN SALVA TU RACHA", message: reminder.message, targetToken: currentUser.fcmToken })
+            }).catch(() => { });
+          }
         }
       }
     };
@@ -802,19 +816,6 @@ const App: React.FC = () => {
 
   // VISTA DE LANDING (PÚBLICA)
   // VISTA DE AUTORIZACIÓN (PÚBLICA / COMPARTIBLE)
-  if (view === AppView.DEPLOYMENT_AUTH) {
-    return (
-      <TacticalAlertProvider>
-        <div className="h-screen overflow-y-auto no-scrollbar">
-          <DeploymentAuthorization
-            onBack={() => setView(isLoggedIn ? AppView.HOME : AppView.PUBLIC_WEB)}
-            agents={agents}
-          />
-        </div>
-      </TacticalAlertProvider>
-    );
-  }
-
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#001f3f] relative overflow-hidden font-montserrat">

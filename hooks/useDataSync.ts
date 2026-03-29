@@ -23,12 +23,20 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [userConfirmations, setUserConfirmations] = useState<string[]>([]);
 
-    /**
-     * Syncs all data from the backend.
-     * Returns the fresh agents list so the caller can update currentUser.
-     */
+    const lastSyncTimeRef = useRef<number>(0);
+    const THROTTLE_MS = 30000; // 30 segundos de gracia entre syncs automáticos
+
     const syncData = useCallback(async (isSilent = false): Promise<Agent[] | null> => {
+        const now = Date.now();
+        // Solo bloqueamos si es un sync silencioso (como el de Realtime)
+        // y ha pasado menos del tiempo de throttle
+        if (isSilent && (now - lastSyncTimeRef.current < THROTTLE_MS)) {
+            console.log(`⏳ Sync throttled. Quedan ${(THROTTLE_MS - (now - lastSyncTimeRef.current)) / 1000}s`);
+            return null;
+        }
+
         if (!isSilent) setIsSyncing(true);
+        lastSyncTimeRef.current = now;
         try {
             const callerRole = currentUser?.userRole || 'STUDENT';
             const sheetAgents = await fetchAgentsFromSupabase(false, callerRole);

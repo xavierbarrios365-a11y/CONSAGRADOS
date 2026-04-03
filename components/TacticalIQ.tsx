@@ -1088,6 +1088,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
         setLightsOutGrid(newGrid);
         setLightsOutMoves(prev => prev + 1);
 
+        const isWin = newGrid.every(val => val === false);
         if (isWin) {
             handleLevelComplete();
         }

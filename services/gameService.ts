@@ -38,11 +38,16 @@ export const submitIQLevelComplete = async (agentId: string, level: number, time
 /**
  * @description Obtiene datos de la academia.
  */
-export const fetchAcademyDataSupabase = async (agentId: string) => {
+export const fetchAcademyDataSupabase = async (agentId?: string) => {
     try {
         const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(50);
         const { data: lessonsRaw } = await supabase.from('academy_lessons').select('*').order('order_index').limit(200);
-        const { data: progressRaw } = await supabase.from('academy_progress').select('*').eq('agent_id', agentId).limit(100);
+
+        let progressQuery = supabase.from('academy_progress').select('*');
+        if (agentId) {
+            progressQuery = progressQuery.eq('agent_id', agentId);
+        }
+        const { data: progressRaw } = await progressQuery.limit(agentId ? 100 : 1000);
 
         // Mapeo de DB -> Frontend (Cursos)
         const mappedCourses = (coursesRaw || []).map((c: any) => ({

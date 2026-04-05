@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Course, Lesson, LessonProgress, UserRole, AppView, Agent } from '../types';
 import { fetchAcademyDataSupabase, deleteAcademyCourseSupabase, deleteAcademyLessonSupabase, submitQuizResultSupabase, resetStudentAttemptsSupabase, saveBulkAcademyDataSupabase, updateAgentPointsSupabase } from '../services/supabaseService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
@@ -68,13 +69,19 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
     const loadAcademy = async (isAuditFetch = false) => {
         setIsLoading(true);
         try {
-            const data = await fetchAcademyDataSupabase((userRole === UserRole.DIRECTOR && isAuditFetch) ? undefined : agentId);
+            // FIX: If auditing as Director, we pass undefined to fetch ALL progress
+            const fetchId = (userRole === UserRole.DIRECTOR && isAuditFetch) ? undefined : agentId;
+            const data = await fetchAcademyDataSupabase(fetchId);
+
             setCourses(data.courses || []);
             setLessons(data.lessons || []);
 
-            // Fix: setProgress must be called even if allAgents is being loaded
             if (isAuditFetch) {
                 setAuditProgress((data.progress as any) || []);
+                // If we are auditing and current progress is empty, also fill progress to show buttons
+                if (progress.length === 0) {
+                    setProgress((data.progress as any) || []);
+                }
             } else {
                 setProgress((data.progress as any) || []);
             }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Star, Zap, Trophy, HelpCircle, ChevronRight, X, BookOpen, Lightbulb, ChevronLeft, Lock, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Agent, IQLevel } from '../types';
 import { submitIQLevelComplete } from '../services/supabaseService';
+import { supabase } from '../services/supabaseClient';
 import { LORE_DATA } from './TacticalLore';
 
 interface TacticalIQProps {
@@ -658,6 +659,9 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
             setStatus('FAILED');
         } finally {
             setIsSubmitting(false);
+            // IMPORTANTE: Resetear status de TRANSITIONING a PLAYING si falló la sincronización
+            // para que el overlay de bloqueo desaparezca.
+            setStatus('PLAYING');
         }
     };
 
@@ -1422,9 +1426,9 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-[#000814] text-white font-montserrat overflow-hidden flex flex-col">
+        <div className="fixed inset-0 h-[100dvh] z-50 bg-[#000814] text-white font-montserrat overflow-hidden flex flex-col">
             {/* HEADER TÁCTICO */}
-            <div className="p-3 border-b border-white/5 flex justify-between items-center bg-black/60 backdrop-blur-md z-10 shrink-0">
+            <div className="p-3 pt-[env(safe-area-inset-top)] border-b border-white/5 flex justify-between items-center bg-black/60 backdrop-blur-md z-10 shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-blue-500/20 rounded-lg border border-blue-500/30">
                         <Brain className="text-blue-400" size={16} />
@@ -1703,7 +1707,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     </span>
                                                 </div>
 
-                                                <div className="grid grid-cols-3 gap-3 p-4 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto">
+                                                <div className="grid grid-cols-3 gap-3 p-4 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto touch-manipulation">
                                                     {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => {
                                                         const isShowing = status === 'MEM_SHOWING' && activeMemoryBlock === i;
 
@@ -1871,7 +1875,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     {/* OUT Indicator */}
                                                     <div className="absolute bottom-[24px] sm:bottom-[30px] -right-2 w-4 h-4 sm:w-6 sm:h-6 bg-gray-800 rounded-full flex items-center justify-center z-10 border-2 border-dashed border-gray-600"></div>
 
-                                                    <div className={`grid gap-1 sm:gap-1.5`} style={{ gridTemplateColumns: `repeat(${pipeGridSize}, minmax(0, 1fr))` }}>
+                                                    <div className={`grid gap-1 sm:gap-1.5 touch-manipulation`} style={{ gridTemplateColumns: `repeat(${pipeGridSize}, minmax(0, 1fr))` }}>
                                                         {pipesGrid.map((pipe, idx) => (
                                                             <button
                                                                 key={`pipe-${idx}`}
@@ -1969,7 +1973,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     </span>
                                                 </div>
 
-                                                <div className="relative p-2 sm:p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mx-auto w-full max-w-[300px]">
+                                                <div className="relative p-2 sm:p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mx-auto w-full max-w-[300px] touch-manipulation">
                                                     <div className={`grid gap-1 sm:gap-1.5`} style={{ gridTemplateColumns: `repeat(${knightGridSize}, minmax(0, 1fr))` }}>
                                                         {Array.from({ length: knightGridSize * knightGridSize }).map((_, idx) => {
                                                             const isKnight = knightPos === idx;
@@ -2078,7 +2082,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     </span>
                                                 </div>
 
-                                                <div className={`grid gap-1.5 p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto w-full max-w-[300px]`} style={{ gridTemplateColumns: `repeat(${sudokuSize}, minmax(0, 1fr))` }}>
+                                                <div className={`grid gap-1.5 p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto w-full max-w-[300px] touch-manipulation`} style={{ gridTemplateColumns: `repeat(${sudokuSize}, minmax(0, 1fr))` }}>
                                                     {sudokuGrid.map((val, idx) => {
                                                         const isInitial = sudokuInitial[idx];
 
@@ -2110,7 +2114,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
                                                     <span className="text-[10px] text-[#FFB700] font-bold uppercase tracking-widest">Suma Objetivo: {magicSquareTarget}</span>
                                                 </div>
 
-                                                <div className="grid grid-cols-3 gap-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto w-full max-w-[280px]">
+                                                <div className="grid grid-cols-3 gap-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl shadow-inner mx-auto w-full max-w-[280px] touch-manipulation">
                                                     {magicSquareGrid.map((val, idx) => (
                                                         <button
                                                             key={`magic-${idx}`}
@@ -2430,7 +2434,7 @@ const TacticalIQ: React.FC<TacticalIQProps> = ({ currentUser, onClose, onUpdateN
             </div>
 
             {/* HUD DE PROGRESO INFERIOR (COMPACTO Y FIJO) */}
-            <div className="p-2 bg-black/90 backdrop-blur-xl border-t border-white/5 flex justify-center gap-6 shadow-[0_-10px_20px_rgba(0,0,0,0.5)] shrink-0">
+            <div className="p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-black/90 backdrop-blur-xl border-t border-white/5 flex justify-center gap-6 shadow-[0_-10px_20px_rgba(0,0,0,0.5)] shrink-0">
                 <div className="text-center">
                     <p className="text-[5px] text-gray-500 uppercase font-black mb-0 tracking-widest leading-none">PROGRESO</p>
                     <p className="text-[10px] font-bebas tracking-widest text-[#FFB700] leading-tight mt-0.5">{Math.floor((currentIqLevel / 100) * 100)}%</p>

@@ -25,8 +25,10 @@ try {
         });
     }
 
-    let sql = `-- RESTORATION OF ACADEMY PROGRESS (CORRECTED SCHEMA)\n`;
-    sql += `INSERT INTO public.academy_progress (agent_id, lesson_id, course_id, is_completed, score, attempts, completed_at)\nVALUES\n`;
+    let sql = `-- RESTORATION OF ACADEMY PROGRESS (ROBUST VERSION)\n`;
+    sql += `INSERT INTO public.academy_progress (agent_id, lesson_id, course_id, is_completed, score, attempts, completed_at)\n`;
+    sql += `SELECT t.agent_id, t.lesson_id, t.course_id, t.is_completed, t.score, t.attempts, t.completed_at\n`;
+    sql += `FROM (VALUES\n`;
 
     const entries = data.progress.map(p => {
         const agentId = p.agentId || 'S/D';
@@ -37,14 +39,16 @@ try {
         const attempts = p.attempts || 1;
         const completedAt = p.date || new Date().toISOString();
 
-        return `('${agentId}', '${lessonId}', '${courseId}', ${isCompleted}, ${score}, ${attempts}, '${completedAt}')`;
+        return `('${agentId}', '${lessonId}', '${courseId}', ${isCompleted}, ${score}, ${attempts}, '${completedAt}'::timestamp with time zone)`;
     });
 
-    sql += entries.join(',\n') + `\nON CONFLICT (agent_id, lesson_id) DO UPDATE SET \n`;
+    sql += entries.join(',\n') + `\n) AS t(agent_id, lesson_id, course_id, is_completed, score, attempts, completed_at)\n`;
+    sql += `INNER JOIN public.agentes a ON a.id = t.agent_id\n`; // Only existing agents
+    sql += `ON CONFLICT (agent_id, lesson_id) DO UPDATE SET \n`;
     sql += `is_completed = EXCLUDED.is_completed, score = EXCLUDED.score, attempts = EXCLUDED.attempts, completed_at = EXCLUDED.completed_at, course_id = EXCLUDED.course_id;`;
 
     fs.writeFileSync('c:\\Users\\sahel\\Downloads\\consagrados-2026\\seed_academy_progress_final.sql', sql);
-    console.log('SUCCESS: Generated seed_academy_progress_final.sql with ' + entries.length + ' entries.');
+    console.log('SUCCESS: Generated robust seed_academy_progress_final.sql with ' + entries.length + ' entries.');
 } catch (err) {
     console.error('ERROR:', err.message);
 }

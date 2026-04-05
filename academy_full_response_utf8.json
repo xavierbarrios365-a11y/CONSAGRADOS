@@ -1,0 +1,975 @@
+﻿­ƒôí Fetching FULL academy data from Sheets...
+Ô£à SUCCESS: Found 4 courses and 10 lessons.
+{
+  "courses": [
+    {
+      "id": "curso_templo_blindado",
+      "title": "OPERACI├ôN: TEMPLO BLINDADO",
+      "description": "Despliegue de protocolos de seguridad para la protecci├│n del activo m├ís valioso: El Templo del Esp├¡ritu Santo. Gesti├│n de alto valor y pureza t├íctica.",
+      "imageUrl": "https://img.freepik.com/free-photo/fencing-mask-protection-safety_23-2150849204.jpg",
+      "requiredLevel": "RECLUTA"
+    },
+    {
+      "id": "CURSO_06_DONES",
+      "title": "CLASE 06: DONES Y TALENTOS",
+      "description": "Destruye el S├¡ndrome del Impostor. Activa el Software del Esp├¡ritu y asume tu rol de Administrador (Oikonomos).",
+      "imageUrl": "",
+      "requiredLevel": "RECLUTA"
+    },
+    {
+      "id": "ID_TACTICAL_03",
+      "title": "NIVEL II: ESTATUS DE ADOPCI├ôN Y POSICIONAMIENTO",
+      "description": "Desmantelamiento de la mentalidad de orfandad y activaci├│n del protocolo de herencia legal.",
+      "imageUrl": "",
+      "requiredLevel": "SOLDADO"
+    },
+    {
+      "id": "ID_TACTICAL_04",
+      "title": "NIVEL II: DIN├üMICA DE VALOR (GRACIA VS. LOGRO)",
+      "description": "Desmantelamiento del sistema de m├®ritos y activaci├│n del motor de obediencia por gratitud.",
+      "imageUrl": "",
+      "requiredLevel": "SOLDADO"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "leccion_templo_blindado_01",
+      "courseId": "curso_templo_blindado",
+      "order": 1,
+      "title": "FASE 1: IDENTIFICACI├ôN DEL ACTIVO",
+      "videoUrl": "",
+      "content": "<h3>INFORME DE INTELIGENCIA: ESTATUS DE PROPIEDAD</h3><p>Soldado, el enemigo intenta devaluar tu cuerpo trat├índolo como una mercanc├¡a barata, pero la Inteligencia B├¡blica (1 Corintios 6:19-20) confirma tu estatus real:</p><ul><li><strong>TU CUERPO ES UN TEMPLO:</strong> No es una casa abandonada donde cualquiera entra a rayar las paredes. Es la residencia operativa de Dios.</li><li><strong>NO ERES EL DUE├æO:</strong> Fuiste expropiado del mundo y comprado por un alto precio: La Sangre de Cristo.</li><li><strong>EL PRINCIPIO DE VALOR (Experimento del Tel├®fono):</strong> T├║ no le prestar├¡as tu tel├®fono de alta gama a un desconocido para que juegue con ├®l. ┬┐Por qu├®? Porque te cost├│ caro. De la misma manera, no entregas tu cuerpo a quien no ha pagado el precio de un pacto.</li></ul><p><strong>OBJETIVO:</strong> Cambiar la mentalidad de 'Prohibici├│n' a 'Gesti├│n de Valor'.</p>",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "Seg├║n 1 Corintios 6:19-20, ┬┐cu├íl es el estatus operativo de tu cuerpo?",
+          "options": [
+            "Es una propiedad privada bajo mi control absoluto",
+            "Es un templo del Esp├¡ritu Santo y no me pertenezco",
+            "Es una herramienta temporal sin valor espiritual",
+            "Es una casa abandonada que necesita reparaci├│n"
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Por qu├® debemos glorificar a Dios en nuestro cuerpo seg├║n la lectura t├íctica?",
+          "options": [
+            "Porque hemos sido comprados por precio",
+            "Para evitar que la gente hable mal de nosotros",
+            "Porque es una regla estricta de la religi├│n",
+            "Para ganar puntos y subir de nivel espiritual"
+          ],
+          "correctAnswer": "A"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "En la din├ímica del 'Tel├®fono', ┬┐cu├íl es la raz├│n principal por la que cuidas un objeto valioso?",
+          "options": [
+            "Porque tienes miedo de que te castiguen",
+            "Porque el manual de usuario lo dice",
+            "Porque reconoces su alto valor y costo",
+            "Porque no quieres comprar otro"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "Diferencia entre una 'Casa Abandonada' y un 'Templo Sagrado':",
+          "options": [
+            "La casa abandonada tiene due├▒o; el templo no",
+            "En la casa abandonada cualquiera entra; en el templo solo entra lo autorizado",
+            "La casa abandonada vale m├ís porque es antigua",
+            "No hay diferencia, ambos son edificios"
+          ],
+          "correctAnswer": "B"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": [
+        {
+          "minScore": 81,
+          "maxScore": 100,
+          "title": "RANGO: CENTINELA DE ├ëLITE",
+          "content": "<strong>IDENTIDAD CONFIRMADA.</strong> Entiendes perfectamente el valor del activo. Proceda a la siguiente fase."
+        },
+        {
+          "minScore": 51,
+          "maxScore": 80,
+          "title": "RANGO: SOLDADO RASO",
+          "content": "<strong>ALERTA AMARILLA.</strong> Entiendes el concepto, pero necesitas internalizar el precio pagado por ti."
+        },
+        {
+          "minScore": 0,
+          "maxScore": 50,
+          "title": "RANGO: CIVIL",
+          "content": "<strong>VULNERABILIDAD DETECTADA.</strong> Revisa los fundamentos. Tu cuerpo no es barato."
+        }
+      ]
+    },
+    {
+      "id": "leccion_templo_blindado_02",
+      "courseId": "curso_templo_blindado",
+      "order": 2,
+      "title": "FASE 2: PROTOCOLOS DE DEFENSA ACTIVA",
+      "videoUrl": "",
+      "content": "<h3>BRIEFING DE MISI├ôN: PROTOCOLOS DE SEGURIDAD</h3><p>La pureza no se mantiene con buenas intenciones, se mantiene con estrategia militar. Nadie cae en territorio enemigo 'de repente'; siempre hay una brecha en el per├¡metro.</p><p><strong>VECTORES DE AMENAZA Y RESPUESTA (TABLA T├üCTICA):</strong></p><ul><li><strong>VECTOR VISUAL (Ojos):</strong> Si algo te hace pensar sucio (Redes, Series), la orden es <strong>DEJAR DE SEGUIR (Unfollow/Block)</strong>. No se negocia con la lujuria visual.</li><li><strong>VECTOR AUDITIVO (O├¡dos):</strong> No participes de chistes de <strong>DOBLE SENTIDO</strong>. Si la m├║sica contamina el ambiente, se cambia la frecuencia.</li><li><strong>VECTOR SITUACIONAL:</strong> Evita el aislamiento. Mant├®n las puertas <strong>ABIERTAS</strong>. La oscuridad es aliada del enemigo.</li></ul><p><strong>ORDEN FINAL (2 Tim 2:22):</strong> La Biblia no dice 'resiste' la tentaci├│n sexual como si fueras de acero. La orden es: <strong>HUYE</strong>. Es la ├║nica batalla que se gana retir├índose t├ícticamente a tiempo.</p>",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "Protocolo para el Vector Visual (Redes, Series, Fotos) ante contenido inapropiado:",
+          "options": [
+            "Analizar el contenido art├¡sticamente",
+            "Orar para que la imagen cambie sola",
+            "Dejar de seguir o Bloquear inmediatamente",
+            "Compartirlo para advertir a otros"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "Seg├║n el manual, ┬┐cu├íl es la acci├│n de seguridad para 'Situaciones' (Noviazgo, Soledad)?",
+          "options": [
+            "Mantener puertas cerradas para privacidad",
+            "Mantener puertas visibles/abiertas y evitar soledad absoluta",
+            "Confiar en mi fuerza de voluntad",
+            "Preguntar a mis amigos qu├® har├¡an ellos"
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "Seg├║n 2 Timoteo 2:22, ┬┐cu├íl es la ├║nica maniobra v├ílida ante las pasiones juveniles?",
+          "options": [
+            "Dialogar con ellas",
+            "Resistir estoicamente",
+            "Huir (Retirada estrat├®gica)",
+            "Ignorar su existencia"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "TEXT",
+          "question": "AUTO-INSPECCI├ôN (CLASIFICADO): Si Dios pasara una luz ultravioleta por tu 'Templo' hoy (chat, galer├¡a, mente), ┬┐qu├® encontrar├¡a que debes eliminar ya?"
+        }
+      ],
+      "xpReward": 15,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": [
+        {
+          "minScore": 81,
+          "maxScore": 100,
+          "title": "RANGO: FUERZA ESPECIAL",
+          "content": "<strong>PER├ìMETRO SEGURO.</strong> Tus protocolos de defensa est├ín activos. Est├ís listo para el combate real."
+        },
+        {
+          "minScore": 51,
+          "maxScore": 80,
+          "title": "RANGO: SOLDADO",
+          "content": "<strong>BRECHA DETECTADA.</strong> Necesitas ser m├ís radical con tus bloqueos y l├¡mites."
+        },
+        {
+          "minScore": 0,
+          "maxScore": 50,
+          "title": "RANGO: BAJA T├üCTICA",
+          "content": "<strong>ALERTA CR├ìTICA.</strong> Est├ís jugando con fuego. Aplica el protocolo de HUIR inmediatamente."
+        }
+      ]
+    },
+    {
+      "id": "CLASE_06_FASE1",
+      "courseId": "CURSO_06_DONES",
+      "order": 1,
+      "title": "CLASE 06 1/4: C├ôDIGO GRIEGO",
+      "videoUrl": "",
+      "content": "<h1>FASE 1: OIKONOMOS</h1><h3>1. EL GERENTE</h3><p>Seg├║n 1 Pedro 4:10, somos ADMINISTRADORES de la gracia. La palabra es OIKONOMOS (Gerente).</p><h3>2. PROPIEDAD</h3><p>Un gerente opera con recursos que NO SON SUYOS. Esconder tu talento es esconder el dinero del Due├▒o.</p>",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Qu├® significa la palabra OIKONOMOS en 1 Pedro 4:10?",
+          "options": [
+            "A. Due├▒o absoluto de un talento",
+            "B. Gerente o administrador de recursos",
+            "C. Siervo sin responsabilidad",
+            "D. Artista famoso"
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "Basado en el concepto de Oikonomos, ┬┐de qui├®n es propiedad tu talento natural?",
+          "options": [
+            "A. Es m├¡o",
+            "B. Es de la iglesia",
+            "C. Es propiedad de Dios y yo lo administro",
+            "D. Es del gobierno"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "Si escondes tu talento diciendo que te da pena, ┬┐qu├® haces realmente?",
+          "options": [
+            "A. Ser humilde",
+            "B. Evitar el orgullo",
+            "C. Esconder los recursos del Due├▒o",
+            "D. Actuar con prudencia"
+          ],
+          "correctAnswer": "C"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": [
+        {
+          "minScore": 0,
+          "maxScore": 74,
+          "title": "CERTIFICADO RECHAZADO",
+          "content": "<p>Mentalidad de due├▒o, no de gerente. Repite.</p>"
+        },
+        {
+          "minScore": 75,
+          "maxScore": 100,
+          "title": "CERTIFICADO APROBADO: CONSAGRADO",
+          "content": "<p>Entiendes que eres administrador. El talento es munici├│n del Rey.</p>"
+        }
+      ]
+    },
+    {
+      "id": "CLASE_06_FASE2",
+      "courseId": "CURSO_06_DONES",
+      "order": 2,
+      "title": "CLASE 06 2/4: HARDWARE VS SOFTWARE",
+      "videoUrl": "",
+      "content": "<h1>FASE 2: HARDWARE VS SOFTWARE</h1><h3>1. EL DEBATE</h3><p>Mucha gente confunde Talento (Hardware) con Don (Software). Imagina a un ateo con t├®cnica perfecta vs un novato que adora con coraz├│n limpio.</p><h3>2. VEREDICTO</h3><p>El ateo entretiene emociones, pero solo el Don Espiritual rompe yugos. Preferimos un novato en el esp├¡ritu a un experto vac├¡o.</p>",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "En la analog├¡a t├íctica, ┬┐qu├® representa el Software?",
+          "options": [
+            "A. El talento natural",
+            "B. La t├®cnica practicada",
+            "C. El Don y la unci├│n del Esp├¡ritu Santo",
+            "D. Los instrumentos f├¡sicos"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Por qu├® el sistema prefiere a un Creyente Novato sobre un Ateo Experto?",
+          "options": [
+            "A. Porque cobra menos",
+            "B. Porque el experto solo entretiene emociones, pero el Esp├¡ritu rompe yugos",
+            "C. Porque nunca se equivoca",
+            "D. Porque es m├ís f├ícil de controlar"
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "Completa Efesios 2:10: Creados en Cristo Jes├║s para...",
+          "options": [
+            "A. Ser felices",
+            "B. Ser famosos",
+            "C. Buenas obras preparadas de antemano",
+            "D. Esperar el cielo"
+          ],
+          "correctAnswer": "C"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": [
+        {
+          "minScore": 0,
+          "maxScore": 74,
+          "title": "CERTIFICADO RECHAZADO",
+          "content": "<p>Par├ímetros incorrectos. Est├ís confiando en el Hardware natural sin el Software del Esp├¡ritu.</p>"
+        },
+        {
+          "minScore": 75,
+          "maxScore": 100,
+          "title": "CERTIFICADO APROBADO: CONSAGRADO",
+          "content": "<p>Aprobado. La t├®cnica sin el Esp├¡ritu es solo ruido. Has activado el Software.</p>"
+        }
+      ]
+    },
+    {
+      "id": "CLASE_06_FASE3",
+      "courseId": "CURSO_06_DONES",
+      "order": 3,
+      "title": "CLASE 06 3/4: M├ëTODO NEHEM├ìAS",
+      "videoUrl": "",
+      "content": "<h1>FASE 3: M├ëTODO NEHEM├ìAS</h1><h3>1. FRUSTRACI├ôN</h3><p>La forma inmadura de descubrir tu don es preguntar qu├® te gusta. La forma madura es preguntar qu├® dolor te causa tanta molestia que debes arreglarlo.</p><h3>2. VENTAJA</h3><p>┬┐Qu├® cosa se te hace f├ícil a ti, pero a tus amigos se les hace dif├¡cil? Esa es tu Ventaja.</p>",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Cu├íl es la forma INMADURA de descubrir tu don?",
+          "options": [
+            "A. Orar en ayuno",
+            "B. Preguntar simplemente qu├® me gusta hacer",
+            "C. Buscar un problema para resolver",
+            "D. Preguntarle a un mentor"
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Qu├® es una Santa Frustraci├│n?",
+          "options": [
+            "A. Molestia por no tener dinero",
+            "B. Enojo contra l├¡deres",
+            "C. Dolor por un problema que sientes que debes arreglar",
+            "D. Frustraci├│n por no cantar bien"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Qu├® significa La Ventaja?",
+          "options": [
+            "A. Aquello que se te hace muy f├ícil a ti, pero muy dif├¡cil a otros",
+            "B. Tener influencias",
+            "C. Ser el mayor",
+            "D. Tener mejores equipos"
+          ],
+          "correctAnswer": "A"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": [
+        {
+          "minScore": 0,
+          "maxScore": 74,
+          "title": "CERTIFICADO RECHAZADO",
+          "content": "<p>Insuficiente. Buscas tu prop├│sito en lo que te gusta y no en lo que el Reino necesita.</p>"
+        },
+        {
+          "minScore": 75,
+          "maxScore": 100,
+          "title": "CERTIFICADO APROBADO: CONSAGRADO",
+          "content": "<p>Auditor├¡a completada. Tu Santa Frustraci├│n es el mapa hacia tu prop├│sito.</p>"
+        }
+      ]
+    },
+    {
+      "id": "CLASE_06_FASE4",
+      "courseId": "CURSO_06_DONES",
+      "order": 4,
+      "title": "CLASE 06 4/4: PROTOCOLO BEZALEL",
+      "videoUrl": "",
+      "content": "<h1>FASE 4: PROTOCOLO BEZALEL</h1><h3>1. UNCI├ôN CREATIVA</h3><p>Dios ungi├│ a Bezalel para ser artista y dise├▒ar. Dios no solo unge predicadores; unge dise├▒adores y t├®cnicos.</p><h3>2. CONTRATO</h3><p>Tu creatividad es un arma. Renuncia a la mentalidad de consumidor y asume tu puesto.</p>",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Para qu├® fue ungido Bezalel seg├║n ├ëxodo 31?",
+          "options": [
+            "A. Para ser rey",
+            "B. Para predicar",
+            "C. Para liderar ej├®rcitos",
+            "D. Para ser artista y dise├▒ar"
+          ],
+          "correctAnswer": "D"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Cu├íl es la deducci├│n t├íctica del Protocolo Bezalel?",
+          "options": [
+            "A. El Esp├¡ritu Santo solo unge predicadores",
+            "B. El arte es secular",
+            "C. Dios unge a creadores, tu creatividad es un arma espiritual",
+            "D. No se necesita el Esp├¡ritu para tareas manuales"
+          ],
+          "correctAnswer": "C"
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐A qu├® mentalidad debes renunciar definitivamente?",
+          "options": [
+            "A. A la mentalidad de Oikonomos",
+            "B. A la mentalidad de consumidor que solo asiste para recibir",
+            "C. A la mentalidad de l├¡der",
+            "D. A la mentalidad de guerrero"
+          ],
+          "correctAnswer": "B"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": [
+        {
+          "minScore": 0,
+          "maxScore": 74,
+          "title": "CERTIFICADO RECHAZADO",
+          "content": "<p>Alerta. Crees que solo los que tienen micr├│fono tienen unci├│n. Expande tu visi├│n.</p>"
+        },
+        {
+          "minScore": 75,
+          "maxScore": 100,
+          "title": "CERTIFICADO APROBADO: CONSAGRADO",
+          "content": "<p>Protocolo activo. Sabes que tu talento es un arma letal contra las tinieblas.</p>"
+        }
+      ]
+    },
+    {
+      "id": "L1_JURISPRUDENCIA_ROMANA",
+      "courseId": "ID_TACTICAL_03",
+      "order": "",
+      "title": "Lecci├│n 1: El Edicto de Adopci├│n (An├ílisis Legal)",
+      "videoUrl": "",
+      "content": "### BRIEFING DE INTELIGENCIA\nEn el siglo I, la *Adrogatio* (adopci├│n) no era un acto sentimental, era una **transferencia de poder**. Cuando Pablo usa el t├®rmino en Romanos 8:15, est├í lanzando una bomba de profundidad contra el sistema de m├®ritos.\n\n### VECTORES DE PROFUNDIDAD\n1. **Extinci├│n de Deuda**: Bajo la ley romana, la adopci├│n cancelaba instant├íneamente todas las deudas del pasado del adoptado. Su 'identidad' anterior mor├¡a legalmente.\n2. **La Firma del Garante**: El Esp├¡ritu Santo no es una emoci├│n; es el **Sello Real (Sphragis)** que valida que la transacci├│n ha sido pagada con sangre (Activo: Sacrificio de Cristo).\n3. **Derecho de Acceso (Parrhesia)**: Un esclavo espera ├│rdenes en el patio; un hijo entra al despacho del General (Dios) sin pedir permiso, porque su presencia est├í validada por su estatus, no por su desempe├▒o semanal.",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "En el contexto de la 'Adrogatio' romana, ┬┐cu├íl es el efecto inmediato de la adopci├│n sobre el pasado del agente?",
+          "options": [
+            "A. El pasado es archivado pero puede ser usado en su contra.",
+            "B. El pasado es legalmente extinguido, incluyendo todas las deudas previas.",
+            "C. El agente debe pagar una fianza para validar su nuevo nombre.",
+            "D. Se le asigna un tutor para vigilar que no vuelva a su vida anterior."
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "TEXT",
+          "question": "Analiza la diferencia entre 'pedir perd├│n como un esclavo' y 'pedir restauraci├│n como un hijo'. ┬┐C├│mo cambia esto tu nivel de confianza en el campo de batalla?"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": []
+    },
+    {
+      "id": "L2_EL_S├ìNDROME_DEL_IMPOSTOR",
+      "courseId": "ID_TACTICAL_03",
+      "order": "",
+      "title": "Lecci├│n 2: Contra-Inteligencia: Rompiendo el S├¡ndrome del Hu├®rfano",
+      "videoUrl": "",
+      "content": "### AN├üLISIS PSICOM├ëTRICO\nEl enemigo no ataca tu salvaci├│n (que es legal), ataca tu **consciencia de hijo**. Un agente que se siente hu├®rfano opera en modo 'supervivencia', no en modo 'conquista'.\n\n### LA MATRIZ DE CONFLICTO\n* **El Hu├®rfano Espiritual**: Compite con otros agentes, busca validaci├│n en los resultados y teme el error porque cree que el General lo expulsar├í del cuartel.\n* **El Heredero Consagrado**: Coopera por dise├▒o, busca la aprobaci├│n del Padre y ve la disciplina como un 'ajuste de mira' para mejorar su punter├¡a.\n\n### PROTOCOLO DE ACTIVACI├ôN\nDebes reclamar tu **Paquete de Beneficios (Efesios 1)**: \n1. **Redenci├│n**: Compra total del activo.\n2. **Sabidur├¡a**: Acceso a la estrategia del Reino.\n3. **Herencia**: Propiedad legal sobre las promesas.",
+      "questions": [
+        {
+          "type": "DISC",
+          "question": "Cuando ves a otro agente recibir una bendici├│n o un ascenso, ┬┐cu├íl es tu vector de pensamiento autom├ítico?",
+          "options": [
+            "A. Sientes que debes esforzarte m├ís para que Dios te note a ti tambi├®n (D).",
+            "B. Te alegras genuinamente porque la victoria de un hermano es la victoria del Reino (I).",
+            "C. Te mantienes neutral y esperas que no cambie la din├ímica del equipo (S).",
+            "D. Analizas si ese agente realmente 'merece' ese ascenso basado en su conducta (C)."
+          ],
+          "optionCategories": [
+            "D",
+            "I",
+            "S",
+            "C"
+          ]
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Cu├íl es la funci├│n t├íctica de la 'Disciplina' seg├║n el manual de Hebreos 12?",
+          "options": [
+            "A. Castigar al agente para que no vuelva a fallar.",
+            "B. Humillar al recluta frente al pelot├│n.",
+            "C. Validar legalmente que el agente es un hijo leg├¡timo y no un extra├▒o.",
+            "D. Suspender los beneficios de la herencia temporalmente."
+          ],
+          "correctAnswer": "C"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": []
+    },
+    {
+      "id": "L1_MATEMATICA_REINO",
+      "courseId": "ID_TACTICAL_04",
+      "order": "",
+      "title": "Lecci├│n 1: La Matem├ítica del Reino (El Regalo Irreproducible)",
+      "videoUrl": "",
+      "content": "### BRIEFING DE INTELIGENCIA\nEl sistema del mundo opera bajo el algoritmo: **HACER + TENER = SER**[cite: 2361, 2363]. Es una trampa de rendimiento que genera fragilidad. En CONSAGRADOS, invertimos el vector: **SER (Hijo) -> HACER (Obra) -> TENER (Fruto)**[cite: 2362, 2363].\n\n### VECTORES DE PROFUNDIDAD\n1. **Diferenciaci├│n T├íctica**: \n    * **Misericordia**: Bloqueo del fuego enemigo. No recibes el castigo que tu traici├│n merece[cite: 2369].\n    * **Gracia**: Suministro de recursos ilimitados. Recibes el equipamiento de ├®lite que NO podr├¡as pagar[cite: 2370].\n2. **La Ecuaci├│n del Perd├│n**: Tus errores + La Cruz = Perd├│n Total[cite: 2365, 2366, 2367, 2368]. No es un pr├®stamo, es un regalo de Dios para que nadie se glor├¡e en sus propias medallas[cite: 2355, 2356, 2357, 2359].\n3. **Acceso al Trono**: El Trono de la Gracia es tu zona de reabastecimiento para el 'oportuno socorro'[cite: 2372, 2373]. Si no te acercas confiadamente, mueres por falta de suministros.",
+      "questions": [
+        {
+          "type": "MULTIPLE",
+          "question": "Seg├║n la 'Matem├ítica del Reino', ┬┐cu├íl es el error fundamental del sistema del mundo?",
+          "options": [
+            "A. Pensar que el 'Ser' precede al 'Hacer'.",
+            "B. Creer que el valor personal (Ser) depende de lo que logramos (Hacer).",
+            "C. Ignorar que el dinero es necesario para ser alguien.",
+            "D. Enfocarse solo en la misericordia y no en la gracia."
+          ],
+          "correctAnswer": "B"
+        },
+        {
+          "type": "TEXT",
+          "question": "Define con tus palabras la diferencia operativa entre 'Misericordia' y 'Gracia' en una situaci├│n donde has fallado en una misi├│n cr├¡tica."
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": []
+    },
+    {
+      "id": "L2_EL_MOTOR_DE_LA_OBEDIENCIA",
+      "courseId": "ID_TACTICAL_04",
+      "order": "",
+      "title": "Lecci├│n 2: Protocolo de Rendimiento: La Paradoja de la Gracia",
+      "videoUrl": "",
+      "content": "### AN├üLISIS DE OPERACIONES\nMuchos agentes confunden Gracia con 'permiso para la mediocridad'. Negativo. La Gracia es el **combustible para la excelencia**[cite: 451, 2400]. No obedecemos para ser aceptados; obedecemos porque ya tenemos acceso total al Cuartel General [cite: 2402].\n\n### LA BALANZA DEL AGENTE\n* **Religi├│n (Modo Fr├ígil)**: Oro para cumplir, me comparo con otros y vivo en cansancio y culpa [cite: 2380, 2386, 2387].\n* **Gracia (Modo Robusto)**: Oro por conexi├│n, me enfoco en el Comandante (Cristo) y opero en paz y gratitud [cite: 2389, 2390, 2391, 2392].\n\n### CIERRE DE MISI├ôN: 'CONSUMADO ES'\nEl c├│digo 'Consumado es' significa que la carga de tu valor ya fue pagada. Ya no necesitas cargar con el peso de ser 'el m├ís rudo' o 'el m├ís inteligente' para valer algo[cite: 2395, 2396]. La Gracia es el poder para dejar de pecar y empezar a conquistar[cite: 2400].",
+      "questions": [
+        {
+          "type": "DISC",
+          "question": "Cuando sientes el peso de la comparaci├│n con otros l├¡deres o agentes, ┬┐cu├íl es tu vector de escape?",
+          "options": [
+            "A. Te esfuerzas el doble para demostrar que eres superior (Dominancia).",
+            "B. Buscas la aprobaci├│n r├ípida de los dem├ís para sentirte bien (Influencia).",
+            "C. Te retraes y dejas de participar para no ser juzgado (Estabilidad).",
+            "D. Analizas meticulosamente tus fallos para intentar no repetirlos solo por tu cuenta (Cumplimiento)."
+          ],
+          "optionCategories": [
+            "D",
+            "I",
+            "S",
+            "C"
+          ]
+        },
+        {
+          "type": "MULTIPLE",
+          "question": "┬┐Cu├íl es el resultado operativo de vivir bajo la 'Balanza de la Religi├│n'?",
+          "options": [
+            "A. Un aumento en la efectividad de las misiones.",
+            "B. Una vida de paz y gratitud constante.",
+            "C. Cansancio cr├│nico y una carga de culpa constante.",
+            "D. Una mejor relaci├│n con los otros agentes."
+          ],
+          "correctAnswer": "C"
+        }
+      ],
+      "xpReward": 10,
+      "startTime": 0,
+      "endTime": 0,
+      "resultAlgorithm": "SCORE_PERCENTAGE",
+      "resultMappings": []
+    }
+  ],
+  "progress": [
+    {
+      "agentId": "20389331",
+      "lessonId": "14F_EVALUATION",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-15T22:43:20.581Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "20389331",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-15T23:06:50.292Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "20389331",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-15T23:10:12.194Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-5728",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T00:54:32.964Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-5728",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T00:57:07.886Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "sahelxbm",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T01:24:16.296Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "sahelxbm",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T01:26:12.061Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 75,
+      "date": "2026-02-16T01:37:00.611Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T01:39:47.377Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T03:21:10.976Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T03:23:42.528Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1005",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T04:24:52.232Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1005",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T04:27:15.832Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "davidjmb99",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T12:17:23.428Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "davidjmb99",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T12:21:10.555Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T15:29:20.325Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-16T15:38:47.850Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-2521",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 75,
+      "date": "2026-02-18T16:02:12.605Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-2521",
+      "lessonId": "leccion_templo_blindado_02",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-19T22:58:03.638Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "CLASE_06_FASE1",
+      "status": "COMPLETADO",
+      "score": 133.33333333333331,
+      "date": "2026-02-22T17:36:53.576Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "CLASE_06_FASE2",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-22T20:25:06.181Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "CLASE_06_FASE3",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-22T20:27:26.746Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "CLASE_06_FASE4",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-22T20:28:48.823Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-2521",
+      "lessonId": "CLASE_06_FASE1",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-22T23:45:30.700Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1007",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "FALLIDO",
+      "score": 50,
+      "date": "2026-02-25T03:54:31.551Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "davidjmb99",
+      "lessonId": "CLASE_06_FASE1",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-25T15:14:02.950Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "davidjmb99",
+      "lessonId": "CLASE_06_FASE2",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-25T15:16:05.270Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "davidjmb99",
+      "lessonId": "CLASE_06_FASE3",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-25T15:17:53.723Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "davidjmb99",
+      "lessonId": "CLASE_06_FASE4",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-25T15:19:45.137Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "CLASE_06_FASE1",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-26T13:16:25.187Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "CLASE_06_FASE2",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-26T13:17:50.237Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "CLASE_06_FASE3",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-26T13:19:01.557Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "CLASE_06_FASE4",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-26T13:24:55.660Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "L1_JURISPRUDENCIA_ROMANA",
+      "status": "FALLIDO",
+      "score": 0,
+      "date": "2026-02-28T03:18:59.023Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "CLASE_06_FASE1",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T03:22:42.799Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "CLASE_06_FASE2",
+      "status": "COMPLETADO",
+      "score": 166.66666666666669,
+      "date": "2026-02-28T03:26:15.768Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "CLASE_06_FASE3",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T03:28:30.917Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-4787",
+      "lessonId": "CLASE_06_FASE4",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T03:31:35.761Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "L1_JURISPRUDENCIA_ROMANA",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T13:53:50.683Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "L2_EL_S├ìNDROME_DEL_IMPOSTOR",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T13:57:13.584Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "L1_MATEMATICA_REINO",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T14:05:10.027Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-1004",
+      "lessonId": "L2_EL_MOTOR_DE_LA_OBEDIENCIA",
+      "status": "FALLIDO",
+      "score": 0,
+      "date": "2026-02-28T14:07:41.062Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "L1_JURISPRUDENCIA_ROMANA",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T21:51:07.605Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-2521",
+      "lessonId": "CLASE_06_FASE2",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T21:51:32.961Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-2521",
+      "lessonId": "CLASE_06_FASE3",
+      "status": "COMPLETADO",
+      "score": 166.66666666666669,
+      "date": "2026-02-28T21:54:24.531Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "L2_EL_S├ìNDROME_DEL_IMPOSTOR",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T21:55:06.509Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-1009",
+      "lessonId": "leccion_templo_blindado_01",
+      "status": "COMPLETADO",
+      "score": 150,
+      "date": "2026-02-28T22:06:36.362Z",
+      "attempts": 2
+    },
+    {
+      "agentId": "CON-2521",
+      "lessonId": "CLASE_06_FASE4",
+      "status": "FALLIDO",
+      "score": 66.66666666666666,
+      "date": "2026-02-28T21:58:34.152Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "L2_EL_MOTOR_DE_LA_OBEDIENCIA",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T22:03:00.726Z",
+      "attempts": 1
+    },
+    {
+      "agentId": "CON-6955",
+      "lessonId": "L1_MATEMATICA_REINO",
+      "status": "COMPLETADO",
+      "score": 100,
+      "date": "2026-02-28T22:06:25.182Z",
+      "attempts": 1
+    }
+  ]
+}

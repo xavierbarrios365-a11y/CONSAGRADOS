@@ -40,8 +40,24 @@ export const submitIQLevelComplete = async (agentId: string, level: number, time
  */
 export const fetchAcademyDataSupabase = async (agentId?: string) => {
     try {
-        const { data: coursesRaw } = await supabase.from('academy_courses').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(50);
-        const { data: lessonsRaw } = await supabase.from('academy_lessons').select('*').order('order_index').limit(200);
+        let coursesQuery = supabase.from('academy_courses').select('*').eq('is_active', true);
+        const { data: coursesRaw, error: cError } = await coursesQuery.order('created_at', { ascending: false }).limit(50);
+
+        let finalCourses = coursesRaw;
+        if (cError) {
+            console.warn('⚠️ Fallback fetch academy_courses:', cError.message);
+            const { data: fallback } = await supabase.from('academy_courses').select('*').eq('is_active', true).limit(50);
+            finalCourses = fallback;
+        }
+
+        const { data: lessonsRaw, error: lError } = await supabase.from('academy_lessons').select('*').order('order_index').limit(200);
+
+        let finalLessons = lessonsRaw;
+        if (lError) {
+            console.warn('⚠️ Fallback fetch academy_lessons:', lError.message);
+            const { data: fallback } = await supabase.from('academy_lessons').select('*').limit(200);
+            finalLessons = fallback;
+        }
 
         let progressQuery = supabase.from('academy_progress').select('*');
         if (agentId) {
@@ -50,17 +66,17 @@ export const fetchAcademyDataSupabase = async (agentId?: string) => {
         const { data: progressRaw } = await progressQuery.limit(agentId ? 100 : 1000);
 
         // Mapeo de DB -> Frontend (Cursos)
-        const mappedCourses = (coursesRaw || []).map((c: any) => ({
+        const mappedCourses = (finalCourses || []).map((c: any) => ({
             id: c.id,
             title: c.title,
             description: c.description,
             imageUrl: c.image_url,
-            requiredLevel: c.required_level,
+            requiredLevel: c.required_level || c.badge_reward || 'ESTUDIANTE',
             orderIndex: c.order_index
         }));
 
         // Mapeo de DB -> Frontend (Lecciones)
-        const mappedLessons = (lessonsRaw || []).map((l: any) => {
+        const mappedLessons = (finalLessons || []).map((l: any) => {
             let parsedQ = [];
             let parsedJsonObj = null;
 
@@ -88,7 +104,7 @@ export const fetchAcademyDataSupabase = async (agentId?: string) => {
                 courseId: l.course_id,
                 order: l.order_index,
                 title: l.title,
-                videoUrl: l.video_url,
+                videoUrl: l.embed_url,
                 content: l.content,
                 questions: parsedQ,
                 xpReward: l.xp_reward || (parsedJsonObj?.xpReward) || 0,

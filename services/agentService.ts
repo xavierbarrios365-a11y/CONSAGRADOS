@@ -220,7 +220,7 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
         const { data, error } = await supabase.rpc('update_agent_points_secure', {
             p_agent_id: agentId,
             p_type: type,
-            p_amount: Math.floor(amount * multiplier),
+            p_amount: amount,
             p_streak_count: streakCount || 0
         });
         if (error) throw error;
@@ -532,8 +532,9 @@ export const addVisitorXPSupabase = async (visitorId: string, visitorName: strin
  * @description Calcula el multiplicador basado en la racha del agente.
  */
 export const getStreakMultiplier = (streak: number): number => {
-    if (streak >= 14) return 2.0;
-    if (streak >= 7) return 1.5;
-    if (streak >= 3) return 1.2;
+    if (streak >= 30) return 2.0;
+    if (streak >= 20) return 1.75;
+    if (streak >= 10) return 1.5;
+    if (streak >= 5) return 1.25;
     return 1.0;
 };

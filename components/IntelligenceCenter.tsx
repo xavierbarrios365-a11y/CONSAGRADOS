@@ -369,11 +369,11 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     const executeUpdate = async () => {
       setIsUpdatingPoints(true);
       try {
-        const res = await updateAgentPointsSupabase(agent.id, type, points, 1.0, agent.streakCount || 0);
+        const currentMultiplier = getStreakMultiplier(agent.streakCount || 0);
+        const res = await updateAgentPointsSupabase(agent.id, type, points, currentMultiplier, agent.streakCount || 0);
         if (res.success) {
           // NOTIFICACIÓN TELEGRAM (ONLY TELEGRAM)
           try {
-            const currentMultiplier = getStreakMultiplier(agent.streakCount || 0);
             const totalXpAdjusted = Math.round(points * currentMultiplier);
             const emoji = points > 0 ? '🔥' : '⚖️';
             const action = points > 0 ? 'ganado' : 'perdido';

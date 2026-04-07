@@ -369,7 +369,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     const executeUpdate = async () => {
       setIsUpdatingPoints(true);
       try {
-        const currentMultiplier = getStreakMultiplier(agent.streakCount || 0);
+        const currentMultiplier = getStreakMultiplier(agent.streakCount || 0, agent.isStreakActive);
         const res = await updateAgentPointsSupabase(agent.id, type, points, currentMultiplier, agent.streakCount || 0);
         if (res.success) {
           // NOTIFICACIÓN TELEGRAM (ONLY TELEGRAM)
@@ -385,7 +385,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
           showAlert({
             title: "PUNTOS ACTUALIZADOS",
-            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + Math.round(points * getStreakMultiplier(agent.streakCount || 0))} XP`,
+            message: `✅ SE HAN ${points > 0 ? 'SUMADO' : 'RESTADO'} ${absPoints} PUNTOS A ${agent.name.toUpperCase()}.\n\nTipo: ${type}\nNuevo Total Aprox: ${agent.xp + Math.round(points * getStreakMultiplier(agent.streakCount || 0, agent.isStreakActive))} XP`,
             type: 'SUCCESS'
           });
           if (onUpdateNeeded) onUpdateNeeded();

@@ -162,9 +162,11 @@ export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?
             birthday: d.birthday || '',
             relationshipWithGod: d.relationship_with_god || 'PENDIENTE',
             mustChangePassword: d.must_change_password || false,
-            streakCount: (() => {
+            streakCount: d.streak_count || 0,
+            rachaProteccion: d.racha_proteccion || 0,
+            isStreakActive: (() => {
                 const raw = d.last_streak_date || '';
-                if (!raw || (d.streak_count || 0) === 0) return 0;
+                if (!raw || (d.streak_count || 0) === 0) return false;
                 try {
                     const today = new Date();
                     const todayStr = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
@@ -176,12 +178,10 @@ export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?
                     if (raw.match(/^\d+$/)) {
                         lastDateStr = new Date(parseInt(raw, 10)).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
                     } else {
-                        // Si ya es YYYY-MM-DD, no pasar por Date() para evitar desajuste de zona horaria
-                        lastDateStr = raw.split(' ')[0]; // Tomar solo la parte de la fecha
+                        lastDateStr = raw.split(' ')[0];
                     }
-
-                    return (lastDateStr === todayStr || lastDateStr === yesterdayStr) ? (d.streak_count || 0) : 0;
-                } catch { return 0; }
+                    return (lastDateStr === todayStr || lastDateStr === yesterdayStr);
+                } catch { return false; }
             })(),
             lastStreakDate: d.last_streak_date || '',
             lastAttendance: d.last_attendance || '',
@@ -240,10 +240,20 @@ export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete
             p_verse_text: verseText || '',
             p_verse_ref: verseRef || ''
         });
-        if (error) throw error;
-        return { success: true, ...data };
-    } catch (e: any) {
-        return { success: false, error: e.message };
+
+        if (error) return { success: false, error: error.message };
+
+        const { newStreak, shieldUsed, shieldsLeft, alreadyDone } = data as any;
+
+        return {
+            success: true,
+            newStreak,
+            shieldUsed,
+            shieldsLeft,
+            alreadyDone
+        };
+    } catch (err: any) {
+        return { success: false, error: err.message };
     }
 };
 
@@ -531,7 +541,8 @@ export const addVisitorXPSupabase = async (visitorId: string, visitorName: strin
 /**
  * @description Calcula el multiplicador basado en la racha del agente.
  */
-export const getStreakMultiplier = (streak: number): number => {
+export const getStreakMultiplier = (streak: number, active: boolean = true): number => {
+    if (!active) return 1.0;
     if (streak >= 30) return 2.0;
     if (streak >= 20) return 1.75;
     if (streak >= 10) return 1.5;

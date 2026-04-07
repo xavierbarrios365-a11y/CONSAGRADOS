@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Agent, UserRole } from '../types';
 import { supabase } from '../services/supabaseClient';
-import { Search, Save, X, RefreshCw, ShieldAlert, AlertTriangle, ShieldCheck, DatabaseBackup, BookOpen, Clock, Users } from 'lucide-react';
+import { Search, Save, X, RefreshCw, ShieldAlert, AlertTriangle, ShieldCheck, DatabaseBackup, BookOpen, Clock, Users, Flame } from 'lucide-react';
 
 interface AdminDashboardProps {
     currentUser: Agent | null;
@@ -26,7 +26,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         try {
             const { data, error } = await supabase
                 .from('agentes')
-                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp, birthday, status, user_role, talent, baptism_status, relationship_with_god')
+                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp, birthday, status, user_role, talent, baptism_status, relationship_with_god, streak_count')
                 .order('nombre', { ascending: true });
             if (error) throw error;
 
@@ -50,6 +50,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                     // Defaults for remaining structure
                     idSignature: `V37-SIG-${d.id}`,
                     joinedDate: d.joined_date || '',
+                    streakCount: d.streak_count || 0,
                     bible: d.bible || 0,
                     notes: d.notes || 0,
                     leadership: d.leadership || 0,
@@ -82,7 +83,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                 p_user_role: editingAgent.userRole || null,
                 p_talent: editingAgent.talent || null,
                 p_baptism_status: editingAgent.baptismStatus || null,
-                p_relationship_with_god: editingAgent.relationshipWithGod || null
+                p_relationship_with_god: editingAgent.relationshipWithGod || null,
+                p_streak_count: editingAgent.streakCount ?? null
             });
 
             if (error) throw error;
@@ -226,6 +228,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                                     {editingAgent.photoUrl ? 'Cambiar Foto' : 'Subir Foto de Perfil'}
                                                 </label>
                                             </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <div className="relative col-span-1">
+                                                <Flame size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" />
+                                                <input type="number" min="0" value={editingAgent.streakCount ?? 0} onChange={e => setEditingAgent({ ...editingAgent, streakCount: parseInt(e.target.value) || 0 })} className="w-full bg-black/40 border border-orange-500/30 rounded-xl pl-8 pr-3 py-2 text-xs text-orange-400 font-bold focus:outline-none focus:border-orange-500 placeholder:text-white/30" placeholder="DÍAS RACHA" />
+                                            </div>
+                                            <span className="flex items-center text-[9px] text-orange-500/60 uppercase tracking-wider font-bold">🔥 Días de Racha</span>
                                         </div>
                                         <div className="flex gap-2 w-full md:w-1/3">
                                             <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-green-500/20 border border-green-500/30 text-green-500 rounded-xl px-2 py-2 flex items-center justify-center hover:bg-green-500/30">

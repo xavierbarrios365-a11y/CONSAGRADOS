@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Timer, Download, Flame, Share2 } from 'lucide-react';
+import { Quote, BookOpen, CheckCircle2, XCircle, Sparkles, Timer, Download, Flame, Share2, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DailyVerse as DailyVerseType, Agent } from '../types';
 import AchievementShareCard from './AchievementShareCard';
@@ -152,9 +152,15 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                         <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-widest font-bebas">Versículo del Día</span>
                         {quizCompleted && <CheckCircle2 size={12} className="text-green-500" />}
                         {streakCount > 0 && (
-                            <div className="flex items-center gap-1 bg-[#ffb700] text-[#001f3f] px-1.5 py-0.5 rounded-full border border-white/10 ml-2">
-                                <Flame size={8} className={quizCompleted ? "animate-bounce" : "animate-pulse"} />
-                                <span className="text-[8px] font-black uppercase font-bebas">{streakCount} DÍAS</span>
+                            <div className={`flex items-center gap-1 ${agent?.isStreakActive ? 'bg-[#ffb700] text-[#001f3f]' : 'bg-red-600/20 text-red-500 border-red-500/30'} px-1.5 py-0.5 rounded-full border border-white/10 ml-2 shadow-lg`}>
+                                <Flame size={8} className={quizCompleted ? "animate-bounce" : agent?.isStreakActive ? "animate-pulse" : "animate-spin"} />
+                                <span className="text-[8px] font-black uppercase font-bebas">{streakCount} DÍAS {!agent?.isStreakActive && ' EN RIESGO'}</span>
+                            </div>
+                        )}
+                        {agent?.rachaProteccion !== undefined && agent.rachaProteccion > 0 && (
+                            <div className="flex items-center gap-1 bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/30 ml-1" title="Escudos de Racha Mensuales">
+                                <ShieldCheck size={8} />
+                                <span className="text-[8px] font-black uppercase font-bebas">{agent.rachaProteccion}</span>
                             </div>
                         )}
                         {quizCompleted && timeLeft && (

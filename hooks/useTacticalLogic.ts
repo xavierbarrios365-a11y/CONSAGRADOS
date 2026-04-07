@@ -169,39 +169,47 @@ export const useTacticalLogic = (
             t.id === 'bible' ? { ...t, completed: true } : t
         ) || [{ id: 'bible', title: 'Lectura diaria', completed: true }];
 
-        // FIRE-AND-FORGET: sync con el servidor en background con timeout de 5s
-        const timeoutPromise = new Promise<{ success: false, error: 'TIMEOUT' }>((resolve) =>
-            setTimeout(() => resolve({ success: false, error: 'TIMEOUT' }), 5000)
-        );
+        try {
+            // BLOQUEANTE: Esperar al servidor para asegurar integridad
+            const res: any = await updateAgentStreaksSupabase(
+                currentUser.id,
+                false,
+                updatedTasks,
+                currentUser.name,
+                dailyVerse?.verse,
+                dailyVerse?.reference,
+                safeStreak,
+                safeXp
+            );
 
-        Promise.race([
-            updateAgentStreaksSupabase(currentUser.id, false, updatedTasks, currentUser.name, dailyVerse?.verse, dailyVerse?.reference, safeStreak, safeXp),
-            timeoutPromise
-        ]).then((res: any) => {
             if (res.success) {
-                // UPDATE LOCAL STATE IMMEDIATELY with the data from response or expected
-                if (updateAgentLocalState && res.updatedAgent) {
-                    updateAgentLocalState(res.updatedAgent);
-                } else if (updateAgentLocalState) {
-                    // Fallback: update manually if RPC doesn't return full agent
-                    updateAgentLocalState({
-                        ...currentUser,
-                        streakCount: res.newStreak !== undefined ? res.newStreak : safeStreak,
-                        lastStreakDate: localToday,
-                        weeklyTasks: updatedTasks
-                    });
-                }
-                syncData(true);
-            } else {
-                console.warn('⚠️ Streak sync failed or timed out:', res.error);
-            }
-        }).catch((e) => {
-            console.error('Error sincronizando racha:', e);
-        });
+                // Sincronizar estado local con la RESPUESTA REAL del servidor (no lo que creemos)
+                const updatedAgent = {
+                    ...currentUser,
+                    streakCount: res.newStreak !== undefined ? res.newStreak : currentUser.streakCount,
+                    rachaProteccion: res.shieldsLeft !== undefined ? res.shieldsLeft : currentUser.rachaProteccion,
+                    lastStreakDate: localToday,
+                    weeklyTasks: updatedTasks
+                };
 
-        // Return true IMMEDIATELY — don't wait for server
+                if (updateAgentLocalState) {
+                    updateAgentLocalState(updatedAgent);
+                }
+
+                // Forzar refresco global de la lista
+                syncData(true);
+            } else if (res.alreadyDone) {
+                console.log("📍 Ya se había registrado en esta llamada.");
+            } else {
+                console.warn('⚠️ Fallo en sincronización:', res.error);
+                localStorage.removeItem('verse_completed_date'); // Permitir reintento
+            }
+        } catch (e) {
+            console.error('Error sincronizando racha:', e);
+            localStorage.removeItem('verse_completed_date');
+        }
         return;
-    }, [currentUser, dailyVerse, syncData]);
+    }, [currentUser, dailyVerse, syncData, updateAgentLocalState]);
 
     const handleConfirmEventAttendance = useCallback(async (event: any) => {
         if (!currentUser) return;

@@ -50,6 +50,8 @@ export interface Agent {
   biometricCredential?: string;
   isAiProfilePending?: boolean;
   streakCount?: number;
+  isStreakActive?: boolean;
+  rachaProteccion?: number;
   lastStreakDate?: string;
   lastAttendance?: string;
   weeklyTasks?: { id: string; title: string; completed: boolean }[];

@@ -232,10 +232,9 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
 
 export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string, currentStreak?: number, currentXp?: number) => {
     try {
-        const { data, error } = await supabase.rpc('update_agent_streak_v2', {
+        const { data, error } = await supabase.rpc('update_agent_streak_v3', {
             p_agent_id: agentId,
             p_tasks: tasks,
-            p_is_week_complete: isWeekComplete,
             p_agent_name: agentName || 'Agente',
             p_verse_text: verseText || '',
             p_verse_ref: verseRef || ''

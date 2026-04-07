@@ -15,6 +15,8 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
     const [showQuiz, setShowQuiz] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [quizCompleted, setQuizCompleted] = useState(false);
+    // Racha real post-quiz: se actualiza al valor del prop más reciente siempre
+    const actualStreak = streakCount;
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
     const [inputValue, setInputValue] = useState('');
     const [missingWord, setMissingWord] = useState('');
@@ -316,7 +318,7 @@ const DailyVerse: React.FC<DailyVerseProps> = ({ verse, streakCount = 0, onQuizC
                     newsItem={{
                         id: 'daily-victory',
                         type: 'RACHA',
-                        message: `¡Racha de ${streakCount} días alcanzada!`,
+                        message: `🎖️ Racha de ${actualStreak} días lograda.`,
                         verse: verse?.verse,
                         reference: verse?.reference,
                         version: verse?.version || 'RVR1960',

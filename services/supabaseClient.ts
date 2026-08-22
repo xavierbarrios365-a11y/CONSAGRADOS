@@ -3,9 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 const OFFICIAL_SUPABASE_URL = 'https://dnzrnpslfabowgtikora.supabase.co';
 const OFFICIAL_SUPABASE_ANON_KEY = 'sb_publishable_Q8gdZ29dpKJeiU-1bE9c2A_aRdUsAD7';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || OFFICIAL_SUPABASE_ANON_KEY;
-
 // BLINDAJE NUCLEAR: Eliminar TODAS las claves de Supabase Auth del localStorage
 // para garantizar que el cliente SIEMPRE use el rol 'anon' y nunca 'authenticated'.
 // Esto previene errores 401/403 "permission denied" en TODAS las tablas.
@@ -24,8 +21,8 @@ if (typeof window !== 'undefined') {
 }
 
 export const supabase = createClient(
-    supabaseUrl || OFFICIAL_SUPABASE_URL,
-    supabaseAnonKey || OFFICIAL_SUPABASE_ANON_KEY,
+    OFFICIAL_SUPABASE_URL,
+    OFFICIAL_SUPABASE_ANON_KEY,
     {
         auth: {
             persistSession: false,

@@ -1,11 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const OFFICIAL_SUPABASE_URL = 'https://dnzrnpslfabowgtikora.supabase.co';
+const OFFICIAL_SUPABASE_ANON_KEY = 'sb_publishable_Q8gdZ29dpKJeiU-1bE9c2A_aRdUsAD7';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️ Supabase credentials missing. Parallel sync will be disabled.');
-}
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || OFFICIAL_SUPABASE_ANON_KEY;
 
 // BLINDAJE NUCLEAR: Eliminar TODAS las claves de Supabase Auth del localStorage
 // para garantizar que el cliente SIEMPRE use el rol 'anon' y nunca 'authenticated'.
@@ -25,8 +24,8 @@ if (typeof window !== 'undefined') {
 }
 
 export const supabase = createClient(
-    supabaseUrl || 'https://placeholder.supabase.co',
-    supabaseAnonKey || 'placeholder',
+    supabaseUrl || OFFICIAL_SUPABASE_URL,
+    supabaseAnonKey || OFFICIAL_SUPABASE_ANON_KEY,
     {
         auth: {
             persistSession: false,

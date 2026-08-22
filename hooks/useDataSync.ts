@@ -40,18 +40,16 @@ export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
             const callerRole = currentUser?.userRole || 'STUDENT';
             const sheetAgents = await fetchAgentsFromSupabase(false, callerRole);
             console.log(`🔄 SYNC [${callerRole}]: ${sheetAgents?.length || 0} agents, optimized columns`);
-            if (sheetAgents && sheetAgents.length > 0) {
+            if (sheetAgents !== null && Array.isArray(sheetAgents)) {
                 setAgents(sheetAgents);
 
                 // Run birthday check once per day locally
                 const todayStr = new Date().toISOString().split('T')[0];
-                if (localStorage.getItem('last_birthday_check_v4') !== todayStr) {
+                if (sheetAgents.length > 0 && localStorage.getItem('last_birthday_check_v4') !== todayStr) {
                     checkAndPublishBirthdays(sheetAgents).then(() => {
                         localStorage.setItem('last_birthday_check_v4', todayStr);
                     });
                 }
-            } else {
-                console.warn('⚠️ SYNC: Empty response, keeping existing agents');
             }
 
             // Eventos: fetch ligero (pocas filas)

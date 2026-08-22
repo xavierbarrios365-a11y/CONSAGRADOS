@@ -345,8 +345,22 @@ export function useAuth() {
                     setIsLoggedIn(true);
                     setCurrentUser(agent);
                     setLastActiveTime(now);
-                    // Aseguramos que la versión esté guardada
                     localStorage.setItem('app_version', APP_VERSION);
+
+                    // VALIDACIÓN EN VIVO: Verificar que el agente todavía existe en Supabase
+                    fetchAgentByIdSupabase(agent.id).then(liveAgent => {
+                        if (!liveAgent) {
+                            console.warn(`🛑 Agente ${agent.id} no existe en la base de datos central. Cerrando sesión residual.`);
+                            localStorage.removeItem('consagrados_session');
+                            localStorage.removeItem('remembered_user');
+                            setIsLoggedIn(false);
+                            setCurrentUser(null);
+                        } else {
+                            // Actualizar con datos frescos
+                            setCurrentUser(liveAgent);
+                            localStorage.setItem('consagrados_session', JSON.stringify(liveAgent));
+                        }
+                    }).catch(() => {});
                 }
             } catch (e) {
                 localStorage.removeItem('consagrados_session');
@@ -526,6 +540,17 @@ export function useAuth() {
                     setCurrentUser(updatedSelf);
                     localStorage.setItem('consagrados_session', JSON.stringify(updatedSelf));
                 }
+            } else if (freshAgents.length > 0) {
+                // Si la lista de agentes cargó y este agente ya no existe en ella
+                fetchAgentByIdSupabase(sessionUser.id).then(liveAgent => {
+                    if (!liveAgent) {
+                        console.warn(`🛑 Sesión de agente eliminada: ${sessionUser.id}`);
+                        localStorage.removeItem('consagrados_session');
+                        localStorage.removeItem('remembered_user');
+                        setIsLoggedIn(false);
+                        setCurrentUser(null);
+                    }
+                }).catch(() => {});
             }
         } catch (e) {
             console.error("Error en refreshCurrentUser:", e);

@@ -3,6 +3,7 @@ import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageI
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { enrollAgentSupabase, fetchSedesSupabase } from '../services/supabaseService';
 import { sendTelegramAlert } from '../services/notifyService';
+import { compressImage } from '../services/storageUtils';
 import { tacticalSound } from '../utils/soundEffects';
 import { UserRole, Agent, Sede } from '../types';
 
@@ -44,7 +45,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
       if (data && data.length > 0) {
         setSedes(data);
       } else {
-        setSedes([{ id: 'SEDE-JESUS-ES-EL-CENTRO', nombre: 'JESÚS ES EL CENTRO', is_active: true }]);
+        setSedes([{ id: 'SEDE-JESUS-ES-EL-CENTRO', nombre: 'JESÚS ES EL CENTRO', isActive: true }]);
       }
     };
     loadSedes();
@@ -54,13 +55,9 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("La imagen es demasiado grande. Máximo 5MB.");
-        return;
-      }
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -84,21 +81,24 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
     }
 
     let photoUrl = '';
-    // 1. Subir la imagen si existe
+    // 1. Subir la imagen si existe (con compresión en cliente y fallback resistente)
     if (selectedFile) {
       setStatus('UPLOADING');
       try {
-        const uploadResult = await uploadToCloudinary(selectedFile);
+        let payload: File | string = selectedFile;
+        try {
+          const compressed = await compressImage(selectedFile, 800, 0.7);
+          if (compressed) payload = `data:image/jpeg;base64,${compressed}`;
+        } catch {
+          payload = selectedFile;
+        }
+
+        const uploadResult = await uploadToCloudinary(payload);
         if (uploadResult.success && uploadResult.url) {
           photoUrl = uploadResult.url;
-        } else {
-          throw new Error(uploadResult.error || 'Fallo al subir la foto de perfil.');
         }
       } catch (err: any) {
-        setStatus('ERROR');
-        setError(err.message);
-        setTimeout(() => setStatus('IDLE'), 4000);
-        return;
+        console.warn('⚠️ Foto no enviada, asignando avatar táctico:', err?.message);
       }
     }
 

@@ -156,9 +156,6 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            onWheel={handleInteraction}
-            onMouseMove={handleInteraction}
-            onClick={handleInteraction}
         >
             {/* Header Section */}
             <div className="relative overflow-hidden bg-[#001f3f] border border-[#FFB700]/20 rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl">

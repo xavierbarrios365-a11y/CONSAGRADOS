@@ -10,7 +10,7 @@ const CLOUDINARY_UPLOAD_PRESET = "consagrados";
 export const uploadToCloudinary = async (file: File | string): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
         const formData = new FormData();
-        const isVideo = typeof file !== 'string' && file.type.startsWith('video/');
+        const isVideo = typeof file !== 'string' && file.type?.startsWith('video/');
 
         // Limit: 50MB for videos, 10MB for images
         if (typeof file !== 'string') {
@@ -20,7 +20,12 @@ export const uploadToCloudinary = async (file: File | string): Promise<{ success
             }
         }
 
-        formData.append('file', file);
+        let payload: any = file;
+        if (typeof file === 'string' && !file.startsWith('data:') && !file.startsWith('http')) {
+            payload = `data:image/jpeg;base64,${file}`;
+        }
+
+        formData.append('file', payload);
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
         // 'auto' detects image or video automatically

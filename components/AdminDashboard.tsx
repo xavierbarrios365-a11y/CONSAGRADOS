@@ -174,43 +174,88 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                             <div key={agent.id} className="p-4 bg-black/20 border border-white/5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
 
                                 {editingAgent?.id === agent.id ? (
-                                    <div className="flex-1 space-y-3 w-full">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <input type="text" value={editingAgent.name} onChange={e => setEditingAgent({ ...editingAgent, name: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="NOMBRE" />
-                                            <input type="number" value={editingAgent.xp} onChange={e => setEditingAgent({ ...editingAgent, xp: parseInt(e.target.value) || 0 })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none placeholder:text-white/30" placeholder="XP" />
-                                            <select value={editingAgent.rank} onChange={e => setEditingAgent({ ...editingAgent, rank: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
-                                                <option value="RECLUTA">RECLUTA</option>
-                                                <option value="ACTIVO">ACTIVO</option>
-                                                <option value="CONSAGRADO">CONSAGRADO</option>
-                                                <option value="REFERENTE">REFERENTE</option>
-                                                <option value="LÍDER">LÍDER</option>
-                                            </select>
-                                            <select value={editingAgent.role} onChange={e => setEditingAgent({ ...editingAgent, role: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
-                                                <option value="ESTUDIANTE">ESTUDIANTE</option>
-                                                <option value="LÍDER">LÍDER</option>
-                                                <option value="DIRECTOR">DIRECTOR</option>
-                                            </select>
+                                    <div className="flex-1 space-y-4 w-full">
+                                        {/* HEADER CON ID DEL AGENTE */}
+                                        <div className="flex items-center gap-3 pb-2 border-b border-[#ffb700]/20">
+                                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">ID:</span>
+                                            <span className="text-xs font-black text-[#ffb700] font-bebas tracking-wider">{editingAgent.id}</span>
                                         </div>
+
+                                        {/* FILA 1: DATOS BÁSICOS */}
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <input type="text" value={editingAgent.whatsapp || ''} onChange={e => setEditingAgent({ ...editingAgent, whatsapp: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="WHATSAPP" />
-                                            <input type="text" value={editingAgent.pin || ''} onChange={e => setEditingAgent({ ...editingAgent, pin: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="PIN" />
-                                            <input type="text" value={editingAgent.birthday || ''} onChange={e => setEditingAgent({ ...editingAgent, birthday: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="CUMPLEAÑOS (YYYY-MM-DD)" />
-                                            <select value={editingAgent.status} onChange={e => setEditingAgent({ ...editingAgent, status: e.target.value as any })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
-                                                <option value="ACTIVO">ACTIVO</option>
-                                                <option value="INACTIVO">INACTIVO</option>
-                                                <option value="SANCIONADO">SANCIONADO</option>
-                                                <option value="OCULTO">OCULTO (PERFIL TEST)</option>
-                                                <option value="ELIMINADO">ELIMINADO</option>
-                                            </select>
+                                            <div>
+                                                <label className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest block mb-1">📛 Nombre Completo</label>
+                                                <input type="text" value={editingAgent.name} onChange={e => setEditingAgent({ ...editingAgent, name: e.target.value })} className="w-full bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ffb700]" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest block mb-1">⭐ Puntos XP</label>
+                                                <input type="number" value={editingAgent.xp} onChange={e => setEditingAgent({ ...editingAgent, xp: parseInt(e.target.value) || 0 })} className="w-full bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ffb700]" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest block mb-1">🎖️ Rango</label>
+                                                <select value={editingAgent.rank} onChange={e => setEditingAgent({ ...editingAgent, rank: e.target.value })} className="w-full bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-[#ffb700]">
+                                                    <option value="RECLUTA">RECLUTA</option>
+                                                    <option value="ACTIVO">ACTIVO</option>
+                                                    <option value="CONSAGRADO">CONSAGRADO</option>
+                                                    <option value="REFERENTE">REFERENTE</option>
+                                                    <option value="LÍDER">LÍDER</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-[#ffb700] uppercase tracking-widest block mb-1">👤 Cargo / Rol</label>
+                                                <select value={editingAgent.role} onChange={e => setEditingAgent({ ...editingAgent, role: e.target.value })} className="w-full bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-[#ffb700]">
+                                                    <option value="ESTUDIANTE">ESTUDIANTE</option>
+                                                    <option value="LÍDER">LÍDER</option>
+                                                    <option value="DIRECTOR">DIRECTOR</option>
+                                                </select>
+                                            </div>
                                         </div>
+
+                                        {/* FILA 2: CONTACTO Y ACCESO */}
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <input type="text" value={editingAgent.talent || ''} onChange={e => setEditingAgent({ ...editingAgent, talent: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="TALENTO" />
-                                            <select value={editingAgent.baptismStatus} onChange={e => setEditingAgent({ ...editingAgent, baptismStatus: e.target.value as any })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none">
-                                                <option value="SI">SI BAUTIZADO</option>
-                                                <option value="NO">NO BAUTIZADO</option>
-                                            </select>
-                                            <input type="text" value={editingAgent.relationshipWithGod || ''} onChange={e => setEditingAgent({ ...editingAgent, relationshipWithGod: e.target.value })} className="bg-black/40 border border-[#ffb700]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none placeholder:text-white/30" placeholder="RELACIÓN CON DIOS" />
-                                            <div className="relative">
+                                            <div>
+                                                <label className="text-[8px] font-black text-green-400 uppercase tracking-widest block mb-1">📱 WhatsApp</label>
+                                                <input type="text" value={editingAgent.whatsapp || ''} onChange={e => setEditingAgent({ ...editingAgent, whatsapp: e.target.value })} className="w-full bg-black/40 border border-green-500/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-green-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-red-400 uppercase tracking-widest block mb-1">🔑 PIN / Contraseña</label>
+                                                <input type="text" value={editingAgent.pin || ''} onChange={e => setEditingAgent({ ...editingAgent, pin: e.target.value })} className="w-full bg-black/40 border border-red-500/30 rounded-xl px-3 py-2 text-xs text-red-300 font-bold focus:outline-none focus:border-red-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">🎂 Cumpleaños</label>
+                                                <input type="text" value={editingAgent.birthday || ''} onChange={e => setEditingAgent({ ...editingAgent, birthday: e.target.value })} className="w-full bg-black/40 border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-white/40" placeholder="YYYY-MM-DD" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">📊 Estado</label>
+                                                <select value={editingAgent.status} onChange={e => setEditingAgent({ ...editingAgent, status: e.target.value as any })} className="w-full bg-black/40 border border-white/20 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-white/40">
+                                                    <option value="ACTIVO">ACTIVO</option>
+                                                    <option value="INACTIVO">INACTIVO</option>
+                                                    <option value="SANCIONADO">SANCIONADO</option>
+                                                    <option value="OCULTO">OCULTO (PERFIL TEST)</option>
+                                                    <option value="ELIMINADO">ELIMINADO</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* FILA 3: PERFIL ESPIRITUAL */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <div>
+                                                <label className="text-[8px] font-black text-purple-400 uppercase tracking-widest block mb-1">🎯 Talento</label>
+                                                <input type="text" value={editingAgent.talent || ''} onChange={e => setEditingAgent({ ...editingAgent, talent: e.target.value })} className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-purple-400 uppercase tracking-widest block mb-1">💧 Bautismo</label>
+                                                <select value={editingAgent.baptismStatus} onChange={e => setEditingAgent({ ...editingAgent, baptismStatus: e.target.value as any })} className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-purple-500">
+                                                    <option value="SI">SI BAUTIZADO</option>
+                                                    <option value="NO">NO BAUTIZADO</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-purple-400 uppercase tracking-widest block mb-1">🙏 Relación con Dios</label>
+                                                <input type="text" value={editingAgent.relationshipWithGod || ''} onChange={e => setEditingAgent({ ...editingAgent, relationshipWithGod: e.target.value })} className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">📸 Foto de Perfil</label>
                                                 <input
                                                     type="file"
                                                     accept="image/*"
@@ -237,30 +282,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                                     }}
                                                 />
                                                 <label htmlFor={`avatar-upload-${editingAgent.id}`} className="flex items-center justify-center gap-2 w-full bg-white/5 border border-white/10 hover:bg-[#ffb700]/20 hover:text-[#ffb700] hover:border-[#ffb700]/50 transition-all rounded-xl px-3 py-2 text-xs text-white cursor-pointer uppercase font-bold tracking-wider">
-                                                    {editingAgent.photoUrl ? 'Cambiar Foto' : 'Subir Foto de Perfil'}
+                                                    {editingAgent.photoUrl ? '📷 Cambiar Foto' : '📷 Subir Foto'}
                                                 </label>
                                             </div>
                                         </div>
-                                        {/* CAMPOS DE IDENTIDAD */}
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-cyan-500/20 pt-3 mt-1">
-                                            <input type="text" value={editingAgent.cedula || ''} onChange={e => setEditingAgent({ ...editingAgent, cedula: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="CÉDULA DE IDENTIDAD" />
-                                            <input type="email" value={editingAgent.email || ''} onChange={e => setEditingAgent({ ...editingAgent, email: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="CORREO ELECTRÓNICO" />
-                                            <input type="text" value={editingAgent.telegram || ''} onChange={e => setEditingAgent({ ...editingAgent, telegram: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="TELEGRAM" />
-                                            <input type="text" value={editingAgent.redesSociales || ''} onChange={e => setEditingAgent({ ...editingAgent, redesSociales: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="REDES SOCIALES" />
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <div className="relative col-span-1">
-                                                <Flame size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" />
-                                                <input type="number" min="0" value={editingAgent.streakCount ?? 0} onChange={e => setEditingAgent({ ...editingAgent, streakCount: parseInt(e.target.value) || 0 })} className="w-full bg-black/40 border border-orange-500/30 rounded-xl pl-8 pr-3 py-2 text-xs text-orange-400 font-bold focus:outline-none focus:border-orange-500 placeholder:text-white/30" placeholder="DÍAS RACHA" />
+
+                                        {/* FILA 4: IDENTIDAD (CÉDULA, EMAIL, ETC.) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-cyan-500/20 pt-3">
+                                            <div>
+                                                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block mb-1">🪪 Cédula de Identidad</label>
+                                                <input type="text" value={editingAgent.cedula || ''} onChange={e => setEditingAgent({ ...editingAgent, cedula: e.target.value })} className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500" />
                                             </div>
-                                            <span className="flex items-center text-[9px] text-orange-500/60 uppercase tracking-wider font-bold">🔥 Días de Racha</span>
+                                            <div>
+                                                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block mb-1">📧 Correo Electrónico</label>
+                                                <input type="email" value={editingAgent.email || ''} onChange={e => setEditingAgent({ ...editingAgent, email: e.target.value })} className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block mb-1">✈️ Telegram</label>
+                                                <input type="text" value={editingAgent.telegram || ''} onChange={e => setEditingAgent({ ...editingAgent, telegram: e.target.value })} className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block mb-1">🌐 Redes Sociales</label>
+                                                <input type="text" value={editingAgent.redesSociales || ''} onChange={e => setEditingAgent({ ...editingAgent, redesSociales: e.target.value })} className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500" />
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 w-full md:w-1/3">
-                                            <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-green-500/20 border border-green-500/30 text-green-500 rounded-xl px-2 py-2 flex items-center justify-center hover:bg-green-500/30">
+
+                                        {/* FILA 5: RACHA */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-orange-500/20 pt-3">
+                                            <div>
+                                                <label className="text-[8px] font-black text-orange-400 uppercase tracking-widest block mb-1">🔥 Días de Racha</label>
+                                                <div className="relative">
+                                                    <Flame size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500" />
+                                                    <input type="number" min="0" value={editingAgent.streakCount ?? 0} onChange={e => setEditingAgent({ ...editingAgent, streakCount: parseInt(e.target.value) || 0 })} className="w-full bg-black/40 border border-orange-500/30 rounded-xl pl-8 pr-3 py-2 text-xs text-orange-400 font-bold focus:outline-none focus:border-orange-500" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* BOTONES GUARDAR / CANCELAR */}
+                                        <div className="flex gap-2 w-full md:w-1/3 pt-2">
+                                            <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-green-500/20 border border-green-500/30 text-green-500 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 hover:bg-green-500/30 text-xs font-bold uppercase tracking-wider">
                                                 {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                                                Guardar
                                             </button>
-                                            <button onClick={() => setEditingAgent(null)} className="flex-1 bg-red-500/20 border border-red-500/30 text-red-500 rounded-xl px-2 py-2 flex items-center justify-center hover:bg-red-500/30">
+                                            <button onClick={() => setEditingAgent(null)} className="flex-1 bg-red-500/20 border border-red-500/30 text-red-500 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 hover:bg-red-500/30 text-xs font-bold uppercase tracking-wider">
                                                 <X size={14} />
+                                                Cancelar
                                             </button>
                                         </div>
                                     </div>

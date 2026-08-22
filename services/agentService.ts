@@ -195,11 +195,12 @@ export const fetchAgentByIdSupabase = async (agentId: string): Promise<Agent | n
 
         const numeric = cleanId.replace(/[^0-9]/g, '');
 
-        // 1. Búsqueda exacta por ID (ej. CON-1011)
+        // 1. Búsqueda exacta por ID o Cédula
         let { data, error } = await supabase
             .from('agentes')
             .select('*')
-            .ilike('id', cleanId)
+            .or(`id.ilike.${cleanId},cedula.eq.${cleanId}`)
+            .limit(1)
             .maybeSingle();
 
         // 2. Búsqueda flexible por número si no se encontró
@@ -207,7 +208,7 @@ export const fetchAgentByIdSupabase = async (agentId: string): Promise<Agent | n
             const { data: numData } = await supabase
                 .from('agentes')
                 .select('*')
-                .ilike('id', `%${numeric}%`)
+                .or(`id.ilike.%${numeric}%,cedula.ilike.%${numeric}%`)
                 .limit(1)
                 .maybeSingle();
             data = numData;

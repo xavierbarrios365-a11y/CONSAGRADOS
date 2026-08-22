@@ -5,6 +5,9 @@
 import { supabase } from './supabaseClient';
 import { InboxNotification } from '../types';
 
+const OFFICIAL_TELEGRAM_BOT_TOKEN = '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA';
+const OFFICIAL_TELEGRAM_CHAT_ID = '1009537014';
+
 const getBaseUrl = () => {
     return import.meta.env.DEV ? 'https://consagrados.vercel.app' : '';
 };
@@ -16,20 +19,37 @@ export const sendTelegramAlert = async (message: string): Promise<boolean> => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'telegram', message })
         });
-        if (!res.ok && res.status === 401 && import.meta.env.DEV) {
-            console.warn("⚠️ API de Notificaciones (Vercel) retornó 401. Ignorado en modo DEV.");
-            return false;
-        }
-        return res.ok;
+        if (res.ok) return true;
+
+        // Fallback directo a Telegram API si la API de Vercel falla
+        const directRes = await fetch(`https://api.telegram.org/bot${OFFICIAL_TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: OFFICIAL_TELEGRAM_CHAT_ID,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+        return directRes.ok;
     } catch (e: any) {
-        if (import.meta.env.DEV) {
-            console.warn("⚠️ Fallo en API de Notificaciones (Local). Probablemente CORS o Servicio Apagado.");
+        try {
+            const directRes = await fetch(`https://api.telegram.org/bot${OFFICIAL_TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: OFFICIAL_TELEGRAM_CHAT_ID,
+                    text: message,
+                    parse_mode: 'HTML'
+                })
+            });
+            return directRes.ok;
+        } catch (err) {
+            console.error("Error al enviar alerta Telegram", err);
             return false;
         }
-        console.error("Error al enviar alerta Telegram", e);
-        return false;
     }
-}
+};
 
 export const sendPushBroadcast = async (title: string, message: string, targetToken?: string, type: string = 'general'): Promise<boolean> => {
     try {

@@ -4,8 +4,8 @@ export const config = {
 
 import crypto from 'crypto';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8514450878:AAElk5X4n2YvnHEiK7K1ZlmmtoekIlQ-IhA';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '1009537014';
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'consagrados-c2d78';
 const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || '';
 const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || '';

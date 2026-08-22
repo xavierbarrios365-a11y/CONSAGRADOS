@@ -46,7 +46,11 @@ export interface Agent {
   leadership: number;
   age?: string;
   birthday?: string;
+  cedula?: string;
+  email?: string;
   whatsapp?: string;
+  telegram?: string;
+  redesSociales?: string;
   relationshipWithGod?: string;
   accessLevel?: string;
   securityQuestion?: string;

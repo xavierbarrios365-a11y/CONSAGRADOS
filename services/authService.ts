@@ -102,13 +102,25 @@ export const enrollAgentSupabase = async (formData: any) => {
         const cleanEmail = (formData.email || '').trim().toLowerCase();
         const cleanWhatsapp = (formData.whatsapp || '').trim();
 
-        // 1. Verificación de Cédula Duplicada
+        // 1. Verificación de Cédula Duplicada (directa en columna o en JSON)
         if (cleanCedula) {
-            const { data: existingByCedula } = await supabase
+            let existingByCedula: any = null;
+            const resDirect = await supabase
                 .from('agentes')
-                .select('id, nombre, tactical_stats')
-                .filter('tactical_stats->>cedula', 'eq', cleanCedula)
+                .select('id, nombre, cedula')
+                .eq('cedula', cleanCedula)
                 .maybeSingle();
+
+            if (!resDirect.error && resDirect.data) {
+                existingByCedula = resDirect.data;
+            } else {
+                const { data: fallback } = await supabase
+                    .from('agentes')
+                    .select('id, nombre, tactical_stats')
+                    .filter('tactical_stats->>cedula', 'eq', cleanCedula)
+                    .maybeSingle();
+                existingByCedula = fallback;
+            }
 
             if (existingByCedula) {
                 return {
@@ -134,13 +146,25 @@ export const enrollAgentSupabase = async (formData: any) => {
             }
         }
 
-        // 3. Verificación de Correo Electrónico Duplicado
+        // 3. Verificación de Correo Electrónico Duplicado (directo en columna o en JSON)
         if (cleanEmail) {
-            const { data: existingByEmail } = await supabase
+            let existingByEmail: any = null;
+            const resEmail = await supabase
                 .from('agentes')
-                .select('id, nombre, tactical_stats')
-                .filter('tactical_stats->>email', 'eq', cleanEmail)
+                .select('id, nombre, email')
+                .eq('email', cleanEmail)
                 .maybeSingle();
+
+            if (!resEmail.error && resEmail.data) {
+                existingByEmail = resEmail.data;
+            } else {
+                const { data: fallback } = await supabase
+                    .from('agentes')
+                    .select('id, nombre, tactical_stats')
+                    .filter('tactical_stats->>email', 'eq', cleanEmail)
+                    .maybeSingle();
+                existingByEmail = fallback;
+            }
 
             if (existingByEmail) {
                 return {
@@ -168,10 +192,14 @@ export const enrollAgentSupabase = async (formData: any) => {
             attempts++;
             const generatedId = (formData.id && formData.id.trim()) ? formData.id.trim().toUpperCase() : `CON-${Math.floor(1000 + Math.random() * 9000)}`;
 
-            const payload: any = {
+            const fullPayload: any = {
                 id: generatedId,
                 nombre: formData.nombre.trim().toUpperCase(),
+                cedula: cleanCedula || null,
+                email: cleanEmail || null,
                 whatsapp: cleanWhatsapp,
+                telegram: (formData.telegram || '').trim() || null,
+                redes_sociales: (formData.redesSociales || formData.instagram || '').trim() || null,
                 pin: generatedPin,
                 user_role: role,
                 rango: formData.rango || (role === 'DIRECTOR_GENERAL' ? 'DIRECTOR GENERAL' : role === 'DIRECTOR' ? 'DIRECTOR' : role === 'LEADER' ? 'LÍDER TÁCTICO' : 'RECLUTA'),
@@ -190,7 +218,21 @@ export const enrollAgentSupabase = async (formData: any) => {
                 tactical_stats: tacticalStatsData
             };
 
-            const { data, error } = await supabase.from('agentes').insert([payload]).select();
+            // Intentar inserción con columnas directas
+            let { data, error } = await supabase.from('agentes').insert([fullPayload]).select();
+
+            // Si falla porque las columnas directas no existen aún en la tabla, fallback al payload básico
+            if (error && error.message?.includes('column') && error.message?.includes('does not exist')) {
+                const fallbackPayload = { ...fullPayload };
+                delete fallbackPayload.cedula;
+                delete fallbackPayload.email;
+                delete fallbackPayload.telegram;
+                delete fallbackPayload.redes_sociales;
+
+                const retry = await supabase.from('agentes').insert([fallbackPayload]).select();
+                data = retry.data;
+                error = retry.error;
+            }
 
             if (!error && data && data.length > 0) {
                 return { success: true, newId: generatedId, newPin: generatedPin, agent: data[0] };

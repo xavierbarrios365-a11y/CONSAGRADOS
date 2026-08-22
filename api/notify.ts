@@ -12,6 +12,14 @@ const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || '';
 const OFFICIAL_LOGO_ID = '1DYDTGzou08o0NIPuCPH9JvYtaNFf2X5f';
 
 async function sendTelegramNotification(message: string) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        const missing = [];
+        if (!TELEGRAM_BOT_TOKEN) missing.push('TELEGRAM_BOT_TOKEN');
+        if (!TELEGRAM_CHAT_ID) missing.push('TELEGRAM_CHAT_ID');
+        console.error(`❌ Variables de entorno faltantes: ${missing.join(', ')}`);
+        throw new Error(`Telegram no configurado: faltan ${missing.join(', ')} en Vercel Dashboard > Settings > Environment Variables`);
+    }
+
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     const payload = {
         chat_id: TELEGRAM_CHAT_ID,
@@ -26,8 +34,14 @@ async function sendTelegramNotification(message: string) {
     });
 
     if (!response.ok) {
-        console.error(`Telegram Error: ${await response.text()}`);
+        const errBody = await response.text();
+        console.error(`❌ Telegram API Error [${response.status}]:`, errBody);
+        throw new Error(`Telegram respondió ${response.status}: ${errBody}`);
     }
+
+    const result = await response.json();
+    console.log('✅ Telegram enviado OK, message_id:', result?.result?.message_id);
+    return result;
 }
 
 async function getFcmAccessToken() {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Agent, UserRole, AppView, DailyVerse as DailyVerseType } from '../types';
 import DailyVerse from './DailyVerse';
-import { Search, Users, Activity, Target, Zap, TrendingUp, AlertCircle, ChevronRight, ChevronLeft, MoreVertical, X, Filter, Download, UserPlus, Shield, UserCheck, UserX, Award, Star, Mail, Phone, Calendar, Clock, MapPin, RefreshCw, Plus, Minus, Send, Camera, ArrowUpCircle, AlertTriangle, Gavel, Sparkles, Loader2, MessageSquare, BookOpen, Fingerprint, FileText, Settings, RotateCcw, ChevronUp, Cpu, Brain, Bell, Trash2, Radio, Trophy, CheckCircle2 } from 'lucide-react';
+import { Search, Users, Activity, Target, Zap, TrendingUp, AlertCircle, ChevronRight, ChevronLeft, MoreVertical, X, Filter, Download, UserPlus, Shield, UserCheck, UserX, Award, Star, Mail, Phone, Calendar, Clock, MapPin, RefreshCw, Plus, Minus, Send, Camera, ArrowUpCircle, AlertTriangle, Gavel, Sparkles, Loader2, MessageSquare, BookOpen, Fingerprint, FileText, Settings, RotateCcw, ChevronUp, Cpu, Brain, Bell, Trash2, Radio, Trophy, CheckCircle2, Edit2, Building } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
@@ -233,8 +233,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const [sedes, setSedes] = useState<any[]>([]);
   const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
   const [showCreateSedeModal, setShowCreateSedeModal] = useState(false);
-  const [newSedeForm, setNewSedeForm] = useState({ nombre: '', ciudad: 'Caracas', pais: 'Venezuela', responsableId: '' });
+  const [newSedeForm, setNewSedeForm] = useState({ nombre: '', ciudad: '', pais: 'Venezuela', responsableId: '' });
   const [isCreatingSede, setIsCreatingSede] = useState(false);
+  const [editingSedeId, setEditingSedeId] = useState<string | null>(null);
 
   const loadSedes = async () => {
     try {
@@ -258,6 +259,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     try {
       const respAgent = agents.find(a => a.id === newSedeForm.responsableId);
       const res = await createOrUpdateSedeSupabase({
+        id: editingSedeId || undefined,
         nombre: newSedeForm.nombre.trim(),
         ciudad: newSedeForm.ciudad.trim(),
         pais: newSedeForm.pais.trim(),
@@ -265,19 +267,37 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         responsableNombre: respAgent?.name || undefined
       });
       if (res.success) {
-        showAlert({ title: "SEDE ACTIVADA", message: `✅ Sede "${newSedeForm.nombre}" registrada correctamente.`, type: 'SUCCESS' });
+        showAlert({
+          title: editingSedeId ? "SEDE ACTUALIZADA" : "SEDE ACTIVADA",
+          message: editingSedeId
+            ? `✅ Sede "${newSedeForm.nombre}" actualizada correctamente.`
+            : `✅ Sede "${newSedeForm.nombre}" registrada correctamente.`,
+          type: 'SUCCESS'
+        });
         setShowCreateSedeModal(false);
-        setNewSedeForm({ nombre: '', ciudad: 'Caracas', pais: 'Venezuela', responsableId: '' });
+        setEditingSedeId(null);
+        setNewSedeForm({ nombre: '', ciudad: '', pais: 'Venezuela', responsableId: '' });
         await loadSedes();
         if (onUpdateNeeded) onUpdateNeeded();
       } else {
-        showAlert({ title: "ERROR", message: "Error al registrar sede: " + (res.error || ''), type: 'ERROR' });
+        showAlert({ title: "ERROR", message: "Error al guardar sede: " + (res.error || ''), type: 'ERROR' });
       }
     } catch (e: any) {
       showAlert({ title: "ERROR", message: e.message || "Fallo de conexión.", type: 'ERROR' });
     } finally {
       setIsCreatingSede(false);
     }
+  };
+
+  const openEditSede = (sede: any) => {
+    setEditingSedeId(sede.id);
+    setNewSedeForm({
+      nombre: sede.nombre || '',
+      ciudad: sede.ciudad || '',
+      pais: sede.pais || 'Venezuela',
+      responsableId: sede.responsable_id || ''
+    });
+    setShowCreateSedeModal(true);
   };
 
   const handleReassignAgentSede = async (agentId: string, targetSedeId: string) => {
@@ -706,24 +726,41 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                   🌐 Todas las Sedes (Global)
                 </button>
 
-                {/* BOTONES POR SEDE */}
+                {/* BOTONES POR SEDE + EDITAR */}
                 {sedes.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedSedeId(s.id)}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider font-bebas transition-all border flex items-center gap-1.5 ${
-                      selectedSedeId === s.id
-                        ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.35)] scale-105'
-                        : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    🏛️ {s.nombre}
-                  </button>
+                  <div key={s.id} className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => setSelectedSedeId(s.id)}
+                      className={`px-4 py-2.5 rounded-l-xl text-xs font-black uppercase tracking-wider font-bebas transition-all border-y border-l flex items-center gap-1.5 ${
+                        selectedSedeId === s.id
+                          ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.35)] scale-105'
+                          : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      🏛️ {s.nombre}
+                      {s.ciudad && <span className="text-[9px] opacity-60 font-montserrat normal-case">({s.ciudad})</span>}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEditSede(s); }}
+                      title={`Editar ${s.nombre}`}
+                      className={`px-2 py-2.5 rounded-r-xl text-xs transition-all border-y border-r ${
+                        selectedSedeId === s.id
+                          ? 'bg-[#ffb700]/80 text-[#001f3f] border-[#ffb700] hover:bg-[#ffb700]'
+                          : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-[#ffb700]'
+                      }`}
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                  </div>
                 ))}
 
                 {/* BOTÓN REGISTRAR NUEVA SEDE */}
                 <button
-                  onClick={() => setShowCreateSedeModal(true)}
+                  onClick={() => {
+                    setEditingSedeId(null);
+                    setNewSedeForm({ nombre: '', ciudad: '', pais: 'Venezuela', responsableId: '' });
+                    setShowCreateSedeModal(true);
+                  }}
                   className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider font-bebas bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40 transition-all flex items-center gap-1.5 shadow-lg active:scale-95 ml-auto lg:ml-2"
                 >
                   <Plus size={14} /> Nueva Sede
@@ -1896,10 +1933,10 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
               >
                 <div className="flex justify-between items-center border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
-                    <Shield className="text-[#ffb700]" size={20} />
-                    <h3 className="text-lg font-bebas text-white tracking-widest uppercase">Crear Nueva Sede / Iglesia</h3>
+                    {editingSedeId ? <Edit2 className="text-[#ffb700]" size={20} /> : <Shield className="text-[#ffb700]" size={20} />}
+                    <h3 className="text-lg font-bebas text-white tracking-widest uppercase">{editingSedeId ? 'Editar Sede / Iglesia' : 'Crear Nueva Sede / Iglesia'}</h3>
                   </div>
-                  <button onClick={() => setShowCreateSedeModal(false)} className="text-white/40 hover:text-white transition-colors">
+                  <button onClick={() => { setShowCreateSedeModal(false); setEditingSedeId(null); }} className="text-white/40 hover:text-white transition-colors">
                     <X size={20} />
                   </button>
                 </div>
@@ -1957,7 +1994,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
                 <div className="flex gap-3 pt-3">
                   <button
-                    onClick={() => setShowCreateSedeModal(false)}
+                    onClick={() => { setShowCreateSedeModal(false); setEditingSedeId(null); }}
                     className="flex-1 py-3 bg-white/5 text-white/60 rounded-xl text-xs font-bebas uppercase hover:bg-white/10 transition-colors"
                   >
                     Cancelar
@@ -1968,7 +2005,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                     className="flex-1 py-3 bg-[#ffb700] text-[#001f3f] rounded-xl text-xs font-black font-bebas uppercase hover:bg-[#ffb700]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg active:scale-95"
                   >
                     {isCreatingSede ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                    Activar Sede
+                    {editingSedeId ? 'Guardar Cambios' : 'Activar Sede'}
                   </button>
                 </div>
               </motion.div>

@@ -26,7 +26,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         try {
             const { data, error } = await supabase
                 .from('agentes')
-                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp, birthday, status, user_role, talent, baptism_status, relationship_with_god, streak_count')
+                .select('id, nombre, xp, rango, cargo, foto_url, is_ai_profile_pending, tactical_stats, tactor_summary, pin, whatsapp, birthday, status, user_role, talent, baptism_status, relationship_with_god, streak_count, cedula, email, telegram, redes_sociales, sede_id')
                 .order('nombre', { ascending: true });
             if (error) throw error;
 
@@ -47,6 +47,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                     baptismStatus: d.baptism_status || 'NO',
                     relationshipWithGod: d.relationship_with_god || '',
                     pin: d.pin || '',
+                    // Campos de identidad
+                    cedula: d.cedula || '',
+                    email: d.email || '',
+                    telegram: d.telegram || '',
+                    redesSociales: d.redes_sociales || '',
+                    sedeId: d.sede_id || '',
                     // Defaults for remaining structure
                     idSignature: `V37-SIG-${d.id}`,
                     joinedDate: d.joined_date || '',
@@ -234,6 +240,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
                                                     {editingAgent.photoUrl ? 'Cambiar Foto' : 'Subir Foto de Perfil'}
                                                 </label>
                                             </div>
+                                        </div>
+                                        {/* CAMPOS DE IDENTIDAD */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-cyan-500/20 pt-3 mt-1">
+                                            <input type="text" value={editingAgent.cedula || ''} onChange={e => setEditingAgent({ ...editingAgent, cedula: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="CÉDULA DE IDENTIDAD" />
+                                            <input type="email" value={editingAgent.email || ''} onChange={e => setEditingAgent({ ...editingAgent, email: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="CORREO ELECTRÓNICO" />
+                                            <input type="text" value={editingAgent.telegram || ''} onChange={e => setEditingAgent({ ...editingAgent, telegram: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="TELEGRAM" />
+                                            <input type="text" value={editingAgent.redesSociales || ''} onChange={e => setEditingAgent({ ...editingAgent, redesSociales: e.target.value })} className="bg-black/40 border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-500 placeholder:text-white/30" placeholder="REDES SOCIALES" />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                             <div className="relative col-span-1">

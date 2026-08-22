@@ -154,8 +154,8 @@ export const mapSupabaseAgentToModel = (d: any): Agent => ({
  */
 export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?: string): Promise<Agent[]> => {
     try {
-        const STUDENT_COLS = 'id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, bible, notes, leadership, streak_count, last_streak_date, pin, baptism_status, iq_level, notif_prefs, fcm_token, sede_id';
-        const LEADER_COLS = STUDENT_COLS + ', whatsapp, joined_date, birthday, last_attendance, tactical_stats, tactor_summary, must_change_password, is_ai_profile_pending';
+        const STUDENT_COLS = 'id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, bible, notes, leadership, streak_count, last_streak_date, pin, baptism_status, iq_level, notif_prefs, fcm_token, sede_id, whatsapp, joined_date, birthday, tactical_stats';
+        const LEADER_COLS = STUDENT_COLS + ', last_attendance, tactor_summary, must_change_password, is_ai_profile_pending';
         const DIRECTOR_COLS = LEADER_COLS + ', weekly_tasks, relationship_with_god, biometric_credential, security_question, security_answer';
 
         const role = (callerRole || '').toUpperCase();

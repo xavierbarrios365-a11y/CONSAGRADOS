@@ -83,17 +83,79 @@ export const syncAllAgentsToSupabase = async (agents: Agent[]) => {
     return { success: failuresCount === 0, count: agents.length - failuresCount };
 };
 
+export const mapSupabaseAgentToModel = (d: any): Agent => ({
+    id: d.id,
+    name: d.nombre,
+    xp: d.xp || 0,
+    iqLevel: d.iq_level || 1,
+    rank: (d.rango || 'RECLUTA').toUpperCase(),
+    role: d.cargo || 'ESTUDIANTE',
+    whatsapp: d.whatsapp || '',
+    photoUrl: d.foto_url || '',
+    pin: d.pin || '',
+    isAiProfilePending: d.is_ai_profile_pending || false,
+    tacticalStats: d.tactical_stats || {},
+    tacticalSummary: d.tactor_summary || '',
+    talent: d.talent || 'PENDIENTE',
+    baptismStatus: d.baptism_status || 'NO',
+    status: d.status || 'ACTIVO',
+    sedeId: d.sede_id || 'SEDE-JESUS-ES-EL-CENTRO',
+    userRole: (() => {
+        const role = String(d.user_role || '').toUpperCase();
+        const cargo = String(d.cargo || '').toUpperCase();
+        if (role === 'DIRECTOR_GENERAL' || cargo === 'DIRECTOR_GENERAL' || role === 'DIRECTOR GENERAL' || cargo === 'DIRECTOR GENERAL' || d.id === 'CON-1011') return UserRole.DIRECTOR_GENERAL;
+        if (role === 'DIRECTOR' || cargo === 'DIRECTOR') return UserRole.DIRECTOR;
+        if (role === 'LEADER' || role === 'LIDER' || role === 'LÍDER' || cargo === 'LIDER' || cargo === 'LÍDER') return UserRole.LEADER;
+        return UserRole.STUDENT;
+    })(),
+    idSignature: `V37-SIG-${d.id}`,
+    joinedDate: d.joined_date || '',
+    birthday: d.birthday || '',
+    relationshipWithGod: d.relationship_with_god || 'PENDIENTE',
+    mustChangePassword: d.must_change_password || false,
+    streakCount: d.streak_count || 0,
+    rachaProteccion: d.racha_proteccion || 0,
+    isStreakActive: (() => {
+        const raw = d.last_streak_date || '';
+        if (!raw || (d.streak_count || 0) === 0) return false;
+        try {
+            const today = new Date();
+            const todayStr = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+            let lastDateStr = '';
+            if (raw.match(/^\d+$/)) {
+                lastDateStr = new Date(parseInt(raw, 10)).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+            } else {
+                lastDateStr = raw.split(' ')[0];
+            }
+            return (lastDateStr === todayStr || lastDateStr === yesterdayStr);
+        } catch { return false; }
+    })(),
+    lastStreakDate: d.last_streak_date || '',
+    lastAttendance: d.last_attendance || '',
+    weekly_tasks: d.weekly_tasks || [],
+    notif_prefs: d.notif_prefs || { read: [], deleted: [] },
+    last_course: d.last_course || '',
+    bible: d.bible || 0,
+    notes: d.notes || 0,
+    leadership: d.leadership || 0,
+    biometricCredential: d.biometric_credential || null,
+    securityQuestion: d.security_question || null,
+    securityAnswer: d.security_answer || null,
+    fcmToken: d.fcm_token || null,
+    notifPrefs: d.notif_prefs || { read: [], deleted: [] }
+}) as unknown as Agent;
+
 /**
  * @description Obtiene la lista completa de agentes desde Supabase. Filtrando los ocultos por defecto.
  */
 export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?: string): Promise<Agent[]> => {
     try {
-        // NIVEL 3: Consulta diferenciada por rol
-        // STUDENT: Solo columnas esenciales (~12 cols, ~40% del tamaño)
-        // LEADER: Columnas operativas (~20 cols, ~65% del tamaño)
-        // DIRECTOR: Todas las columnas (~30 cols, 100%)
-        const STUDENT_COLS = 'id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, bible, notes, leadership, streak_count, last_streak_date, pin, baptism_status, iq_level, notif_prefs, fcm_token';
-        const LEADER_COLS = STUDENT_COLS + ', whatsapp, joined_date, birthday, last_attendance, last_streak_date, tactical_stats, tactor_summary, must_change_password, is_ai_profile_pending';
+        const STUDENT_COLS = 'id, nombre, xp, rango, cargo, foto_url, status, talent, user_role, bible, notes, leadership, streak_count, last_streak_date, pin, baptism_status, iq_level, notif_prefs, fcm_token, sede_id';
+        const LEADER_COLS = STUDENT_COLS + ', whatsapp, joined_date, birthday, last_attendance, tactical_stats, tactor_summary, must_change_password, is_ai_profile_pending';
         const DIRECTOR_COLS = LEADER_COLS + ', weekly_tasks, relationship_with_god, biometric_credential, security_question, security_answer';
 
         const role = (callerRole || '').toUpperCase();
@@ -111,76 +173,49 @@ export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?
 
         const filteredData = includeHidden ? data : data.filter((d: any) => d.status !== 'OCULTO' && String(d.nombre || '').toUpperCase() !== 'TEST');
 
-        return filteredData.filter((d: any) => d.id && d.id.trim() !== '').map((d: any) => ({
-            id: d.id,
-            name: d.nombre,
-            xp: d.xp || 0,
-            iqLevel: d.iq_level || 1,
-            rank: (d.rango || 'RECLUTA').toUpperCase(),
-            role: d.cargo || 'ESTUDIANTE',
-            whatsapp: d.whatsapp || '',
-            photoUrl: d.foto_url || '',
-            pin: d.pin || '',
-            isAiProfilePending: d.is_ai_profile_pending || false,
-            tacticalStats: d.tactical_stats || {},
-            tacticalSummary: d.tactor_summary || '',
-            talent: d.talent || 'PENDIENTE',
-            baptismStatus: d.baptism_status || 'NO',
-            status: d.status || 'ACTIVO',
-            sedeId: d.sede_id || 'SEDE-JESUS-ES-EL-CENTRO',
-            userRole: (() => {
-                const role = String(d.user_role || '').toUpperCase();
-                const cargo = String(d.cargo || '').toUpperCase();
-                if (role === 'DIRECTOR_GENERAL' || cargo === 'DIRECTOR_GENERAL' || role === 'DIRECTOR GENERAL' || cargo === 'DIRECTOR GENERAL' || d.id === 'CON-1011') return UserRole.DIRECTOR_GENERAL;
-                if (role === 'DIRECTOR' || cargo === 'DIRECTOR') return UserRole.DIRECTOR;
-                if (role === 'LEADER' || role === 'LIDER' || role === 'LÍDER' || cargo === 'LIDER' || cargo === 'LÍDER') return UserRole.LEADER;
-                return UserRole.STUDENT;
-            })(),
-            idSignature: `V37-SIG-${d.id}`,
-            joinedDate: d.joined_date || '',
-            birthday: d.birthday || '',
-            relationshipWithGod: d.relationship_with_god || 'PENDIENTE',
-            mustChangePassword: d.must_change_password || false,
-            streakCount: d.streak_count || 0,
-            rachaProteccion: d.racha_proteccion || 0,
-            isStreakActive: (() => {
-                const raw = d.last_streak_date || '';
-                if (!raw || (d.streak_count || 0) === 0) return false;
-                try {
-                    const today = new Date();
-                    const todayStr = today.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-
-                    let lastDateStr = '';
-                    if (raw.match(/^\d+$/)) {
-                        lastDateStr = new Date(parseInt(raw, 10)).toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-                    } else {
-                        lastDateStr = raw.split(' ')[0];
-                    }
-                    return (lastDateStr === todayStr || lastDateStr === yesterdayStr);
-                } catch { return false; }
-            })(),
-            lastStreakDate: d.last_streak_date || '',
-            lastAttendance: d.last_attendance || '',
-            weekly_tasks: d.weekly_tasks || [],
-            notif_prefs: d.notif_prefs || { read: [], deleted: [] },
-            last_course: d.last_course || '',
-            bible: d.bible || 0,
-            notes: d.notes || 0,
-            leadership: d.leadership || 0,
-            // --- CAMPOS CRTICOS: Biometría y Seguridad ---
-            biometricCredential: d.biometric_credential || null,
-            securityQuestion: d.security_question || null,
-            securityAnswer: d.security_answer || null,
-            fcmToken: d.fcm_token || null,
-            notifPrefs: d.notif_prefs || { read: [], deleted: [] }
-        })) as unknown as Agent[];
+        return filteredData.filter((d: any) => d.id && d.id.trim() !== '').map(mapSupabaseAgentToModel);
 
     } catch (e: any) {
         console.error('❌ Fallo crítico en fetchAgentsFromSupabase:', e.message);
         return [];
+    }
+};
+
+/**
+ * @description Obtiene un agente específico por ID desde Supabase con búsqueda flexible.
+ */
+export const fetchAgentByIdSupabase = async (agentId: string): Promise<Agent | null> => {
+    try {
+        const cleanId = (agentId || '').trim().toUpperCase();
+        if (!cleanId) return null;
+
+        const numeric = cleanId.replace(/[^0-9]/g, '');
+
+        // 1. Búsqueda exacta por ID (ej. CON-1011)
+        let { data, error } = await supabase
+            .from('agentes')
+            .select('*')
+            .ilike('id', cleanId)
+            .maybeSingle();
+
+        // 2. Búsqueda flexible por número si no se encontró
+        if (!data && numeric.length >= 3) {
+            const { data: numData } = await supabase
+                .from('agentes')
+                .select('*')
+                .ilike('id', `%${numeric}%`)
+                .limit(1)
+                .maybeSingle();
+            data = numData;
+        }
+
+        if (data) {
+            return mapSupabaseAgentToModel(data);
+        }
+        return null;
+    } catch (e: any) {
+        console.error('❌ Error obteniendo agente por ID:', e.message);
+        return null;
     }
 };
 

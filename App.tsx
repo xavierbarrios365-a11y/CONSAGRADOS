@@ -127,7 +127,7 @@ const App: React.FC = () => {
 
   // Destructure for convenience (backward compatible with existing render code)
   const {
-    isLoggedIn, currentUser, loginId, loginPin, showPin, loginError,
+    isLoggedIn, currentUser, loginId, loginPin, showPin, loginError, isLoggingIn,
     showForgotPassword, forgotPasswordStep, securityAnswerInput, resetError, revealedPin,
     isMustChangeFlow, newPinInput, confirmPinInput, newQuestionInput, newAnswerInput, isUpdatingPin,
     biometricAvailable, isAuthenticatingBio, isRegisteringBio,
@@ -818,10 +818,11 @@ const App: React.FC = () => {
                 setView(AppView.HOME);
               }}
               agents={agents}
-              onDirectLogin={(id, pin) => {
+              onDirectLogin={async (id, pin) => {
                 setLoginId(id);
                 setLoginPin(pin);
                 setView(AppView.HOME);
+                await handleLogin(undefined, id);
               }}
             />
           </div>
@@ -1078,10 +1079,13 @@ const App: React.FC = () => {
                     name="username"
                     type="text"
                     autoComplete="username"
-                    placeholder="ID DE AGENTE"
+                    placeholder="ID DE AGENTE (EJ. CON-1011)"
                     value={loginId}
-                    onChange={(e) => setLoginId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20 uppercase"
+                    onChange={(e) => {
+                      setLoginId(e.target.value);
+                      if (loginError.message) setLoginError({ field: null, message: null });
+                    }}
+                    className={`w-full bg-white/5 border ${loginError.field === 'id' || loginError.field === 'both' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'border-white/10'} rounded-2xl py-5 px-6 text-white text-xs font-bold tracking-widest outline-none focus:border-[#ffb700] focus:bg-white/10 transition-all group-hover:border-white/20 uppercase`}
                   />
                   <Fingerprint size={18} className="absolute right-6 top-1/2 -translate-y-1/2 text-[#ffb700]/30 group-focus-within:text-[#ffb700] transition-colors" />
                 </div>
@@ -1094,28 +1098,46 @@ const App: React.FC = () => {
                     autoComplete="current-password"
                     placeholder="PIN DE SEGURIDAD"
                     value={loginPin}
-                    onChange={(e) => setLoginPin(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:shadow-[0_0_15px_rgba(255,183,0,0.3)] transition-all group-hover:border-white/20 focus:bg-white/10"
+                    onChange={(e) => {
+                      setLoginPin(e.target.value);
+                      if (loginError.message) setLoginError({ field: null, message: null });
+                    }}
+                    className={`w-full bg-white/5 border ${loginError.field === 'pin' || loginError.field === 'both' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'border-white/10'} rounded-2xl py-5 px-6 pr-16 text-white text-xs font-bold tracking-[0.5em] outline-none focus:border-[#ffb700] focus:shadow-[0_0_15px_rgba(255,183,0,0.3)] transition-all group-hover:border-white/20 focus:bg-white/10`}
                   />
                   <button type="button" onClick={(e) => { e.preventDefault(); setShowPin(!showPin); }} className="absolute right-5 top-1/2 -translate-y-1/2 text-[#ffb700]/50 hover:text-[#ffb700] transition-colors p-2">
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+
+                {loginError.message && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3.5 flex items-center gap-3 animate-in fade-in zoom-in-95">
+                    <AlertCircle className="text-red-500 shrink-0" size={16} />
+                    <p className="text-red-400 text-[10px] font-black uppercase tracking-widest leading-relaxed">{loginError.message}</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas"
+                  disabled={isLoggingIn}
+                  className="flex-1 bg-[#ffb700] py-6 rounded-2xl text-[#001f3f] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-[#ffb700]/90 active:scale-[0.98] transition-all font-bebas flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Ingresar al Sistema
+                  {isLoggingIn ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-[#001f3f]" />
+                      Validando Acceso...
+                    </>
+                  ) : (
+                    "Ingresar al Sistema"
+                  )}
                 </button>
 
                 {biometricAvailable && (
                   <button
                     type="button"
                     onClick={() => handleBiometricLogin()}
-                    disabled={isAuthenticatingBio}
+                    disabled={isAuthenticatingBio || isLoggingIn}
                     className="w-16 md:w-20 relative overflow-hidden bg-blue-600/10 border border-blue-500/40 rounded-2xl flex items-center justify-center text-blue-400 hover:bg-blue-600/20 hover:border-blue-400 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all active:scale-[0.95] disabled:opacity-50 group"
                     title="Acceso Biométrico Múltiple"
                   >

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Agent, UserRole } from '../types';
-import { resetPasswordWithAnswerSupabase as resetPasswordWithAnswer, updateAgentPinSupabase as updateAgentPin, verifyAgentPinSupabase, recoveryAgentPinSupabase } from '../services/supabaseService';
+import { resetPasswordWithAnswerSupabase as resetPasswordWithAnswer, updateAgentPinSupabase as updateAgentPin, verifyAgentPinSupabase, recoveryAgentPinSupabase, fetchAgentByIdSupabase } from '../services/supabaseService';
 import { isBiometricAvailable, authenticateBiometric } from '../services/BiometricService';
 import { trackEvent } from '../firebase-config';
 
@@ -14,6 +14,7 @@ export interface AuthState {
     loginId: string;
     loginPin: string;
     showPin: boolean;
+    isLoggingIn: boolean;
     loginError: { field: 'id' | 'pin' | 'both' | 'biometric' | null; message: string | null };
     showForgotPassword: boolean;
     forgotPasswordStep: 'ID' | 'QUESTION' | 'SUCCESS';
@@ -46,6 +47,7 @@ export function useAuth() {
     const [loginId, setLoginId] = useState(localStorage.getItem('last_login_id') || '');
     const [loginPin, setLoginPin] = useState('');
     const [showPin, setShowPin] = useState(false);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState<{ field: 'id' | 'pin' | 'both' | 'biometric' | null; message: string | null }>({ field: null, message: null });
 
     // --- Session management ---
@@ -157,47 +159,78 @@ export function useAuth() {
     // --- Login ---
     const handleLogin = useCallback(async (e?: React.FormEvent, overrideId?: string) => {
         if (e) e.preventDefault();
+        setLoginError({ field: null, message: null });
+
         const rawId = (overrideId || loginId).trim();
         const effectiveId = rawId.toUpperCase();
         const numericInput = rawId.replace(/[^0-9]/g, '');
 
-        const agents = agentsRef.current;
-        let user = agents.find(a => String(a.id).trim().toUpperCase() === effectiveId);
-        if (!user && numericInput.length > 3) {
-            user = agents.find(a => {
-                const agentNumeric = String(a.id).replace(/[^0-9]/g, '');
-                return agentNumeric.length > 0 && agentNumeric === numericInput;
-            });
-        }
-
-        if (!user) {
-            setLoginError({ field: 'id', message: 'ID DE AGENTE NO ENCONTRADO' });
-            trackEvent('login_fail', { id: effectiveId, reason: 'id_not_found' });
+        if (!rawId) {
+            setLoginError({ field: 'id', message: 'POR FAVOR INGRESA TU ID DE AGENTE' });
             return;
         }
 
-        const isPinValid = await verifyAgentPinSupabase(user.id, loginPin);
+        const inputPin = loginPin.trim();
+        if (!inputPin) {
+            setLoginError({ field: 'pin', message: 'POR FAVOR INGRESA TU PIN DE ACCESO' });
+            return;
+        }
 
-        if (isPinValid) {
-            localStorage.setItem('consagrados_session', JSON.stringify(user));
-            localStorage.setItem('last_login_id', user.id);
-            localStorage.setItem('app_version', APP_VERSION);
-            const now = Date.now();
-            localStorage.setItem('last_active_time', String(now));
+        setIsLoggingIn(true);
+        try {
+            const agents = agentsRef.current || [];
+            let user = agents.find(a => String(a.id).trim().toUpperCase() === effectiveId);
+            if (!user && numericInput.length >= 3) {
+                user = agents.find(a => {
+                    const agentNumeric = String(a.id).replace(/[^0-9]/g, '');
+                    return agentNumeric.length > 0 && agentNumeric === numericInput;
+                });
+            }
 
-            const summary = { id: user.id, name: user.name, photoUrl: user.photoUrl };
-            localStorage.setItem('remembered_user', JSON.stringify(summary));
-            setRememberedUser(summary);
+            // Fallback directo a Supabase para agentes recién creados o no sincronizados aún
+            if (!user) {
+                user = await fetchAgentByIdSupabase(rawId);
+            }
 
-            setLastActiveTime(now);
-            setCurrentUser(user);
-            setIsLoggedIn(true);
-            trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'password' });
-            setLoginError({ field: null, message: null });
-            setLoginPin('');
-        } else {
-            setLoginError({ field: 'pin', message: 'PIN DE SEGURIDAD INCORRECTO' });
-            trackEvent('login_fail', { id: user.id, reason: 'wrong_pin' });
+            if (!user) {
+                setLoginError({ field: 'id', message: 'ID DE AGENTE NO ENCONTRADO EN LA BASE DE DATOS' });
+                trackEvent('login_fail', { id: effectiveId, reason: 'id_not_found' });
+                setIsLoggingIn(false);
+                return;
+            }
+
+            // Validación de PIN: primero localmente y luego con verifyAgentPinSupabase
+            let isPinValid = (String(user.pin).trim() === inputPin);
+            if (!isPinValid) {
+                isPinValid = await verifyAgentPinSupabase(user.id, inputPin);
+            }
+
+            if (isPinValid) {
+                localStorage.setItem('consagrados_session', JSON.stringify(user));
+                localStorage.setItem('last_login_id', user.id);
+                localStorage.setItem('app_version', APP_VERSION);
+                const now = Date.now();
+                localStorage.setItem('last_active_time', String(now));
+
+                const summary = { id: user.id, name: user.name, photoUrl: user.photoUrl };
+                localStorage.setItem('remembered_user', JSON.stringify(summary));
+                setRememberedUser(summary);
+
+                setLastActiveTime(now);
+                setCurrentUser(user);
+                setIsLoggedIn(true);
+                trackEvent('login_success', { agent_id: user.id, role: user.userRole, method: 'password' });
+                setLoginError({ field: null, message: null });
+                setLoginPin('');
+            } else {
+                setLoginError({ field: 'pin', message: 'PIN DE ACCESO INCORRECTO' });
+                trackEvent('login_fail', { id: user.id, reason: 'wrong_pin' });
+            }
+        } catch (err: any) {
+            console.error('Error durante login:', err);
+            setLoginError({ field: 'both', message: 'ERROR DE CONEXIÓN AL VALIDAR. INTENTA DE NUEVO.' });
+        } finally {
+            setIsLoggingIn(false);
         }
     }, [loginId, loginPin]);
     // Note: handleLogin is async now
@@ -501,7 +534,7 @@ export function useAuth() {
 
     return {
         // State
-        isLoggedIn, currentUser, loginId, loginPin, showPin, loginError,
+        isLoggedIn, currentUser, loginId, loginPin, showPin, loginError, isLoggingIn,
         showForgotPassword, forgotPasswordStep, securityAnswerInput, resetError, revealedPin,
         isMustChangeFlow, newPinInput, confirmPinInput, newQuestionInput, newAnswerInput, isUpdatingPin,
         biometricAvailable, isAuthenticatingBio, isRegisteringBio,
@@ -509,7 +542,7 @@ export function useAuth() {
         rememberedUser, showQuickLogin,
 
         // Setters (expose for UI bindings)
-        setLoginId, setLoginPin, setShowPin, setLoginError,
+        setLoginId, setLoginPin, setShowPin, setLoginError, setIsLoggingIn,
         setShowForgotPassword, setForgotPasswordStep, setSecurityAnswerInput, setResetError, setRevealedPin,
         setIsMustChangeFlow, setNewPinInput, setConfirmPinInput, setNewQuestionInput, setNewAnswerInput, setIsUpdatingPin,
         setIsRegisteringBio, setRememberedUser,

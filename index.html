@@ -143,14 +143,17 @@
   <div id="root"></div>
   <script type="module" src="/main_entry.tsx"></script>
   <script>
-    console.log('🚀 SYSTEM_CORE: v2.5.0 (NEW-ENTRY) - TIME: ' + new Date().toLocaleTimeString());
+    console.log('🚀 SYSTEM_CORE: v3.0.0 (OFFICIAL-2026) - TIME: ' + new Date().toLocaleTimeString());
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(registrations => {
         for (let registration of registrations) {
-          registration.unregister().then(success => {
-            if (success) console.log('✅ ServiceWorker UNREGISTERED successfully.');
-          });
+          registration.unregister();
         }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(k => caches.delete(k));
       });
     }
   </script>

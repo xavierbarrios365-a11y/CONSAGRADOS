@@ -533,17 +533,32 @@ export const getStreakMultiplier = (streak: number, active: boolean = true): num
  */
 export const fetchSedesSupabase = async () => {
     try {
-        const { data, error } = await supabase.rpc('fetch_sedes_summary');
-        if (!error && Array.isArray(data) && data.length > 0) {
-            return data;
-        }
-        // Fallback directo a la tabla
         const { data: tableData, error: tableError } = await supabase
             .from('sedes')
             .select('*')
             .order('is_active', { ascending: false });
         if (tableError) throw tableError;
-        return tableData || [];
+        if (tableData && tableData.length > 0) {
+            return tableData.map((s: any) => ({
+                id: s.id,
+                nombre: s.nombre,
+                ciudad: s.ciudad,
+                pais: s.pais,
+                responsableId: s.responsable_id,
+                responsableNombre: s.responsable_nombre,
+                isActive: s.is_active !== false,
+                is_active: s.is_active !== false
+            }));
+        }
+        return [{
+            id: 'SEDE-JESUS-ES-EL-CENTRO',
+            nombre: 'JESÚS ES EL CENTRO',
+            ciudad: 'Caracas',
+            pais: 'Venezuela',
+            responsableNombre: 'DIRECCIÓN GENERAL',
+            isActive: true,
+            is_active: true
+        }];
     } catch (e: any) {
         console.warn('Fallback sedes default:', e.message);
         return [{
@@ -551,7 +566,8 @@ export const fetchSedesSupabase = async () => {
             nombre: 'JESÚS ES EL CENTRO',
             ciudad: 'Caracas',
             pais: 'Venezuela',
-            responsable_nombre: 'DIRECCIÓN GENERAL',
+            responsableNombre: 'DIRECCIÓN GENERAL',
+            isActive: true,
             is_active: true
         }];
     }

@@ -544,12 +544,24 @@ const App: React.FC = () => {
       let active = true;
       const startCamera = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-          });
-          if (videoRef.current && active) {
+          let stream: MediaStream | null = null;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+          } catch (firstErr) {
+            console.warn("Retrying camera with generic constraints...", firstErr);
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          }
+
+          if (videoRef.current && active && stream) {
             videoRef.current.srcObject = stream;
             streamRef.current = stream;
+            try {
+              await videoRef.current.play();
+            } catch (playErr) {
+              console.warn("Video play interrupted:", playErr);
+            }
 
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -557,9 +569,9 @@ const App: React.FC = () => {
             let lastScanTime = 0;
             const scan = () => {
               if (!active) return;
-              if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && context) {
-                const scanWidth = Math.min(videoRef.current.videoWidth, 480);
-                const scanHeight = Math.min(videoRef.current.videoHeight, Math.floor(480 * (videoRef.current.videoHeight / videoRef.current.videoWidth)));
+              if (videoRef.current && videoRef.current.readyState >= 2 && context) {
+                const scanWidth = Math.min(videoRef.current.videoWidth || 480, 480);
+                const scanHeight = Math.min(videoRef.current.videoHeight || 360, Math.floor(480 * ((videoRef.current.videoHeight || 360) / (videoRef.current.videoWidth || 480))));
 
                 canvas.width = scanWidth;
                 canvas.height = scanHeight;
@@ -587,14 +599,18 @@ const App: React.FC = () => {
             };
             setTimeout(scan, 200);
           }
-        } catch (err) {
-          showAlert({ title: "FALLO DE SENSOR", message: "NO SE PUDO ACTIVAR LA CÁMARA.", type: 'ERROR' });
+        } catch (err: any) {
+          console.error("Camera access error:", err);
+          showAlert({ title: "FALLO DE SENSOR", message: "No se pudo acceder a la cámara. Por favor autoriza los permisos de cámara en tu navegador.", type: 'ERROR' });
         }
       };
       startCamera();
       return () => {
         active = false;
-        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
       };
     }
   }, [view, scanStatus]);

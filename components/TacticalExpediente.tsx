@@ -241,12 +241,14 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose,
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-[2px] bg-amber-500/30"></div>
-                                    <h3 className="text-[10px] text-white/40 font-black uppercase tracking-widest font-bebas">Registro Operativo</h3>
+                                    <h3 className="text-[10px] text-white/40 font-black uppercase tracking-widest font-bebas">Identidad y Contacto</h3>
                                 </div>
-                                <div className="space-y-4">
-                                    <MetricRow label="Última Presencia" value={agent.lastAttendance || 'N/A'} isRisk={isAtRisk} icon={<Clock size={12} />} />
-                                    <MetricRow label="Talento Principal" value={agent.talent || 'SIN ASIGNAR'} icon={<Star size={12} />} />
-                                    <MetricRow label="Estado Actual" value={agent.status || 'ACTIVO'} icon={<Activity size={12} />} />
+                                <div className="space-y-3">
+                                    <MetricRow label="Cédula de Identidad" value={agent.cedula || 'NO REGISTRADA'} icon={<Shield size={12} />} />
+                                    <MetricRow label="Correo Electrónico" value={agent.email || 'NO REGISTRADO'} icon={<FileText size={12} />} />
+                                    <MetricRow label="WhatsApp / Teléfono" value={agent.whatsapp || 'NO REGISTRADO'} icon={<Phone size={12} />} />
+                                    <MetricRow label="Telegram / Redes" value={agent.telegram || agent.redesSociales || 'SIN REDES'} icon={<MessageSquare size={12} />} />
+                                    <MetricRow label="Sede Asignada" value={agent.sedeId === 'SEDE-JESUS-ES-EL-CENTRO' ? 'JESÚS ES EL CENTRO' : (agent.sedeId || 'SEDE PRINCIPAL')} icon={<Star size={12} />} />
                                 </div>
                             </div>
 

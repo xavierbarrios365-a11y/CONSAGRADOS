@@ -36,7 +36,7 @@ const TasksModule: React.FC<TasksModuleProps> = ({ agentId, agentName, userRole,
     const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
     const [loadError, setLoadError] = useState<string | null>(null);
 
-    const isDirector = userRole === UserRole.DIRECTOR;
+    const isDirector = userRole === UserRole.DIRECTOR || userRole === UserRole.DIRECTOR_GENERAL;
 
     const loadData = async () => {
         setLoading(true);

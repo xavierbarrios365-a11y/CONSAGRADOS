@@ -250,24 +250,70 @@ export const updateAgentPointsSupabase = async (agentId: string, type: 'BIBLIA' 
 
 export const updateAgentStreaksSupabase = async (agentId: string, isWeekComplete: boolean, tasks: any[], agentName?: string, verseText?: string, verseRef?: string, currentStreak?: number, currentXp?: number) => {
     try {
-        const { data, error } = await supabase.rpc('update_agent_streak_v3', {
-            p_agent_id: agentId,
-            p_tasks: tasks,
-            p_agent_name: agentName || 'Agente',
-            p_verse_text: verseText || '',
-            p_verse_ref: verseRef || ''
-        });
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = yesterdayDate.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 
-        if (error) return { success: false, error: error.message };
+        // Consultar estado actual del agente
+        const { data: agent } = await supabase.from('agentes').select('streak_count, last_streak_date, xp, racha_proteccion').eq('id', agentId).single();
 
-        const { newStreak, shieldUsed, shieldsLeft, alreadyDone } = data as any;
+        let newStreak = 1;
+        let shieldsLeft = agent?.racha_proteccion || 0;
+        let shieldUsed = false;
+        const lastDate = agent?.last_streak_date || '';
+
+        if (lastDate === todayStr) {
+            return {
+                success: true,
+                newStreak: agent?.streak_count || 1,
+                shieldUsed: false,
+                shieldsLeft,
+                alreadyDone: true
+            };
+        }
+
+        if (lastDate === yesterdayStr) {
+            newStreak = (agent?.streak_count || 0) + 1;
+        } else if (lastDate !== '' && shieldsLeft > 0) {
+            shieldUsed = true;
+            shieldsLeft -= 1;
+            newStreak = (agent?.streak_count || 0) + 1;
+        } else {
+            newStreak = 1;
+        }
+
+        // Regla: 1 punto de XP exacto por día de racha
+        const currentTotalXp = (agent?.xp || 0) + 1;
+
+        // Actualizar agente en Supabase
+        await supabase.from('agentes').update({
+            streak_count: newStreak,
+            last_streak_date: todayStr,
+            xp: currentTotalXp,
+            weekly_tasks: tasks,
+            racha_proteccion: shieldsLeft
+        }).eq('id', agentId);
+
+        // Publicar automáticamente al Feed Social / Transmisión
+        try {
+            await supabase.from('historias').insert([{
+                agent_id: agentId,
+                agent_name: agentName || 'Agente',
+                tipo: 'LOGRO',
+                contenido: `🔥 ¡Completó su devocional diario! Racha activa de ${newStreak} día(s) (+1 XP)`,
+                created_at: new Date().toISOString()
+            }]);
+        } catch (feedErr) {
+            console.warn('⚠️ No se pudo publicar al feed:', feedErr);
+        }
 
         return {
             success: true,
             newStreak,
             shieldUsed,
             shieldsLeft,
-            alreadyDone
+            alreadyDone: false
         };
     } catch (err: any) {
         return { success: false, error: err.message };
@@ -512,13 +558,37 @@ export const reconcileXPSupabase = async () => {
 };
 
 /**
- * @description Obtiene el estado de ascenso de un agente.
+ * @description Obtiene el estado de ascenso de un agente con fallback robusto a la tabla.
  */
 export const getPromotionStatusSupabase = async (agentId: string) => {
     try {
+        // 1. Intentar RPC
         const { data, error } = await supabase.rpc('get_promotion_status', { p_agent_id: agentId });
-        if (error) throw error;
-        return { success: true, ...data };
+        if (!error && data) return { success: true, ...data };
+
+        // 2. Fallback directo consultando la tabla agentes
+        const { data: agent, error: agentError } = await supabase
+            .from('agentes')
+            .select('id, xp, rango, weekly_tasks')
+            .eq('id', agentId)
+            .single();
+
+        if (agentError || !agent) throw new Error("Agente no encontrado");
+
+        const { count: certCount } = await supabase
+            .from('academy_progress')
+            .select('*', { count: 'exact', head: true })
+            .eq('agent_id', agentId)
+            .eq('passed', true);
+
+        return {
+            success: true,
+            rank: agent.rango || 'RECLUTA',
+            xp: agent.xp || 0,
+            certificates: certCount || 0,
+            tasksCompleted: Array.isArray(agent.weekly_tasks) ? agent.weekly_tasks.filter((t: any) => t.completed).length : 0,
+            promotionHistory: []
+        };
     } catch (e: any) {
         return { success: false, error: e.message };
     }

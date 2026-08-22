@@ -11,7 +11,7 @@ interface TrainingCenterProps {
     currentUser: Agent;
     setView: (view: AppView) => void;
     onUpdateNeeded: () => void;
-    initialTab?: 'material' | 'misiones' | 'ascenso' | 'guerra';
+    initialTab?: 'material' | 'misiones' | 'ascenso';
 }
 
 const TrainingCenter: React.FC<TrainingCenterProps> = ({
@@ -20,15 +20,12 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
     onUpdateNeeded,
     initialTab = 'material'
 }) => {
-    const [activeTab, setActiveTab] = useState<'material' | 'misiones' | 'ascenso' | 'guerra'>(initialTab);
+    const [activeTab, setActiveTab] = useState<'material' | 'misiones' | 'ascenso'>(initialTab);
 
     const tabs = [
         { id: 'material', label: 'Material', icon: <BookOpen size={18} />, color: 'text-blue-400' },
         { id: 'misiones', label: 'Misiones', icon: <ClipboardList size={18} />, color: 'text-amber-400' },
         { id: 'ascenso', label: 'Ascenso', icon: <ChevronUp size={18} />, color: 'text-[#ffb700]' },
-        ...(currentUser.userRole === 'DIRECTOR' || currentUser.userRole === 'LEADER' ? [
-            { id: 'guerra', label: 'Guerra', icon: <Zap size={18} />, color: 'text-red-400' }
-        ] : []),
     ];
 
     return (
@@ -88,11 +85,6 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
                 {activeTab === 'ascenso' && (
                     <div className="animate-in slide-in-from-right-4 duration-500">
                         <PromotionModule agentId={currentUser.id} agentName={currentUser.name} userRole={currentUser.userRole} onActivity={onUpdateNeeded} />
-                    </div>
-                )}
-                {activeTab === 'guerra' && (
-                    <div className="animate-in slide-in-from-right-4 duration-500 h-[calc(100vh-16rem)] min-h-[600px] bg-black/20 rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                        <BibleWarDirector />
                     </div>
                 )}
             </div>

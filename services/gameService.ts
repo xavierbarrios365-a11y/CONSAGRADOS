@@ -241,12 +241,32 @@ export const verifyTaskSupabase = async (params: { taskId: string, agentId: stri
     try {
         const { error } = await supabase.from('tareas_completadas').update({ status: 'VERIFICADO', verificado: true }).eq('tarea_id', params.taskId).eq('agent_id', params.agentId);
         if (error) throw error;
-        // Si hay que sumar XP, sería otro rpc o update
+
+        const reward = params.xpReward || 5;
+
+        // Sumar XP directamente al agente
         try {
-            if (params.xpReward) {
-                await supabase.rpc('add_xp', { p_agent_id: params.agentId, p_amount: params.xpReward });
+            const { data: agent } = await supabase.from('agentes').select('xp').eq('id', params.agentId).single();
+            if (agent) {
+                await supabase.from('agentes').update({ xp: (agent.xp || 0) + reward }).eq('id', params.agentId);
             }
-        } catch (e) { }
+        } catch (xpErr) {
+            console.warn('Error updating agent XP for task:', xpErr);
+        }
+
+        // Publicar automáticamente al Feed Social / Transmisión
+        try {
+            await supabase.from('historias').insert([{
+                agent_id: params.agentId,
+                agent_name: params.agentName || 'Agente',
+                tipo: 'LOGRO',
+                contenido: `🎖️ ¡Misión completada! ${params.taskTitle || 'Misión táctica'} (+${reward} XP)`,
+                created_at: new Date().toISOString()
+            }]);
+        } catch (feedErr) {
+            console.warn('Error publishing task completion to feed:', feedErr);
+        }
+
         return { success: true };
     } catch (e: any) {
         return { success: false, error: e.message };

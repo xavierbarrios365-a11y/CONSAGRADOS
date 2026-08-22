@@ -69,24 +69,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
         if (!editingAgent) return;
         setIsSaving(true);
         try {
-            const { error } = await supabase.rpc('update_agent_admin', {
-                p_id: editingAgent.id,
-                p_nombre: editingAgent.name || null,
-                p_xp: editingAgent.xp ?? 0,
-                p_rango: editingAgent.rank || null,
-                p_cargo: editingAgent.role || null,
-                p_whatsapp: editingAgent.whatsapp || null,
-                p_pin: editingAgent.pin || null,
-                p_foto_url: editingAgent.photoUrl || null,
-                p_birthday: editingAgent.birthday || null,
-                p_status: editingAgent.status || null,
-                p_user_role: editingAgent.userRole || null,
-                p_talent: editingAgent.talent || null,
-                p_baptism_status: editingAgent.baptismStatus || null,
-                p_relationship_with_god: editingAgent.relationshipWithGod || null,
-                p_streak_count: editingAgent.streakCount ?? null
-            });
+            const updatePayload: any = {
+                nombre: editingAgent.name || null,
+                xp: editingAgent.xp ?? 0,
+                rango: editingAgent.rank || null,
+                cargo: editingAgent.role || null,
+                whatsapp: editingAgent.whatsapp || null,
+                pin: editingAgent.pin || null,
+                foto_url: editingAgent.photoUrl || null,
+                birthday: editingAgent.birthday || null,
+                status: editingAgent.status || null,
+                user_role: editingAgent.userRole || null,
+                talent: editingAgent.talent || null,
+                baptism_status: editingAgent.baptismStatus || null,
+                relationship_with_god: editingAgent.relationshipWithGod || null,
+                streak_count: editingAgent.streakCount ?? null,
+                sede_id: editingAgent.sedeId || 'SEDE-JESUS-ES-EL-CENTRO'
+            };
+            if (editingAgent.cedula) updatePayload.cedula = editingAgent.cedula;
+            if (editingAgent.email) updatePayload.email = editingAgent.email;
+            if (editingAgent.telegram) updatePayload.telegram = editingAgent.telegram;
+            if (editingAgent.redesSociales) updatePayload.redes_sociales = editingAgent.redesSociales;
 
+            const { error } = await supabase.from('agentes').update(updatePayload).eq('id', editingAgent.id);
             if (error) throw error;
 
             // Update local state
@@ -103,7 +108,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onClose, o
     };
 
 
-    if (currentUser?.userRole !== UserRole.DIRECTOR) {
+    const isDirectorOrHigher = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.DIRECTOR_GENERAL || currentUser?.id === 'CON-1011';
+    if (!isDirectorOrHigher) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-center animate-in slide-in-from-bottom-4">
                 <ShieldAlert size={64} className="text-red-500 mb-4 animate-pulse" />

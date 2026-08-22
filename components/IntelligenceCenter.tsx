@@ -228,7 +228,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (res.success) loadBanners();
   };
 
-  const isDirectorGeneral = userRole === UserRole.DIRECTOR_GENERAL || currentUser?.userRole === UserRole.DIRECTOR_GENERAL || currentUser?.id === 'CON-1011';
+  const isDirectorGeneral = userRole === UserRole.DIRECTOR_GENERAL || userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.DIRECTOR_GENERAL || currentUser?.userRole === UserRole.DIRECTOR || currentUser?.id === 'CON-1011';
 
   const [sedes, setSedes] = useState<any[]>([]);
   const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
@@ -295,13 +295,9 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   };
 
   const displayedAgents = React.useMemo(() => {
-    if (!isDirectorGeneral) {
-      const mySede = currentUser?.sedeId || 'SEDE-JESUS-ES-EL-CENTRO';
-      return agents.filter(a => (a.sedeId || 'SEDE-JESUS-ES-EL-CENTRO') === mySede);
-    }
     if (selectedSedeId === 'GLOBAL') return agents;
     return agents.filter(a => (a.sedeId || 'SEDE-JESUS-ES-EL-CENTRO') === selectedSedeId);
-  }, [agents, selectedSedeId, isDirectorGeneral, currentUser]);
+  }, [agents, selectedSedeId]);
 
   const agent = displayedAgents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || displayedAgents[0] || agents[0];
 
@@ -737,18 +733,6 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         )}
 
-        {/* INDICADOR PARA DIRECTOR DE SEDE LOCAL */}
-        {!isDirectorGeneral && (userRole === UserRole.DIRECTOR) && (
-          <div className="bg-[#001428] border border-blue-500/20 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Shield className="text-blue-400" size={18} />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/80 font-bebas">
-                Sede Asignada: <span className="text-[#ffb700]">{sedes.find(s => s.id === currentUser?.sedeId)?.nombre || 'JESÚS ES EL CENTRO'}</span>
-              </span>
-            </div>
-            <span className="text-[8px] font-bold uppercase tracking-widest text-white/40">Visión Local Restringida</span>
-          </div>
-        )}
 
         {/* PANEL DE CONTROL DE ALTO MANDO */}
         {(userRole === UserRole.DIRECTOR || userRole === UserRole.DIRECTOR_GENERAL) && (
@@ -1255,6 +1239,29 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
                       }
                       return null;
                     })()}
+                  </div>
+
+                  {/* ASIGNACIÓN DE SEDE DIRECTA */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl p-3.5 mt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+                    <div>
+                      <span className="text-[7px] text-[#ffb700] font-black uppercase tracking-widest block">Sede Asignada</span>
+                      <span className="text-[11px] font-black text-white uppercase font-bebas">
+                        {sedes.find(s => s.id === (agent.sedeId || 'SEDE-JESUS-ES-EL-CENTRO'))?.nombre || 'JESÚS ES EL CENTRO'}
+                      </span>
+                    </div>
+                    {isDirectorGeneral && (
+                      <select
+                        value={agent.sedeId || 'SEDE-JESUS-ES-EL-CENTRO'}
+                        onChange={(e) => handleReassignAgentSede(agent.id, e.target.value)}
+                        className="bg-black/60 border border-[#ffb700]/30 rounded-xl px-3 py-1.5 text-[10px] font-black text-[#ffb700] uppercase font-bebas outline-none w-full sm:w-auto"
+                      >
+                        {sedes.map(s => (
+                          <option key={s.id} value={s.id} className="bg-[#001f3f] text-white">
+                            🏛️ {s.nombre} ({s.ciudad || 'Vnzla'})
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="bg-indigo-950/20 border border-indigo-500/10 rounded-2xl p-4 mt-2">

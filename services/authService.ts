@@ -94,12 +94,72 @@ export const resetPasswordWithAnswerSupabase = async (id: string, answer: string
 };
 
 /**
- * @description Registra un nuevo agente desde el formulario de enrolamiento.
+ * @description Registra un nuevo agente desde el formulario de enrolamiento con prevención de duplicados por Cédula, Email y Teléfono.
  */
 export const enrollAgentSupabase = async (formData: any) => {
     try {
+        const cleanCedula = (formData.cedula || '').trim().toUpperCase().replace(/\s+/g, '');
+        const cleanEmail = (formData.email || '').trim().toLowerCase();
+        const cleanWhatsapp = (formData.whatsapp || '').trim();
+
+        // 1. Verificación de Cédula Duplicada
+        if (cleanCedula) {
+            const { data: existingByCedula } = await supabase
+                .from('agentes')
+                .select('id, nombre, tactical_stats')
+                .filter('tactical_stats->>cedula', 'eq', cleanCedula)
+                .maybeSingle();
+
+            if (existingByCedula) {
+                return {
+                    success: false,
+                    error: `⚠️ Esta Cédula (${cleanCedula}) ya está registrada a nombre de ${existingByCedula.nombre} (ID: ${existingByCedula.id}). Si olvidaste tu PIN, regresa al inicio y selecciona "¿Olvidaste tu PIN?".`
+                };
+            }
+        }
+
+        // 2. Verificación de Teléfono / WhatsApp Duplicado
+        if (cleanWhatsapp) {
+            const { data: existingByPhone } = await supabase
+                .from('agentes')
+                .select('id, nombre, whatsapp')
+                .eq('whatsapp', cleanWhatsapp)
+                .maybeSingle();
+
+            if (existingByPhone) {
+                return {
+                    success: false,
+                    error: `⚠️ Este número de WhatsApp (${cleanWhatsapp}) ya pertenece a ${existingByPhone.nombre} (ID: ${existingByPhone.id}).`
+                };
+            }
+        }
+
+        // 3. Verificación de Correo Electrónico Duplicado
+        if (cleanEmail) {
+            const { data: existingByEmail } = await supabase
+                .from('agentes')
+                .select('id, nombre, tactical_stats')
+                .filter('tactical_stats->>email', 'eq', cleanEmail)
+                .maybeSingle();
+
+            if (existingByEmail) {
+                return {
+                    success: false,
+                    error: `⚠️ Este correo electrónico (${cleanEmail}) ya está registrado a nombre de ${existingByEmail.nombre} (ID: ${existingByEmail.id}).`
+                };
+            }
+        }
+
         const generatedPin = (formData.pin && formData.pin.trim()) ? formData.pin.trim() : Math.floor(1000 + Math.random() * 9000).toString();
         const role = formData.userRole || (formData.nivel === 'DIRECTOR_GENERAL' ? 'DIRECTOR_GENERAL' : formData.nivel === 'DIRECTOR' ? 'DIRECTOR' : formData.nivel === 'LIDER' ? 'LEADER' : 'STUDENT');
+
+        const tacticalStatsData = {
+            cedula: cleanCedula || null,
+            email: cleanEmail || null,
+            telegram: (formData.telegram || '').trim() || null,
+            redes_sociales: (formData.redesSociales || formData.instagram || '').trim() || null,
+            referido_por: (formData.referidoPor || '').trim() || null
+        };
 
         let attempts = 0;
         let lastError: any = null;
@@ -111,7 +171,7 @@ export const enrollAgentSupabase = async (formData: any) => {
             const payload: any = {
                 id: generatedId,
                 nombre: formData.nombre.trim().toUpperCase(),
-                whatsapp: formData.whatsapp.trim(),
+                whatsapp: cleanWhatsapp,
                 pin: generatedPin,
                 user_role: role,
                 rango: formData.rango || (role === 'DIRECTOR_GENERAL' ? 'DIRECTOR GENERAL' : role === 'DIRECTOR' ? 'DIRECTOR' : role === 'LEADER' ? 'LÍDER TÁCTICO' : 'RECLUTA'),
@@ -126,7 +186,8 @@ export const enrollAgentSupabase = async (formData: any) => {
                 birthday: formData.fechaNacimiento || formData.birthday || null,
                 security_question: formData.preguntaSeguridad || formData.securityQuestion || null,
                 security_answer: formData.respuestaSeguridad || formData.securityAnswer || null,
-                sede_id: formData.sedeId || formData.sede_id || 'SEDE-JESUS-ES-EL-CENTRO'
+                sede_id: formData.sedeId || formData.sede_id || 'SEDE-JESUS-ES-EL-CENTRO',
+                tactical_stats: tacticalStatsData
             };
 
             const { data, error } = await supabase.from('agentes').insert([payload]).select();

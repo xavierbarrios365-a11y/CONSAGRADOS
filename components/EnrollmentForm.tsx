@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2, Copy, Check, ArrowRight, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
+import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2, Copy, Check, ArrowRight, ShieldCheck, Sparkles, Building2, User, CreditCard, Mail, Phone, Send, AtSign, KeyRound } from 'lucide-react';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { enrollAgentSupabase, fetchSedesSupabase } from '../services/supabaseService';
 import { sendTelegramAlert } from '../services/notifyService';
@@ -18,7 +18,11 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [formData, setFormData] = useState({
     nombre: '',
+    cedula: '',
+    email: '',
     whatsapp: '',
+    telegram: '',
+    redesSociales: '',
     sedeId: 'SEDE-JESUS-ES-EL-CENTRO',
     talento: '',
     bautizado: 'NO',
@@ -71,12 +75,25 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
     e.preventDefault();
     setError('');
 
+    // --- VALIDACIONES DE CAMPOS OBLIGATORIOS ---
     if (!formData.nombre.trim()) {
-      setError("Por favor ingresa tu nombre y apellido.");
+      setError("Por favor ingresa tu Nombre y Apellido.");
+      return;
+    }
+    if (!formData.cedula.trim()) {
+      setError("Por favor ingresa tu Cédula de Identidad (Requerido para evitar duplicados).");
+      return;
+    }
+    if (!formData.email.trim() || !formData.email.includes('@') || !formData.email.includes('.')) {
+      setError("Por favor ingresa un Correo Electrónico válido (ej. correo@gmail.com).");
       return;
     }
     if (!formData.whatsapp.trim()) {
-      setError("Por favor ingresa tu número de WhatsApp.");
+      setError("Por favor ingresa tu número de WhatsApp / Teléfono.");
+      return;
+    }
+    if (!formData.respuestaSeguridad.trim()) {
+      setError("Por favor define la respuesta a tu Pregunta Secreta (para recuperar tu PIN si lo olvidas).");
       return;
     }
 
@@ -120,8 +137,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
       const currentSedeName = selectedSedeObj?.nombre || 'JESÚS ES EL CENTRO';
 
       // 3. Notificar a Telegram
-      const appUrl = window.location.origin;
-      const telegramMessage = `✅ <b>NUEVO RECLUTA REGISTRADO</b>\n\nUn nuevo agente se ha incorporado a las filas.\n\n<b>• Nombre:</b> ${formData.nombre.toUpperCase()}\n<b>• Sede:</b> ${currentSedeName}\n<b>• ID Táctico:</b> <code>${enrollResult.newId}</code>\n<b>• PIN:</b> <code>${enrollResult.newPin}</code>\n<b>• WhatsApp:</b> ${formData.whatsapp}\n<b>• Talento:</b> ${formData.talento || 'Por definir'}\n\n<i>Acceso táctico listo para despliegue.</i>`;
+      const telegramMessage = `✅ <b>NUEVO RECLUTA REGISTRADO</b>\n\nUn nuevo agente se ha incorporado a las filas.\n\n<b>• Nombre:</b> ${formData.nombre.toUpperCase()}\n<b>• Cédula:</b> <code>${formData.cedula.toUpperCase()}</code>\n<b>• Correo:</b> ${formData.email}\n<b>• Sede:</b> ${currentSedeName}\n<b>• ID Táctico:</b> <code>${enrollResult.newId}</code>\n<b>• PIN:</b> <code>${enrollResult.newPin}</code>\n<b>• WhatsApp:</b> ${formData.whatsapp}\n<b>• Telegram:</b> ${formData.telegram || 'No indicado'}\n<b>• Redes:</b> ${formData.redesSociales || 'No indicado'}\n<b>• Talento:</b> ${formData.talento || 'Por definir'}\n\n<i>Acceso táctico listo para despliegue.</i>`;
       sendTelegramAlert(telegramMessage).catch(() => {});
 
       setStatus('SUCCESS');
@@ -135,7 +151,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
       tacticalSound.playErrorBuzz();
       setStatus('ERROR');
       setError(enrollResult.error || 'Error al registrar el agente.');
-      setTimeout(() => setStatus('IDLE'), 4000);
+      setTimeout(() => setStatus('IDLE'), 5000);
     }
   };
 
@@ -222,10 +238,10 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
             <h2 className="text-3xl font-bebas font-bold text-white tracking-widest leading-none">
               REGISTRO DE AGENTE
             </h2>
-            <p className="text-xs text-white/50">Completa tus datos para recibir tu ID Táctico y PIN de acceso.</p>
+            <p className="text-xs text-white/50">Completa tus datos obligatorios para recibir tu ID Táctico y PIN personal.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
             {/* Foto de Perfil Opcional */}
@@ -244,68 +260,143 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
               )}
             </div>
 
-            {/* 1. Nombre Completo */}
-            <InputField
-              label="Nombre y Apellido *"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-              placeholder="EJ. DAVID MENDOZA"
-            />
+            {/* SECCIÓN 1: DATOS OBLIGATORIOS PRINCIPALES */}
+            <div className="space-y-3.5">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-1.5">
+                <ShieldCheck size={14} className="text-[#ffb700]" />
+                <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-widest font-bebas">
+                  Datos de Identidad (Obligatorios)
+                </span>
+              </div>
 
-            {/* 2. Sede de Pertenencia */}
-            <div>
-              <label className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">
-                🏛️ Sede / Iglesia a la que perteneces *
-              </label>
-              <select
-                name="sedeId"
-                value={formData.sedeId}
+              {/* 1. Nombre Completo */}
+              <InputField
+                label="Nombre y Apellido *"
+                name="nombre"
+                value={formData.nombre}
                 onChange={handleChange}
-                className="w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 px-4 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat"
-              >
-                {sedes.map(s => (
-                  <option key={s.id} value={s.id} className="bg-[#001428] text-white">
-                    🏛️ {s.nombre} {s.ciudad ? `(${s.ciudad})` : ''}
-                  </option>
-                ))}
-              </select>
+                placeholder="EJ. DAVID MENDOZA"
+                icon={<User size={14} className="text-white/40" />}
+                required
+              />
+
+              {/* 2. Cédula de Identidad (Anti-duplicados) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <InputField
+                  label="Cédula de Identidad *"
+                  name="cedula"
+                  value={formData.cedula}
+                  onChange={handleChange}
+                  placeholder="EJ. V-12345678"
+                  icon={<CreditCard size={14} className="text-white/40" />}
+                  required
+                />
+
+                <InputField
+                  label="Correo Electrónico *"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="EJ. AGENTE@GMAIL.COM"
+                  icon={<Mail size={14} className="text-white/40" />}
+                  required
+                />
+              </div>
+
+              {/* 3. WhatsApp y Sede */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <InputField
+                  label="WhatsApp / Teléfono *"
+                  name="whatsapp"
+                  value={formData.whatsapp}
+                  onChange={handleChange}
+                  placeholder="EJ. +58 412 1234567"
+                  icon={<Phone size={14} className="text-white/40" />}
+                  required
+                />
+
+                <div>
+                  <label className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">
+                    🏛️ Sede / Iglesia *
+                  </label>
+                  <select
+                    name="sedeId"
+                    value={formData.sedeId}
+                    onChange={handleChange}
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat"
+                  >
+                    {sedes.map(s => (
+                      <option key={s.id} value={s.id} className="bg-[#001428] text-white">
+                        🏛️ {s.nombre} {s.ciudad ? `(${s.ciudad})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
-            {/* 3. WhatsApp y Fecha de Nacimiento */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InputField
-                label="WhatsApp / Teléfono *"
-                name="whatsapp"
-                value={formData.whatsapp}
-                onChange={handleChange}
-                placeholder="EJ. +58 412 1234567"
-              />
-              <InputField
-                label="Fecha de Nacimiento"
-                name="fechaNacimiento"
-                value={formData.fechaNacimiento}
-                onChange={handleChange}
-                type="date"
-              />
+            {/* SECCIÓN 2: REDES Y COMUNICACIÓN (OPCIONALES) */}
+            <div className="space-y-3.5 pt-2">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-1.5">
+                <Send size={14} className="text-[#ffb700]" />
+                <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-widest font-bebas">
+                  Canales Digitales (Opcional)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <InputField
+                  label="Usuario de Telegram"
+                  name="telegram"
+                  value={formData.telegram}
+                  onChange={handleChange}
+                  placeholder="EJ. @MiUsuario"
+                  icon={<Send size={14} className="text-white/40" />}
+                />
+                <InputField
+                  label="Instagram / Redes Sociales"
+                  name="redesSociales"
+                  value={formData.redesSociales}
+                  onChange={handleChange}
+                  placeholder="EJ. @MiInstagram"
+                  icon={<AtSign size={14} className="text-white/40" />}
+                />
+              </div>
             </div>
 
-            {/* 4. Talento y ¿Bautizado? */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InputField
-                label="Talento / Área de Servicio"
-                name="talento"
-                value={formData.talento}
-                onChange={handleChange}
-                placeholder="EJ. MÚSICA, MEDIOS, LIDERAZGO"
-              />
-              <SelectField
-                label="¿Estás Bautizado?"
-                name="bautizado"
-                value={formData.bautizado}
-                onChange={handleChange}
-                options={['NO', 'SÍ']}
-              />
+            {/* SECCIÓN 3: SERVICIO Y MEMBRESÍA */}
+            <div className="space-y-3.5 pt-2">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-1.5">
+                <Sparkles size={14} className="text-[#ffb700]" />
+                <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-widest font-bebas">
+                  Servicio y Vocación
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <InputField
+                  label="Talento / Área"
+                  name="talento"
+                  value={formData.talento}
+                  onChange={handleChange}
+                  placeholder="EJ. MÚSICA, MEDIOS"
+                />
+                <SelectField
+                  label="¿Estás Bautizado?"
+                  name="bautizado"
+                  value={formData.bautizado}
+                  onChange={handleChange}
+                  options={['NO', 'SÍ']}
+                />
+                <InputField
+                  label="Fecha Nacimiento"
+                  name="fechaNacimiento"
+                  value={formData.fechaNacimiento}
+                  onChange={handleChange}
+                  type="date"
+                />
+              </div>
             </div>
 
             {/* Si es Director General registrando a un líder/director */}
@@ -330,40 +421,48 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
               </div>
             )}
 
-            {/* 5. Pregunta de Seguridad para Recuperar PIN */}
-            <div className="border-t border-white/5 pt-4 mt-4 space-y-3">
-              <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-wider font-bebas">
-                🔐 Recuperación de Contraseña
-              </p>
+            {/* SECCIÓN 4: RECUPERACIÓN DE SEGURIDAD */}
+            <div className="border-t border-white/10 pt-3 mt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <KeyRound size={14} className="text-[#ffb700]" />
+                <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-widest font-bebas">
+                  🔐 Llave Secreta para Recuperar tu Contraseña *
+                </span>
+              </div>
               <InputField
-                label="Pregunta Secreta"
+                label="Pregunta Secreta *"
                 name="preguntaSeguridad"
                 value={formData.preguntaSeguridad}
                 onChange={handleChange}
-                placeholder="EJ. ¿NOMBRE DE TU MASCOTA O VERSÍCULO?"
+                placeholder="EJ. ¿CUÁL ES TU VERSÍCULO FAVORITO?"
+                required
               />
               <InputField
-                label="Respuesta Secreta"
+                label="Respuesta Secreta *"
                 name="respuestaSeguridad"
                 value={formData.respuestaSeguridad}
                 onChange={handleChange}
                 placeholder="TU RESPUESTA SECRETA..."
+                required
               />
             </div>
 
             {error && (
-              <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-xs font-bold">
-                {error}
+              <div className="text-left text-red-400 bg-red-500/10 border border-red-500/30 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 animate-in shake duration-300">
+                <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={16} />
+                <div className="space-y-1">
+                  <p className="text-red-300 font-bold leading-relaxed">{error}</p>
+                </div>
               </div>
             )}
 
             <button
               type="submit"
               disabled={status !== 'IDLE'}
-              className="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all font-bebas bg-gradient-to-r from-[#ffb700] to-yellow-500 text-[#001f3f] shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all font-bebas bg-gradient-to-r from-[#ffb700] to-yellow-500 text-[#001f3f] shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
               {status === 'UPLOADING' ? <><Loader2 size={16} className="animate-spin" /> Subiendo Foto...</> :
-               status === 'SUBMITTING' ? <><Loader2 size={16} className="animate-spin" /> Registrando Agente...</> :
+               status === 'SUBMITTING' ? <><Loader2 size={16} className="animate-spin" /> Verificando y Registrando...</> :
                status === 'SUCCESS' ? <><CheckCircle2 size={16} /> ¡Agente Registrado!</> :
                status === 'ERROR' ? <><AlertCircle size={16} /> Error en Registro</> :
                <><Save size={16} /> Completar Registro Táctico</>}
@@ -375,10 +474,13 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
   );
 };
 
-const InputField = ({ label, ...props }: any) => (
+const InputField = ({ label, icon, ...props }: any) => (
   <div>
     <label className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">{label}</label>
-    <input {...props} className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 px-4 text-white text-xs font-medium outline-none focus:border-[#ffb700] transition-all font-montserrat placeholder-white/20" />
+    <div className="relative">
+      <input {...props} className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 px-4 text-white text-xs font-medium outline-none focus:border-[#ffb700] transition-all font-montserrat placeholder-white/20" />
+      {icon && <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">{icon}</div>}
+    </div>
   </div>
 );
 

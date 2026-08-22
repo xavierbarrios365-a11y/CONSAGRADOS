@@ -33,9 +33,10 @@ const getPromotionStatus = (agent: Agent): string => {
 };
 
 const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, onAgentClick, onChallenge }) => {
-    const [activeTab, setActiveTab] = useState<string>('RECLUTA');
+    const [activeTab, setActiveTab] = useState<string>('GLOBAL');
 
     const rankingTabs = [
+        { id: 'GLOBAL', label: 'General', icon: <Trophy size={14} />, color: 'gold' },
         { id: 'RECLUTA', label: 'Reclutas', icon: <Shield size={14} />, color: 'gray' },
         { id: 'ACTIVO', label: 'Activos', icon: <Target size={14} />, color: 'blue-sky' },
         { id: 'CONSAGRADO', label: 'Consagrados', icon: <Award size={14} />, color: 'purple' },
@@ -46,6 +47,8 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
     const filteredAgents = agents.filter(a => {
         // Ocultar perfiles de prueba y marcados como OCULTO
         if (a.id === 'CON-TEST1' || a.id === 'CON-TEST2' || a.status === 'OCULTO') return false;
+
+        if (activeTab === 'GLOBAL') return true;
 
         // Normalización Táctica: Ignorar acentos y mayúsculas para el filtrado
         const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -60,38 +63,16 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
         .sort((a, b) => b.xp - a.xp)
         .map((agent, index) => ({ ...agent, position: index + 1 }));
 
-    // --- AUTO-CYCLE AND SWIPE LOGIC ---
-    const [lastInteractionTime, setLastInteractionTime] = useState<number>(Date.now());
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-    const handleInteraction = React.useCallback(() => {
-        setLastInteractionTime(Date.now());
-    }, []);
-
-    React.useEffect(() => {
-        const interval = setInterval(() => {
-            if (Date.now() - lastInteractionTime >= 5000) {
-                setActiveTab(current => {
-                    const currentIndex = rankingTabs.findIndex(t => t.id === current);
-                    const nextIndex = (currentIndex + 1) % rankingTabs.length;
-                    return rankingTabs[nextIndex].id;
-                });
-                setLastInteractionTime(Date.now()); // Reset to prevent rapid firing
-            }
-        }, 500); // Check every 500ms
-        return () => clearInterval(interval);
-    }, [lastInteractionTime, rankingTabs]);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         setTouchEnd(null);
         setTouchStart(e.targetTouches[0].clientX);
-        handleInteraction();
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         setTouchEnd(e.targetTouches[0].clientX);
-        handleInteraction();
     };
 
     const handleTouchEnd = () => {
@@ -112,7 +93,6 @@ const TacticalRanking: React.FC<TacticalRankingProps> = ({ agents, currentUser, 
                 }
             });
         }
-        handleInteraction();
     };
 
     // --- POSITION CHANGE TRACKING ---

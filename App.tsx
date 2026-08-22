@@ -1,12 +1,3 @@
-// --- PURGE SYSTEM: FORZAR RECARGA PARA LIMPIAR CACHÉ ANTIGUO ---
-const APP_PURGE_VERSION = '2026_PURGE_V6_PRESENCE_FIX_V4_DEPLOY_AUTH';
-if (typeof window !== 'undefined') {
-  if (localStorage.getItem('APP_PURGE_ID') !== APP_PURGE_VERSION) {
-    localStorage.setItem('APP_PURGE_ID', APP_PURGE_VERSION);
-    window.location.reload();
-  }
-}
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
@@ -197,7 +188,21 @@ const App: React.FC = () => {
 
   const hasSession = !!localStorage.getItem('consagrados_session');
   const storedView = localStorage.getItem('current_view') as AppView | null;
-  const [view, setView] = useState<AppView>(hasSession ? (storedView || AppView.HOME) : AppView.PUBLIC_WEB);
+  const [view, setView] = useState<AppView>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get('view') || params.get('v') || params.get('tab');
+    if (v) {
+      const vLower = v.toLowerCase();
+      if (vLower === 'registro' || vLower === 'enrollment' || vLower === 'reclutar' || vLower === 'enroll') {
+        return AppView.ENROLLMENT;
+      }
+      if (vLower === 'ranking') return AppView.RANKING;
+      if (vLower === 'academia' || vLower === 'academy') return AppView.ACADEMIA;
+      if (vLower === 'biblia' || vLower === 'bible') return AppView.BIBLE;
+      if (vLower === 'landing' || vLower === 'inversion') return AppView.LANDING;
+    }
+    return hasSession ? (storedView || AppView.HOME) : AppView.PUBLIC_WEB;
+  });
   const [lastStreakNotif, setLastStreakNotif] = useState<string | null>(() => localStorage.getItem('last_streak_notif'));
 
   useEffect(() => {
@@ -594,30 +599,6 @@ const App: React.FC = () => {
     }
   }, [view, scanStatus]);
 
-  // --- SECURITY: ANTI-SCREENSHOT FOR STUDENTS ---
-  useEffect(() => {
-    if (isLoggedIn && currentUser?.userRole === UserRole.STUDENT) {
-      const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-      const handleBlur = () => { document.body.classList.add('tactical-blackout'); };
-      const handleFocus = () => { document.body.classList.remove('tactical-blackout'); };
-
-      document.addEventListener('contextmenu', handleContextMenu);
-      window.addEventListener('blur', handleBlur);
-      window.addEventListener('focus', handleFocus);
-      document.body.style.userSelect = 'none';
-      document.body.style.webkitUserSelect = 'none';
-
-      return () => {
-        document.removeEventListener('contextmenu', handleContextMenu);
-        window.removeEventListener('blur', handleBlur);
-        window.removeEventListener('focus', handleFocus);
-        document.body.style.userSelect = '';
-        document.body.style.webkitUserSelect = '';
-      };
-    }
-  }, [isLoggedIn, currentUser]);
-
-
   const effectiveRole = viewingAsRole || currentUser?.userRole || UserRole.STUDENT;
 
   const renderContent = () => {
@@ -814,8 +795,52 @@ const App: React.FC = () => {
     );
   }
 
+  // VISTA PÚBLICA DE RECLUTAMIENTO / REGISTRO
+  if (view === AppView.ENROLLMENT && !isLoggedIn) {
+    return (
+      <TacticalAlertProvider>
+        <div className="min-h-screen bg-[#001428] p-4 md:p-8 flex flex-col items-center justify-center font-montserrat">
+          <div className="w-full max-w-xl space-y-6">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setView(AppView.PUBLIC_WEB)}
+                className="text-xs text-white/50 hover:text-[#ffb700] uppercase font-bebas tracking-wider"
+              >
+                ← Volver al Portal
+              </button>
+              <span className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.3em] font-bebas">
+                Reclutamiento Consagrados 2026
+              </span>
+            </div>
+            <EnrollmentForm
+              onSuccess={() => {
+                syncData();
+                setView(AppView.HOME);
+              }}
+              agents={agents}
+              onDirectLogin={(id, pin) => {
+                setLoginId(id);
+                setLoginPin(pin);
+                setView(AppView.HOME);
+              }}
+            />
+          </div>
+        </div>
+      </TacticalAlertProvider>
+    );
+  }
+
   // VISTA DE LANDING (PÚBLICA)
-  // VISTA DE AUTORIZACIÓN (PÚBLICA / COMPARTIBLE)
+  if (view === AppView.LANDING && !isLoggedIn) {
+    return (
+      <TacticalAlertProvider>
+        <React.Suspense fallback={<LoadingScreen message="CARGANDO PLAN DE INVERSIÓN..." />}>
+          <LandingInversion onBack={() => setView(AppView.PUBLIC_WEB)} />
+        </React.Suspense>
+      </TacticalAlertProvider>
+    );
+  }
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#001f3f] relative overflow-hidden font-montserrat">
@@ -1107,6 +1132,15 @@ const App: React.FC = () => {
               </div>
 
               <div className="pt-4 flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setView(AppView.ENROLLMENT)}
+                  className="w-full bg-[#ffb700]/15 border border-[#ffb700]/40 py-4 rounded-2xl text-[#ffb700] font-bebas text-lg tracking-widest hover:bg-[#ffb700]/25 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <UserPlus size={18} />
+                  ¿NUEVO RECLUTA? REGÍSTRATE AQUÍ
+                </button>
+
                 <button
                   type="button"
                   className="text-[8px] text-white/30 font-black uppercase tracking-widest hover:text-[#ffb700] transition-colors"

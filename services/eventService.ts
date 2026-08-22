@@ -55,10 +55,12 @@ export const registerVisitorSupabase = async (
  */
 export const fetchActiveEventsSupabase = async () => {
     try {
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
         const { data, error } = await supabase
             .from('eventos')
             .select('*')
             .eq('activo', true)
+            .gte('fecha', todayStr)
             .order('fecha', { ascending: true });
         if (error) throw error;
         return data || [];

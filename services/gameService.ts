@@ -104,7 +104,7 @@ export const fetchAcademyDataSupabase = async (agentId?: string) => {
                 courseId: l.course_id,
                 order: l.order_index,
                 title: l.title,
-                videoUrl: l.embed_url,
+                videoUrl: l.video_url || l.embed_url || '',
                 content: l.content,
                 questions: parsedQ,
                 xpReward: l.xp_reward || (parsedJsonObj?.xpReward) || 0,

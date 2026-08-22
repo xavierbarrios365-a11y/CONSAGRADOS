@@ -116,21 +116,7 @@ export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?
             name: d.nombre,
             xp: d.xp || 0,
             iqLevel: d.iq_level || 1,
-            rank: (() => {
-                const name = String(d.nombre || '').toUpperCase();
-                const role = String(d.user_role || '').toUpperCase();
-                const cargo = String(d.cargo || '').toUpperCase();
-                const dbRank = (d.rango || 'RECLUTA').toUpperCase();
-
-                const knownStaffNames = ['SAHEL', 'SOLISBETH', 'NAILETH', 'ANTONELLA', 'DAVID JOEL'];
-                if (knownStaffNames.some(sn => name.includes(sn))) return Rank.LIDER;
-
-                const staffKeywords = ['DIRECTOR', 'DIRECTORA', 'PASTORAL', 'IDENTIDAD', 'DINÁMICAS', 'EVIDENCIA', 'CENTRO DE OPERACIÓN', 'ADMINISTRADOR', 'ADMINISTRADORA'];
-                if (staffKeywords.some(kw => cargo.includes(kw) || role.includes(kw))) {
-                    return Rank.LIDER;
-                }
-                return dbRank;
-            })(),
+            rank: (d.rango || 'RECLUTA').toUpperCase(),
             role: d.cargo || 'ESTUDIANTE',
             whatsapp: d.whatsapp || '',
             photoUrl: d.foto_url || '',
@@ -141,20 +127,13 @@ export const fetchAgentsFromSupabase = async (includeHidden = false, callerRole?
             talent: d.talent || 'PENDIENTE',
             baptismStatus: d.baptism_status || 'NO',
             status: d.status || 'ACTIVO',
+            sedeId: d.sede_id || 'SEDE-JESUS-ES-EL-CENTRO',
             userRole: (() => {
-                const name = String(d.nombre || '').toUpperCase();
                 const role = String(d.user_role || '').toUpperCase();
                 const cargo = String(d.cargo || '').toUpperCase();
-
-                if (name.includes('SAHEL') || role === 'DIRECTOR' || cargo === 'DIRECTOR') return UserRole.DIRECTOR;
-
-                const staffKeywords = ['LIDER', 'LÍDER', 'LEADER', 'PASTORAL', 'IDENTIDAD', 'DINÁMICAS', 'EVIDENCIA', 'ADMIN'];
-                const isStaffKeyword = staffKeywords.some(kw => cargo.includes(kw) || role.includes(kw));
-                const knownStaffNames = ['SOLISBETH', 'NAILETH', 'ANTONELLA', 'DAVID JOEL'];
-                const isKnownStaff = knownStaffNames.some(sn => name.includes(sn));
-
-                if (isStaffKeyword || isKnownStaff) return UserRole.LEADER;
-
+                if (role === 'DIRECTOR_GENERAL' || cargo === 'DIRECTOR_GENERAL' || role === 'DIRECTOR GENERAL' || cargo === 'DIRECTOR GENERAL' || d.id === 'CON-1011') return UserRole.DIRECTOR_GENERAL;
+                if (role === 'DIRECTOR' || cargo === 'DIRECTOR') return UserRole.DIRECTOR;
+                if (role === 'LEADER' || role === 'LIDER' || role === 'LÍDER' || cargo === 'LIDER' || cargo === 'LÍDER') return UserRole.LEADER;
                 return UserRole.STUDENT;
             })(),
             idSignature: `V37-SIG-${d.id}`,
@@ -548,3 +527,98 @@ export const getStreakMultiplier = (streak: number, active: boolean = true): num
     if (streak >= 5) return 1.25;
     return 1.0;
 };
+
+/**
+ * @description Obtiene el listado y resumen de todas las sedes / iglesias.
+ */
+export const fetchSedesSupabase = async () => {
+    try {
+        const { data, error } = await supabase.rpc('fetch_sedes_summary');
+        if (!error && Array.isArray(data) && data.length > 0) {
+            return data;
+        }
+        // Fallback directo a la tabla
+        const { data: tableData, error: tableError } = await supabase
+            .from('sedes')
+            .select('*')
+            .order('is_active', { ascending: false });
+        if (tableError) throw tableError;
+        return tableData || [];
+    } catch (e: any) {
+        console.warn('Fallback sedes default:', e.message);
+        return [{
+            id: 'SEDE-JESUS-ES-EL-CENTRO',
+            nombre: 'JESÚS ES EL CENTRO',
+            ciudad: 'Caracas',
+            pais: 'Venezuela',
+            responsable_nombre: 'DIRECCIÓN GENERAL',
+            is_active: true
+        }];
+    }
+};
+
+/**
+ * @description Crea o actualiza una sede / iglesia y asigna a su responsable.
+ */
+export const createOrUpdateSedeSupabase = async (params: {
+    id?: string;
+    nombre: string;
+    ciudad?: string;
+    pais?: string;
+    responsableId?: string;
+    responsableNombre?: string;
+}) => {
+    try {
+        const { data, error } = await supabase.rpc('create_or_update_sede', {
+            p_id: params.id || null,
+            p_nombre: params.nombre,
+            p_ciudad: params.ciudad || 'Caracas',
+            p_pais: params.pais || 'Venezuela',
+            p_responsable_id: params.responsableId || null,
+            p_responsable_nombre: params.responsableNombre || null
+        });
+        if (error) throw error;
+        return { success: true, data };
+    } catch (e: any) {
+        // Fallback directo
+        try {
+            const sedeId = params.id || `SEDE-${params.nombre.toUpperCase().replace(/[^A-Z0-9]/g, '-')}`;
+            const { error: insError } = await supabase.from('sedes').upsert({
+                id: sedeId,
+                nombre: params.nombre,
+                ciudad: params.ciudad || 'Caracas',
+                pais: params.pais || 'Venezuela',
+                responsable_id: params.responsableId || null,
+                responsable_nombre: params.responsableNombre || null,
+                updated_at: new Date().toISOString()
+            });
+            if (insError) throw insError;
+            return { success: true, data: { sede_id: sedeId } };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
+};
+
+/**
+ * @description Reasigna a un agente a una sede específica a 1 clic.
+ */
+export const assignAgentSedeSupabase = async (agentId: string, sedeId: string) => {
+    try {
+        const { data, error } = await supabase.rpc('assign_agent_sede', {
+            p_agent_id: agentId,
+            p_sede_id: sedeId
+        });
+        if (error) throw error;
+        return { success: true, data };
+    } catch (e: any) {
+        try {
+            const { error: updErr } = await supabase.from('agentes').update({ sede_id: sedeId }).eq('id', agentId);
+            if (updErr) throw updErr;
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
+};
+

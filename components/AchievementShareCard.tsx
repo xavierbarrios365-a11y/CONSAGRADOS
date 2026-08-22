@@ -489,6 +489,12 @@ const AchievementShareCard: React.FC<AchievementShareCardProps> = ({ agent, news
                                                 XP: {agent?.xp || '000'}
                                             </p>
                                         </div>
+
+                                        <div className="inline-flex items-center gap-4 bg-blue-600/30 px-10 py-4 rounded-[30px] border border-blue-400/40 backdrop-blur-sm justify-center">
+                                            <p className="text-[24px] text-blue-200 font-black uppercase tracking-wider font-bebas leading-none">
+                                                🏛️ {agent?.sedeId === 'SEDE-JESUS-ES-EL-CENTRO' || !agent?.sedeId ? 'JESÚS ES EL CENTRO' : agent.sedeId.replace('SEDE-', '').replace(/-/g, ' ')}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

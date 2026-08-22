@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Agent, UserRole, Visitor, Badge } from '../types';
-import { INITIAL_AGENTS } from '../mockData';
 
 import {
     fetchAgentsFromSupabase,
@@ -14,7 +13,7 @@ import {
 } from '../services/supabaseService';
 
 export function useDataSync(currentUser: Agent | null, isLoggedIn: boolean) {
-    const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
+    const [agents, setAgents] = useState<Agent[]>([]);
     const [isSyncing, setIsSyncing] = useState(false);
     const [visitorRadar, setVisitorRadar] = useState<Visitor[]>([]);
     const [activeEvents, setActiveEvents] = useState<any[]>([]);

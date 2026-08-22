@@ -103,7 +103,7 @@ const TacticalExpediente: React.FC<TacticalExpedienteProps> = ({ agent, onClose,
                 initial="hidden"
                 animate="visible"
                 variants={modalVariants}
-                className="w-full max-w-4xl bg-[#0a1219] border border-amber-500/30 rounded-[2.5rem] shadow-[0_0_120px_rgba(0,0,0,0.8)] overflow-hidden relative max-h-[92vh] flex flex-col md:flex-row mt-12 mb-4"
+                className="w-full max-w-4xl bg-[#0a1219] border border-amber-500/30 rounded-3xl md:rounded-[2.5rem] shadow-[0_0_120px_rgba(0,0,0,0.8)] overflow-hidden relative max-h-[95vh] flex flex-col md:flex-row my-auto"
             >
                 {/* DECORACIÓN CORNER TÁCTICA */}
                 <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-4 -translate-y-4">

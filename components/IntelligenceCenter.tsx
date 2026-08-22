@@ -8,7 +8,7 @@ import { formatDriveUrl } from '../services/storageUtils';
 import TacticalRadar from './TacticalRadar';
 import { compressImage } from '../services/storageUtils';
 import { fetchAcademyDataSupabase } from '../services/supabaseService';
-import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase, getStreakMultiplier } from '../services/supabaseService';
+import { updateAgentPointsSupabase, deductPercentagePointsSupabase, applyAbsencePenaltiesSupabase, promoteAgentActionSupabase as promoteAgentAction, createEventSupabase as createEvent, fetchActiveEventsSupabase as fetchActiveEvents, deleteEventSupabase as deleteEvent, reconcileXPSupabase, updateAgentAiProfileSupabase, updateAgentTacticalStatsSupabase, getPromotionStatusSupabase, assignAgentToBibleWarGroup, fetchTaskRecruitsSupabase, fetchAllBannersSupabase, createBannerSupabase, toggleBannerStatusSupabase, deleteBannerSupabase, updateAgentPhotoSupabase, updateAgentAiPendingStatusSupabase, getStreakMultiplier, fetchSedesSupabase, createOrUpdateSedeSupabase, assignAgentSedeSupabase } from '../services/supabaseService';
 import { fetchAuthorizationsSupabase, deleteAuthorizationSupabase, DeploymentAuthorizationData, fetchAuthorizationSignatureSupabase } from '../services/authPortalService';
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { sendTelegramAlert, sendPushBroadcast } from '../services/notifyService';
@@ -228,10 +228,85 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     if (res.success) loadBanners();
   };
 
-  const agent = agents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || agents[0];
+  const isDirectorGeneral = userRole === UserRole.DIRECTOR_GENERAL || currentUser?.userRole === UserRole.DIRECTOR_GENERAL || currentUser?.id === 'CON-1011';
 
-  const totalAgents = agents.length;
-  const totalLeaders = agents.filter(a => a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR).length;
+  const [sedes, setSedes] = useState<any[]>([]);
+  const [selectedSedeId, setSelectedSedeId] = useState<string>('GLOBAL');
+  const [showCreateSedeModal, setShowCreateSedeModal] = useState(false);
+  const [newSedeForm, setNewSedeForm] = useState({ nombre: '', ciudad: 'Caracas', pais: 'Venezuela', responsableId: '' });
+  const [isCreatingSede, setIsCreatingSede] = useState(false);
+
+  const loadSedes = async () => {
+    try {
+      const data = await fetchSedesSupabase();
+      setSedes(data || []);
+    } catch (e) {
+      console.error('Error cargando sedes:', e);
+    }
+  };
+
+  React.useEffect(() => {
+    loadSedes();
+  }, []);
+
+  const handleCreateSedeSubmit = async () => {
+    if (!newSedeForm.nombre.trim()) {
+      showAlert({ title: "CAMPO REQUERIDO", message: "El nombre de la sede es obligatorio.", type: 'ERROR' });
+      return;
+    }
+    setIsCreatingSede(true);
+    try {
+      const respAgent = agents.find(a => a.id === newSedeForm.responsableId);
+      const res = await createOrUpdateSedeSupabase({
+        nombre: newSedeForm.nombre.trim(),
+        ciudad: newSedeForm.ciudad.trim(),
+        pais: newSedeForm.pais.trim(),
+        responsableId: newSedeForm.responsableId || undefined,
+        responsableNombre: respAgent?.name || undefined
+      });
+      if (res.success) {
+        showAlert({ title: "SEDE ACTIVADA", message: `✅ Sede "${newSedeForm.nombre}" registrada correctamente.`, type: 'SUCCESS' });
+        setShowCreateSedeModal(false);
+        setNewSedeForm({ nombre: '', ciudad: 'Caracas', pais: 'Venezuela', responsableId: '' });
+        await loadSedes();
+        if (onUpdateNeeded) onUpdateNeeded();
+      } else {
+        showAlert({ title: "ERROR", message: "Error al registrar sede: " + (res.error || ''), type: 'ERROR' });
+      }
+    } catch (e: any) {
+      showAlert({ title: "ERROR", message: e.message || "Fallo de conexión.", type: 'ERROR' });
+    } finally {
+      setIsCreatingSede(false);
+    }
+  };
+
+  const handleReassignAgentSede = async (agentId: string, targetSedeId: string) => {
+    try {
+      const res = await assignAgentSedeSupabase(agentId, targetSedeId);
+      if (res.success) {
+        showAlert({ title: "SEDE REASIGNADA", message: "✅ Agente transferido de sede exitosamente.", type: 'SUCCESS' });
+        if (onUpdateNeeded) onUpdateNeeded();
+      } else {
+        showAlert({ title: "ERROR", message: "Error al reasignar sede.", type: 'ERROR' });
+      }
+    } catch (e: any) {
+      showAlert({ title: "ERROR", message: "Fallo de conexión al reasignar sede.", type: 'ERROR' });
+    }
+  };
+
+  const displayedAgents = React.useMemo(() => {
+    if (!isDirectorGeneral) {
+      const mySede = currentUser?.sedeId || 'SEDE-JESUS-ES-EL-CENTRO';
+      return agents.filter(a => (a.sedeId || 'SEDE-JESUS-ES-EL-CENTRO') === mySede);
+    }
+    if (selectedSedeId === 'GLOBAL') return agents;
+    return agents.filter(a => (a.sedeId || 'SEDE-JESUS-ES-EL-CENTRO') === selectedSedeId);
+  }, [agents, selectedSedeId, isDirectorGeneral, currentUser]);
+
+  const agent = displayedAgents.find(a => String(a.id).trim() === String(selectedAgentId).trim()) || displayedAgents[0] || agents[0];
+
+  const totalAgents = displayedAgents.length;
+  const totalLeaders = displayedAgents.filter(a => a.userRole === UserRole.LEADER || a.userRole === UserRole.DIRECTOR || a.userRole === UserRole.DIRECTOR_GENERAL).length;
 
   const getLevelInfo = (xp: number) => {
     const ranks = Object.entries(RANK_CONFIG).sort((a, b) => a[1].minXp - b[1].minXp);
@@ -256,7 +331,8 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
     return { current: currentRank, next: nextRank, target: targetXp };
   };
 
-  const getPromotionStatus = (a: Agent): 'APTO' | 'PROXIMAMENTE' | 'NONE' => {
+  const getPromotionStatus = (a?: Agent | null): 'APTO' | 'PROXIMAMENTE' | 'NONE' => {
+    if (!a) return 'NONE';
     const rule = PROMOTION_RULES[(a.rank || 'RECLUTA').toUpperCase()];
     if (!rule) return 'NONE';
     if (a.xp >= rule.requiredXp) return 'APTO';
@@ -267,7 +343,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
   const currentPromotionStatus = getPromotionStatus(agent);
   const isProspectoAscender = currentPromotionStatus === 'PROXIMAMENTE';
   const isAptoTotal = currentPromotionStatus === 'APTO';
-  const levelInfo = getLevelInfo(agent.xp);
+  const levelInfo = getLevelInfo(agent?.xp || 0);
 
   const handleBroadcast = async () => {
     if (!broadcastData.title || !broadcastData.message) return;
@@ -604,8 +680,78 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
 
       <div className="max-w-7xl mx-auto space-y-6 relative z-10">
 
+        {/* BARRA TÁCTICA MULTI-SEDES (DIRECTOR GENERAL: CAMBIO A 1 CLIC) */}
+        {isDirectorGeneral && (
+          <div className="bg-[#001428] border border-[#ffb700]/30 rounded-3xl p-5 mb-4 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[#ffb700]/20 text-[#ffb700] rounded-2xl border border-[#ffb700]/30 shadow-inner">
+                  <Shield size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black uppercase tracking-[0.25em] text-[#ffb700] font-montserrat">Alto Mando Supremo</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#ffb700]/10 border border-[#ffb700]/30 text-[8px] font-black text-[#ffb700] font-bebas">DIRECTOR GENERAL</span>
+                  </div>
+                  <h4 className="text-base font-black uppercase text-white font-bebas tracking-widest leading-none mt-1">Conmutador Global de Sucursales</h4>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                {/* BOTÓN GLOBAL */}
+                <button
+                  onClick={() => setSelectedSedeId('GLOBAL')}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider font-bebas transition-all border ${
+                    selectedSedeId === 'GLOBAL'
+                      ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.35)] scale-105'
+                      : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  🌐 Todas las Sedes (Global)
+                </button>
+
+                {/* BOTONES POR SEDE */}
+                {sedes.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedSedeId(s.id)}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider font-bebas transition-all border flex items-center gap-1.5 ${
+                      selectedSedeId === s.id
+                        ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.35)] scale-105'
+                        : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    🏛️ {s.nombre}
+                  </button>
+                ))}
+
+                {/* BOTÓN REGISTRAR NUEVA SEDE */}
+                <button
+                  onClick={() => setShowCreateSedeModal(true)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider font-bebas bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40 transition-all flex items-center gap-1.5 shadow-lg active:scale-95 ml-auto lg:ml-2"
+                >
+                  <Plus size={14} /> Nueva Sede
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* INDICADOR PARA DIRECTOR DE SEDE LOCAL */}
+        {!isDirectorGeneral && (userRole === UserRole.DIRECTOR) && (
+          <div className="bg-[#001428] border border-blue-500/20 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Shield className="text-blue-400" size={18} />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/80 font-bebas">
+                Sede Asignada: <span className="text-[#ffb700]">{sedes.find(s => s.id === currentUser?.sedeId)?.nombre || 'JESÚS ES EL CENTRO'}</span>
+              </span>
+            </div>
+            <span className="text-[8px] font-bold uppercase tracking-widest text-white/40">Visión Local Restringida</span>
+          </div>
+        )}
+
         {/* PANEL DE CONTROL DE ALTO MANDO */}
-        {userRole === UserRole.DIRECTOR && (
+        {(userRole === UserRole.DIRECTOR || userRole === UserRole.DIRECTOR_GENERAL) && (
           <div className="bg-[#ffb700]/5 border border-[#ffb700]/20 rounded-3xl p-5 mb-6 backdrop-blur-md space-y-5">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-4">
@@ -1005,7 +1151,7 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
           </div>
         </div>
 
-        {selectedAgentId ? (
+        {agent ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* PERFIL DEL AGENTE SELECCIONADO */}
             <div className="lg:col-span-4 space-y-6">
@@ -1718,13 +1864,110 @@ const IntelligenceCenter: React.FC<CIUProps> = ({ agents, currentUser, onUpdateN
         )}
 
         {/* ===== GEMINI COMMAND CENTER (Director Only) ===== */}
-        {(userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.DIRECTOR) && (
+        {(userRole === UserRole.DIRECTOR || userRole === UserRole.DIRECTOR_GENERAL || currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.DIRECTOR_GENERAL) && (
           <GeminiCommandCenter
             agents={agents}
             currentUser={currentUser}
             onUpdateNeeded={onUpdateNeeded}
           />
         )}
+
+        {/* ===== MODAL DE CREACIÓN DE SEDE TÁCTICA ===== */}
+        <AnimatePresence>
+          {showCreateSedeModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-[#001428] border border-[#ffb700]/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4"
+              >
+                <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="text-[#ffb700]" size={20} />
+                    <h3 className="text-lg font-bebas text-white tracking-widest uppercase">Crear Nueva Sede / Iglesia</h3>
+                  </div>
+                  <button onClick={() => setShowCreateSedeModal(false)} className="text-white/40 hover:text-white transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-3 font-montserrat">
+                  <div>
+                    <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">Nombre de la Sede</label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Sede Norte / Sede Valencia"
+                      value={newSedeForm.nombre}
+                      onChange={(e) => setNewSedeForm({ ...newSedeForm, nombre: e.target.value.toUpperCase() })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#ffb700] font-bebas tracking-wide"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">Ciudad</label>
+                      <input
+                        type="text"
+                        placeholder="Caracas / Valencia"
+                        value={newSedeForm.ciudad}
+                        onChange={(e) => setNewSedeForm({ ...newSedeForm, ciudad: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#ffb700]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">País</label>
+                      <input
+                        type="text"
+                        value={newSedeForm.pais}
+                        onChange={(e) => setNewSedeForm({ ...newSedeForm, pais: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#ffb700]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[8px] font-black text-white/60 uppercase tracking-widest block mb-1">Director Responsable</label>
+                    <select
+                      value={newSedeForm.responsableId}
+                      onChange={(e) => setNewSedeForm({ ...newSedeForm, responsableId: e.target.value })}
+                      className="w-full bg-[#000810] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#ffb700]"
+                    >
+                      <option value="">-- SELECCIONAR RESPONSABLE --</option>
+                      {agents.map((ag) => (
+                        <option key={ag.id} value={ag.id}>
+                          {ag.name} ({ag.role || ag.rank})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    onClick={() => setShowCreateSedeModal(false)}
+                    className="flex-1 py-3 bg-white/5 text-white/60 rounded-xl text-xs font-bebas uppercase hover:bg-white/10 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCreateSedeSubmit}
+                    disabled={isCreatingSede || !newSedeForm.nombre.trim()}
+                    className="flex-1 py-3 bg-[#ffb700] text-[#001f3f] rounded-xl text-xs font-black font-bebas uppercase hover:bg-[#ffb700]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg active:scale-95"
+                  >
+                    {isCreatingSede ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                    Activar Sede
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </div>
     </div >

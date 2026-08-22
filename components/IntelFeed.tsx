@@ -28,6 +28,7 @@ import AchievementShareCard from './AchievementShareCard';
 import { useTacticalAlert } from './TacticalAlert';
 import TacticalMediaPlayer from './TacticalMediaPlayer';
 import { usePresence } from '../hooks/usePresence';
+import { tacticalSound } from '../utils/soundEffects';
 
 interface NewsFeedProps {
     onActivity?: () => void;
@@ -538,6 +539,7 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
 
     const handleToggleLike = async (noticiaId: string) => {
         if (!currentUser) return;
+        tacticalSound.playReactionPop();
         const isCurrentlyLiked = userLikes.includes(noticiaId);
         setUserLikes(prev => isCurrentlyLiked ? prev.filter(id => id !== noticiaId) : [...prev, noticiaId]);
         setLikesCount(prev => ({
@@ -770,8 +772,15 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
                                             </div>
 
                                             <div className="flex-1 min-w-0 pt-0.5">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[9px] font-black text-[#ffb700] uppercase hover:underline cursor-pointer" onClick={() => agent && onAgentClick?.(agent)}>{agent ? agentName : config.label}</span>
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <span className="text-[10px] font-black text-[#ffb700] uppercase hover:underline cursor-pointer font-bebas tracking-wide" onClick={() => agent && onAgentClick?.(agent)}>
+                                                        {agent ? agentName : config.label}
+                                                    </span>
+                                                    {agent && (
+                                                        <span className="text-[7px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/20 font-bebas">
+                                                            🏛️ {agent.sedeId === 'SEDE-JESUS-ES-EL-CENTRO' || !agent.sedeId ? 'JESÚS ES EL CENTRO' : agent.sedeId.replace('SEDE-', '').replace(/-/g, ' ')}
+                                                        </span>
+                                                    )}
                                                     {agent && mostLikedAgentId === agent.id && <Trophy size={10} className="text-[#ffb700]" />}
                                                     <span className="text-[8px] text-white/20 font-bold uppercase">• {item.date}</span>
                                                 </div>

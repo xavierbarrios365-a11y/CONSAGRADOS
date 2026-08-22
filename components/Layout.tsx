@@ -30,21 +30,21 @@ const Layout: React.FC<LayoutProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const bottomNavItems = [
-    { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Feed', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Ranking', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.PROFILE, icon: <User size={20} />, label: 'Perfil', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.HOME, icon: <LayoutDashboard size={20} />, label: 'Inicio', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.BIBLE, icon: <BookOpen size={20} />, label: 'Biblia', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.ACADEMIA, icon: <GraduationCap size={20} />, label: 'Academia', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.CONTENT, icon: <Activity size={20} />, label: 'Feed', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.RANKING, icon: <Trophy size={20} />, label: 'Ranking', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.PROFILE, icon: <User size={20} />, label: 'Perfil', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
   ];
 
   const secondaryNavItems = [
-    { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR] },
-    { id: AppView.DIRECTORY, icon: <Users size={20} />, label: 'Directorio', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.VISITOR, icon: <Radar size={20} />, label: 'Radar', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
-    { id: AppView.SCANNER, icon: <QrCode size={20} />, label: 'Asistencia', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
-    { id: AppView.ASCENSO, icon: <ChevronUp size={20} />, label: 'Ascenso', roles: [UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
-    { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.DIRECTOR, UserRole.LEADER] },
+    { id: AppView.CIU, icon: <Target size={20} />, label: 'Inteligencia', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR] },
+    { id: AppView.DIRECTORY, icon: <Users size={20} />, label: 'Directorio', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.VISITOR, icon: <Radar size={20} />, label: 'Radar', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER] },
+    { id: AppView.SCANNER, icon: <QrCode size={20} />, label: 'Asistencia', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER] },
+    { id: AppView.ASCENSO, icon: <ChevronUp size={20} />, label: 'Ascenso', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER, UserRole.STUDENT] },
+    { id: AppView.BIBLE_WAR_ARENA, icon: <Zap size={20} />, label: 'Arena', roles: [UserRole.DIRECTOR_GENERAL, UserRole.DIRECTOR, UserRole.LEADER] },
   ];
 
   const filterItemsByRole = (items: typeof bottomNavItems) => {

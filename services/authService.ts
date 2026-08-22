@@ -98,38 +98,37 @@ export const resetPasswordWithAnswerSupabase = async (id: string, answer: string
  */
 export const enrollAgentSupabase = async (formData: any) => {
     try {
-        // Generar ID
-        const nameParts = formData.nombre.trim().split(' ');
-        const firstLetter = nameParts[0]?.charAt(0).toUpperCase() || 'X';
-        const secondLetter = nameParts.length > 1 ? nameParts[1]?.charAt(0).toUpperCase() : (nameParts[0]?.charAt(1)?.toUpperCase() || 'X');
-        const randomNum = Math.floor(100 + Math.random() * 900);
-        const generatedId = `${firstLetter}${secondLetter}${randomNum}`;
+        // Generar ID Táctico CON-XXXX
+        const generatedId = (formData.id && formData.id.trim()) ? formData.id.trim().toUpperCase() : `CON-${Math.floor(1000 + Math.random() * 9000)}`;
 
-        // Generar PIN
-        const generatedPin = Math.floor(1000 + Math.random() * 9000).toString();
+        // Generar PIN de 4 dígitos
+        const generatedPin = (formData.pin && formData.pin.trim()) ? formData.pin.trim() : Math.floor(1000 + Math.random() * 9000).toString();
 
-        const { error } = await supabase.from('agentes').insert([{
+        const role = formData.userRole || (formData.nivel === 'DIRECTOR_GENERAL' ? 'DIRECTOR_GENERAL' : formData.nivel === 'DIRECTOR' ? 'DIRECTOR' : formData.nivel === 'LIDER' ? 'LEADER' : 'STUDENT');
+
+        const { data, error } = await supabase.from('agentes').insert([{
             id: generatedId,
-            nombre: formData.nombre,
-            whatsapp: formData.whatsapp,
+            nombre: formData.nombre.trim().toUpperCase(),
+            whatsapp: formData.whatsapp.trim(),
             pin: generatedPin,
-            user_role: formData.nivel === 'DIRECTOR' ? 'DIRECTOR' : formData.nivel === 'LIDER' ? 'LEADER' : 'STUDENT',
-            rango: 'RECLUTA',
-            cargo: 'ESTUDIANTE',
+            user_role: role,
+            rango: formData.rango || (role === 'DIRECTOR_GENERAL' ? 'DIRECTOR GENERAL' : role === 'DIRECTOR' ? 'DIRECTOR' : role === 'LEADER' ? 'LÍDER TÁCTICO' : 'RECLUTA'),
+            cargo: formData.cargo || (role === 'DIRECTOR_GENERAL' ? 'DIRECCIÓN SUPREMA' : role === 'DIRECTOR' ? 'DIRECCIÓN DE SEDE' : role === 'LEADER' ? 'LIDERAZGO' : 'ESTUDIANTE'),
             xp: 0,
             status: 'ACTIVO',
             joined_date: new Date().toISOString(),
             foto_url: formData.photoUrl || null,
-            talent: formData.talento || null,
-            baptism_status: formData.bautizado || 'NO',
-            relationship_with_god: formData.relacion || null,
-            birthday: formData.fechaNacimiento || null,
-            security_question: formData.preguntaSeguridad || null,
-            security_answer: formData.respuestaSeguridad || null
-        }]);
+            talent: formData.talento || formData.talent || null,
+            baptism_status: formData.bautizado || formData.baptismStatus || 'NO',
+            relationship_with_god: formData.relacion || formData.relationshipWithGod || null,
+            birthday: formData.fechaNacimiento || formData.birthday || null,
+            security_question: formData.preguntaSeguridad || formData.securityQuestion || null,
+            security_answer: formData.respuestaSeguridad || formData.securityAnswer || null,
+            sede_id: formData.sedeId || formData.sede_id || 'SEDE-JESUS-ES-EL-CENTRO'
+        }]).select();
 
         if (error) throw error;
-        return { success: true, newId: generatedId, newPin: generatedPin };
+        return { success: true, newId: generatedId, newPin: generatedPin, agent: data?.[0] };
     } catch (e: any) {
         return { success: false, error: e.message };
     }

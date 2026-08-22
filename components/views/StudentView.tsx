@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import {
     Bell, Calendar, Target, ShieldCheck, CheckCircle2,
     Loader2, Download, Trophy, UserPlus, AlertTriangle,
-    ChevronRight, Activity, Brain, Swords, HelpCircle
+    ChevronRight, Activity, Brain, Swords, HelpCircle,
+    Flame, BookOpen, GraduationCap, Sparkles, Zap
 } from 'lucide-react';
 import { AppView, Agent, UserRole, DailyVerse as DailyVerseType } from '../../types';
 import PromotionProgressCard from '../PromotionProgressCard';
@@ -99,68 +100,76 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
         case AppView.HOME:
             return (
                 <motion.div variants={viewVariants} initial="initial" animate="animate" exit="exit" key="home" className="h-full">
-                    <div className="max-w-2xl mx-auto pt-4 pb-10 ig-container font-montserrat">
+                    <div className="max-w-md mx-auto pt-2 pb-28 px-3.5 font-montserrat space-y-4">
                         {/* HISTORIAS FULL WIDTH (IG STYLE) */}
-                        <div className="mb-4 -mx-4 px-4 overflow-x-auto no-scrollbar border-b border-white/5 pb-4">
+                        <div className="mb-2 -mx-3.5 px-3.5 overflow-x-auto no-scrollbar border-b border-white/5 pb-3">
                             <StoriesBar currentUser={currentUser} />
                         </div>
 
                         {/* TACTICAL DASHBOARD SLIDER (AUTOPLAY) */}
-                        <div className="mb-6 -mx-4 relative group overflow-hidden">
-                            <div
-                                className="flex overflow-x-auto no-scrollbar pb-4 scroll-smooth snap-x snap-mandatory"
-                                ref={sliderRef}
-                            >
-                                {sliderItems.map((item: any, idx) => (
-                                    <div key={item.id} className="w-full shrink-0 px-4 snap-center">
-                                        <button
-                                            onClick={() => {
-                                                if (item.type === 'shortcut') setView(item.view);
-                                                else if (item.type === 'event') handleConfirmEventAttendance(item.event);
-                                            }}
-                                            className={`flex items-center gap-4 p-5 rounded-xl w-full border transition-all shadow-lg active:scale-[0.98] ${item.color === 'blue' ? 'bg-blue-900/10 border-blue-500/30 hover:bg-blue-900/20' :
-                                                item.color === 'red' ? 'bg-red-900/10 border-red-500/30 hover:bg-red-900/20' :
-                                                    'bg-[#ffb700]/10 border-[#ffb700]/40 hover:bg-[#ffb700]/20'
+                        {sliderItems.length > 0 && (
+                            <div className="relative group overflow-hidden rounded-2xl">
+                                <div
+                                    className="flex overflow-x-auto no-scrollbar pb-1 scroll-smooth snap-x snap-mandatory"
+                                    ref={sliderRef}
+                                >
+                                    {sliderItems.map((item: any) => (
+                                        <div key={item.id} className="w-full shrink-0 snap-center">
+                                            <button
+                                                onClick={() => {
+                                                    if (item.type === 'shortcut') setView(item.view);
+                                                    else if (item.type === 'event') handleConfirmEventAttendance(item.event);
+                                                }}
+                                                className={`flex items-center gap-3.5 p-4 rounded-2xl w-full border transition-all shadow-lg active:scale-[0.98] ${
+                                                    item.color === 'blue' ? 'bg-gradient-to-r from-blue-900/20 to-blue-600/10 border-blue-500/30 hover:border-blue-400/50' :
+                                                    item.color === 'red' ? 'bg-gradient-to-r from-red-900/20 to-red-600/10 border-red-500/30 hover:border-red-400/50' :
+                                                    'bg-gradient-to-r from-amber-500/15 to-yellow-500/5 border-[#ffb700]/30 hover:border-[#ffb700]/60'
                                                 }`}
-                                        >
-                                            <div className={`p-4 rounded-lg shadow-inner shrink-0 ${item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
-                                                item.color === 'red' ? 'bg-red-500/20 text-red-400' :
+                                            >
+                                                <div className={`p-3 rounded-xl shadow-inner shrink-0 ${
+                                                    item.color === 'blue' ? 'bg-blue-500/20 text-blue-400' :
+                                                    item.color === 'red' ? 'bg-red-500/20 text-red-400' :
                                                     'bg-[#ffb700]/20 text-[#ffb700]'
                                                 }`}>
-                                                {item.icon}
-                                            </div>
-                                            <div className="text-left min-w-0 flex-1">
-                                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${item.color === 'blue' ? 'text-blue-400' :
-                                                    item.color === 'red' ? 'text-red-400' :
+                                                    {item.icon}
+                                                </div>
+                                                <div className="text-left min-w-0 flex-1">
+                                                    <p className={`text-[8px] font-black uppercase tracking-[0.2em] mb-0.5 ${
+                                                        item.color === 'blue' ? 'text-blue-400' :
+                                                        item.color === 'red' ? 'text-red-400' :
                                                         'text-[#ffb700]'
                                                     }`}>{item.sub}</p>
-                                                <h4 className="text-[16px] font-bebas tracking-widest text-white leading-tight uppercase truncate">{item.title}</h4>
-                                                {item.type === 'event' && item.event ? (
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-white/60 font-medium">{item.event.fecha}</span>
-                                                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-white/60 font-medium">{item.event.hora || 'S/H'}</span>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-[10px] text-white/30 mt-1 font-medium italic">ACCESO PRIORITARIO</p>
-                                                )}
-                                            </div>
-                                        </button>
+                                                    <h4 className="text-sm md:text-base font-bebas tracking-wider text-white leading-tight uppercase truncate">{item.title}</h4>
+                                                    {item.type === 'event' && item.event ? (
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[8px] text-white/70 font-medium">{item.event.fecha}</span>
+                                                            <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[8px] text-white/70 font-medium">{item.event.hora || 'S/H'}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[8px] text-white/40 mt-0.5 font-bold uppercase tracking-widest font-bebas">ACCESO INMEDIATO</p>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Indicadores de Slider */}
+                                {sliderItems.length > 1 && (
+                                    <div className="flex justify-center gap-1.5 mt-1.5">
+                                        {sliderItems.map((_, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`h-1 rounded-full transition-all duration-300 ${idx === sliderIndex ? 'w-3.5 bg-[#ffb700]' : 'w-1 bg-white/15'}`}
+                                            />
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
+                        )}
 
-                            {/* Indicadores de Slider */}
-                            <div className="flex justify-center gap-1.5 mt-2">
-                                {sliderItems.map((_, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={`h-1 rounded-full transition-all duration-300 ${idx === sliderIndex ? 'w-4 bg-[#ffb700]' : 'w-1 bg-white/10'}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        <div id="tutorial-daily-verse" className="w-full animate-in slide-in-from-top-4 duration-1000 mb-2">
+                        {/* RETO / PROTOCOLO DEL VERSÍCULO DEL DÍA (TOUCH TO LAUNCH) */}
+                        <div id="tutorial-daily-verse" className="w-full">
                             <DailyVerse
                                 verse={dailyVerse ? { ...dailyVerse, lastStreakDate: currentUser?.lastStreakDate } : null}
                                 streakCount={currentUser?.streakCount}
@@ -168,6 +177,45 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 agent={currentUser || undefined}
                             />
                         </div>
+
+                        {/* SHORTCUTS GRID TÁCTICO MÓVIL */}
+                        <div className="grid grid-cols-4 gap-2">
+                            <button
+                                onClick={() => setView(AppView.BIBLE)}
+                                className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-[#ffb700]/40 flex flex-col items-center gap-1 transition-all text-center active:scale-95 shadow-md"
+                            >
+                                <BookOpen size={18} className="text-[#ffb700]" />
+                                <span className="text-[9px] font-black uppercase text-white font-bebas tracking-wide">Biblia</span>
+                            </button>
+
+                            <button
+                                onClick={() => setView(AppView.ACADEMIA)}
+                                className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-blue-500/40 flex flex-col items-center gap-1 transition-all text-center active:scale-95 shadow-md"
+                            >
+                                <GraduationCap size={18} className="text-blue-400" />
+                                <span className="text-[9px] font-black uppercase text-white font-bebas tracking-wide">Academia</span>
+                            </button>
+
+                            <button
+                                onClick={() => setView(AppView.RANKING)}
+                                className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-yellow-500/40 flex flex-col items-center gap-1 transition-all text-center active:scale-95 shadow-md"
+                            >
+                                <Trophy size={18} className="text-yellow-400" />
+                                <span className="text-[9px] font-black uppercase text-white font-bebas tracking-wide">Ranking</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    if (currentUser) onAgentClick(currentUser);
+                                }}
+                                className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/40 flex flex-col items-center gap-1 transition-all text-center active:scale-95 shadow-md"
+                            >
+                                <ShieldCheck size={18} className="text-emerald-400" />
+                                <span className="text-[9px] font-black uppercase text-white font-bebas tracking-wide">Carnet 3D</span>
+                            </button>
+                        </div>
+
+                        {/* FEED DE NOTICIAS & INTEL */}
                         {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
                             <IntelFeed
                                 headlines={headlines}
@@ -177,86 +225,6 @@ const StudentView: React.FC<StudentViewProps> = (props) => {
                                 onAgentClick={onAgentClick}
                             />
                         )}
-
-                        {/* RADAR DE DESERCIÓN RÁPIDO */}
-                        {(() => {
-                            const isCommandRole = currentUser?.userRole === UserRole.DIRECTOR || currentUser?.userRole === UserRole.LEADER;
-                            if (isCommandRole) {
-                                const dangerCount = agents.filter(a => {
-                                    if (!a.lastAttendance || a.lastAttendance === 'N/A') return false;
-                                    const lastDate = parseAttendanceDate(a.lastAttendance);
-                                    if (!lastDate) return false;
-                                    const diffDays = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-                                    return diffDays >= 21;
-                                }).length;
-
-                                if (dangerCount === 0) return null;
-
-                                return (
-                                    <div onClick={() => setView(AppView.VISITOR)} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-xl transition-all cursor-pointer">
-                                        <div className="flex items-center gap-3">
-                                            <AlertTriangle className="text-red-500" size={18} />
-                                            <div>
-                                                <p className="text-[10px] text-red-500/80 font-black uppercase tracking-widest">{dangerCount} AGENTES EN PELIGRO CRÍTICO</p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight size={16} className="text-red-500" />
-                                    </div>
-                                );
-                            } else {
-                                if (!currentUser?.lastAttendance || currentUser.lastAttendance === 'N/A') return null;
-                                const myLastDate = parseAttendanceDate(currentUser.lastAttendance);
-                                if (!myLastDate) return null;
-                                const myDiffDays = Math.floor((new Date().getTime() - myLastDate.getTime()) / (1000 * 60 * 60 * 24));
-
-                                if (myDiffDays < 14) return null;
-
-                                return (
-                                    <div className="flex items-center justify-between p-2">
-                                        <div className="flex items-center gap-3">
-                                            <AlertTriangle className="text-amber-500" size={18} />
-                                            <div>
-                                                <p className="text-[10px] text-amber-500/80 font-black uppercase tracking-widest">LLEVAS {myDiffDays} DÍAS SIN ASISTIR. ¡NO TE RINDAS!</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            }
-                        })()}
-
-
-                        <div className={`grid gap-3 ${currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2' ? 'grid-cols-1' : 'grid-cols-2 xs:grid-cols-3'}`}>
-                            {currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
-                                <button id="btn-ranking" onClick={() => setView(AppView.RANKING)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-[#ffb700]/10 hover:border-[#ffb700]/40 transition-all active:scale-90 shadow-lg group">
-                                    <Trophy size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ranking</span>
-                                </button>
-                            )}
-
-                            {(currentUser?.userRole === UserRole.DIRECTOR || currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2') && (
-                                <button id="btn-combatir" onClick={() => setView(AppView.BIBLE_WAR_ARENA)} className={`p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-blue-500/10 hover:border-blue-500/40 transition-all active:scale-90 shadow-lg group ${currentUser?.id === 'CON-TEST1' || currentUser?.id === 'CON-TEST2' ? 'py-8 border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : ''}`}>
-                                    <ShieldCheck size={24} className="text-blue-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Combatir</span>
-                                </button>
-                            )}
-
-                            {currentUser?.userRole !== UserRole.STUDENT && currentUser?.id !== 'CON-TEST1' && currentUser?.id !== 'CON-TEST2' && (
-                                <button onClick={() => setView(AppView.ENROLLMENT)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                                    <UserPlus size={24} className="text-[#ffb700] group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,183,0,0.5)] transition-transform" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Reclutar</span>
-                                </button>
-                            )}
-
-                            <button onClick={() => setView(AppView.DEPLOYMENT_AUTH)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-red-500/10 hover:border-red-500/40 transition-all active:scale-90 shadow-lg group">
-                                <ShieldCheck size={24} className="text-red-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] transition-transform" />
-                                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Autorización</span>
-                            </button>
-
-                            <button onClick={() => setView(AppView.HELP_CENTER)} className="p-4 glass-card border-white/10 rounded-3xl flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all active:scale-90 shadow-lg group">
-                                <HelpCircle size={24} className="text-blue-400 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-transform" />
-                                <span className="text-[10px] font-black uppercase tracking-widest font-bebas text-white/60 group-hover:text-white transition-colors">Ayuda</span>
-                            </button>
-                        </div>
                     </div>
                 </motion.div>
             );

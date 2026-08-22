@@ -9,6 +9,7 @@ import { fetchAcademyDataSupabase, updateAgentAiProfileSupabase, updateAgentPoin
 import { uploadToCloudinary } from '../services/cloudinaryService';
 import { toPng } from 'html-to-image';
 import { formatDriveUrl } from '../services/storageUtils';
+import { tacticalSound } from '../utils/soundEffects';
 
 import EliteRecruitmentTest from './EliteRecruitmentTest';
 
@@ -187,27 +188,13 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUs
       </div>
 
       <div
+        onClick={() => {
+          tacticalSound.playReactionPop();
+          setIsFlipped(!isFlipped);
+        }}
         className="relative w-full aspect-[1/1.6] cursor-pointer select-none transition-transform active:scale-[0.98]"
         style={{ perspective: '2000px' }}
       >
-        {/* Botón de voltear */}
-        <div className="absolute -top-3 -right-3 z-50 bg-blue-600 p-2.5 rounded-full shadow-xl border-2 border-white animate-bounce cursor-pointer hover:bg-blue-500 transition-colors"
-          onClick={(e) => { e.stopPropagation(); setIsFlipped(!isFlipped); }}
-          title="Voltear Carnet">
-          <RotateCw size={14} className="text-white" />
-        </div>
-
-        {/* Botón de cierre opcional */}
-        {onClose && (
-          <div
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="absolute -top-3 -left-3 z-50 bg-red-600 p-2.5 rounded-full shadow-xl border-2 border-white cursor-pointer hover:bg-red-500 transition-colors"
-            title="Cerrar Carnet"
-          >
-            <X size={14} className="text-white" />
-          </div>
-        )}
-
         <div
           className={`relative w-full h-full transition-all duration-700 ease-in-out`}
           style={{
@@ -302,9 +289,14 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUs
               </div>
               <div className="text-center px-4">
                 <p className="text-[12px] font-black text-white uppercase tracking-wider leading-tight font-montserrat drop-shadow-lg">{agent.name}</p>
-                <span className="inline-block bg-[#ffb700]/15 border border-[#ffb700]/30 px-5 py-1 rounded-full mt-2 shadow-[0_0_15px_rgba(255,183,0,0.1)]">
-                  <p className="text-[9px] text-[#ffb700] font-bold uppercase tracking-[0.3em] font-bebas">{agent.rank}</p>
-                </span>
+                <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
+                  <span className="inline-block bg-[#ffb700]/15 border border-[#ffb700]/30 px-3 py-0.5 rounded-full shadow-[0_0_15px_rgba(255,183,0,0.1)]">
+                    <p className="text-[9px] text-[#ffb700] font-bold uppercase tracking-[0.2em] font-bebas">{agent.rank}</p>
+                  </span>
+                  <span className="inline-block bg-blue-500/15 border border-blue-400/30 px-3 py-0.5 rounded-full">
+                    <p className="text-[8px] text-blue-300 font-bold uppercase tracking-wider font-bebas">🏛️ {agent.sedeId === 'SEDE-JESUS-ES-EL-CENTRO' || !agent.sedeId ? 'JESÚS ES EL CENTRO' : agent.sedeId.replace('SEDE-', '').replace(/-/g, ' ')}</p>
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -471,7 +463,22 @@ const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ agent, onClose, currentUs
           </div>
         </div>
       </div>
-    </div >
+
+      {/* Botón Táctico de Giro y Acciones */}
+      <div className="mt-4 flex items-center justify-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            tacticalSound.playReactionPop();
+            setIsFlipped(!isFlipped);
+          }}
+          className="px-5 py-2.5 rounded-2xl bg-[#001428] hover:bg-[#ffb700]/20 border border-[#ffb700]/30 text-white font-bebas text-xs tracking-widest uppercase flex items-center gap-2 transition-all shadow-lg active:scale-95 group"
+        >
+          <RotateCw size={14} className="text-[#ffb700] group-hover:rotate-180 transition-transform duration-500" />
+          {isFlipped ? 'Ver Frontal (Credencial)' : 'Girar Carnet (Dorsal / QR)'}
+        </button>
+      </div>
+    </div>
   );
 };
 

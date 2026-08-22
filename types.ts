@@ -8,14 +8,28 @@ export enum Rank {
 }
 
 export enum UserRole {
+  DIRECTOR_GENERAL = 'DIRECTOR_GENERAL',
   DIRECTOR = 'DIRECTOR',
   LEADER = 'LEADER',
   STUDENT = 'STUDENT'
 }
 
+export interface Sede {
+  id: string;
+  nombre: string;
+  ciudad?: string;
+  pais?: string;
+  responsableId?: string;
+  responsableNombre?: string;
+  isActive: boolean;
+  totalAgentes?: number;
+  totalAsistencias?: number;
+}
+
 export interface Agent {
   id: string;
   name: string;
+  sedeId?: string;
   photoUrl: string;
   rank: string;
   role: string;
@@ -64,6 +78,7 @@ export interface Agent {
     draws: number;
   };
   fcm_token?: string;
+  fcmToken?: string;
 }
 
 export interface DailyVerse {
@@ -254,6 +269,7 @@ export interface BibleWarSession {
   used_questions?: string[];
   gladiator_a_id?: string | null;
   gladiator_b_id?: string | null;
+  last_winner?: 'A' | 'B' | 'DRAW' | 'NONE' | string | null;
   display_phase?: 'IDLE' | 'READING' | 'BATTLE';
 }
 

@@ -1,46 +1,54 @@
-
-import React, { useState, useRef } from 'react';
-import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserPlus, Save, AlertCircle, CheckCircle2, UploadCloud, Image as ImageIcon, Loader2, Copy, Check, ArrowRight, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
 import { uploadToCloudinary } from '../services/cloudinaryService';
-import { enrollAgentSupabase } from '../services/supabaseService';
-import { compressImage } from '../services/storageUtils';
+import { enrollAgentSupabase, fetchSedesSupabase } from '../services/supabaseService';
 import { sendTelegramAlert } from '../services/notifyService';
-
-import { UserRole, Agent } from '../types';
+import { tacticalSound } from '../utils/soundEffects';
+import { UserRole, Agent, Sede } from '../types';
 
 interface EnrollmentFormProps {
-  onSuccess: () => void;
+  onSuccess: (newAgent?: Agent) => void;
   userRole?: UserRole;
   agents?: Agent[];
+  onDirectLogin?: (id: string, pin: string) => void;
 }
 
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = error => reject(error);
-  });
-};
-
-export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userRole, agents = [] }) => {
+export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userRole, agents = [], onDirectLogin }) => {
+  const [sedes, setSedes] = useState<Sede[]>([]);
   const [formData, setFormData] = useState({
     nombre: '',
     whatsapp: '',
+    sedeId: 'SEDE-JESUS-ES-EL-CENTRO',
     talento: '',
     bautizado: 'NO',
     relacion: '',
-    nivel: 'ESTUDIANTE',
+    nivel: userRole === UserRole.DIRECTOR_GENERAL ? 'LIDER' : 'ESTUDIANTE',
+    pin: '',
     fechaNacimiento: '',
-    preguntaSeguridad: '',
+    preguntaSeguridad: '¿Cuál es tu versículo o palabra favorita?',
     respuestaSeguridad: '',
     referidoPor: ''
   });
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<'IDLE' | 'UPLOADING' | 'SUBMITTING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [error, setError] = useState('');
+  const [registeredCreds, setRegisteredCreds] = useState<{ id: string; pin: string; name: string; sedeName: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const loadSedes = async () => {
+      const data = await fetchSedesSupabase();
+      if (data && data.length > 0) {
+        setSedes(data);
+      } else {
+        setSedes([{ id: 'SEDE-JESUS-ES-EL-CENTRO', nombre: 'JESÚS ES EL CENTRO', is_active: true }]);
+      }
+    };
+    loadSedes();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -49,8 +57,8 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 3 * 1024 * 1024) {
-        setError("La imagen es demasiado grande. Máximo 3MB.");
+      if (file.size > 5 * 1024 * 1024) {
+        setError("La imagen es demasiado grande. Máximo 5MB.");
         return;
       }
       setSelectedFile(file);
@@ -65,8 +73,13 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!formData.nombre || !formData.whatsapp) {
-      setError("Nombre y WhatsApp son requeridos.");
+
+    if (!formData.nombre.trim()) {
+      setError("Por favor ingresa tu nombre y apellido.");
+      return;
+    }
+    if (!formData.whatsapp.trim()) {
+      setError("Por favor ingresa tu número de WhatsApp.");
       return;
     }
 
@@ -79,7 +92,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
         if (uploadResult.success && uploadResult.url) {
           photoUrl = uploadResult.url;
         } else {
-          throw new Error(uploadResult.error || 'Fallo al subir la imagen.');
+          throw new Error(uploadResult.error || 'Fallo al subir la foto de perfil.');
         }
       } catch (err: any) {
         setStatus('ERROR');
@@ -91,138 +104,269 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
 
     // 2. Enviar los datos del formulario
     setStatus('SUBMITTING');
-    const finalData = { ...formData, photoUrl };
+    const finalData = {
+      ...formData,
+      photoUrl,
+      userRole: formData.nivel === 'DIRECTOR_GENERAL' ? UserRole.DIRECTOR_GENERAL :
+                formData.nivel === 'DIRECTOR' ? UserRole.DIRECTOR :
+                formData.nivel === 'LIDER' ? UserRole.LEADER : UserRole.STUDENT
+    };
+
     const enrollResult = await enrollAgentSupabase(finalData);
 
-    if (enrollResult.success) {
+    if (enrollResult.success && enrollResult.newId && enrollResult.newPin) {
+      tacticalSound.playVictoryChime();
+      const selectedSedeObj = sedes.find(s => s.id === formData.sedeId);
+      const currentSedeName = selectedSedeObj?.nombre || 'JESÚS ES EL CENTRO';
+
       // 3. Notificar a Telegram
       const appUrl = window.location.origin;
-      const telegramMessage = `✅ <b>NUEVA INSCRIPCIÓN TÁCTICA</b>\n\nUn nuevo agente se ha unido a las filas.\n\n<b>• Nombre:</b> ${formData.nombre}\n<b>• URL:</b> ${appUrl}\n<b>• ID Generado:</b> <code>${enrollResult.newId}</code>\n<b>• PIN de Acceso:</b> <code>${enrollResult.newPin}</code>\n<b>• Pregunta:</b> ${formData.preguntaSeguridad || '¿Cuál es tu color favorito?'}\n<b>• Respuesta:</b> ${formData.respuestaSeguridad || 'Azul'}\n\n<i>Por favor, entrega estas credenciales al agente para su despliegue inmediato.</i>`;
-      await sendTelegramAlert(telegramMessage);
+      const telegramMessage = `✅ <b>NUEVO RECLUTA REGISTRADO</b>\n\nUn nuevo agente se ha incorporado a las filas.\n\n<b>• Nombre:</b> ${formData.nombre.toUpperCase()}\n<b>• Sede:</b> ${currentSedeName}\n<b>• ID Táctico:</b> <code>${enrollResult.newId}</code>\n<b>• PIN:</b> <code>${enrollResult.newPin}</code>\n<b>• WhatsApp:</b> ${formData.whatsapp}\n<b>• Talento:</b> ${formData.talento || 'Por definir'}\n\n<i>Acceso táctico listo para despliegue.</i>`;
+      sendTelegramAlert(telegramMessage).catch(() => {});
 
       setStatus('SUCCESS');
-      // Limpiar formulario
-      setFormData({
-        nombre: '',
-        whatsapp: '',
-        talento: '',
-        bautizado: 'NO',
-        relacion: '',
-        nivel: 'ESTUDIANTE',
-        fechaNacimiento: '',
-        preguntaSeguridad: '',
-        respuestaSeguridad: '',
-        referidoPor: ''
+      setRegisteredCreds({
+        id: enrollResult.newId,
+        pin: enrollResult.newPin,
+        name: formData.nombre.toUpperCase(),
+        sedeName: currentSedeName
       });
-      setSelectedFile(null);
-      setImagePreview(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-
-      setTimeout(() => {
-        setStatus('IDLE');
-        onSuccess(); // Llamar a la función de éxito para refrescar la lista de agentes
-      }, 2000);
     } else {
+      tacticalSound.playErrorBuzz();
       setStatus('ERROR');
       setError(enrollResult.error || 'Error al registrar el agente.');
       setTimeout(() => setStatus('IDLE'), 4000);
     }
   };
 
-  const getButtonContent = () => {
-    switch (status) {
-      case 'UPLOADING': return <><Loader2 size={18} className="animate-spin" /> Subiendo Foto...</>;
-      case 'SUBMITTING': return <><Loader2 size={18} className="animate-spin" /> Registrando Agente...</>;
-      case 'SUCCESS': return <><CheckCircle2 size={18} /> Agente Registrado</>;
-      case 'ERROR': return <><AlertCircle size={18} /> Error en Sistema</>;
-      default: return <><Save size={18} /> Completar Inscripción</>;
-    }
+  const handleCopyCredentials = () => {
+    if (!registeredCreds) return;
+    const text = `🎖️ CREDENCIALES CONSAGRADOS 2026 🎖️\n• Agente: ${registeredCreds.name}\n• Sede: ${registeredCreds.sedeName}\n• ID de Acceso: ${registeredCreds.id}\n• PIN Secreto: ${registeredCreds.pin}\n\n📲 Ingresa en: ${window.location.origin}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    tacticalSound.playReactionPop();
+    setTimeout(() => setCopied(false), 3000);
   };
 
-  return (
-    <div className="p-6 md:p-10 max-w-2xl mx-auto animate-in fade-in duration-500 pb-24 font-montserrat">
-      <div className="bg-[#001f3f] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FFB700] to-transparent opacity-30"></div>
-        <div className="space-y-8">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-bebas font-bold text-white tracking-widest">INSCRIPCIÓN</h2>
-            <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-[0.4em] font-montserrat">Registro de Nuevo Agente</p>
+  // --- MODAL DE BIENVENIDA / CREDENCIAL INMEDIATA ---
+  if (registeredCreds) {
+    return (
+      <div className="p-6 max-w-md mx-auto animate-in zoom-in-95 duration-500 font-montserrat">
+        <div className="bg-[#001428] border-2 border-[#ffb700] rounded-[2.5rem] p-8 text-center shadow-[0_0_50px_rgba(255,183,0,0.3)] relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-[#ffb700]/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="inline-flex p-4 rounded-full bg-[#ffb700]/20 text-[#ffb700] mb-4 border border-[#ffb700]/30 shadow-lg">
+            <ShieldCheck size={48} className="animate-pulse" />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#ffb700] font-bebas block">
+            INSCRIPCIÓN TÁCTICA APROBADA
+          </span>
+          <h2 className="text-2xl font-black uppercase text-white font-bebas tracking-wide mt-1">
+            ¡BIENVENIDO A LAS FILAS!
+          </h2>
+          <p className="text-xs text-white/70 font-medium mt-1">
+            {registeredCreds.name} • <span className="text-[#ffb700] font-bold">🏛️ {registeredCreds.sedeName}</span>
+          </p>
+
+          {/* Tarjeta de Credenciales */}
+          <div className="my-6 p-5 rounded-2xl bg-black/60 border border-white/15 text-left space-y-3">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2.5">
+              <span className="text-[9px] font-black uppercase text-white/50 font-bebas tracking-widest">ID TÁCTICO:</span>
+              <span className="text-base font-black text-[#ffb700] font-mono tracking-wider">{registeredCreds.id}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-black uppercase text-white/50 font-bebas tracking-widest">PIN DE ACCESO:</span>
+              <span className="text-base font-black text-green-400 font-mono tracking-widest">{registeredCreds.pin}</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={handleCopyCredentials}
+              className="w-full py-3.5 bg-white/10 hover:bg-white/15 border border-white/20 text-white rounded-2xl text-xs font-black uppercase font-bebas tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+              {copied ? "¡Credenciales Copiadas!" : "Copiar Credenciales"}
+            </button>
+
+            <button
+              onClick={() => {
+                if (onDirectLogin) {
+                  onDirectLogin(registeredCreds.id, registeredCreds.pin);
+                } else {
+                  onSuccess();
+                }
+              }}
+              className="w-full py-4 bg-gradient-to-r from-[#ffb700] to-yellow-500 text-[#001f3f] rounded-2xl text-xs font-black uppercase font-bebas tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_10px_25px_rgba(255,183,0,0.3)] flex items-center justify-center gap-2"
+            >
+              Entrar al Sistema <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- FORMULARIO DE REGISTRO ---
+  return (
+    <div className="p-4 md:p-8 max-w-xl mx-auto animate-in fade-in duration-500 pb-24 font-montserrat">
+      <div className="bg-[#001428] border border-white/10 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FFB700] to-transparent opacity-50" />
+
+        <div className="space-y-6">
+          <div className="text-center space-y-1">
+            <span className="text-[9px] font-black text-[#ffb700] uppercase tracking-[0.4em] font-bebas">
+              ALISTAMIENTO CONSAGRADOS 2026
+            </span>
+            <h2 className="text-3xl font-bebas font-bold text-white tracking-widest leading-none">
+              REGISTRO DE AGENTE
+            </h2>
+            <p className="text-xs text-white/50">Completa tus datos para recibir tu ID Táctico y PIN de acceso.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-            {(userRole === UserRole.DIRECTOR || userRole === UserRole.LEADER) && (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-video bg-[#3A3A3A]/20 border-2 border-dashed border-[#FFB700]/10 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#3A3A3A]/30 transition-all p-4 group"
+            {/* Foto de Perfil Opcional */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full aspect-[21/9] bg-black/40 border-2 border-dashed border-[#FFB700]/20 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-black/60 transition-all p-3 group relative overflow-hidden"
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="Vista previa" className="h-full w-auto object-cover rounded-xl" />
+              ) : (
+                <div className="space-y-1 text-gray-400">
+                  <UploadCloud size={24} className="mx-auto text-[#ffb700]" />
+                  <p className="text-[10px] font-bold uppercase tracking-wider font-bebas text-white">Subir Foto o Selfie (Opcional)</p>
+                  <p className="text-[8px] text-white/40">Toca aquí para seleccionar una imagen</p>
+                </div>
+              )}
+            </div>
+
+            {/* 1. Nombre Completo */}
+            <InputField
+              label="Nombre y Apellido *"
+              name="nombre"
+              value={formData.nombre}
+              onChange={handleChange}
+              placeholder="EJ. DAVID MENDOZA"
+            />
+
+            {/* 2. Sede de Pertenencia */}
+            <div>
+              <label className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">
+                🏛️ Sede / Iglesia a la que perteneces *
+              </label>
+              <select
+                name="sedeId"
+                value={formData.sedeId}
+                onChange={handleChange}
+                className="w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 px-4 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat"
               >
-                {imagePreview ? (
-                  <img src={imagePreview} alt="Vista previa" className="max-h-full w-auto object-contain rounded-lg" />
-                ) : (
-                  <div className="space-y-2 text-gray-500">
-                    <UploadCloud size={32} className="mx-auto text-[#ffb700]" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest font-bebas">Subir Foto de Perfil</p>
-                    <p className="text-xs">Toca para seleccionar una imagen</p>
-                  </div>
-                )}
+                {sedes.map(s => (
+                  <option key={s.id} value={s.id} className="bg-[#001428] text-white">
+                    🏛️ {s.nombre} {s.ciudad ? `(${s.ciudad})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3. WhatsApp y Fecha de Nacimiento */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InputField
+                label="WhatsApp / Teléfono *"
+                name="whatsapp"
+                value={formData.whatsapp}
+                onChange={handleChange}
+                placeholder="EJ. +58 412 1234567"
+              />
+              <InputField
+                label="Fecha de Nacimiento"
+                name="fechaNacimiento"
+                value={formData.fechaNacimiento}
+                onChange={handleChange}
+                type="date"
+              />
+            </div>
+
+            {/* 4. Talento y ¿Bautizado? */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InputField
+                label="Talento / Área de Servicio"
+                name="talento"
+                value={formData.talento}
+                onChange={handleChange}
+                placeholder="EJ. MÚSICA, MEDIOS, LIDERAZGO"
+              />
+              <SelectField
+                label="¿Estás Bautizado?"
+                name="bautizado"
+                value={formData.bautizado}
+                onChange={handleChange}
+                options={['NO', 'SÍ']}
+              />
+            </div>
+
+            {/* Si es Director General registrando a un líder/director */}
+            {(userRole === UserRole.DIRECTOR_GENERAL || userRole === UserRole.DIRECTOR) && (
+              <div>
+                <label className="text-[8px] text-[#ffb700] font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">
+                  Rango Táctico de Mando
+                </label>
+                <select
+                  name="nivel"
+                  value={formData.nivel}
+                  onChange={handleChange}
+                  className="w-full bg-black/60 border border-[#ffb700]/40 rounded-2xl py-3.5 px-4 text-[#ffb700] text-xs font-bold outline-none font-montserrat"
+                >
+                  <option value="ESTUDIANTE" className="bg-[#001428]">ESTUDIANTE / RECLUTA</option>
+                  <option value="LIDER" className="bg-[#001428]">LÍDER TÁCTICO</option>
+                  <option value="DIRECTOR" className="bg-[#001428]">DIRECTOR DE SEDE</option>
+                  {userRole === UserRole.DIRECTOR_GENERAL && (
+                    <option value="DIRECTOR_GENERAL" className="bg-[#001428]">DIRECTOR GENERAL</option>
+                  )}
+                </select>
               </div>
             )}
 
-            <div className="space-y-4">
-              <InputField label="Nombre Completo *" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="EJ. JUAN PÉREZ" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField label="WhatsApp *" name="whatsapp" value={formData.whatsapp} onChange={handleChange} placeholder="+54..." />
-                <InputField label="Fecha Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} type="date" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField label="Talento / Habilidad" name="talento" value={formData.talento} onChange={handleChange} placeholder="EJ. MÚSICA, DISEÑO..." />
-                <SelectField label="Nivel de Acceso" name="nivel" value={formData.nivel} onChange={handleChange} options={['ESTUDIANTE', 'LIDER', 'DIRECTOR']} />
-              </div>
-              <SelectField label="Bautizado" name="bautizado" value={formData.bautizado} onChange={handleChange} options={['SÍ', 'NO']} />
-
-              {/* Referral Dropdown */}
-              {agents.length > 0 && (
-                <div>
-                  <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">¿Quién te trajo? (Opcional)</label>
-                  <select
-                    name="referidoPor"
-                    value={formData.referidoPor}
-                    onChange={handleChange}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat"
-                  >
-                    <option value="" className="bg-black">-- Ninguno --</option>
-                    {agents.map(a => <option key={a.id} value={a.name} className="bg-black">{a.name}</option>)}
-                  </select>
-                </div>
-              )}
-
-              <TextAreaField label="Relación con Dios" name="relacion" value={formData.relacion} onChange={handleChange} placeholder="Describe brevemente..." />
-
-              <div className="border-t border-white/5 pt-6 mt-6 space-y-4">
-                <p className="text-[10px] text-[#ffb700] font-black uppercase tracking-widest text-center font-bebas">Configuración de Seguridad</p>
-                <InputField
-                  label="Pregunta de Seguridad (Para recuperar PIN)"
-                  name="preguntaSeguridad"
-                  value={formData.preguntaSeguridad}
-                  onChange={handleChange}
-                  placeholder="EJ. ¿NOMBRE DE TU MASCOTA?"
-                />
-                <InputField
-                  label="Respuesta de Seguridad"
-                  name="respuestaSeguridad"
-                  value={formData.respuestaSeguridad}
-                  onChange={handleChange}
-                  placeholder="TU RESPUESTA..."
-                />
-              </div>
+            {/* 5. Pregunta de Seguridad para Recuperar PIN */}
+            <div className="border-t border-white/5 pt-4 mt-4 space-y-3">
+              <p className="text-[9px] text-[#ffb700] font-black uppercase tracking-wider font-bebas">
+                🔐 Recuperación de Contraseña
+              </p>
+              <InputField
+                label="Pregunta Secreta"
+                name="preguntaSeguridad"
+                value={formData.preguntaSeguridad}
+                onChange={handleChange}
+                placeholder="EJ. ¿NOMBRE DE TU MASCOTA O VERSÍCULO?"
+              />
+              <InputField
+                label="Respuesta Secreta"
+                name="respuestaSeguridad"
+                value={formData.respuestaSeguridad}
+                onChange={handleChange}
+                placeholder="TU RESPUESTA SECRETA..."
+              />
             </div>
 
-            {error && <div className="text-center text-red-500 bg-red-500/10 p-3 rounded-lg text-xs font-bold">{error}</div>}
+            {error && (
+              <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-xs font-bold">
+                {error}
+              </div>
+            )}
 
-            <button type="submit" disabled={status !== 'IDLE'} className={`w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all font-bebas ${status !== 'IDLE' ? (status === 'SUCCESS' ? 'bg-green-600' : status === 'ERROR' ? 'bg-red-600' : 'bg-gray-800 text-gray-500') : 'bg-[#ffb700] text-[#001f3f] shadow-xl hover:bg-[#ffb700]/90'
-              } text-white`}>
-              {getButtonContent()}
+            <button
+              type="submit"
+              disabled={status !== 'IDLE'}
+              className="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all font-bebas bg-gradient-to-r from-[#ffb700] to-yellow-500 text-[#001f3f] shadow-xl hover:brightness-110 active:scale-95 disabled:opacity-50"
+            >
+              {status === 'UPLOADING' ? <><Loader2 size={16} className="animate-spin" /> Subiendo Foto...</> :
+               status === 'SUBMITTING' ? <><Loader2 size={16} className="animate-spin" /> Registrando Agente...</> :
+               status === 'SUCCESS' ? <><CheckCircle2 size={16} /> ¡Agente Registrado!</> :
+               status === 'ERROR' ? <><AlertCircle size={16} /> Error en Registro</> :
+               <><Save size={16} /> Completar Registro Táctico</>}
             </button>
           </form>
         </div>
@@ -231,26 +375,20 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onSuccess, userR
   );
 };
 
-// --- Componentes de Formulario Reutilizables ---
-const InputField = ({ label, ...props }) => (
+const InputField = ({ label, ...props }: any) => (
   <div>
-    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">{label}</label>
-    <input {...props} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all font-montserrat" />
+    <label className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">{label}</label>
+    <input {...props} className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 px-4 text-white text-xs font-medium outline-none focus:border-[#ffb700] transition-all font-montserrat placeholder-white/20" />
   </div>
 );
 
-const SelectField = ({ label, options, ...props }) => (
+const SelectField = ({ label, options, ...props }: any) => (
   <div>
-    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">{label}</label>
-    <select {...props} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat">
-      {options.map(o => <option key={o} value={o} className="bg-black">{o}</option>)}
+    <label className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1.5 block ml-1 font-bebas">{label}</label>
+    <select {...props} className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all appearance-none font-montserrat">
+      {options.map((o: string) => <option key={o} value={o} className="bg-[#001428] text-white">{o}</option>)}
     </select>
   </div>
 );
 
-const TextAreaField = ({ label, ...props }) => (
-  <div>
-    <label className="text-[8px] text-gray-500 font-black uppercase tracking-widest mb-2 block ml-1 font-bebas">{label}</label>
-    <textarea {...props} rows={3} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-xs font-bold outline-none focus:border-[#ffb700] transition-all resize-none font-montserrat" />
-  </div>
-);
+export default EnrollmentForm;

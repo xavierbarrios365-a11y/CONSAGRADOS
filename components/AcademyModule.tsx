@@ -11,6 +11,7 @@ import { processAssessmentAI, getDeepTestAnalysis, generateCourseFinalReport } f
 import AcademyStudio from './AcademyStudio';
 import TacticalCertificate from './TacticalCertificate';
 import TacticalDocument from './TacticalDocument';
+import InteractiveWorkbook, { WorkbookData } from './InteractiveWorkbook';
 import { formatDriveUrl } from '../services/storageUtils';
 
 interface AcademyModuleProps {
@@ -924,215 +925,274 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                     </div>
                                 )}
                             </div>
+                                {(() => {
+                                    const isWorkbook = activeLesson.resultAlgorithm === 'WORKBOOK' ||
+                                        (activeLesson.questions && activeLesson.questions.some((q: any) =>
+                                            ['FILL_BLANK', 'OPEN_QUESTION', 'CHECKLIST', 'COMMITMENT'].includes(q.type as string)
+                                        ));
 
-                            <TacticalDocument
-                                title={activeLesson.title}
-                                content={activeLesson.content}
-                                xpReward={activeLesson.xpReward}
-                                agentName={allAgents.find(a => a.id === agentId)?.name}
-                                status={isLessonCompleted(activeLesson.id) ? 'COMPLETADO' : (getLessonAttempts(activeLesson.id) >= 2 ? 'FALLIDO' : 'PENDIENTE')}
-                            >
-                                {activeLesson.questions && activeLesson.questions.length > 0 ? (
-                                    <div className="space-y-10 py-6">
-                                        {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
-                                            <div className="py-10 text-center space-y-6">
-                                                <div className="w-20 h-20 bg-green-700/10 border-green-700/30 rounded-full flex items-center justify-center mx-auto border-2">
-                                                    <CheckCircle className="text-green-700" size={40} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <h4 className="text-xl font-bold text-black uppercase tracking-widest">REGISTRO APROBADO</h4>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                        LOS DATOS DE ESTA EVALUACIÓN YA HAN SIDO ASENTADOS EN EL REGISTRO CENTRAL.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ) : getLessonAttempts(activeLesson.id) >= 2 && quizState !== 'RESULT' ? (
-                                            <div className="py-10 text-center space-y-6">
-                                                <div className="w-20 h-20 bg-red-700/10 border-red-700/30 rounded-full flex items-center justify-center mx-auto border-2">
-                                                    <AlertCircle className="text-red-700" size={40} />
-                                                </div>
-                                                <div className="space-y-4">
-                                                    <div className="space-y-1">
-                                                        <h4 className="text-xl font-bold text-black uppercase tracking-widest">ACCESO DENEGADO</h4>
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                            EXCESO DE INTENTOS FALLIDOS. EVALUACIÓN CERRADA POR SEGURIDAD.
-                                                        </p>
-                                                    </div>
-                                                    {userRole === UserRole.DIRECTOR && (
-                                                        <button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    // Update: The backend now groups it by course+lesson. We need lessonId.
-                                                                    const res = await resetStudentAttemptsSupabase(agentId, activeLesson.id);
-                                                                    if (res.success) {
-                                                                        alert('Reseteo Exitoso.');
-                                                                        loadAcademy(true);
-                                                                    } else {
-                                                                        alert('Error al resetear: ' + res.error);
-                                                                    }
-                                                                } catch (e: any) {
-                                                                    console.error("Error resetting attempts:", e);
-                                                                    alert('Error inesperado al resetear intentos.');
-                                                                }
-                                                            }}
-                                                            className="px-6 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-gray-800 transition-all"
-                                                        >
-                                                            Resetear mis intentos (Modo Director)
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : quizState !== 'RESULT' ? (
-                                            <div className="space-y-6">
-                                                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                                                    <span className="text-base font-black text-[#ffb700] uppercase tracking-wider font-bebas">
-                                                        PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}
-                                                    </span>
-                                                    <div className="text-[10px] font-bold text-white/50 font-montserrat">
-                                                        INTENTOS: {getLessonAttempts(activeLesson.id)}/2
-                                                    </div>
-                                                </div>
+                                    if (isWorkbook) {
+                                        let workbookSections = activeLesson.questions as any[];
+                                        if (!workbookSections || workbookSections.length === 0) {
+                                            try {
+                                                const parsed = JSON.parse(activeLesson.content);
+                                                if (parsed?.workbook?.sections) {
+                                                    workbookSections = parsed.workbook.sections;
+                                                }
+                                            } catch (e) { }
+                                        }
 
-                                                <div className="space-y-6">
-                                                    <p className="text-base md:text-lg font-bold leading-relaxed text-white border-l-4 border-[#ffb700] pl-4 font-montserrat">
-                                                        {activeLesson.questions[currentQuestionIndex].question}
-                                                    </p>
+                                        const wbData: WorkbookData = {
+                                            lessonId: activeLesson.id,
+                                            courseTitle: selectedCourse?.title || "ACADEMIA CONSAGRADOS",
+                                            lessonTitle: activeLesson.title,
+                                            sections: workbookSections || []
+                                        };
 
-                                                    {activeLesson.questions[currentQuestionIndex]?.type === 'TEXT' ? (
-                                                        <textarea
-                                                            value={textAnswer}
-                                                            onChange={(e) => setTextAnswer(e.target.value)}
-                                                            placeholder="Escriba su reporte y reflexión aquí..."
-                                                            className="w-full h-44 bg-black/50 border border-white/15 rounded-2xl p-4 text-white text-xs font-montserrat outline-none focus:border-[#ffb700] transition-all placeholder-white/30"
-                                                        />
-                                                    ) : (
-                                                        <div className="grid grid-cols-1 gap-3">
-                                                            {activeLesson.questions[currentQuestionIndex]?.options?.map((option, idx) => {
-                                                                const isSelected = selectedAnswer === option;
-                                                                return (
+                                        return (
+                                            <InteractiveWorkbook
+                                                workbook={wbData}
+                                                agentId={agentId}
+                                                agentName={allAgents.find(a => a.id === agentId)?.name}
+                                                xpReward={activeLesson.xpReward || 50}
+                                                onComplete={async (answers) => {
+                                                    const wasAlreadyCompleted = isLessonCompleted(activeLesson.id);
+                                                    const result = await submitQuizResultSupabase(
+                                                        agentId,
+                                                        activeLesson.id,
+                                                        activeLesson.courseId,
+                                                        100,
+                                                        true,
+                                                        1
+                                                    );
+                                                    if (result.success && !wasAlreadyCompleted) {
+                                                        try {
+                                                            await updateAgentPointsSupabase(agentId, 'BIBLIA', activeLesson.xpReward || 50);
+                                                            if (onUpdateNeeded) onUpdateNeeded();
+                                                        } catch (err) {
+                                                            console.error('Error awarding workbook XP:', err);
+                                                        }
+                                                    }
+                                                    setProgress(prev => [...prev.filter(p => p.lessonId !== activeLesson.id), {
+                                                        lessonId: activeLesson.id,
+                                                        status: 'COMPLETADO',
+                                                        score: 100,
+                                                        attempts: 1
+                                                    }]);
+                                                    showAlert({
+                                                        title: '¡GUÍA CONSOLIDADA!',
+                                                        message: `Has completado exitosamente la guía interactiva "${activeLesson.title}". +${activeLesson.xpReward || 50} XP asignados a tu expediente.`,
+                                                        type: 'SUCCESS'
+                                                    });
+                                                }}
+                                                onClose={() => setActiveLesson(null)}
+                                            />
+                                        );
+                                    }
+
+                                    return (
+                                        <TacticalDocument
+                                            title={activeLesson.title}
+                                            content={activeLesson.content}
+                                            xpReward={activeLesson.xpReward}
+                                            agentName={allAgents.find(a => a.id === agentId)?.name}
+                                            status={isLessonCompleted(activeLesson.id) ? 'COMPLETADO' : (getLessonAttempts(activeLesson.id) >= 2 ? 'FALLIDO' : 'PENDIENTE')}
+                                        >
+                                            {activeLesson.questions && activeLesson.questions.length > 0 ? (
+                                                <div className="space-y-10 py-6">
+                                                    {isLessonCompleted(activeLesson.id) && quizState !== 'RESULT' ? (
+                                                        <div className="py-10 text-center space-y-6">
+                                                            <div className="w-20 h-20 bg-green-700/10 border-green-700/30 rounded-full flex items-center justify-center mx-auto border-2">
+                                                                <CheckCircle className="text-green-700" size={40} />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <h4 className="text-xl font-bold text-black uppercase tracking-widest">REGISTRO APROBADO</h4>
+                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                                    LOS DATOS DE ESTA EVALUACIÓN YA HAN SIDO ASENTADOS EN EL REGISTRO CENTRAL.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : getLessonAttempts(activeLesson.id) >= 2 && quizState !== 'RESULT' ? (
+                                                        <div className="py-10 text-center space-y-6">
+                                                            <div className="w-20 h-20 bg-red-700/10 border-red-700/30 rounded-full flex items-center justify-center mx-auto border-2">
+                                                                <AlertCircle className="text-red-700" size={40} />
+                                                            </div>
+                                                            <div className="space-y-4">
+                                                                <div className="space-y-1">
+                                                                    <h4 className="text-xl font-bold text-black uppercase tracking-widest">ACCESO DENEGADO</h4>
+                                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                                        EXCESO DE INTENTOS FALLIDOS. EVALUACIÓN CERRADA POR SEGURIDAD.
+                                                                    </p>
+                                                                </div>
+                                                                {userRole === UserRole.DIRECTOR && (
                                                                     <button
-                                                                        key={idx}
-                                                                        onClick={() => handleAnswerSelect(option)}
-                                                                        className={`group flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all font-montserrat ${isSelected
-                                                                            ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)] font-bold scale-[1.01]'
-                                                                            : 'bg-black/40 text-white/90 border-white/10 hover:border-white/30 hover:bg-white/5'
-                                                                            }`}
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                const res = await resetStudentAttemptsSupabase(agentId, activeLesson.id);
+                                                                                if (res.success) {
+                                                                                    alert('Reseteo Exitoso.');
+                                                                                    loadAcademy(true);
+                                                                                } else {
+                                                                                    alert('Error al resetear: ' + res.error);
+                                                                                }
+                                                                            } catch (e: any) {
+                                                                                console.error("Error resetting attempts:", e);
+                                                                                alert('Error inesperado al resetear intentos.');
+                                                                            }
+                                                                        }}
+                                                                        className="px-6 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-gray-800 transition-all"
                                                                     >
-                                                                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs font-bebas shrink-0 transition-all ${isSelected
-                                                                            ? 'bg-[#001f3f] text-[#ffb700]'
-                                                                            : 'bg-white/10 text-white group-hover:bg-white/20'
-                                                                            }`}>
-                                                                            {String.fromCharCode(65 + idx)}
-                                                                        </span>
-                                                                        <span className="text-xs font-medium leading-snug">{option}</span>
+                                                                        Resetear mis intentos (Modo Director)
                                                                     </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-
-                                                    <button
-                                                        onClick={handleNextQuestion}
-                                                        disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'}
-                                                        className="w-full bg-[#ffb700] hover:bg-[#ffa000] py-4 rounded-2xl text-[#001f3f] font-black uppercase text-xs font-bebas tracking-widest shadow-[0_0_25px_rgba(255,183,0,0.3)] active:scale-[0.99] transition-all disabled:opacity-30 disabled:pointer-events-none"
-                                                    >
-                                                        {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : (currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Evaluación')}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : quizResult && (
-                                            <div className="space-y-6">
-                                                <div className={`p-6 md:p-8 border rounded-3xl ${quizResult.isCorrect ? 'border-green-500/30 bg-green-950/20 shadow-[0_0_30px_rgba(34,197,94,0.1)]' : 'border-red-500/30 bg-red-950/20'}`}>
-                                                    <div className="flex items-center gap-4 mb-4">
-                                                        {quizResult.isCorrect ? <CheckCircle className="text-green-400 shrink-0" size={48} /> : <AlertCircle className="text-red-400 shrink-0" size={48} />}
-                                                        <div>
-                                                            <h4 className="text-2xl font-black text-white uppercase font-bebas tracking-wide leading-none mb-1">
-                                                                {quizResult.title || (quizResult.isCorrect ? 'CERTIFICADO APROBADO' : 'EVALUACIÓN NO SUPERADA')}
-                                                            </h4>
-                                                            <div className="text-xs font-bold uppercase text-[#ffb700] font-bebas tracking-wider">
-                                                                PUNTAJE: {Math.round(quizResult.score)}% | RECOMPENSA: +{quizResult.xpAwarded} XP
+                                                                )}
                                                             </div>
                                                         </div>
-                                                    </div>
-
-                                                    <div className="text-xs font-medium leading-relaxed text-white/80 bg-black/40 p-4 border border-white/10 rounded-2xl font-montserrat">
-                                                        {quizResult.content ? (
-                                                            <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
-                                                        ) : (
-                                                            <p>{quizResult.isCorrect ? 'Tus aptitudes han sido validadas. Has alcanzado el grado requerido para esta lección.' : 'Puntaje insuficiente. Se requiere revisión adicional de los conceptos operativos.'}</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                                                        <Info size={14} className="text-[#ffb700]" />
-                                                        <span className="text-xs font-black uppercase text-white/70 font-bebas tracking-wider">DESGLOSE DE RESPUESTAS</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                        {userAnswers.map((ua, i) => (
-                                                            <div key={i} className="bg-black/40 border border-white/10 p-3.5 rounded-2xl space-y-1">
-                                                                <p className="text-[10px] text-white/40 font-bold uppercase leading-tight line-clamp-1 font-montserrat">{i + 1}. {ua.question}</p>
-                                                                <p className="text-xs text-[#ffb700] font-bold font-montserrat">R: {ua.answer}</p>
+                                                    ) : quizState !== 'RESULT' ? (
+                                                        <div className="space-y-6">
+                                                            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                                                                <span className="text-base font-black text-[#ffb700] uppercase tracking-wider font-bebas">
+                                                                    PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}
+                                                                </span>
+                                                                <div className="text-[10px] font-bold text-white/50 font-montserrat">
+                                                                    INTENTOS: {getLessonAttempts(activeLesson.id)}/2
+                                                                </div>
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
 
-                                                {/* Botón Volver a Intentar (Solo si falló y quedan intentos) */}
-                                                {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
-                                                    <div className="pt-2">
-                                                        <button
-                                                            onClick={async () => {
-                                                                // Solo reseteamos estado local para que pueda re-hacerlo
-                                                                setQuizState('IDLE');
-                                                                setCurrentQuestionIndex(0);
-                                                                setSelectedAnswer(null);
-                                                                setTextAnswer("");
-                                                                setQuizResult(null);
-                                                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                            }}
-                                                            className="w-full py-4 bg-black text-white font-black uppercase text-[11px] tracking-widest rounded-sm hover:bg-gray-900 transition-all border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,0.2)] active:translate-y-1 active:shadow-none mb-4"
-                                                        >
-                                                            VOLVER A INTENTAR EVALUACIÓN
-                                                        </button>
-                                                        <p className="text-[9px] text-gray-500 font-bold uppercase text-center tracking-widest">
-                                                            PUNTAJE MÍNIMO REQUERIDO: 60%
-                                                        </p>
-                                                    </div>
-                                                )}
+                                                            <div className="space-y-6">
+                                                                <p className="text-base md:text-lg font-bold leading-relaxed text-white border-l-4 border-[#ffb700] pl-4 font-montserrat">
+                                                                    {activeLesson.questions[currentQuestionIndex].question}
+                                                                </p>
 
-                                                {/* Botón Siguiente Lección */}
-                                                {(() => {
-                                                    const currentIndex = courseLessons.findIndex(l => l.id === activeLesson.id);
-                                                    const nextLesson = courseLessons[currentIndex + 1];
-                                                    if (nextLesson) {
-                                                        return (
-                                                            <div className="pt-8 mt-8 border-t-2 border-dashed border-black/10">
+                                                                {activeLesson.questions[currentQuestionIndex]?.type === 'TEXT' ? (
+                                                                    <textarea
+                                                                        value={textAnswer}
+                                                                        onChange={(e) => setTextAnswer(e.target.value)}
+                                                                        placeholder="Escriba su reporte y reflexión aquí..."
+                                                                        className="w-full h-44 bg-black/50 border border-white/15 rounded-2xl p-4 text-white text-xs font-montserrat outline-none focus:border-[#ffb700] transition-all placeholder-white/30"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="grid grid-cols-1 gap-3">
+                                                                        {activeLesson.questions[currentQuestionIndex]?.options?.map((option, idx) => {
+                                                                            const isSelected = selectedAnswer === option;
+                                                                            return (
+                                                                                <button
+                                                                                    key={idx}
+                                                                                    onClick={() => handleAnswerSelect(option)}
+                                                                                    className={`group flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all font-montserrat ${isSelected
+                                                                                        ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)] font-bold scale-[1.01]'
+                                                                                        : 'bg-black/40 text-white/90 border-white/10 hover:border-white/30 hover:bg-white/5'
+                                                                                        }`}
+                                                                                >
+                                                                                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs font-bebas shrink-0 transition-all ${isSelected
+                                                                                        ? 'bg-[#001f3f] text-[#ffb700]'
+                                                                                        : 'bg-white/10 text-white group-hover:bg-white/20'
+                                                                                        }`}>
+                                                                                        {String.fromCharCode(65 + idx)}
+                                                                                    </span>
+                                                                                    <span className="text-xs font-medium leading-snug">{option}</span>
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+
                                                                 <button
-                                                                    onClick={() => handleLessonSelect(nextLesson)}
-                                                                    className="w-full py-6 bg-[#ffb700] hover:bg-[#e6a500] text-[#001f3f] font-black uppercase text-[12px] tracking-[0.4em] rounded-sm transition-all shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:-translate-y-1 active:translate-y-1 active:shadow-none flex items-center justify-center gap-4 group"
+                                                                    onClick={handleNextQuestion}
+                                                                    disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'}
+                                                                    className="w-full bg-[#ffb700] hover:bg-[#ffa000] py-4 rounded-2xl text-[#001f3f] font-black uppercase text-xs font-bebas tracking-widest shadow-[0_0_25px_rgba(255,183,0,0.3)] active:scale-[0.99] transition-all disabled:opacity-30 disabled:pointer-events-none"
                                                                 >
-                                                                    CONTINUAR A LA SIGUIENTE LECCIÓN
-                                                                    <ChevronRight size={20} className="group-hover:translate-x-2 transition-transform" />
+                                                                    {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : (currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Evaluación')}
                                                                 </button>
                                                             </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })()}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="py-12 border-2 border-dashed border-black/10 rounded-sm text-center space-y-3">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-black text-black uppercase tracking-widest">DETECCIÓN: EVALUACIÓN NO DISPONIBLE</p>
-                                            <p className="text-[9px] text-gray-500 font-bold uppercase">ESTA UNIDAD NO TIENE PREGUNTAS ASIGNADAS EN EL REGISTRO.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </TacticalDocument>
+                                                        </div>
+                                                    ) : quizResult && (
+                                                        <div className="space-y-6">
+                                                            <div className={`p-6 md:p-8 border rounded-3xl ${quizResult.isCorrect ? 'border-green-500/30 bg-green-950/20 shadow-[0_0_30px_rgba(34,197,94,0.1)]' : 'border-red-500/30 bg-red-950/20'}`}>
+                                                                <div className="flex items-center gap-4 mb-4">
+                                                                    {quizResult.isCorrect ? <CheckCircle className="text-green-400 shrink-0" size={48} /> : <AlertCircle className="text-red-400 shrink-0" size={48} />}
+                                                                    <div>
+                                                                        <h4 className="text-2xl font-black text-white uppercase font-bebas tracking-wide leading-none mb-1">
+                                                                            {quizResult.title || (quizResult.isCorrect ? 'CERTIFICADO APROBADO' : 'EVALUACIÓN NO SUPERADA')}
+                                                                        </h4>
+                                                                        <div className="text-xs font-bold uppercase text-[#ffb700] font-bebas tracking-wider">
+                                                                            PUNTAJE: {Math.round(quizResult.score)}% | RECOMPENSA: +{quizResult.xpAwarded} XP
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="text-xs font-medium leading-relaxed text-white/80 bg-black/40 p-4 border border-white/10 rounded-2xl font-montserrat">
+                                                                    {quizResult.content ? (
+                                                                        <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
+                                                                    ) : (
+                                                                        <p>{quizResult.isCorrect ? 'Tus aptitudes han sido validadas. Has alcanzado el grado requerido para esta lección.' : 'Puntaje insuficiente. Se requiere revisión adicional de los conceptos operativos.'}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                                                                    <Info size={14} className="text-[#ffb700]" />
+                                                                    <span className="text-xs font-black uppercase text-white/70 font-bebas tracking-wider">DESGLOSE DE RESPUESTAS</span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                    {userAnswers.map((ua, i) => (
+                                                                        <div key={i} className="bg-black/40 border border-white/10 p-3.5 rounded-2xl space-y-1">
+                                                                            <p className="text-[10px] text-white/40 font-bold uppercase leading-tight line-clamp-1 font-montserrat">{i + 1}. {ua.question}</p>
+                                                                            <p className="text-xs text-[#ffb700] font-bold font-montserrat">R: {ua.answer}</p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
+                                                                <div className="pt-2">
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            setQuizState('STARTED');
+                                                                            setCurrentQuestionIndex(0);
+                                                                            setSelectedAnswer(null);
+                                                                            setTextAnswer("");
+                                                                            setUserAnswers([]);
+                                                                            setCorrectAnswersCount(0);
+                                                                            setDiscScores({ A: 0, B: 0, C: 0, D: 0 });
+                                                                        }}
+                                                                        className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase text-xs font-bebas tracking-widest rounded-2xl transition-all"
+                                                                    >
+                                                                        Intentar Nuevamente ({2 - getLessonAttempts(activeLesson.id)} intento restante)
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
+                                                            {quizResult.isCorrect && (() => {
+                                                                const currentIdx = courseLessons.findIndex(l => l.id === activeLesson.id);
+                                                                const nextLesson = courseLessons[currentIdx + 1];
+                                                                if (nextLesson) {
+                                                                    return (
+                                                                        <div className="pt-4 border-t border-white/10">
+                                                                            <button
+                                                                                onClick={() => handleLessonSelect(nextLesson)}
+                                                                                className="w-full py-4 bg-[#ffb700] hover:bg-[#ffa000] text-[#001f3f] font-black uppercase text-xs font-bebas tracking-widest rounded-2xl transition-all shadow-[0_0_25px_rgba(255,183,0,0.3)] flex items-center justify-center gap-3 group"
+                                                                            >
+                                                                                CONTINUAR A LA SIGUIENTE LECCIÓN
+                                                                                <ChevronRight size={18} className="group-hover:translate-x-1.5 transition-transform" />
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="py-12 border-2 border-dashed border-white/10 rounded-2xl text-center space-y-2">
+                                                    <p className="text-xs font-black text-white/60 uppercase tracking-widest font-bebas">DETECCIÓN: EVALUACIÓN NO DISPONIBLE</p>
+                                                    <p className="text-[10px] text-white/40 font-montserrat">Esta unidad no tiene preguntas asignadas en el registro.</p>
+                                                </div>
+                                            )}
+                                        </TacticalDocument>
+                                    );
+                                })()}
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20 bg-white/5 rounded-[3rem] border border-white/5">

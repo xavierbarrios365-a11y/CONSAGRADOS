@@ -68,20 +68,22 @@ const TacticalDocument: React.FC<TacticalDocumentProps> = ({
                 {/* Main Content Area */}
                 <div className="space-y-8 relative">
                     {/* Content Section */}
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                            <Hash size={14} className="text-[#ffb700]" />
-                            <span className="text-xs font-black uppercase tracking-widest text-[#ffb700] font-bebas">
-                                BRIEFING & CONTENIDO DE LA LECCIÓN
-                            </span>
-                        </div>
+                    {content && !content.trim().startsWith('{') && (
+                        <section className="space-y-4">
+                            <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                                <Hash size={14} className="text-[#ffb700]" />
+                                <span className="text-xs font-black uppercase tracking-widest text-[#ffb700] font-bebas">
+                                    BRIEFING & CONTENIDO DE LA LECCIÓN
+                                </span>
+                            </div>
 
-                        {/* High Contrast HTML Content Container */}
-                        <div
-                            className="text-sm leading-relaxed text-white/90 space-y-4 font-montserrat prose prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ __html: content }}
-                        />
-                    </section>
+                            {/* High Contrast HTML Content Container */}
+                            <div
+                                className="text-sm leading-relaxed text-white/90 space-y-4 font-montserrat prose prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{ __html: content }}
+                            />
+                        </section>
+                    )}
 
                     {/* Integrated Questions / Children */}
                     {children && (

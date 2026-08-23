@@ -79,25 +79,48 @@ export const fetchAcademyDataSupabase = async (agentId?: string) => {
         const mappedLessons = (finalLessons || []).map((l: any) => {
             let parsedQ = [];
             let parsedJsonObj = null;
+            let cleanContent = l.content || '';
 
-            if (typeof l.questions_json === 'string' && l.questions_json.trim()) {
+            // Si content contiene JSON de workbook, extraerlo y limpiar content
+            if (typeof l.content === 'string' && l.content.trim().startsWith('{')) {
                 try {
-                    parsedJsonObj = JSON.parse(l.questions_json);
+                    const parsedContent = JSON.parse(l.content);
+                    if (parsedContent.workbook) {
+                        parsedJsonObj = parsedContent.workbook;
+                        cleanContent = '';
+                    } else if (parsedContent.sections) {
+                        parsedJsonObj = parsedContent;
+                        cleanContent = '';
+                    }
                 } catch (e) { }
-            } else if (l.questions_json && typeof l.questions_json === 'object') {
-                parsedJsonObj = l.questions_json;
-            } else if (typeof l.questions === 'string' && l.questions.trim()) {
-                try { parsedJsonObj = JSON.parse(l.questions); } catch (e) { }
-            } else if (l.questions && typeof l.questions === 'object') {
-                parsedJsonObj = l.questions;
+            }
+
+            if (!parsedJsonObj) {
+                if (typeof l.questions_json === 'string' && l.questions_json.trim()) {
+                    try {
+                        parsedJsonObj = JSON.parse(l.questions_json);
+                    } catch (e) { }
+                } else if (l.questions_json && typeof l.questions_json === 'object') {
+                    parsedJsonObj = l.questions_json;
+                } else if (typeof l.questions === 'string' && l.questions.trim()) {
+                    try { parsedJsonObj = JSON.parse(l.questions); } catch (e) { }
+                } else if (l.questions && typeof l.questions === 'object') {
+                    parsedJsonObj = l.questions;
+                }
             }
 
             // Extract array from parsed object
             if (Array.isArray(parsedJsonObj)) {
                 parsedQ = parsedJsonObj;
+            } else if (parsedJsonObj && Array.isArray(parsedJsonObj.sections)) {
+                parsedQ = parsedJsonObj.sections;
             } else if (parsedJsonObj && Array.isArray(parsedJsonObj.questions)) {
                 parsedQ = parsedJsonObj.questions;
             }
+
+            const isWorkbookType = l.result_algorithm === 'WORKBOOK' || 
+                                   (parsedJsonObj && (parsedJsonObj.sections || parsedJsonObj.workbook)) ||
+                                   parsedQ.some((q: any) => ['FILL_BLANK', 'OPEN_QUESTION', 'CHECKLIST', 'COMMITMENT'].includes(q.type));
 
             return {
                 id: l.id,
@@ -105,12 +128,12 @@ export const fetchAcademyDataSupabase = async (agentId?: string) => {
                 order: l.order_index,
                 title: l.title,
                 videoUrl: l.video_url || l.embed_url || '',
-                content: l.content,
+                content: cleanContent,
                 questions: parsedQ,
-                xpReward: l.xp_reward || (parsedJsonObj?.xpReward) || 0,
+                xpReward: l.xp_reward || (parsedJsonObj?.xpReward) || 50,
                 startTime: l.start_time,
                 endTime: l.end_time,
-                resultAlgorithm: l.result_algorithm || (parsedJsonObj?.resultAlgorithm) || null,
+                resultAlgorithm: isWorkbookType ? 'WORKBOOK' : (l.result_algorithm || (parsedJsonObj?.resultAlgorithm) || null),
                 resultMappings: l.result_mappings || (parsedJsonObj?.resultMappings) || null
             };
         });

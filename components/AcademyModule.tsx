@@ -983,14 +983,18 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                 </div>
                                             </div>
                                         ) : quizState !== 'RESULT' ? (
-                                            <div className="space-y-8">
-                                                <div className="flex items-center justify-between border-b-2 border-black/5 pb-2">
-                                                    <span className="text-[14px] font-black text-black uppercase tracking-widest italic">PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}</span>
-                                                    <div className="text-[9px] font-bold text-gray-400">INTENTOS: {getLessonAttempts(activeLesson.id)}/2</div>
+                                            <div className="space-y-6">
+                                                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                                                    <span className="text-base font-black text-[#ffb700] uppercase tracking-wider font-bebas">
+                                                        PREGUNTA {currentQuestionIndex + 1} DE {activeLesson.questions.length}
+                                                    </span>
+                                                    <div className="text-[10px] font-bold text-white/50 font-montserrat">
+                                                        INTENTOS: {getLessonAttempts(activeLesson.id)}/2
+                                                    </div>
                                                 </div>
 
                                                 <div className="space-y-6">
-                                                    <p className="text-[16px] font-black leading-tight text-black border-l-4 border-black pl-4">
+                                                    <p className="text-base md:text-lg font-bold leading-relaxed text-white border-l-4 border-[#ffb700] pl-4 font-montserrat">
                                                         {activeLesson.questions[currentQuestionIndex].question}
                                                     </p>
 
@@ -998,105 +1002,86 @@ const AcademyModule: React.FC<AcademyModuleProps> = ({ userRole, agentId, onActi
                                                         <textarea
                                                             value={textAnswer}
                                                             onChange={(e) => setTextAnswer(e.target.value)}
-                                                            placeholder="Escriba su reporte aquí..."
-                                                            className="w-full h-48 bg-black/5 border-2 border-black/10 rounded-sm p-5 text-black text-[12px] font-bold uppercase outline-none focus:border-black transition-all"
+                                                            placeholder="Escriba su reporte y reflexión aquí..."
+                                                            className="w-full h-44 bg-black/50 border border-white/15 rounded-2xl p-4 text-white text-xs font-montserrat outline-none focus:border-[#ffb700] transition-all placeholder-white/30"
                                                         />
                                                     ) : (
-                                                        <div className="grid grid-cols-1 gap-4">
-                                                            {activeLesson.questions[currentQuestionIndex]?.options?.map((option, idx) => (
-                                                                <button
-                                                                    key={idx}
-                                                                    onClick={() => handleAnswerSelect(option)}
-                                                                    className={`group flex items-center gap-4 p-5 rounded-sm border-2 text-left transition-all ${selectedAnswer === option
-                                                                        ? 'bg-black text-white border-black'
-                                                                        : 'bg-white text-black border-black/10 hover:border-black/30'
-                                                                        }`}
-                                                                >
-                                                                    <span className={`w-8 h-8 flex items-center justify-center font-black text-xs border-2 ${selectedAnswer === option ? 'border-white/40' : 'border-black/20'}`}>
-                                                                        {String.fromCharCode(65 + idx)}
-                                                                    </span>
-                                                                    <span className="text-[11px] font-bold uppercase tracking-wide">{option}</span>
-                                                                </button>
-                                                            ))}
+                                                        <div className="grid grid-cols-1 gap-3">
+                                                            {activeLesson.questions[currentQuestionIndex]?.options?.map((option, idx) => {
+                                                                const isSelected = selectedAnswer === option;
+                                                                return (
+                                                                    <button
+                                                                        key={idx}
+                                                                        onClick={() => handleAnswerSelect(option)}
+                                                                        className={`group flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all font-montserrat ${isSelected
+                                                                            ? 'bg-[#ffb700] text-[#001f3f] border-[#ffb700] shadow-[0_0_20px_rgba(255,183,0,0.3)] font-bold scale-[1.01]'
+                                                                            : 'bg-black/40 text-white/90 border-white/10 hover:border-white/30 hover:bg-white/5'
+                                                                            }`}
+                                                                    >
+                                                                        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs font-bebas shrink-0 transition-all ${isSelected
+                                                                            ? 'bg-[#001f3f] text-[#ffb700]'
+                                                                            : 'bg-white/10 text-white group-hover:bg-white/20'
+                                                                            }`}>
+                                                                            {String.fromCharCode(65 + idx)}
+                                                                        </span>
+                                                                        <span className="text-xs font-medium leading-snug">{option}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
 
                                                     <button
                                                         onClick={handleNextQuestion}
                                                         disabled={(activeLesson.questions[currentQuestionIndex].type === 'TEXT' ? !textAnswer : !selectedAnswer) || quizState === 'SUBMITTING'}
-                                                        className="w-full bg-black py-5 shadow-[5px_5px_0px_rgba(0,0,0,0.2)] text-white font-black uppercase text-[12px] tracking-[0.3em] active:translate-y-1 active:shadow-none transition-all disabled:opacity-30 disabled:pointer-events-none"
+                                                        className="w-full bg-[#ffb700] hover:bg-[#ffa000] py-4 rounded-2xl text-[#001f3f] font-black uppercase text-xs font-bebas tracking-widest shadow-[0_0_25px_rgba(255,183,0,0.3)] active:scale-[0.99] transition-all disabled:opacity-30 disabled:pointer-events-none"
                                                     >
-                                                        {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : (currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Reporte')}
+                                                        {quizState === 'SUBMITTING' ? <Loader2 size={16} className="animate-spin mx-auto" /> : (currentQuestionIndex < activeLesson.questions.length - 1 ? 'Siguiente Pregunta' : 'Finalizar Evaluación')}
                                                     </button>
                                                 </div>
                                             </div>
                                         ) : quizResult && (
-                                            <div className="space-y-8">
-                                                <div className={`p-8 border-4 border-dashed rounded-sm ${quizResult.isCorrect ? 'border-green-700/50 bg-green-700/5' : 'border-red-700/50 bg-red-700/5'}`}>
-                                                    <div className="flex items-center gap-6 mb-6">
-                                                        {quizResult.isCorrect ? <CheckCircle className="text-green-700" size={60} /> : <AlertCircle className="text-red-700" size={60} />}
+                                            <div className="space-y-6">
+                                                <div className={`p-6 md:p-8 border rounded-3xl ${quizResult.isCorrect ? 'border-green-500/30 bg-green-950/20 shadow-[0_0_30px_rgba(34,197,94,0.1)]' : 'border-red-500/30 bg-red-950/20'}`}>
+                                                    <div className="flex items-center gap-4 mb-4">
+                                                        {quizResult.isCorrect ? <CheckCircle className="text-green-400 shrink-0" size={48} /> : <AlertCircle className="text-red-400 shrink-0" size={48} />}
                                                         <div>
-                                                            <h4 className="text-3xl font-black text-black uppercase tracking-tighter leading-none mb-1">
-                                                                {quizResult.title || (quizResult.isCorrect ? 'CERTIFICADO APROBADO (CONSAGRADO)' : 'CERTIFICADO RECHAZADO')}
+                                                            <h4 className="text-2xl font-black text-white uppercase font-bebas tracking-wide leading-none mb-1">
+                                                                {quizResult.title || (quizResult.isCorrect ? 'CERTIFICADO APROBADO' : 'EVALUACIÓN NO SUPERADA')}
                                                             </h4>
-                                                            <div className="text-[12px] font-bold uppercase text-gray-500">
+                                                            <div className="text-xs font-bold uppercase text-[#ffb700] font-bebas tracking-wider">
                                                                 PUNTAJE: {Math.round(quizResult.score)}% | RECOMPENSA: +{quizResult.xpAwarded} XP
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="text-[12px] font-bold uppercase leading-relaxed text-gray-800 bg-white/50 p-4 border border-black/5 rounded-sm">
+                                                    <div className="text-xs font-medium leading-relaxed text-white/80 bg-black/40 p-4 border border-white/10 rounded-2xl font-montserrat">
                                                         {quizResult.content ? (
                                                             <div dangerouslySetInnerHTML={{ __html: quizResult.content }} />
                                                         ) : (
-                                                            <p>{quizResult.isCorrect ? 'SUS APTITUDES HAN SIDO VALIDADAS. HA ALCANZADO EL GRADO DE CONSAGRADO.' : 'PUNTAJE INSUFICIENTE. SE REQUIERE REVISIÓN ADICIONAL DE LOS CONCEPTOS OPERATIVOS.'}</p>
+                                                            <p>{quizResult.isCorrect ? 'Tus aptitudes han sido validadas. Has alcanzado el grado requerido para esta lección.' : 'Puntaje insuficiente. Se requiere revisión adicional de los conceptos operativos.'}</p>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center gap-2 border-b-2 border-black/10 pb-1">
-                                                        <Info size={14} />
-                                                        <span className="text-[10px] font-black uppercase">DESGLOSE DE RESPUESTAS</span>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                                                        <Info size={14} className="text-[#ffb700]" />
+                                                        <span className="text-xs font-black uppercase text-white/70 font-bebas tracking-wider">DESGLOSE DE RESPUESTAS</span>
                                                     </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         {userAnswers.map((ua, i) => (
-                                                            <div key={i} className="bg-black/5 border border-black/10 p-4 rounded-sm space-y-1">
-                                                                <p className="text-[10px] text-gray-500 font-bold uppercase leading-tight line-clamp-1">{i + 1}. {ua.question}</p>
-                                                                <p className="text-[11px] text-black font-black uppercase">R: {ua.answer}</p>
+                                                            <div key={i} className="bg-black/40 border border-white/10 p-3.5 rounded-2xl space-y-1">
+                                                                <p className="text-[10px] text-white/40 font-bold uppercase leading-tight line-clamp-1 font-montserrat">{i + 1}. {ua.question}</p>
+                                                                <p className="text-xs text-[#ffb700] font-bold font-montserrat">R: {ua.answer}</p>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
 
-                                                {userRole === UserRole.DIRECTOR && (
-                                                    <div className="space-y-4 pt-6">
-                                                        {/* Ocultado por solicitud de reporte consolidado al final del curso
-                                                        {!deepAnalysis ? (
-                                                            <button
-                                                                onClick={handleDeepAnalysis}
-                                                                disabled={isAnalyzingDeeply}
-                                                                className="w-full flex items-center justify-center gap-3 py-4 bg-white border-2 border-black text-black font-black uppercase text-[11px] tracking-widest hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none"
-                                                            >
-                                                                {isAnalyzingDeeply ? <Loader2 size={16} className="animate-spin" /> : <BrainCircuit size={18} />}
-                                                                AUDITORÍA DE INTELIGENCIA (IA)
-                                                            </button>
-                                                        ) : (
-                                                            <div className="p-8 bg-black text-white rounded-sm space-y-6 animate-in slide-in-from-bottom-2">
-                                                                <div className="flex items-center gap-3 text-[#ffb700] border-b border-white/20 pb-2">
-                                                                    <Sparkles size={20} />
-                                                                    <h5 className="text-xl font-black uppercase italic tracking-tighter">ANÁLISIS PROFUNDO IA</h5>
-                                                                </div>
-                                                                <div className="text-[12px] font-bold uppercase leading-relaxed prose prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: deepAnalysis }} />
-                                                            </div>
-                                                        )}
-                                                        */}
-                                                    </div>
-                                                )}
-
                                                 {/* Botón Volver a Intentar (Solo si falló y quedan intentos) */}
                                                 {!quizResult.isCorrect && getLessonAttempts(activeLesson.id) < 2 && (
-                                                    <div className="pt-4">
+                                                    <div className="pt-2">
                                                         <button
                                                             onClick={async () => {
                                                                 // Solo reseteamos estado local para que pueda re-hacerlo

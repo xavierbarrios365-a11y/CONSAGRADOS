@@ -1,17 +1,17 @@
 
 import React, { useState } from 'react';
-import { BookOpen, ClipboardList, ChevronUp, ArrowLeft, Target, Sparkles, Zap, Skull } from 'lucide-react';
+import { BookOpen, ClipboardList, ChevronUp, ArrowLeft, Target, Sparkles, Zap, Skull, MessageSquare } from 'lucide-react';
 import ContentModule from './ContentModule';
 import TasksModule from './TasksModule';
 import PromotionModule from './PromotionModule';
-import BibleWarDirector from './BibleWar/BibleWarDirector';
+import SharedClassNotes from './SharedClassNotes';
 import { AppView, Agent, UserRole, Guide } from '../types';
 
 interface TrainingCenterProps {
     currentUser: Agent;
     setView: (view: AppView) => void;
     onUpdateNeeded: () => void;
-    initialTab?: 'material' | 'misiones' | 'ascenso';
+    initialTab?: 'material' | 'anotaciones' | 'misiones' | 'ascenso';
 }
 
 const TrainingCenter: React.FC<TrainingCenterProps> = ({
@@ -20,10 +20,11 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
     onUpdateNeeded,
     initialTab = 'material'
 }) => {
-    const [activeTab, setActiveTab] = useState<'material' | 'misiones' | 'ascenso'>(initialTab);
+    const [activeTab, setActiveTab] = useState<'material' | 'anotaciones' | 'misiones' | 'ascenso'>(initialTab);
 
     const tabs = [
         { id: 'material', label: 'Material', icon: <BookOpen size={18} />, color: 'text-blue-400' },
+        { id: 'anotaciones', label: 'Anotaciones', icon: <MessageSquare size={18} />, color: 'text-cyan-400' },
         { id: 'misiones', label: 'Misiones', icon: <ClipboardList size={18} />, color: 'text-amber-400' },
         { id: 'ascenso', label: 'Ascenso', icon: <ChevronUp size={18} />, color: 'text-[#ffb700]' },
     ];
@@ -53,12 +54,12 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
             </div>
 
             <div className="p-4 sticky top-[80px] z-10 bg-[#000810]/95 backdrop-blur-sm">
-                <div className="max-w-md mx-auto bg-black/30 p-1.5 rounded-2xl flex gap-1 border border-white/5 shadow-2xl">
+                <div className="max-w-lg mx-auto bg-black/30 p-1.5 rounded-2xl flex gap-1 border border-white/5 shadow-2xl">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
                                 ? 'bg-[#ffb700] text-[#001f3f] shadow-[0_0_20px_rgba(255,183,0,0.3)] scale-[1.02]'
                                 : 'text-white/40 hover:text-white hover:bg-white/5'
                                 }`}
@@ -75,6 +76,11 @@ const TrainingCenter: React.FC<TrainingCenterProps> = ({
                 {activeTab === 'material' && (
                     <div className="animate-in slide-in-from-right-4 duration-500">
                         <ContentModule userRole={currentUser.userRole} />
+                    </div>
+                )}
+                {activeTab === 'anotaciones' && (
+                    <div className="animate-in slide-in-from-right-4 duration-500">
+                        <SharedClassNotes currentUser={currentUser} onActivity={onUpdateNeeded} />
                     </div>
                 )}
                 {activeTab === 'misiones' && (

@@ -58,19 +58,37 @@ export const InteractiveWorkbook: React.FC<InteractiveWorkbookProps> = ({
                 }
             } catch (e) { }
 
-            // 2. Intentar desde Supabase (si existe registro previo)
+            // 2. Intentar desde Supabase (asistencia_visitas)
             try {
-                const { data } = await supabase
+                const { data: guideData } = await supabase
+                    .from('asistencia_visitas')
+                    .select('detalle')
+                    .eq('agent_id', agentId)
+                    .eq('tipo', 'GUIA_INTERACTIVA')
+                    .order('registrado_en', { ascending: false })
+                    .limit(5);
+
+                if (guideData && guideData.length > 0) {
+                    for (const row of guideData) {
+                        try {
+                            const parsed = JSON.parse(row.detalle);
+                            if (parsed.lessonId === workbook.lessonId && parsed.answers) {
+                                setAnswers(prev => ({ ...parsed.answers, ...prev }));
+                                break;
+                            }
+                        } catch (e) { }
+                    }
+                }
+
+                // 3. Verificar si ya estaba completada en academy_progress
+                const { data: progData } = await supabase
                     .from('academy_progress')
-                    .select('notes_data, is_completed')
+                    .select('is_completed')
                     .eq('agent_id', agentId)
                     .eq('lesson_id', workbook.lessonId)
-                    .single();
+                    .maybeSingle();
 
-                if (data?.notes_data) {
-                    setAnswers(prev => ({ ...prev, ...data.notes_data }));
-                }
-                if (data?.is_completed) {
+                if (progData?.is_completed) {
                     setIsCompleted(true);
                 }
             } catch (e) { }
@@ -93,14 +111,35 @@ export const InteractiveWorkbook: React.FC<InteractiveWorkbookProps> = ({
         try {
             localStorage.setItem(storageKey, JSON.stringify(answers));
 
-            // Sincronizar en Supabase en campo notes_data
+            // Sincronizar en Supabase en asistencia_visitas
+            await supabase
+                .from('asistencia_visitas')
+                .insert({
+                    agent_id: agentId,
+                    agent_name: agentName,
+                    tipo: 'GUIA_INTERACTIVA',
+                    detalle: JSON.stringify({
+                        lessonId: workbook.lessonId,
+                        courseTitle: workbook.courseTitle,
+                        lessonTitle: workbook.lessonTitle,
+                        answers: answers,
+                        completionPercentage: completionPercentage
+                    }),
+                    sede_id: 'SEDE-JESUS-ES-EL-CENTRO',
+                    registrado_en: new Date().toISOString()
+                });
+
+            // Sincronizar en academy_progress
             await supabase
                 .from('academy_progress')
                 .upsert({
                     agent_id: agentId,
                     lesson_id: workbook.lessonId,
-                    notes_data: answers,
-                    updated_at: new Date().toISOString()
+                    course_id: 'CURSO-AMI-01',
+                    score: 100,
+                    is_completed: isCompleted || completionPercentage >= 80,
+                    attempts: 1,
+                    completed_at: new Date().toISOString()
                 }, { onConflict: 'agent_id,lesson_id' });
 
             if (!silent) {
@@ -125,13 +164,13 @@ export const InteractiveWorkbook: React.FC<InteractiveWorkbookProps> = ({
     }).length - (workbook.sections.length - totalFillableSections);
 
     const completionPercentage = totalFillableSections > 0
-        ? Math.round((filledSectionsCount / totalFillableSections) * 100)
+        ? Math.round((Math.max(0, filledSectionsCount) / totalFillableSections) * 100)
         : 100;
 
     const handleFinishWorkbook = async () => {
         tacticalSound.playVictoryChime();
-        await handleSaveProgress(true);
         setIsCompleted(true);
+        await handleSaveProgress(true);
 
         if (onComplete) {
             await onComplete(answers);

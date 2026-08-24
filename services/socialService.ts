@@ -10,7 +10,7 @@ export const fetchNewsFeedSupabase = async (): Promise<NewsFeedItem[]> => {
         const { data, error } = await supabase
             .from('asistencia_visitas')
             .select('*')
-            .not('tipo', 'in', '("ASISTENCIA","BIBLIA","APUNTES","LIDERAZGO","CONDUCTA","RECOMPENSA_VISITA","VISITANTE","EVENTO_CONFIRMADO","DIRECTOR_ASISTENCIA","SANCION_AUTOMATICA")')
+            .not('tipo', 'in', '("ASISTENCIA","BIBLIA","APUNTES","LIDERAZGO","CONDUCTA","RECOMPENSA_VISITA","VISITANTE","EVENTO_CONFIRMADO","DIRECTOR_ASISTENCIA","SANCION_AUTOMATICA","GUIA_INTERACTIVA","APUNTES_CLASE","WORKBOOK","WORKBOOK_ANSWERS")')
             .order('registrado_en', { ascending: false })
             .limit(100);
         if (error) throw error;

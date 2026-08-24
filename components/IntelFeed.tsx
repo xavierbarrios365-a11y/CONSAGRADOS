@@ -244,22 +244,34 @@ const IntelFeed: React.FC<NewsFeedProps> = ({ onActivity, headlines = [], agents
         try {
             const rawData = await fetchNewsFeed();
             // Map raw DB rows (asistencia_visitas) → NewsFeedItem
-            const mapped: NewsFeedItem[] = (rawData || []).map((item: any) => {
-                const { message, verse, reference, mediaUrl, mediaType } = parseNewsMessage(item.detalle || item.message || '');
-                return {
-                    id: item.id,
-                    agentId: item.agent_id ?? item.agentId,
-                    agentName: item.agent_name ?? item.agentName,
-                    type: item.tipo ?? item.type,
-                    message,
-                    verse,
-                    reference,
-                    mediaUrl,
-                    mediaType: (mediaType as any)?.toLowerCase() || undefined,
-                    parentId: item.parent_id ?? item.parentId,
-                    date: new Date(item.registrado_en ?? item.date ?? Date.now()).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase()
-                };
-            });
+            const mapped: NewsFeedItem[] = (rawData || [])
+                .filter((item: any) => {
+                    const tipo = item.tipo || item.type;
+                    const detalle = item.detalle || item.message || '';
+                    if (['GUIA_INTERACTIVA', 'APUNTES_CLASE', 'WORKBOOK', 'WORKBOOK_ANSWERS', 'ASISTENCIA', 'BIBLIA', 'APUNTES', 'LIDERAZGO'].includes(tipo)) {
+                        return false;
+                    }
+                    if (typeof detalle === 'string' && detalle.trim().startsWith('{') && detalle.trim().endsWith('}')) {
+                        return false;
+                    }
+                    return true;
+                })
+                .map((item: any) => {
+                    const { message, verse, reference, mediaUrl, mediaType } = parseNewsMessage(item.detalle || item.message || '');
+                    return {
+                        id: item.id,
+                        agentId: item.agent_id ?? item.agentId,
+                        agentName: item.agent_name ?? item.agentName,
+                        type: item.tipo ?? item.type,
+                        message,
+                        verse,
+                        reference,
+                        mediaUrl,
+                        mediaType: (mediaType as any)?.toLowerCase() || undefined,
+                        parentId: item.parent_id ?? item.parentId,
+                        date: new Date(item.registrado_en ?? item.date ?? Date.now()).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase()
+                    };
+                });
             setNews(mapped);
             setCurrentPage(0);
 
